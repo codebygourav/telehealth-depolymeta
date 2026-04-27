@@ -1,0 +1,56 @@
+Working Experience (group: working_experience)
+Key	Value
+group	working_experience
+professional_experience_info[0][career_start]	2015
+professional_experience_info[0][past_associations]	City Hospital
+professional_experience_info[1][career_start]	2020
+professional_experience_info[1][past_associations]	Global Clinic
+
+
+2. Personal Information (group: personal_information)
+Key	Value
+group	personal_information
+first_name	Amit
+last_name	Sharma
+bio	Senior Doctor with 10 years experience...
+doctor_departments[0][department_id]	uuid-here
+doctor_departments[0][role]	Head of Dept
+email	doctor@example.com
+avatar	(Select File)
+
+3. Education Info (group: education_info)
+Key	Value
+group	education_info
+education_info[0][degree]	MBBS
+education_info[0][institution]	AIIMS
+education_info[0][start_date]	2010-01-01
+education_info[0][end_date]	2015-01-01
+
+4. Certifications (group: certifications_info)
+Key	Value
+group	certifications_info
+certifications_info[0][name]	Advanced Surgery
+certifications_info[0][organization]	Medical Council
+certifications_info[0][certification_image]	(Select File)
+
+
+5. Awards (group: awards_info)
+Key	Value
+group	awards_info
+awards_info[0][title]	Best Doctor 2023
+awards_info[0][award_image]	(Select File)
+
+
+6. Address & Contact (group: address_contact)
+Key	Value
+group	address_contact
+address_line1	Street Name
+city	Mumbai
+postal_code	400001
+
+
+7. Social Media (group: social_media)
+Key	Value
+group	social_media
+social_links[facebook]	https://facebook.com/doctor
+social_links[linkedin]	https://linkedin.com/in/doctor

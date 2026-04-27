@@ -1,0 +1,991 @@
+@import "tailwindcss";
+@import "../../../../vendor/filament/filament/resources/css/theme.css";
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/vendor/**/*';
+
+/*
+ * Theme colors - These are fallback values.
+ * The actual colors are injected dynamically via PHP in the layout.
+ * See: resources/views/filament/partial/theme-colors.blade.php
+ */
+:root {
+    --app-primary-hex: #073827;
+    --app-secondary-hex: #22c55e;
+    --app-primary-hex-12: #07382712;
+    --border: oklch(0.922 0 0);
+}
+
+/* Override Filament's primary color with green */
+[x-cloak] {
+    --primary-50: 240 253 247;
+    --primary-100: 209 250 229;
+    --primary-200: 167 243 208;
+    --primary-300: 110 231 183;
+    --primary-400: 52 211 153;
+    --primary-500: 16 185 129;
+    --primary-600: 5 150 105;
+    --primary-700: 4 120 87;
+    --primary-800: 6 95 70;
+    --primary-900: 7 56 39;
+    --primary-950: 2 34 23;
+}
+
+/* For light mode */
+:root {
+    --primary-50: 240 253 247;
+    --primary-100: 209 250 229;
+    --primary-200: 167 243 208;
+    --primary-300: 110 231 183;
+    --primary-400: 52 211 153;
+    --primary-500: 16 185 129;
+    --primary-600: 5 150 105;
+    --primary-700: 4 120 87;
+    --primary-800: 6 95 70;
+    --primary-900: 7 56 39;
+    --primary-950: 2 34 23;
+}
+
+/* Tailwind v4 overrides - no @layer needed, direct CSS */
+.fi-sidebar .shadow {
+    padding: 0.125rem;
+    background-color: white;
+}
+
+.fi-main-ctn {
+    background-color: #f5f7f6;
+}
+
+.fi-sidebar-header-ctn,
+.fi-sidebar-footer {
+    padding-left: 0.125rem;
+    padding-right: 0.125rem;
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+}
+
+.aside .fi-sidebar-nav,
+.fi-wi-stats-overview .fi-section-content-ctn {
+    padding: 0 !important;
+}
+
+.fi-sidebar-item-btn {
+    padding-left: 0.125rem;
+    padding-right: 0.125rem;
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+}
+
+.fi-sidebar-item-label {
+    margin-left: 0.5rem;
+}
+
+/* -- Sidebar visual match tweaks -------------------------------------------------- */
+/* Aim: recreate the compact sidebar in the attached design (avatar, name, role,
+       compact nav list with a highlighted active item). Adjust values if you want
+       a wider/narrower or different color.
+    */
+
+.fi-sidebar {
+    /* keep the panel width controlled by Filament, but ensure spacing fits */
+    padding-top: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.fi-sidebar .fi-sidebar-header-ctn {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    /* 10px */
+    padding: 0.6rem 0.75rem;
+}
+
+.fi-sidebar .fi-sidebar-header-logo-ctn img,
+.fi-sidebar .fi-sidebar-header-logo-ctn svg {
+    width: 56px;
+    height: 56px;
+    border-radius: 0.5rem;
+    /* rounded square like the screenshot */
+    object-fit: cover;
+}
+
+.fi-sidebar .fi-sidebar-header-ctn .fi-sidebar-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.fi-sidebar .fi-sidebar-header-ctn .fi-sidebar-header .fi-heading,
+.fi-sidebar .fi-sidebar-header-ctn .fi-sidebar-header h3,
+.fi-sidebar .fi-sidebar-header-ctn .fi-sidebar-header .fi-label {
+    margin: 0;
+    line-height: 1;
+}
+
+.fi-sidebar .fi-sidebar-header-ctn .fi-sidebar-header strong,
+.fi-sidebar .fi-sidebar-header-ctn .fi-sidebar-header h3 {
+    font-size: 1rem;
+    /* slightly larger name */
+    font-weight: 600;
+    color: #0f172a;
+    /* dark slate */
+}
+
+.fi-sidebar .fi-sidebar-header-ctn .fi-sidebar-header p,
+.fi-sidebar .fi-sidebar-header-ctn .fi-sidebar-header .muted {
+    font-size: 0.8125rem;
+    /* 13px */
+    color: #6b7280;
+}
+
+/* Nav items: compact rows with icon + label; active row highlighted */
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 0.75rem;
+    font-size: 0.95rem;
+    color: #111827;
+    border-radius: 0.25rem;
+}
+
+/* Icon container */
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn .fi-sidebar-item-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.375rem;
+    /* 22px */
+    height: 1.375rem;
+}
+
+/* Active item. Filament may add an active class or aria attributes; target both */
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn[aria-current="true"],
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn.is-active,
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn.active,
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn:where(.fi-is-active) {
+    background-color: var(--app-primary-hex) !important;
+    color: #fff !important;
+}
+
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn[aria-current="true"] .fi-sidebar-item-icon,
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn.is-active .fi-sidebar-item-icon {
+    color: #fff;
+}
+
+/* Also target Filament's default active parent class (.fi-active) to override vendor rules */
+.fi-sidebar .fi-sidebar-item.fi-active>.fi-sidebar-item-btn {
+    background-color: var(--app-primary-hex) !important;
+    color: #fff !important;
+}
+
+.fi-sidebar .fi-sidebar-item.fi-active>.fi-sidebar-item-btn .fi-icon,
+.fi-sidebar .fi-sidebar-item.fi-active>.fi-sidebar-item-btn .fi-sidebar-item-label {
+    color: #fff !important;
+}
+
+.bg-shade-min {
+    background-color: color-mix(in srgb, var(--app-primary-hex) 14%, transparent);
+}
+
+/* Primary button override to match the attached image color */
+.fi-btn:not(.fi-outlined):not(.fi-disabled),
+button.fi-btn:not(.fi-outlined):not(.fi-disabled),
+a.fi-btn:not(.fi-outlined):not(.fi-disabled) {
+    background-color: var(--app-primary-hex) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+}
+
+.fi-btn:not(.fi-outlined):not(.fi-disabled):hover,
+button.fi-btn:not(.fi-outlined):not(.fi-disabled):hover,
+a.fi-btn:not(.fi-outlined):not(.fi-disabled):hover {
+    filter: brightness(0.95);
+}
+
+/* Slight divider between items (subtle) */
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item,
+li.fi-sidebar-group.fi-collapsible.fi-collapsed {
+    border-bottom: 1px solid #0738271a;
+}
+
+/* Make footer (logout) stick to bottom */
+.fi-sidebar .fi-sidebar-footer {
+    margin-top: auto;
+    padding: 1rem;
+}
+
+/* a11y / hover states */
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn:hover {
+    background-color: rgba(15, 23, 42, 0.03);
+}
+
+/* Raw CSS fallback for specificity */
+.fi-sidebar.fi-main-sidebar {
+    padding: 0px !important;
+}
+
+.fi-sidebar-header-ctn,
+.fi-sidebar-footer {
+    padding: 0.125rem !important;
+}
+
+.fi-sidebar-nav {
+    padding: 0px !important;
+    padding-top: 5px !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.fi-sidebar-nav::-webkit-scrollbar {
+    display: none;
+}
+
+/* .fi-sidebar, .fi-main-sidebar, .fi-sidebar-open {
+    width: 230px !important;
+} */
+
+.fi-sidebar-nav-groups {
+    margin-left: 0px !important;
+    width: 100% !important;
+}
+
+.fi-sidebar-item-btn {
+    gap: 2px !important;
+}
+
+.fi-page-header-main-ctn {
+    padding: 0px !important;
+    gap: 16px !important;
+}
+
+.fi-main,
+.fi-width-7xl {
+    padding: 16px !important;
+    min-height: calc(100vh - 45px) !important;
+    max-width: 100% !important;
+}
+
+.fi-sc.fi-sc-has-gap {
+    padding: 0px !important;
+    gap: 16px !important;
+}
+
+.fi-sc-tabs.fi-contained .fi-sc-tabs-tab.fi-active {
+    padding: 16px !important;
+}
+
+.fi-section-content-ctn {
+    padding: 16px !important;
+}
+
+.fi-sidebar-header {
+    display: none;
+}
+
+/* Header */
+.fi-topbar {
+    background-color: var(--app-primary-hex) !important;
+    color: #fff !important;
+}
+
+.fi-sidebar .fi-sidebar-nav .fi-sidebar-item-btn {
+    border-radius: 0px !important;
+}
+
+.fi-header-heading {
+    font-size: 18px !important;
+}
+
+.fi-sidebar-group-btn {
+    padding: 8px 12px !important;
+}
+
+.fi-sidebar-nav-groups {
+    gap: 0px !important;
+}
+
+
+.fi-sidebar-item-grouped-border-part-not-last,
+.fi-sidebar-item-grouped-border-part-not-first {
+    display: none;
+}
+
+.fi-sidebar-header-ctn {
+    display: none !important;
+}
+
+.fi-sidebar-footer {
+    display: none;
+}
+
+.fi-tabs-item {
+    &.fi-active {
+
+        & .fi-tabs-item-label,
+        & .fi-icon {
+            color: var(--app-primary-hex) !important;
+        }
+    }
+}
+
+.fi-simple-header-heading {
+    display: none !important;
+}
+
+img.fi-logo {
+    height: 60px !important;
+}
+
+.fi-logo {
+    margin-bottom: 0px !important;
+}
+
+.fi-topbar img.fi-logo {
+    height: 40px !important;
+}
+
+/* Ensure pagination container is a flex container so `order` takes effect */
+.custom-pagination .filament-pagination {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between !important;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.custom-pagination .fi-pagination {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 1rem;
+}
+
+.custom-pagination .fi-pagination-overview {
+    order: 1;
+}
+
+.custom-pagination .fi-pagination-records-per-page-select-ctn {
+    order: 3;
+}
+
+.custom-pagination .fi-pagination-items {
+    order: 2;
+}
+
+.stroke-width svg {
+    stroke-width: 4 !important;
+}
+
+.fi-input-wrp {
+    &:not(.fi-disabled):not(:has(.fi-ac-action:focus)) {
+        &:focus-within {
+            --tw-ring-color: var(--app-primary-hex);
+        }
+    }
+}
+
+/* ////////////////////////////////////////////////////////////////////////////////////////// */
+
+/* =====================
+   TYPOGRAPHY
+===================== */
+.fs-xs {
+    font-size: 0.75rem;
+}
+
+.fs-sm {
+    font-size: 0.875rem;
+}
+
+.fs-md {
+    font-size: 1rem;
+}
+
+.fs-lg {
+    font-size: 1.25rem;
+}
+
+.fs-xl {
+    font-size: 1.5rem;
+}
+
+.fw-light {
+    font-weight: 300;
+}
+
+.fw-normal {
+    font-weight: 400;
+}
+
+.fw-semibold {
+    font-weight: 600;
+}
+
+.fw-bold {
+    font-weight: 700;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.uppercase {
+    text-transform: uppercase;
+}
+
+.lowercase {
+    text-transform: lowercase;
+}
+
+.capitalize {
+    text-transform: capitalize;
+}
+
+.svg-color-primary {
+    fill: var(--app-primary-hex);
+}
+
+.text-primary {
+    color: var(--app-primary-hex);
+}
+
+.text-success {
+    color: #198754;
+}
+
+.text-danger {
+    color: #ff0000;
+}
+
+.text-warning {
+    color: #ffc107;
+}
+
+.text-info {
+    color: #0dcaf0;
+}
+
+.text-light {
+    color: #f8f9fa;
+}
+
+.text-dark {
+    color: #212529;
+}
+
+.text-muted {
+    color: #6c757d;
+}
+
+/* =====================
+   BACKGROUND COLORS
+===================== */
+.bg-primary {
+    background-color: var(--app-primary-hex) !important;
+    color: #fff;
+}
+
+.bg-primary-100 {
+    background-color: var(--app-primary-hex-12);
+    color: var(--app-primary-hex);
+}
+
+.bg-grey {
+    background-color: #eaeaea;
+}
+
+.bg-secondary {
+    background-color: var(--app-secondary-hex);
+    color: #fff;
+}
+
+.text-secondary {
+    color: var(--app-secondary-hex);
+}
+
+.bg-danger {
+    background-color: #ff0000;
+    color: #fff;
+}
+
+.bg-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.bg-info {
+    background-color: #0dcaf0;
+    color: #212529;
+}
+
+.bg-light {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+
+.bg-dark {
+    background-color: #212529;
+    color: #fff;
+}
+
+.bg-white {
+    background-color: #fff;
+    color: #212529;
+}
+
+.bg-grey-200 {
+    background-color: #e7e7e7;
+    color: #212529;
+}
+
+/* =====================
+   BORDERS
+===================== */
+.border {
+    border: 1px solid var(--border);
+}
+
+.border-b {
+    border-bottom: 1px solid var(--border);
+}
+
+.border-r {
+    border-right: 1px solid var(--border);
+}
+
+.border-primary {
+    border-color: var(--app-primary-hex) !important;
+}
+
+.border {
+    border: 1px solid #dee2e6;
+}
+
+.border-0 {
+    border: 0;
+}
+
+.border-2 {
+    border: 2px solid #dee2e6;
+}
+
+.border-3 {
+    border: 3px solid #dee2e6;
+}
+
+.border-secondary {
+    border-color: #6c757d;
+}
+
+.border-success {
+    border-color: #198754;
+}
+
+.border-danger {
+    border-color: #ff0000;
+}
+
+.border-warning {
+    border-color: #ffc107;
+}
+
+.border-info {
+    border-color: #0dcaf0;
+}
+
+.border-light {
+    border-color: #f8f9fa;
+}
+
+.border-dark {
+    border-color: #212529;
+}
+
+svg {
+    stroke-width: 2px;
+}
+
+/* Ensure checkboxes show primary color when checked */
+.fi-checkbox-input:checked,
+input[type="checkbox"].fi-checkbox-input:checked {
+    background-color: var(--app-primary-hex) !important;
+    border-color: var(--app-primary-hex) !important;
+    accent-color: var(--app-primary-hex) !important;
+}
+
+/* For standard HTML checkboxes */
+input[type="checkbox"]:checked {
+    background-color: var(--app-primary-hex) !important;
+    border-color: var(--app-primary-hex) !important;
+    accent-color: var(--app-primary-hex) !important;
+}
+
+/* Table checkboxes */
+.fi-ta-checkbox-cell input[type="checkbox"]:checked,
+.fi-table-checkbox:checked {
+    background-color: var(--app-primary-hex) !important;
+    border-color: var(--app-primary-hex) !important;
+    accent-color: var(--app-primary-hex) !important;
+}
+
+/* Focus state for checkboxes */
+.fi-checkbox-input:focus,
+input[type="checkbox"]:focus {
+    --tw-ring-color: var(--app-primary-hex) !important;
+    border-color: var(--app-primary-hex) !important;
+    outline-color: var(--app-primary-hex) !important;
+}
+
+/* Ensure checkbox checkmark is visible */
+.fi-checkbox-input:checked::before,
+input[type="checkbox"]:checked::before {
+    color: #fff !important;
+}
+
+/* For Tailwind-based checkboxes using accent-color */
+input[type="checkbox"] {
+    accent-color: var(--app-primary-hex) !important;
+}
+
+/* Filament table checkboxes - ensure they show primary color */
+.fi-ta-checkbox-cell input[type="checkbox"]:checked,
+.fi-table-checkbox:checked,
+.fi-ta-checkbox input[type="checkbox"]:checked {
+    background-color: var(--app-primary-hex) !important;
+    border-color: var(--app-primary-hex) !important;
+    accent-color: var(--app-primary-hex) !important;
+}
+
+/* Filament form checkboxes */
+.fi-fo-checkbox input[type="checkbox"]:checked,
+.fi-checkbox-input:checked {
+    background-color: var(--app-primary-hex) !important;
+    border-color: var(--app-primary-hex) !important;
+    accent-color: var(--app-primary-hex) !important;
+}
+
+/* Ensure the checkmark icon is white when checked */
+.fi-checkbox-input:checked::after,
+input[type="checkbox"]:checked::after {
+    color: #fff !important;
+    border-color: #fff !important;
+}
+
+/* =====================
+   CUSTOM SIDEBAR STYLES
+===================== */
+.custom-sidebar {
+    @apply bg-white border-r border-gray-200 flex flex-col h-full;
+    width: 15rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.custom-sidebar-header {
+    @apply flex items-center gap-2 p-4 border-b border-gray-200;
+    min-height: 4rem;
+}
+
+/* .fi-toggle-on {
+    background: green;
+} */
+
+.custom-sidebar-toggle-btn {
+    @apply p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors;
+    @apply flex items-center justify-center;
+}
+
+.custom-sidebar-logo {
+    @apply flex-1 flex items-center;
+}
+
+.custom-sidebar-nav {
+    @apply flex-1 overflow-y-auto overflow-x-hidden;
+    padding-top: 1rem;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.custom-sidebar-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.custom-sidebar-menu {
+    @apply space-y-1 px-2;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.custom-sidebar-menu-item {
+    @apply list-none;
+    margin: 0;
+}
+
+.custom-sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 transition-all duration-200;
+    @apply hover:bg-gray-100 hover:text-gray-900;
+    text-decoration: none;
+    width: 100%;
+}
+
+.custom-sidebar-link.active {
+    background-color: var(--app-primary-hex) !important;
+    color: #fff !important;
+}
+
+.custom-sidebar-link.active:hover {
+    filter: brightness(0.95);
+}
+
+.custom-sidebar-link-grouped {
+    @apply pl-8;
+}
+
+.custom-sidebar-icon {
+    @apply flex-shrink-0 flex items-center justify-center;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.custom-sidebar-label {
+    @apply flex-1 truncate;
+}
+
+.custom-sidebar-badge {
+    @apply px-2 py-0.5 text-xs font-semibold rounded-full;
+}
+
+.custom-sidebar-badge-primary {
+    background-color: rgba(7, 56, 39, 0.1);
+    color: var(--app-primary-hex);
+}
+
+.custom-sidebar-group {
+    @apply mb-1;
+}
+
+.custom-sidebar-group-header {
+    @apply w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-700 transition-all duration-200;
+    @apply hover:bg-gray-100 hover:text-gray-900;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+}
+
+.custom-sidebar-group-header .custom-sidebar-chevron {
+    @apply ml-auto;
+}
+
+.custom-sidebar-group-items {
+    @apply mt-1 space-y-1 overflow-hidden;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.custom-sidebar-group.is-collapsed .custom-sidebar-group-items {
+    display: none;
+}
+
+.custom-sidebar-footer {
+    @apply p-4 border-t border-gray-200 mt-auto;
+}
+
+/* Collapsed state */
+.custom-sidebar:not(.custom-sidebar-open) .custom-sidebar-link {
+    @apply justify-center px-0;
+}
+
+.advertisements-grid-table .fi-ta-content-grid-item {
+    position: relative !important;
+}
+
+.advertisements-grid-table .fi-ta-record-checkbox-column {
+    position: absolute !important;
+    z-index: 30 !important;
+    top: 1rem !important;
+    left: 1rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.advertisements-grid-table .fi-ta-record-checkbox-column .fi-checkbox-input {
+    background-color: white !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    transition: transform 0.2s ease-in-out !important;
+}
+
+.advertisements-grid-table .fi-ta-record-checkbox-column .fi-checkbox-input:hover {
+    transform: scale(1.1) !important;
+}
+
+/* Remove extra layout padding from the record container */
+.advertisements-grid-table .fi-ta-content-grid-item>div {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Ensure the card itself doesn't have offset */
+.advertisements-grid-table .fi-ta-content-grid-item .fi-ta-stack {
+    width: 100% !important;
+}
+
+.custom-sidebar:not(.custom-sidebar-open) .custom-sidebar-link-grouped {
+    @apply pl-2;
+}
+
+.custom-sidebar:not(.custom-sidebar-open) .custom-sidebar-group-header {
+    @apply justify-center px-2;
+}
+
+/* Responsive */
+@media (max-width: 1023px) {
+    .custom-sidebar {
+        @apply fixed left-0 top-0 z-50 transform transition-transform duration-300;
+        height: 100vh;
+    }
+
+    .custom-sidebar:not(.custom-sidebar-open) {
+        @apply -translate-x-full;
+    }
+}
+
+/* Ensure active state is visible */
+.custom-sidebar-link.active .custom-sidebar-icon,
+.custom-sidebar-link.active .custom-sidebar-label,
+.custom-sidebar-link.active .custom-sidebar-badge {
+    color: #fff !important;
+}
+
+/* Override Filament's default sidebar styles when using custom sidebar */
+.custom-sidebar.fi-sidebar {
+    padding: 0;
+}
+
+.custom-sidebar .fi-sidebar-header-ctn {
+    display: none;
+}
+
+.custom-sidebar .fi-sidebar-nav {
+    padding: 0;
+}
+
+.custom-sidebar-link {
+    border-radius: 0px !important;
+}
+
+/* =====================
+   COLLAPSIBLE SIDEBAR DYNAMIC STYLES
+   Moved from theme-colors.blade.php
+===================== */
+
+/* Force sidebar transition with smoother easing */
+.fi-sidebar {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Allow floating button to stick out */
+    overflow: visible !important;
+    will-change: width;
+}
+
+.sidebar_collapsed_icon {
+    right: -10px !important;
+    top: 6px !important;
+}
+
+/* Scroll handling moved to nav so button is not clipped */
+.fi-sidebar-nav {
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: 100%;
+}
+
+.fi-ta.advertisements-grid-table .fi-ta-content-grid .fi-checkbox-input,
+.medical-reports-grid-table .fi-ta-content-grid .fi-checkbox-input,
+.module-documents-grid-table .fi-ta-content-grid .fi-checkbox-input {
+    position: absolute;
+    z-index: 10;
+    top: 7px;
+    right: 9px;
+}
+
+.advertisements-grid-table .fi-ta-record-content-ctn {
+    row-gap: 0;
+}
+
+/* Smooth Label Transition - The Magic Fix for "Stuck" Animation */
+.fi-sidebar-item-label,
+.fi-sidebar-group-label {
+    opacity: 1;
+    /* Start fully visible width */
+    max-width: 200px;
+    /* Animate opacity and width to slide text in/out nicely */
+    transition: opacity 0.2s ease, max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Ensure logo container doesn't jump */
+.fi-sidebar-header-logo-ctn {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+
+    /* Default State (Collapsed) */
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar {
+        width: 4rem !important;
+        padding-inline: 0 !important;
+    }
+
+    /* Open State (Expanded) */
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar.fi-sidebar-open {
+        width: 17rem !important;
+    }
+
+    /* Hide Text when Collapsed - using max-width for smooth transition instead of display:none */
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-label,
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group-label,
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group-collapse-button {
+        opacity: 0 !important;
+        max-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        pointer-events: none;
+    }
+
+    /* Hide Group Headers (Label + Arrow) completely when collapsed */
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group-btn {
+        display: none !important;
+    }
+
+    /* Remove padding/margin from group lists to flatten visuals */
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group-items {
+        padding-inline: 0 !important;
+        margin-block: 0 !important;
+    }
+
+    /* Hide Sub-Navigation items when collapsed */
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-sub-group-items,
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group-items .fi-sidebar-group-items {
+        display: none !important;
+    }
+
+    /* Ensure item content (icon+text wrapper) is flexible */
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-button {
+        justify-content: center;
+        /* keep centered */
+        padding-inline: 0;
+    }
+
+    /* Center Icons when Collapsed */
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-btn {
+        justify-content: center;
+        padding-inline: 0;
+    }
+}

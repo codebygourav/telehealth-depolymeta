@@ -1,0 +1,10 @@
+/* Adjust padding for the main content area in Filament 4 */
+
+.fi-main {
+    padding: 2rem !important; /* You can change to 1rem, 3rem, etc. */
+}
+
+/* Optionally adjust page container too */
+.fi-main-content {
+    padding: 2rem !important;
+}
