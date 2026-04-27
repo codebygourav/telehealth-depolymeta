@@ -15,7 +15,7 @@ jobs:
 
       - name: Clone Git1
         run: |
-          git clone https://${{ secrets.GIT1_TOKEN }}@github.com/CMC-Telehealth-Filemant/cmc-telehealth-filament.git source
+          git clone https://${{ secrets.REPO1_TOKEN }}@github.com/CMC-Telehealth-Filemant/cmc-telehealth-filament.git source
 
       - name: Sync src → backend
         run: |
