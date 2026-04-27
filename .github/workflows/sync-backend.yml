@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   sync:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
@@ -23,11 +22,11 @@ jobs:
           repository: CMC-Telehealth-Filemant/cmc-telehealth-filament
           token: ${{ secrets.REPO1_TOKEN }}
           path: source
-          sparse-checkout: |
-            src
+          ref: main
 
-      - name: Sync src → backend
+      - name: Sync → backend
         run: |
+          mkdir -p backend
           rsync -av \
           --exclude 'node_modules' \
           --exclude 'vendor' \
