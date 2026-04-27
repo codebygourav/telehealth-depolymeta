@@ -1,0 +1,36 @@
+name: Sync Backend from Git1
+
+on:
+  workflow_dispatch:   # manual trigger
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes (optional)
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo2
+        uses: actions/checkout@v3
+
+      - name: Clone Git1
+        run: |
+          git clone https://${{ secrets.GIT1_TOKEN }}@github.com/CMC-Telehealth-Filemant/cmc-telehealth-filament.git source
+
+      - name: Sync src → backend
+        run: |
+          rsync -av \
+          --exclude 'node_modules' \
+          --exclude 'vendor' \
+          --exclude '.git' \
+          --exclude '.env' \
+          --exclude 'storage' \
+          source/src/ backend/
+
+      - name: Commit & Push
+        run: |
+          git config user.name "sync-bot"
+          git config user.email "sync@bot.com"
+          git add .
+          git commit -m "Auto sync backend from Git1" || echo "No changes"
+          git push
