@@ -7,6 +7,36 @@ use Carbon\Carbon;
 
 class DoctorAvailabilityValidationService
 {
+    private function isNonRecurringSlotInFutureWindow(?string $date, string $endTime): bool
+    {
+        $normalizedDate = $this->normalizeDate($date);
+        $normalizedEnd = $this->normalizeTime($endTime);
+
+        if (!$normalizedDate || !$normalizedEnd) {
+            return true;
+        }
+
+        try {
+            return Carbon::parse("{$normalizedDate} {$normalizedEnd}")->isFuture();
+        } catch (\Exception $e) {
+            return true;
+        }
+    }
+
+    private function hasRecurringWindowPassed(?string $recurringEndDate): bool
+    {
+        $normalizedRecurringEnd = $this->normalizeDate($recurringEndDate);
+        if (!$normalizedRecurringEnd) {
+            return false;
+        }
+
+        try {
+            return Carbon::parse($normalizedRecurringEnd)->endOfDay()->isPast();
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
     /**
      * ----------------------------------------------------------------------
      * GLOBAL AVAILABILITY RULES (Telehealth)
@@ -121,11 +151,15 @@ class DoctorAvailabilityValidationService
         string $startTime,
         string $endTime,
         ?string $excludeId = null,
-        ?string $dayOfWeek = null
+        ?string $dayOfWeek = null,
+        ?string $recurringStartDate = null,
+        ?string $recurringEndDate = null
     ): bool {
         $normalizedDate = $this->normalizeDate($date);
         $normalizedStart = $this->normalizeTime($startTime);
         $normalizedEnd = $this->normalizeTime($endTime);
+        $normalizedRecurringStart = $this->normalizeDate($recurringStartDate);
+        $normalizedRecurringEnd = $this->normalizeDate($recurringEndDate);
 
         if (!$normalizedStart || !$normalizedEnd) {
             return false;
@@ -152,14 +186,31 @@ class DoctorAvailabilityValidationService
             if ($dayOfWeek) {
                 $query->where('day_of_week', strtolower($dayOfWeek));
             }
+            if ($normalizedRecurringStart) {
+                $query->where('recurring_start_date', $normalizedRecurringStart);
+            }
+            if ($normalizedRecurringEnd) {
+                $query->where('recurring_end_date', $normalizedRecurringEnd);
+            }
         }
 
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
         }
 
-        // Exclude soft-deleted records
-        return $query->exists();
+        // Exclude soft-deleted records and ignore expired windows
+        return $query->get()->contains(function ($slot) {
+            if (!$slot->is_recurring) {
+                return $this->isNonRecurringSlotInFutureWindow(
+                    $slot->date?->format('Y-m-d') ?? $slot->date,
+                    $slot->end_time
+                );
+            }
+
+            return !$this->hasRecurringWindowPassed(
+                $slot->recurring_end_date?->format('Y-m-d') ?? $slot->recurring_end_date
+            );
+        });
     }
 
     /**
@@ -171,12 +222,16 @@ class DoctorAvailabilityValidationService
         string $startTime,
         string $endTime,
         ?string $excludeId = null,
-        ?string $dayOfWeek = null
+        ?string $dayOfWeek = null,
+        ?string $recurringStartDate = null,
+        ?string $recurringEndDate = null
     ): array {
         $overlaps = [];
         $normalizedDate = $this->normalizeDate($date);
         $normalizedStart = $this->normalizeTime($startTime);
         $normalizedEnd = $this->normalizeTime($endTime);
+        $normalizedRecurringStart = $this->normalizeDate($recurringStartDate);
+        $normalizedRecurringEnd = $this->normalizeDate($recurringEndDate);
 
         if (!$normalizedStart || !$normalizedEnd) {
             return $overlaps;
@@ -207,6 +262,28 @@ class DoctorAvailabilityValidationService
         $existingSlots = $query->get();
 
         foreach ($existingSlots as $slot) {
+            if (!$slot->is_recurring && !$this->isNonRecurringSlotInFutureWindow(
+                $slot->date?->format('Y-m-d') ?? $slot->date,
+                $slot->end_time
+            )) {
+                continue;
+            }
+
+            if ($slot->is_recurring && $this->hasRecurringWindowPassed(
+                $slot->recurring_end_date?->format('Y-m-d') ?? $slot->recurring_end_date
+            )) {
+                continue;
+            }
+
+            if (! $normalizedDate && ! $this->recurringRangesOverlap(
+                $normalizedRecurringStart,
+                $normalizedRecurringEnd,
+                $slot->recurring_start_date?->format('Y-m-d') ?? $slot->recurring_start_date,
+                $slot->recurring_end_date?->format('Y-m-d') ?? $slot->recurring_end_date
+            )) {
+                continue;
+            }
+
             $existingStart = $this->normalizeTime($slot->start_time);
             $existingEnd = $this->normalizeTime($slot->end_time);
 
@@ -228,6 +305,20 @@ class DoctorAvailabilityValidationService
         return $overlaps;
     }
 
+    private function recurringRangesOverlap(
+        ?string $startA,
+        ?string $endA,
+        ?string $startB,
+        ?string $endB
+    ): bool {
+        $normalizedStartA = $this->normalizeDate($startA) ?? '0001-01-01';
+        $normalizedEndA = $this->normalizeDate($endA) ?? '9999-12-31';
+        $normalizedStartB = $this->normalizeDate($startB) ?? '0001-01-01';
+        $normalizedEndB = $this->normalizeDate($endB) ?? '9999-12-31';
+
+        return $normalizedStartA <= $normalizedEndB && $normalizedStartB <= $normalizedEndA;
+    }
+
     /**
      * Validate a single slot against database and form data
      * Returns array of error messages (empty if valid)
@@ -240,7 +331,8 @@ class DoctorAvailabilityValidationService
         bool $isRecurring = false,
         ?string $slotId = null,
         array $existingFormSlots = [],
-        ?string $dayOfWeek = null
+        ?string $dayOfWeek = null,
+        ?string $recurringEndDate = null
     ): array {
         $errors = [];
 
@@ -260,6 +352,16 @@ class DoctorAvailabilityValidationService
             return $errors;
         }
 
+        // Past one-time slots should not block scheduling.
+        if (!$isRecurring && !$this->isNonRecurringSlotInFutureWindow($normalizedDate, $normalizedEnd)) {
+            return $errors;
+        }
+
+        // Recurring slots whose recurrence window already ended should not block scheduling.
+        if ($isRecurring && $this->hasRecurringWindowPassed($recurringEndDate)) {
+            return $errors;
+        }
+
         // 2. Check for exact duplicates in form data
         foreach ($existingFormSlots as $existingSlot) {
             if (!is_array($existingSlot)) {
@@ -275,8 +377,17 @@ class DoctorAvailabilityValidationService
             $existingEnd = $this->normalizeTime($existingSlot['end_time'] ?? null);
             $existingIsRecurring = (bool)($existingSlot['is_recurring'] ?? false);
             $existingDate = $existingIsRecurring ? null : $this->normalizeDate($existingSlot['date'] ?? null);
+            $existingRecurringEndDate = $existingSlot['recurring_end_date'] ?? null;
 
             if (!$existingStart || !$existingEnd) {
+                continue;
+            }
+
+            if (!$existingIsRecurring && !$this->isNonRecurringSlotInFutureWindow($existingDate, $existingEnd)) {
+                continue;
+            }
+
+            if ($existingIsRecurring && $this->hasRecurringWindowPassed($existingRecurringEndDate)) {
                 continue;
             }
 

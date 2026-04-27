@@ -158,7 +158,7 @@ trait HasDoctorAvailabilitySlideOver
                 if ($results['totalSaved'] === 0 && $results['totalUpdated'] === 0) {
                     $title = $results['hasErrors'] ? 'Nothing Imported' : 'No New Slots Added';
                     $notificationStyle = $results['hasErrors'] ? 'danger' : 'warning';
-                    
+
                     $body = [];
                     if ($results['totalSkipped'] > 0) {
                         $body[] = "{$results['totalSkipped']} slots were already present and skipped.";
@@ -188,7 +188,7 @@ trait HasDoctorAvailabilitySlideOver
                     }
 
                     if ($results['hasErrors']) {
-                        $notification->warning(); 
+                        $notification->warning();
                         $errorBody = implode("\n", array_unique(array_slice($results['errors'], 0, 3)));
                         if ($errorBody) {
                              $notification->body(($notification->getBody() ? $notification->getBody() . "\n\n" : "") . "Note: Some issues occurred during import:\n" . $errorBody);
@@ -373,6 +373,21 @@ trait HasDoctorAvailabilitySlideOver
         return $this->getValidationService()->normalizeTime($time);
     }
 
+    private function normalizeConsultationType($value): string
+    {
+        return strtolower((string) $value) === 'video' ? 'video' : 'in-person';
+    }
+
+    private function normalizeOpdType($value, string $consultationType): ?string
+    {
+        if ($consultationType === 'video') {
+            return null;
+        }
+
+        $normalized = strtolower(trim((string) ($value ?? 'general')));
+        return in_array($normalized, ['general', 'private'], true) ? $normalized : 'general';
+    }
+
     /**
      * Check if an availability slot already exists
      * Matches the unique constraint: ['doctor_id', 'date', 'start_time', 'end_time']
@@ -384,7 +399,9 @@ trait HasDoctorAvailabilitySlideOver
         string $startTime,
         string $endTime,
         ?string $excludeId = null,
-        ?string $dayOfWeek = null
+        ?string $dayOfWeek = null,
+        ?string $recurringStartDate = null,
+        ?string $recurringEndDate = null
     ): bool {
         return $this->getValidationService()->slotExistsInDatabase(
             $doctorId,
@@ -392,7 +409,9 @@ trait HasDoctorAvailabilitySlideOver
             $startTime,
             $endTime,
             $excludeId,
-            $dayOfWeek
+            $dayOfWeek,
+            $recurringStartDate,
+            $recurringEndDate
         );
     }
     protected function getAvailabilitySlotsData(): array
@@ -421,7 +440,7 @@ trait HasDoctorAvailabilitySlideOver
                         'end_time' => \Carbon\Carbon::parse($slot->end_time)->format('H:i'),
                         'capacity' => $slot->capacity,
                         'consultation_type' => $slot->consultation_type,
-                        'opd_type' => $slot->opd_type ?? 'general',
+                        'opd_type' => $slot->consultation_type === 'video' ? null : ($slot->opd_type ?? 'general'),
                         'doctor_room' => $slot->doctor_room,
                         'consultation_fee' => $slot->consultation_fee ?? 0,
                         'is_available' => (bool) ($slot->is_available ?? true),
@@ -560,21 +579,44 @@ trait HasDoctorAvailabilitySlideOver
                             }
                         }
 
-                        // Track this unique slot key to avoid duplicates within this same request
-                        $slotKey = $dayKeyLower . '_' . ($normalizedDate ?? 'null') . '_' . $start . '_' . $end;
+                        $normalizedRecurringStart = $isRecurring
+                            ? $this->getValidationService()->normalizeDate($slot['recurring_start_date'] ?? null)
+                            : null;
+                        $normalizedRecurringEnd = $isRecurring
+                            ? $this->getValidationService()->normalizeDate($slot['recurring_end_date'] ?? null)
+                            : null;
+
+                        $slotKey = implode('_', [
+                            $dayKeyLower,
+                            $normalizedDate ?? 'null',
+                            $start,
+                            $end,
+                            $normalizedRecurringStart ?? 'null',
+                            $normalizedRecurringEnd ?? 'null',
+                        ]);
 
                         if (isset($processedKeys[$slotKey])) {
                             $totalSkipped++;
-                            $hasErrors = true;
-                            $dayName = ucfirst($dayKeyLower);
-                            $dateStr = $normalizedDate ? \Carbon\Carbon::parse($normalizedDate)->format('M d, Y') : 'recurring';
-                            $errors[] = "Duplicate in file: {$dayName} {$start}-{$end} on {$dateStr}";
                             continue;
                         }
                         $processedKeys[$slotKey] = true;
 
+                        if (! $slotId && $this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
+                            $totalSkipped++;
+                            continue;
+                        }
+
                         // Check for overlaps in DB
-                        $overlaps = $this->getValidationService()->slotOverlapsInDatabase($doctorId, $normalizedDate, $start, $end, $slotId, $dayKeyLower);
+                        $overlaps = $this->getValidationService()->slotOverlapsInDatabase(
+                            $doctorId,
+                            $normalizedDate,
+                            $start,
+                            $end,
+                            $slotId,
+                            $dayKeyLower,
+                            $normalizedRecurringStart,
+                            $normalizedRecurringEnd
+                        );
                         if (!empty($overlaps)) {
                             $overlap = $overlaps[0];
                             $dayName = ucfirst($dayKeyLower);
@@ -590,14 +632,16 @@ trait HasDoctorAvailabilitySlideOver
                         $endTimeFormatted = \Carbon\Carbon::parse($end)->format('H:i:00');
 
                         // Only save required fields for availability
+                        $consultationType = $this->normalizeConsultationType($slot['consultation_type'] ?? 'in-person');
+                        $normalizedOpdType = $this->normalizeOpdType($slot['opd_type'] ?? null, $consultationType);
                         $availabilityData = [
                             'doctor_id' => $doctorId,
                             'day_of_week' => $dayKeyLower,
                             'start_time' => $startTimeFormatted,
                             'end_time' => $endTimeFormatted,
                             'capacity' => (int) ($slot['capacity'] ?? 1),
-                            'consultation_type' => $slot['consultation_type'] ?? 'in-person',
-                            'opd_type' => $slot['opd_type'] ?? 'general',
+                            'consultation_type' => $consultationType,
+                            'opd_type' => $normalizedOpdType,
                             'consultation_fee' => (float) ($slot['consultation_fee'] ?? 0),
                             'doctor_room' => $slot['doctor_room'] ?? null,
                             'is_recurring' => $isRecurring,
@@ -634,7 +678,7 @@ trait HasDoctorAvailabilitySlideOver
                             $availabilityData['date'] = $normalizedDate;
                             $availabilityData['recurring_start_date'] = null;
                             $availabilityData['recurring_end_date'] = null;
-                            $availabilityData['recurring_months'] = null;
+                            $availabilityData['recurring_months'] = 3;
                         }
 
                         // If updating existing slot
@@ -663,8 +707,8 @@ trait HasDoctorAvailabilitySlideOver
                                 $endChanged = $existingEnd !== $end;
                                 $capacityChanged = (int) ($existingSlot->capacity ?? 1) !== (int) ($slot['capacity'] ?? 1);
                                 $feeChanged = (float) ($existingSlot->consultation_fee ?? 0) !== (float) ($slot['consultation_fee'] ?? 0);
-                                $typeChanged = ($existingSlot->consultation_type ?? 'in-person') !== ($slot['consultation_type'] ?? 'in-person');
-                                $opdChanged = ($existingSlot->opd_type ?? 'general') !== ($slot['opd_type'] ?? 'general');
+                                $typeChanged = ($existingSlot->consultation_type ?? 'in-person') !== $consultationType;
+                                $opdChanged = (($existingSlot->consultation_type ?? 'in-person') === 'video' ? null : ($existingSlot->opd_type ?? 'general')) !== $normalizedOpdType;
                                 $availableChanged = (bool) ($existingSlot->is_available ?? true) !== (bool) ($slot['is_available'] ?? true);
                                 $recurringChanged = (bool) ($existingSlot->is_recurring ?? false) !== $isRecurring;
 
@@ -683,12 +727,8 @@ trait HasDoctorAvailabilitySlideOver
                                 }
 
                                 if ($dateChanged || $startChanged || $endChanged) {
-                                    if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $slotId, $dayKeyLower)) {
-                                        $dayName = ucfirst($dayKeyLower);
-                                        $dateStr = $normalizedDate ? \Carbon\Carbon::parse($normalizedDate)->format('M d, Y') : 'recurring';
-                                        $errors[] = "Duplicate slot: {$dayName} {$start}-{$end} on {$dateStr}";
+                                    if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $slotId, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                                         $totalSkipped++;
-                                        $hasErrors = true;
                                         continue;
                                     }
                                 }
@@ -714,12 +754,8 @@ trait HasDoctorAvailabilitySlideOver
 
                         // Creating new slot
                         if (! $slotId) {
-                            if ($this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower)) {
-                                $dayName = ucfirst($dayKeyLower);
-                                $dateStr = $normalizedDate ? \Carbon\Carbon::parse($normalizedDate)->format('M d, Y') : 'recurring';
-                                $errors[] = "Duplicate slot: {$dayName} {$start}-{$end} on {$dateStr}";
+                            if ($this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                                 $totalSkipped++;
-                                $hasErrors = true;
                                 continue;
                             }
 
@@ -731,11 +767,7 @@ trait HasDoctorAvailabilitySlideOver
                                     $processedSlotIds[$newSlot->id] = true;
                                 }
                             } catch (UniqueConstraintViolationException $e) {
-                                $dayName = ucfirst($dayKeyLower);
-                                $dateStr = $normalizedDate ? \Carbon\Carbon::parse($normalizedDate)->format('M d, Y') : 'recurring';
-                                $errors[] = "Duplicate slot: {$dayName} {$start}-{$end} on {$dateStr}";
                                 $totalSkipped++;
-                                $hasErrors = true;
                             }
                         }
                     }
@@ -757,18 +789,17 @@ trait HasDoctorAvailabilitySlideOver
                     }
 
                     if ($this->slotExists($doctorId, $normalizedTempDate, $tempStart, $tempEnd, null, $tempDay)) {
-                        $errors[] = "Duplicate quick-add slot: " . ucfirst($tempDay) . " {$tempStart}-{$tempEnd}";
                         $totalSkipped++;
-                        $hasErrors = true;
                     } else {
+                        $tempConsultationType = $this->normalizeConsultationType($data['temp_cons'] ?? 'in-person');
                         $pendingData = [
                             'doctor_id' => $doctorId,
                             'day_of_week' => $tempDay,
                             'start_time' => \Carbon\Carbon::parse($tempStart)->format('H:i:00'),
                             'end_time' => \Carbon\Carbon::parse($tempEnd)->format('H:i:00'),
                             'capacity' => (int) ($data['temp_cap'] ?? 1),
-                            'consultation_type' => $data['temp_cons'] ?? 'in-person',
-                            'opd_type' => $data['temp_opd'] ?? 'general',
+                            'consultation_type' => $tempConsultationType,
+                            'opd_type' => $this->normalizeOpdType($data['temp_opd'] ?? null, $tempConsultationType),
                             'consultation_fee' => (float) ($data['temp_fee'] ?? 0),
                             'doctor_room' => $data['temp_room'] ?? null,
                             'is_recurring' => $isRec,
@@ -789,9 +820,7 @@ trait HasDoctorAvailabilitySlideOver
                             $savedSlots[] = $pendingData;
                             $totalSaved++;
                         } catch (UniqueConstraintViolationException $e) {
-                            $errors[] = "Duplicate quick-add slot: " . ucfirst($tempDay) . " {$tempStart}-{$tempEnd}";
                             $totalSkipped++;
-                            $hasErrors = true;
                         }
                     }
                 }
@@ -828,6 +857,8 @@ trait HasDoctorAvailabilitySlideOver
                     }
                 } elseif ($hasErrors && $totalSkipped > 0) {
                     Notification::make()->title('No Changes Saved')->body('All slots were duplicates.')->danger()->send();
+                } elseif (! $hasErrors && $totalSkipped > 0) {
+                    Notification::make()->title('No New Slots Added')->body('All provided slots already existed and were skipped.')->warning()->send();
                 }
             }
         } catch (\Throwable $e) {
@@ -946,11 +977,17 @@ trait HasDoctorAvailabilitySlideOver
                         $existingRoom = empty(trim($existingSlot->doctor_room ?? '')) ? null : trim($existingSlot->doctor_room);
                         $newRoom = empty(trim($slot['doctor_room'] ?? '')) ? null : trim($slot['doctor_room']);
 
+                        $normalizedConsultationType = $this->normalizeConsultationType($slot['consultation_type'] ?? 'in-person');
+                        $normalizedOpdType = $this->normalizeOpdType($slot['opd_type'] ?? null, $normalizedConsultationType);
+                        $existingNormalizedOpdType = ($existingSlot->consultation_type ?? 'in-person') === 'video'
+                            ? null
+                            : ($existingSlot->opd_type ?? 'general');
+
                         $otherFieldsChanged =
                             ((int) ($slot['capacity'] ?? 1)) !== ((int) ($existingSlot->capacity ?? 1)) ||
                             (float) ($slot['consultation_fee'] ?? 0) !== (float) ($existingSlot->consultation_fee ?? 0) ||
-                            ($slot['consultation_type'] ?? 'in-person') !== ($existingSlot->consultation_type ?? 'in-person') ||
-                            ($slot['opd_type'] ?? 'general') !== ($existingSlot->opd_type ?? 'general') ||
+                            $normalizedConsultationType !== ($existingSlot->consultation_type ?? 'in-person') ||
+                            $normalizedOpdType !== $existingNormalizedOpdType ||
                             (bool) ($slot['is_available'] ?? true) !== (bool) ($existingSlot->is_available ?? true) ||
                             (bool) ($slot['is_recurring'] ?? false) !== (bool) ($existingSlot->is_recurring ?? false) ||
                             $newRoom !== $existingRoom;

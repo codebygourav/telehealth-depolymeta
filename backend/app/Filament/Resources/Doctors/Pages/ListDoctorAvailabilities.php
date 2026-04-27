@@ -117,7 +117,7 @@ class ListDoctorAvailabilities extends ListRecords
                             if ($results['totalSkipped'] > 0) $message[] = "{$results['totalSkipped']} already existed (skipped)";
 
                             $notification = Notification::make()
-                                ->title($results['hasErrors'] ? 'Import Partially Successful' : 'Import Successful 11')
+                                ->title($results['hasErrors'] ? 'Import Partially Successful' : 'Import Successful')
                                 ->success();
 
                             if (!empty($message)) {

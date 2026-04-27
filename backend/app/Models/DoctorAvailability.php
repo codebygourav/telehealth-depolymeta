@@ -163,7 +163,16 @@ class DoctorAvailability extends Model
                 $excludeId = $model->exists ? $model->id : null;
 
                 // Check for exact duplicate
-                if ($validationService->slotExistsInDatabase($model->doctor_id, $date, $startTime, $endTime, $excludeId, $dayOfWeek)) {
+                if ($validationService->slotExistsInDatabase(
+                    $model->doctor_id,
+                    $date,
+                    $startTime,
+                    $endTime,
+                    $excludeId,
+                    $dayOfWeek,
+                    $model->recurring_start_date?->format('Y-m-d') ?? $model->recurring_start_date,
+                    $model->recurring_end_date?->format('Y-m-d') ?? $model->recurring_end_date
+                )) {
                     $dateStr = $date
                         ? Carbon::parse($date)->format('M d, Y')
                         : "this recurring pattern on " . ucfirst($dayOfWeek);
@@ -173,7 +182,16 @@ class DoctorAvailability extends Model
                 }
 
                 // Check for overlaps
-                $overlaps = $validationService->slotOverlapsInDatabase($model->doctor_id, $date, $startTime, $endTime, $excludeId, $dayOfWeek);
+                $overlaps = $validationService->slotOverlapsInDatabase(
+                    $model->doctor_id,
+                    $date,
+                    $startTime,
+                    $endTime,
+                    $excludeId,
+                    $dayOfWeek,
+                    $model->recurring_start_date?->format('Y-m-d') ?? $model->recurring_start_date,
+                    $model->recurring_end_date?->format('Y-m-d') ?? $model->recurring_end_date
+                );
                 if (!empty($overlaps)) {
                     $overlap = $overlaps[0];
                     $dateStr = $date

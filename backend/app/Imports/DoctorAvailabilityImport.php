@@ -38,7 +38,7 @@ class DoctorAvailabilityImport implements ToCollection
             if ($index === 0) continue;
 
             $vService = app(\App\Services\DoctorAvailabilityValidationService::class);
-            
+
             $isRecurring = in_array(strtolower(trim((string)($row[9] ?? ''))), ['true', '1', 'yes', 'y']);
 
             $startDate = $vService->normalizeDate($row[10] ?? null);
@@ -58,8 +58,8 @@ class DoctorAvailabilityImport implements ToCollection
                 // Priority 1: From Recurring Start Date
                 if ($isRecurring && $startDate) {
                     $day = strtolower(Carbon::parse($startDate)->format('l'));
-                } 
-                
+                }
+
                 // Priority 2: From Day Name Column (Index 13)
                 if (!$day && !empty($row[13])) {
                     $d = strtolower(trim((string)$row[13]));
@@ -73,7 +73,7 @@ class DoctorAvailabilityImport implements ToCollection
                 if (!$day && !empty($row[1])) {
                     $d = strtolower(trim((string)$row[1]));
                     $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-                    
+
                     if (in_array($d, $days)) {
                         $day = $d;
                     } else {
@@ -103,19 +103,20 @@ class DoctorAvailabilityImport implements ToCollection
                 continue;
             }
 
+            $consultationType = $this->normalizeConsultationType($row[5] ?? null);
             $data["slots_{$day}"][] = [
                 'date' => $isRecurring ? null : ($vService->normalizeDate($row[1] ?? null)),
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'capacity' => (int) ($row[4] ?? 1),
-                'consultation_type' => $row[5] ?? 'in-person',
-                'opd_type' => !empty($row[6]) ? $row[6] : (($row[5] ?? '') === 'video' ? null : 'general'),
+                'consultation_type' => $consultationType,
+                'opd_type' => $this->normalizeOpdType($row[6] ?? null, $consultationType),
                 'doctor_room' => $row[7] ?? null,
                 'consultation_fee' => (float) ($row[8] ?? 0),
                 'is_recurring' => $isRecurring,
                 'recurring_start_date' => $startDate,
                 'recurring_end_date' => $endDate,
-                'recurring_months' => $isRecurring ? $months : null,
+                'recurring_months' => $isRecurring ? ($months ?? 3) : 0,
             ];
         }
 
@@ -123,5 +124,26 @@ class DoctorAvailabilityImport implements ToCollection
         if (!empty($data)) {
             $this->results = $this->context->persistAvailabilitySlots($this->doctor, $data, false, false);
         }
+    }
+
+    private function normalizeConsultationType($value): string
+    {
+        $normalized = strtolower(trim((string) ($value ?? 'in-person')));
+        return $normalized === 'video' ? 'video' : 'in-person';
+    }
+
+    private function normalizeOpdType($value, string $consultationType): ?string
+    {
+        if ($consultationType === 'video') {
+            return null;
+        }
+
+        $normalizedValue = strtolower(trim((string) ($value ?? '')));
+        if ($normalizedValue === '' || in_array($normalizedValue, ['n/a', 'na', '-', 'null'], true)) {
+            return null;
+        }
+
+        $normalized = $normalizedValue;
+        return in_array($normalized, ['general', 'private'], true) ? $normalized : 'general';
     }
 }

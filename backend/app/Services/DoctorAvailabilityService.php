@@ -166,21 +166,46 @@ class DoctorAvailabilityService
                             }
                         }
 
-                        // Track this unique slot key to avoid duplicates within this same request
-                        $slotKey = $dayKeyLower . '_' . ($normalizedDate ?? 'null') . '_' . $start . '_' . $end;
+                        $normalizedRecurringStart = $isRecurring
+                            ? $this->getValidationService()->normalizeDate($slot['recurring_start_date'] ?? null)
+                            : null;
+                        $normalizedRecurringEnd = $isRecurring
+                            ? $this->getValidationService()->normalizeDate($slot['recurring_end_date'] ?? null)
+                            : null;
+
+                        // Track this unique slot key to avoid duplicates within this same request.
+                        $slotKey = implode('_', [
+                            $dayKeyLower,
+                            $normalizedDate ?? 'null',
+                            $start,
+                            $end,
+                            $normalizedRecurringStart ?? 'null',
+                            $normalizedRecurringEnd ?? 'null',
+                        ]);
 
                         if (isset($processedKeys[$slotKey])) {
                             $totalSkipped++;
-                            $hasErrors = true;
-                             $dayName = ucfirst($dayKeyLower);
-                            $dateStr = $normalizedDate ? \Carbon\Carbon::parse($normalizedDate)->format('M d, Y') : 'recurring';
-                            $errors[] = "Duplicate in file: {$dayName} {$start}-{$end} on {$dateStr}";
                             continue;
                         }
                         $processedKeys[$slotKey] = true;
 
-                        // Check for overlaps in DB (In addition to exact duplicates)
-                        $overlaps = $this->getValidationService()->slotOverlapsInDatabase($doctorId, $normalizedDate, $start, $end, $slotId, $dayKeyLower);
+                        // Exact duplicates are expected during import reruns. Skip them quietly.
+                        if (! $slotId && $this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
+                            $totalSkipped++;
+                            continue;
+                        }
+
+                        // Overlaps are real data conflicts and should still be reported.
+                        $overlaps = $this->getValidationService()->slotOverlapsInDatabase(
+                            $doctorId,
+                            $normalizedDate,
+                            $start,
+                            $end,
+                            $slotId,
+                            $dayKeyLower,
+                            $normalizedRecurringStart,
+                            $normalizedRecurringEnd
+                        );
                         if (!empty($overlaps)) {
                             $overlap = $overlaps[0];
                             $dayName = ucfirst($dayKeyLower);
@@ -195,6 +220,9 @@ class DoctorAvailabilityService
                         $startTimeFormatted = \Carbon\Carbon::parse($start)->format('H:i:00');
                         $endTimeFormatted = \Carbon\Carbon::parse($end)->format('H:i:00');
 
+                        $consultationType = $this->normalizeConsultationType($slot['consultation_type'] ?? 'in-person');
+                        $normalizedOpdType = $this->normalizeOpdType($slot['opd_type'] ?? null, $consultationType);
+
                         // Only save required fields for availability
                         $availabilityData = [
                             'doctor_id' => $doctorId,
@@ -203,8 +231,8 @@ class DoctorAvailabilityService
                             'start_time' => $startTimeFormatted,
                             'end_time' => $endTimeFormatted,
                             'capacity' => (int) ($slot['capacity'] ?? 1),
-                            'consultation_type' => $slot['consultation_type'] ?? 'in-person',
-                            'opd_type' => $slot['opd_type'] ?? 'general',
+                            'consultation_type' => $consultationType,
+                            'opd_type' => $normalizedOpdType,
                             'consultation_fee' => (float) ($slot['consultation_fee'] ?? 0),
                             'doctor_room' => $slot['doctor_room'] ?? null,
                             'is_recurring' => $isRecurring,
@@ -241,7 +269,7 @@ class DoctorAvailabilityService
                             $availabilityData['date'] = $normalizedDate;
                             $availabilityData['recurring_start_date'] = null;
                             $availabilityData['recurring_end_date'] = null;
-                            $availabilityData['recurring_months'] = null;
+                            $availabilityData['recurring_months'] = 0;
                         }
 
                         // If updating existing slot
@@ -274,8 +302,8 @@ class DoctorAvailabilityService
                                 // Check if any other fields have changed strictly
                                 $capacityChanged = (int) ($existingSlot->capacity ?? 1) !== (int) ($slot['capacity'] ?? 1);
                                 $feeChanged = (float) ($existingSlot->consultation_fee ?? 0) !== (float) ($slot['consultation_fee'] ?? 0);
-                                $typeChanged = ($existingSlot->consultation_type ?? 'in-person') !== ($slot['consultation_type'] ?? 'in-person');
-                                $opdChanged = ($existingSlot->opd_type ?? 'general') !== ($slot['opd_type'] ?? 'general');
+                                $typeChanged = ($existingSlot->consultation_type ?? 'in-person') !== $consultationType;
+                                $opdChanged = ($existingSlot->opd_type ?? null) !== $normalizedOpdType;
                                 $availableChanged = (bool) ($existingSlot->is_available ?? true) !== (bool) ($slot['is_available'] ?? true);
                                 $recurringChanged = (bool) ($existingSlot->is_recurring ?? false) !== $isRecurring;
 
@@ -300,16 +328,8 @@ class DoctorAvailabilityService
                                 // This prevents "overlap with self" errors when updating non-time fields
                                 if ($dateChanged || $startChanged || $endChanged) {
                                     // Check if another slot exists with the new unique values (excluding current slot)
-                                    if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $slotId, $dayKeyLower)) {
-                                        $dayName = ucfirst($dayKeyLower);
-                                        $dateStr = $normalizedDate
-                                            ? \Carbon\Carbon::parse($normalizedDate)->format('M d, Y')
-                                            : 'recurring';
-
-                                        $errors[] = "Duplicate slot: {$dayName} {$start}-{$end} on {$dateStr}";
+                                    if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $slotId, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                                         $totalSkipped++;
-                                        $hasErrors = true;
-
                                         continue;
                                     }
                                 }
@@ -341,13 +361,8 @@ class DoctorAvailabilityService
                         // Creating new slot (or slot with invalid ID)
                         if (! $slotId) {
                             // Check for duplicates - use normalized date
-                            if ($this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower)) {
-                                $dayName = ucfirst($dayKeyLower);
-                                $dateStr = $normalizedDate ? \Carbon\Carbon::parse($normalizedDate)->format('M d, Y') : 'recurring';
-                                $errors[] = "Duplicate slot: {$dayName} {$start}-{$end} on {$dateStr}";
+                            if ($this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                                 $totalSkipped++;
-                                $hasErrors = true;
-
                                 continue;
                             }
 
@@ -360,11 +375,7 @@ class DoctorAvailabilityService
                                     $processedSlotIds[$newSlot->id] = true;
                                 }
                             } catch (UniqueConstraintViolationException $e) {
-                                $dayName = ucfirst($dayKeyLower);
-                                $dateStr = $normalizedDate ? \Carbon\Carbon::parse($normalizedDate)->format('M d, Y') : 'recurring';
-                                $errors[] = "Duplicate slot: {$dayName} {$start}-{$end} on {$dateStr}";
                                 $totalSkipped++;
-                                $hasErrors = true;
                             }
                         }
                     }
@@ -396,15 +407,14 @@ class DoctorAvailabilityService
                     }
 
                     if ($this->slotExists($doctorId, $normalizedTempDate, $tempStart, $tempEnd, null, $tempDay)) {
-                        $dayName = ucfirst($tempDay);
-                        $dateStr = $normalizedTempDate ? \Carbon\Carbon::parse($normalizedTempDate)->format('M d, Y') : 'recurring';
-                        $errors[] = "Duplicate quick-add slot: {$dayName} {$tempStart}-{$tempEnd} on {$dateStr}";
                         $totalSkipped++;
-                        $hasErrors = true;
                     } else {
                         // Ensure time is in H:i:00 format
                         $tempStartFormatted = \Carbon\Carbon::parse($tempStart)->format('H:i:00');
                         $tempEndFormatted = \Carbon\Carbon::parse($tempEnd)->format('H:i:00');
+
+                        $tempConsultationType = $this->normalizeConsultationType($data['temp_cons'] ?? 'in-person');
+                        $tempOpdType = $this->normalizeOpdType($data['temp_opd'] ?? null, $tempConsultationType);
 
                         // Only save required fields
                         $pendingData = [
@@ -413,8 +423,8 @@ class DoctorAvailabilityService
                             'start_time' => $tempStartFormatted,
                             'end_time' => $tempEndFormatted,
                             'capacity' => (int) ($data['temp_cap'] ?? 1),
-                            'consultation_type' => $data['temp_cons'] ?? 'in-person',
-                            'opd_type' => $data['temp_opd'] ?? 'general',
+                            'consultation_type' => $tempConsultationType,
+                            'opd_type' => $tempOpdType,
                             'consultation_fee' => (float) ($data['temp_fee'] ?? 0),
                             'doctor_room' => $data['temp_room'] ?? null,
                             'is_recurring' => $isRec,
@@ -453,8 +463,8 @@ class DoctorAvailabilityService
                                 'start_time' => $tempStart,
                                 'end_time' => $tempEnd,
                                 'capacity' => (int) ($data['temp_cap'] ?? 1),
-                                'consultation_type' => $data['temp_cons'] ?? 'in-person',
-                                'opd_type' => $data['temp_opd'] ?? 'general',
+                                'consultation_type' => $tempConsultationType,
+                                'opd_type' => $tempOpdType,
                                 'consultation_fee' => (float) ($data['temp_fee'] ?? 0),
                                 'doctor_room' => $data['temp_room'] ?? null,
                                 'is_recurring' => $isRec,
@@ -483,11 +493,7 @@ class DoctorAvailabilityService
                             $savedSlots[] = $pendingData;
                             $totalSaved++;
                         } catch (UniqueConstraintViolationException $e) {
-                            $dayName = ucfirst($tempDay);
-                            $dateStr = $normalizedTempDate ? \Carbon\Carbon::parse($normalizedTempDate)->format('M d, Y') : 'recurring';
-                            $errors[] = "Duplicate quick-add slot: {$dayName} {$tempStart}-{$tempEnd} on {$dateStr}";
                             $totalSkipped++;
-                            $hasErrors = true;
                         }
                     }
                 }
@@ -579,6 +585,12 @@ class DoctorAvailabilityService
                         ->danger()
                         ->persistent()
                         ->send();
+                } elseif (! $hasErrors && $totalSkipped > 0 && $totalSaved === 0 && $totalUpdated === 0) {
+                    Notification::make()
+                        ->title('No New Slots Added')
+                        ->body('All provided slots already existed and were skipped.')
+                        ->warning()
+                        ->send();
                 }
             }
         } catch (\Throwable $e) {
@@ -612,13 +624,35 @@ class DoctorAvailabilityService
         return $this->getValidationService()->normalizeTime($time);
     }
 
+    private function normalizeConsultationType($value): string
+    {
+        $normalized = strtolower(trim((string) ($value ?? 'in-person')));
+        return $normalized === 'video' ? 'video' : 'in-person';
+    }
+
+    private function normalizeOpdType($value, string $consultationType): ?string
+    {
+        if ($consultationType === 'video') {
+            return null;
+        }
+
+        $normalized = strtolower(trim((string) ($value ?? '')));
+        if ($normalized === '' || in_array($normalized, ['n/a', 'na', '-', 'null'], true)) {
+            return null;
+        }
+
+        return in_array($normalized, ['general', 'private'], true) ? $normalized : null;
+    }
+
     private function slotExists(
         string $doctorId,
         ?string $date,
         string $startTime,
         string $endTime,
         ?string $excludeId = null,
-        ?string $dayOfWeek = null
+        ?string $dayOfWeek = null,
+        ?string $recurringStartDate = null,
+        ?string $recurringEndDate = null
     ): bool {
         return $this->getValidationService()->slotExistsInDatabase(
             $doctorId,
@@ -626,7 +660,9 @@ class DoctorAvailabilityService
             $startTime,
             $endTime,
             $excludeId,
-            $dayOfWeek
+            $dayOfWeek,
+            $recurringStartDate,
+            $recurringEndDate
         );
     }
 

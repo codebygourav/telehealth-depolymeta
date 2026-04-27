@@ -167,9 +167,15 @@ class OPDCalendar extends Page implements HasForms
 
                                     $preview = [];
                                     $emailCache = [];
+                                    $totalRows = count($rows);
+                                    $rowsWithEmptyEmail = 0;
+                                    $rowsWithUnknownDoctor = 0;
                                     foreach ($rows as $index => $row) {
                                         $email = trim($row[0] ?? '');
-                                        if (empty($email)) continue; // Skip empty emails completely
+                                        if (empty($email)) {
+                                            $rowsWithEmptyEmail++;
+                                            continue; // Skip empty emails completely
+                                        }
 
                                         if (!array_key_exists($email, $emailCache)) {
                                             $user = User::with('doctor')->where('email', $email)->first();
@@ -180,7 +186,10 @@ class OPDCalendar extends Page implements HasForms
                                         }
 
                                         $doctorId = $emailCache[$email]['doctor_id'];
-                                        if (!$doctorId) continue;
+                                        if (!$doctorId) {
+                                            $rowsWithUnknownDoctor++;
+                                            continue;
+                                        }
 
                                         $doctorName = $emailCache[$email]['name'];
                                         $isRecurring = in_array(strtolower(trim((string)($row[9] ?? ''))), ['true', '1', 'yes', 'y']);
@@ -240,6 +249,18 @@ class OPDCalendar extends Page implements HasForms
 
                                     foreach ($grouped as $k => $arr) {
                                         $set($k, $arr);
+                                    }
+
+                                    $previewCount = count($preview);
+                                    $skippedAtPreview = $totalRows - $previewCount;
+                                    if ($skippedAtPreview > 0) {
+                                        \Illuminate\Support\Facades\Log::warning('OPD bulk import preview skipped rows', [
+                                            'total_rows' => $totalRows,
+                                            'preview_rows' => $previewCount,
+                                            'skipped_rows' => $skippedAtPreview,
+                                            'rows_with_empty_email' => $rowsWithEmptyEmail,
+                                            'rows_with_unknown_doctor' => $rowsWithUnknownDoctor,
+                                        ]);
                                     }
                                 } catch (\Exception $e) {
                                     Notification::make()->title('File parsing failed')->body($e->getMessage())->danger()->send();
@@ -468,6 +489,14 @@ class OPDCalendar extends Page implements HasForms
                                     }
                                 }
                             }
+
+                            \Illuminate\Support\Facades\Log::info('OPD bulk import finished', [
+                                'total_preview_slots' => count($slots),
+                                'successful' => $successful,
+                                'skipped' => $skipped,
+                                'error_count' => count($errors),
+                                'sample_errors' => array_slice($errors, 0, 20),
+                            ]);
 
                             $notification = Notification::make()
                                 ->title('Import Completed')
@@ -790,7 +819,7 @@ class OPDCalendar extends Page implements HasForms
                     Carbon::parse($slot->end_time)->format('H:i'),
                     $slot->capacity,
                     $slot->consultation_type,
-                    $slot->opd_type ?? 'N/A',
+                    $slot->consultation_type === 'video' ? '' : ($slot->opd_type ?? 'general'),
                     $slot->doctor_room ?? 'N/A',
                     $slot->consultation_fee,
                     $slot->is_recurring ? 'true' : 'false',
@@ -942,7 +971,7 @@ class OPDCalendar extends Page implements HasForms
                 'capacity' => $slot->capacity,
                 'type' => ucfirst($slot->consultation_type),
                 'consultation_type' => $slot->consultation_type,
-                'opd_type' => $slot->opd_type ?? 'general',
+                'opd_type' => $slot->consultation_type === 'video' ? null : ($slot->opd_type ?? 'general'),
                 'is_recurring' => $isRecurring,
                 'recurring_label' => $recurringLabel,
                 'date_label' => $dateLabel,
@@ -1333,7 +1362,7 @@ class OPDCalendar extends Page implements HasForms
                     'end_time' => Carbon::parse($slot->end_time)->format('g:i A'),
                     'avatar' => $avatar,
                     'consultation_type' => $slot->consultation_type,
-                    'opd_type' => $slot->opd_type ?? 'general',
+                    'opd_type' => $slot->consultation_type === 'video' ? null : ($slot->opd_type ?? 'general'),
                 ];
             }
         }
@@ -1400,7 +1429,7 @@ class OPDCalendar extends Page implements HasForms
                 'end_time' => Carbon::parse($slot->end_time)->format('g:i A'),
                 'avatar' => $avatar,
                 'consultation_type' => $slot->consultation_type,
-                'opd_type' => $slot->opd_type ?? 'general',
+                'opd_type' => $slot->consultation_type === 'video' ? null : ($slot->opd_type ?? 'general'),
             ];
         }
 

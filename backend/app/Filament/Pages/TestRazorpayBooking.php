@@ -7,7 +7,6 @@ use App\Models\Doctor;
 use App\Models\DoctorAvailability;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TimePicker;
 use Filament\Schemas\Components\Section;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -21,6 +20,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Api\V2\Common\Appointment\BookAppointmentController;
 use Illuminate\Http\JsonResponse;
+use App\Services\SettingService;
 
 use App\Traits\HasCustomSidebar;
 
@@ -29,8 +29,8 @@ class TestRazorpayBooking extends Page implements HasForms
     use InteractsWithForms;
     use HasCustomSidebar;
     protected static string|\BackedEnum|null $navigationIcon = Heroicon::OutlinedCreditCard;
-    protected static ?string $title = 'Test Razorpay Booking';
-    protected static ?string $navigationLabel = 'Test Razorpay Booking';
+    protected static ?string $title = 'Appointment Booking';
+    protected static ?string $navigationLabel = 'Appointment Booking';
     protected static ?string $slug = 'test-razorpay-booking';
     protected static ?int $navigationSort = 100;
     protected string $view = 'filament.pages.test-razorpay-booking';
@@ -39,6 +39,8 @@ class TestRazorpayBooking extends Page implements HasForms
     public ?array $result = null;
     public bool $showResult = false;
     public ?array $availabilityDetails = null;
+    public array $appointmentDateOptions = [];
+    public string $paymentMode = 'Live';
     public ?string $currentAppointmentId = null;
     // public static function canAccess(): bool
     // {
@@ -48,15 +50,16 @@ class TestRazorpayBooking extends Page implements HasForms
     public static function getSidebarOptions(): array
     {
         return [
-            'label' => 'Test Razorpay Booking',
+            'label' => 'Appointment Booking',
             'icon'  => 'heroicon-o-calendar-days',
             'sort'  => 1000,
-            'group' => 'Test Booking Functionality',
+            'group' => 'Appointment Management',
         ];
     }
 
     public function mount(): void
     {
+        $this->paymentMode = SettingService::isAppointmentMockPaymentEnabled() ? 'Mock' : 'Live';
         $this->form->fill();
     }
 
@@ -65,7 +68,7 @@ class TestRazorpayBooking extends Page implements HasForms
         return $form
             ->schema([
                 Section::make('Booking Details')
-                    ->description('Fill in the details to test Razorpay booking functionality')
+                    ->description('Create and manage appointment bookings from the admin panel')
                     ->schema([
                         Select::make('patient_id')
                             ->label('Patient')
@@ -132,13 +135,13 @@ class TestRazorpayBooking extends Page implements HasForms
                             ->required()
                             ->live()
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $this->appointmentDateOptions = [];
                                 if ($state) {
                                     $availability = DoctorAvailability::with('doctor')->find($state);
                                     if ($availability) {
-                                        // Auto-populate date from availability
-                                        if ($availability->date) {
-                                            $set('appointment_date', Carbon::parse($availability->date)->format('Y-m-d'));
-                                        }
+                                        $dateOptions = $this->buildAppointmentDateOptions($availability);
+                                        $this->appointmentDateOptions = $dateOptions;
+                                        $set('appointment_date', array_key_first($dateOptions) ?: null);
 
                                         // Auto-populate time from availability (use start_time)
                                         if ($availability->start_time) {
@@ -162,6 +165,9 @@ class TestRazorpayBooking extends Page implements HasForms
                                         $this->availabilityDetails = [
                                             'id' => $availability->id,
                                             'date' => $availability->date ? Carbon::parse($availability->date)->format('d M Y') : ($availability->day_of_week ?? 'Recurring'),
+                                            'is_recurring' => (bool) $availability->is_recurring,
+                                            'recurring_start_date' => $availability->recurring_start_date ? Carbon::parse($availability->recurring_start_date)->format('d M Y') : null,
+                                            'recurring_end_date' => $availability->recurring_end_date ? Carbon::parse($availability->recurring_end_date)->format('d M Y') : null,
                                             'start_time' => $availability->start_time instanceof Carbon
                                                 ? $availability->start_time->format('H:i')
                                                 : ($availability->start_time ? Carbon::parse($availability->start_time)->format('H:i') : 'N/A'),
@@ -178,17 +184,30 @@ class TestRazorpayBooking extends Page implements HasForms
                                     }
                                 } else {
                                     $this->availabilityDetails = null;
+                                    $set('appointment_date', null);
                                 }
                             })
                             ->disabled(fn(callable $get) => !$get('doctor_id'))
                             ->columnSpan(1),
 
-                        DatePicker::make('appointment_date')
+                        Select::make('appointment_date')
                             ->label('Appointment Date')
+                            ->options(fn() => $this->appointmentDateOptions)
                             ->required()
-                            ->default(today())
-                            ->minDate(today())
-                            ->helperText('Auto-filled from selected availability')
+                            ->searchable()
+                            ->native(false)
+                            ->placeholder('Select availability slot to load valid dates')
+                            ->helperText(function (callable $get) {
+                                if (!$get('availability_id')) {
+                                    return 'Select an availability slot first.';
+                                }
+
+                                if (empty($this->appointmentDateOptions)) {
+                                    return 'No upcoming dates are available for this slot.';
+                                }
+
+                                return 'Dates are auto-generated from the selected slot.';
+                            })
                             ->columnSpan(1),
 
                         TimePicker::make('appointment_time')
@@ -244,11 +263,13 @@ class TestRazorpayBooking extends Page implements HasForms
             ->statePath('data');
     }
 
-  
+
 
 
     public function testBooking(): void
     {
+        // Keep banner mode in sync with runtime settings.
+        $this->paymentMode = SettingService::isAppointmentMockPaymentEnabled() ? 'Mock' : 'Live';
         $this->validate();
 
         // Because your form uses ->statePath('data')
@@ -303,5 +324,57 @@ class TestRazorpayBooking extends Page implements HasForms
     {
         $this->result = null;
         $this->showResult = false;
+    }
+
+    private function buildAppointmentDateOptions(DoctorAvailability $availability): array
+    {
+        if (!$availability->is_recurring && $availability->date) {
+            $slotDate = Carbon::parse($availability->date)->startOfDay();
+
+            if ($slotDate->lt(today()->startOfDay())) {
+                return [];
+            }
+
+            return [
+                $slotDate->format('Y-m-d') => $slotDate->format('D, d M Y'),
+            ];
+        }
+
+        if (!$availability->is_recurring) {
+            return [];
+        }
+
+        $endDate = $availability->recurring_end_date
+            ? Carbon::parse($availability->recurring_end_date)->endOfDay()
+            : now()->copy()->addMonths((int) ($availability->recurring_months ?: 3))->endOfDay();
+
+        if ($endDate->isPast()) {
+            return [];
+        }
+
+        $startDate = $availability->recurring_start_date
+            ? Carbon::parse($availability->recurring_start_date)->startOfDay()
+            : now()->startOfDay();
+
+        $cursor = $startDate->greaterThan(today()->startOfDay())
+            ? $startDate->copy()
+            : today()->startOfDay();
+
+        $targetDay = strtolower((string) $availability->day_of_week);
+        if ($targetDay === '') {
+            return [];
+        }
+
+        while (strtolower($cursor->format('l')) !== $targetDay) {
+            $cursor->addDay();
+        }
+
+        $options = [];
+        while ($cursor->lte($endDate)) {
+            $options[$cursor->format('Y-m-d')] = $cursor->format('D, d M Y');
+            $cursor->addWeek();
+        }
+
+        return $options;
     }
 }
