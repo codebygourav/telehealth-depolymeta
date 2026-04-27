@@ -23,6 +23,8 @@ jobs:
           repository: CMC-Telehealth-Filemant/cmc-telehealth-filament
           token: ${{ secrets.REPO1_TOKEN }}
           path: source
+          sparse-checkout: |
+            src
 
       - name: Sync src → backend
         run: |
@@ -32,12 +34,12 @@ jobs:
           --exclude '.git' \
           --exclude '.env' \
           --exclude 'storage' \
-          source/src/ backend/
+          source/ backend/
 
       - name: Commit & Push
         run: |
           git config user.name "sync-bot"
           git config user.email "sync@bot.com"
-          git add .
+          git add backend/
           git commit -m "Auto sync backend from Git1" || echo "No changes"
           git push
