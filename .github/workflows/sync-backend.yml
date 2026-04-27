@@ -23,6 +23,7 @@ jobs:
           token: ${{ secrets.REPO1_TOKEN }}
           path: source
           ref: main
+          persist-credentials: false
 
       - name: Sync → backend
         run: |
