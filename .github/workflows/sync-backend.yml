@@ -11,11 +11,12 @@ jobs:
 
     steps:
       - name: Checkout Repo2
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Clone Git1
+      - name: Clone Git1 (debug)
         run: |
-          git clone https://${{ secrets.REPO1_TOKEN }}@github.com/CMC-Telehealth-Filemant/cmc-telehealth-filament.git source
+          set -x
+          git clone https://${{ secrets.GIT1_TOKEN }}@github.com/CMC-Telehealth-Filemant/cmc-telehealth-filament.git source
 
       - name: Sync src → backend
         run: |
