@@ -1,22 +1,28 @@
 name: Sync Backend from Git1
 
 on:
-  workflow_dispatch:   # manual trigger
+  workflow_dispatch:
   schedule:
-    - cron: "*/10 * * * *"   # every 10 minutes (optional)
+    - cron: "*/10 * * * *"
+
+permissions:
+  contents: write
 
 jobs:
   sync:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repo2
         uses: actions/checkout@v4
 
-      - name: Clone Git1 (debug)
-        run: |
-          set -x
-          git clone https://${{ secrets.GIT1_TOKEN }}@github.com/CMC-Telehealth-Filemant/cmc-telehealth-filament.git source
+      - name: Checkout Repo1
+        uses: actions/checkout@v4
+        with:
+          repository: CMC-Telehealth-Filemant/cmc-telehealth-filament
+          token: ${{ secrets.REPO1_TOKEN }}
+          path: source
 
       - name: Sync src → backend
         run: |
