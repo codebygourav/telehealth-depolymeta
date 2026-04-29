@@ -172,6 +172,7 @@ class DoctorAvailabilityService
                         $normalizedRecurringEnd = $isRecurring
                             ? $this->getValidationService()->normalizeDate($slot['recurring_end_date'] ?? null)
                             : null;
+                        $consultationType = $this->normalizeConsultationType($slot['consultation_type'] ?? 'in-person');
 
                         // Track this unique slot key to avoid duplicates within this same request.
                         $slotKey = implode('_', [
@@ -179,6 +180,7 @@ class DoctorAvailabilityService
                             $normalizedDate ?? 'null',
                             $start,
                             $end,
+                            $consultationType,
                             $normalizedRecurringStart ?? 'null',
                             $normalizedRecurringEnd ?? 'null',
                         ]);
@@ -190,7 +192,7 @@ class DoctorAvailabilityService
                         $processedKeys[$slotKey] = true;
 
                         // Exact duplicates are expected during import reruns. Skip them quietly.
-                        if (! $slotId && $this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
+                        if (! $slotId && $this->slotExists($doctorId, $normalizedDate, $start, $end, $consultationType, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                             $totalSkipped++;
                             continue;
                         }
@@ -201,6 +203,7 @@ class DoctorAvailabilityService
                             $normalizedDate,
                             $start,
                             $end,
+                            $consultationType,
                             $slotId,
                             $dayKeyLower,
                             $normalizedRecurringStart,
@@ -220,7 +223,6 @@ class DoctorAvailabilityService
                         $startTimeFormatted = \Carbon\Carbon::parse($start)->format('H:i:00');
                         $endTimeFormatted = \Carbon\Carbon::parse($end)->format('H:i:00');
 
-                        $consultationType = $this->normalizeConsultationType($slot['consultation_type'] ?? 'in-person');
                         $normalizedOpdType = $this->normalizeOpdType($slot['opd_type'] ?? null, $consultationType);
 
                         // Only save required fields for availability
@@ -328,7 +330,7 @@ class DoctorAvailabilityService
                                 // This prevents "overlap with self" errors when updating non-time fields
                                 if ($dateChanged || $startChanged || $endChanged) {
                                     // Check if another slot exists with the new unique values (excluding current slot)
-                                    if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $slotId, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
+                                    if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $consultationType, $slotId, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                                         $totalSkipped++;
                                         continue;
                                     }
@@ -361,7 +363,7 @@ class DoctorAvailabilityService
                         // Creating new slot (or slot with invalid ID)
                         if (! $slotId) {
                             // Check for duplicates - use normalized date
-                            if ($this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
+                            if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $consultationType, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                                 $totalSkipped++;
                                 continue;
                             }
@@ -401,19 +403,19 @@ class DoctorAvailabilityService
                     }
 
                     // Check for duplicates - use normalized date
-                    $tempKey = ($normalizedTempDate ?? 'null') . '_' . $tempStart . '_' . $tempEnd;
+                    $tempConsultationType = $this->normalizeConsultationType($data['temp_cons'] ?? 'in-person');
+                    $tempKey = ($normalizedTempDate ?? 'null') . '_' . $tempStart . '_' . $tempEnd . '_' . $tempConsultationType;
                     if (isset($processedKeys[$tempKey])) {
                         return; // Already processed in the main loops
                     }
 
-                    if ($this->slotExists($doctorId, $normalizedTempDate, $tempStart, $tempEnd, null, $tempDay)) {
+                    if ($this->slotExists($doctorId, $normalizedTempDate, $tempStart, $tempEnd, $tempConsultationType, null, $tempDay)) {
                         $totalSkipped++;
                     } else {
                         // Ensure time is in H:i:00 format
                         $tempStartFormatted = \Carbon\Carbon::parse($tempStart)->format('H:i:00');
                         $tempEndFormatted = \Carbon\Carbon::parse($tempEnd)->format('H:i:00');
 
-                        $tempConsultationType = $this->normalizeConsultationType($data['temp_cons'] ?? 'in-person');
                         $tempOpdType = $this->normalizeOpdType($data['temp_opd'] ?? null, $tempConsultationType);
 
                         // Only save required fields
@@ -649,6 +651,7 @@ class DoctorAvailabilityService
         ?string $date,
         string $startTime,
         string $endTime,
+        ?string $consultationType = null,
         ?string $excludeId = null,
         ?string $dayOfWeek = null,
         ?string $recurringStartDate = null,
@@ -659,6 +662,7 @@ class DoctorAvailabilityService
             $date,
             $startTime,
             $endTime,
+            $consultationType,
             $excludeId,
             $dayOfWeek,
             $recurringStartDate,

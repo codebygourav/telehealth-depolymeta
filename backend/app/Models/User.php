@@ -13,6 +13,8 @@ use Filament\Models\Contracts\HasName;
 use Filament\Panel;
 use Laravel\Sanctum\HasApiTokens;
 
+
+// dsjklfdsjklfdsjkldfjslkfdjslkfjdslkfjds
 class User extends Authenticatable implements FilamentUser, HasName
 {
     use HasFactory, Notifiable, SoftDeletes, HasRoles, HasApiTokens;

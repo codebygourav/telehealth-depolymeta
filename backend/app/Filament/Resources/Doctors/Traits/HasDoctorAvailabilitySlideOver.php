@@ -218,8 +218,8 @@ trait HasDoctorAvailabilitySlideOver
             ->slideOver()
             ->modalWidth('6xl')
             ->modalCloseButton(true)
-            ->modalHeading('Manage Availability')
-            ->modalDescription('Set up this doctor\'s available consultation times.')
+            ->modalHeading('Manage Doctor Availability')
+            ->modalDescription('Add, edit, and bulk-manage slots. Same date/time is allowed across different consultation types.')
 
 
             ->disabled(fn() => filled($this->getAvailabilityActionDisabledReason()))
@@ -325,22 +325,24 @@ trait HasDoctorAvailabilitySlideOver
                     $vStart = $this->normalizeTime($vSlot['start_time'] ?? $vSlot['start'] ?? null);
                     $vEnd = $this->normalizeTime($vSlot['end_time'] ?? $vSlot['end'] ?? null);
                     $vDate = empty($vSlot['is_recurring']) ? ($vSlot['date'] ?? null) : null;
+                    $vConsultationType = $this->normalizeConsultationType($vSlot['consultation_type'] ?? 'in-person');
                     if ($vDate) {
                         $vDate = \Carbon\Carbon::parse($vDate)->format('Y-m-d');
                     }
 
-                    $vKey = ($vDate ?? 'null') . '_' . ($vStart ?? 'x') . '_' . ($vEnd ?? 'y');
+                    $vKey = ($vDate ?? 'null') . '_' . ($vStart ?? 'x') . '_' . ($vEnd ?? 'y') . '_' . $vConsultationType;
 
                     $found = false;
                     foreach ($mergedSlots as &$mSlot) {
                         $mStart = $this->normalizeTime($mSlot['start_time'] ?? $mSlot['start'] ?? null);
                         $mEnd = $this->normalizeTime($mSlot['end_time'] ?? $mSlot['end'] ?? null);
                         $mDate = empty($mSlot['is_recurring']) ? ($mSlot['date'] ?? null) : null;
+                        $mConsultationType = $this->normalizeConsultationType($mSlot['consultation_type'] ?? 'in-person');
                         if ($mDate) {
                             $mDate = \Carbon\Carbon::parse($mDate)->format('Y-m-d');
                         }
 
-                        $mKey = ($mDate ?? 'null') . '_' . ($mStart ?? 'x') . '_' . ($mEnd ?? 'y');
+                        $mKey = ($mDate ?? 'null') . '_' . ($mStart ?? 'x') . '_' . ($mEnd ?? 'y') . '_' . $mConsultationType;
 
                         if ($vKey === $mKey) {
                             $mSlot = array_merge($mSlot, $vSlot);
@@ -398,6 +400,7 @@ trait HasDoctorAvailabilitySlideOver
         ?string $date,
         string $startTime,
         string $endTime,
+        ?string $consultationType = null,
         ?string $excludeId = null,
         ?string $dayOfWeek = null,
         ?string $recurringStartDate = null,
@@ -408,6 +411,7 @@ trait HasDoctorAvailabilitySlideOver
             $date,
             $startTime,
             $endTime,
+            $consultationType,
             $excludeId,
             $dayOfWeek,
             $recurringStartDate,
@@ -585,12 +589,14 @@ trait HasDoctorAvailabilitySlideOver
                         $normalizedRecurringEnd = $isRecurring
                             ? $this->getValidationService()->normalizeDate($slot['recurring_end_date'] ?? null)
                             : null;
+                        $consultationType = $this->normalizeConsultationType($slot['consultation_type'] ?? 'in-person');
 
                         $slotKey = implode('_', [
                             $dayKeyLower,
                             $normalizedDate ?? 'null',
                             $start,
                             $end,
+                            $consultationType,
                             $normalizedRecurringStart ?? 'null',
                             $normalizedRecurringEnd ?? 'null',
                         ]);
@@ -601,7 +607,7 @@ trait HasDoctorAvailabilitySlideOver
                         }
                         $processedKeys[$slotKey] = true;
 
-                        if (! $slotId && $this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
+                        if (! $slotId && $this->slotExists($doctorId, $normalizedDate, $start, $end, $consultationType, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                             $totalSkipped++;
                             continue;
                         }
@@ -612,6 +618,7 @@ trait HasDoctorAvailabilitySlideOver
                             $normalizedDate,
                             $start,
                             $end,
+                            $consultationType,
                             $slotId,
                             $dayKeyLower,
                             $normalizedRecurringStart,
@@ -632,7 +639,6 @@ trait HasDoctorAvailabilitySlideOver
                         $endTimeFormatted = \Carbon\Carbon::parse($end)->format('H:i:00');
 
                         // Only save required fields for availability
-                        $consultationType = $this->normalizeConsultationType($slot['consultation_type'] ?? 'in-person');
                         $normalizedOpdType = $this->normalizeOpdType($slot['opd_type'] ?? null, $consultationType);
                         $availabilityData = [
                             'doctor_id' => $doctorId,
@@ -727,7 +733,7 @@ trait HasDoctorAvailabilitySlideOver
                                 }
 
                                 if ($dateChanged || $startChanged || $endChanged) {
-                                    if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $slotId, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
+                                    if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $consultationType, $slotId, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                                         $totalSkipped++;
                                         continue;
                                     }
@@ -754,7 +760,7 @@ trait HasDoctorAvailabilitySlideOver
 
                         // Creating new slot
                         if (! $slotId) {
-                            if ($this->slotExists($doctorId, $normalizedDate, $start, $end, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
+                            if ($this->slotExists($doctorId, $normalizedDate, $start, $end, $consultationType, null, $dayKeyLower, $normalizedRecurringStart, $normalizedRecurringEnd)) {
                                 $totalSkipped++;
                                 continue;
                             }
@@ -782,16 +788,16 @@ trait HasDoctorAvailabilitySlideOver
                     $isRec = (bool) ($data['temp_rec'] ?? false);
                     $tempDate = $isRec ? null : ($data['temp_date'] ?? null);
                     $normalizedTempDate = $tempDate ? \Carbon\Carbon::parse($tempDate)->format('Y-m-d') : null;
+                    $tempConsultationType = $this->normalizeConsultationType($data['temp_cons'] ?? 'in-person');
 
-                    $tempKey = ($normalizedTempDate ?? 'null') . '_' . $tempStart . '_' . $tempEnd;
+                    $tempKey = ($normalizedTempDate ?? 'null') . '_' . $tempStart . '_' . $tempEnd . '_' . $tempConsultationType;
                     if (isset($processedKeys[$tempKey])) {
                         return;
                     }
 
-                    if ($this->slotExists($doctorId, $normalizedTempDate, $tempStart, $tempEnd, null, $tempDay)) {
+                    if ($this->slotExists($doctorId, $normalizedTempDate, $tempStart, $tempEnd, $tempConsultationType, null, $tempDay)) {
                         $totalSkipped++;
                     } else {
-                        $tempConsultationType = $this->normalizeConsultationType($data['temp_cons'] ?? 'in-person');
                         $pendingData = [
                             'doctor_id' => $doctorId,
                             'day_of_week' => $tempDay,
@@ -856,7 +862,11 @@ trait HasDoctorAvailabilitySlideOver
                          Notification::make()->title('Update Successful')->success()->send();
                     }
                 } elseif ($hasErrors && $totalSkipped > 0) {
-                    Notification::make()->title('No Changes Saved')->body('All slots were duplicates.')->danger()->send();
+                    Notification::make()
+                        ->title('No Changes Saved')
+                        ->body('All failed slots conflicted with existing entries of the same consultation type. Use a different time, date, or switch consultation mode.')
+                        ->danger()
+                        ->send();
                 } elseif (! $hasErrors && $totalSkipped > 0) {
                     Notification::make()->title('No New Slots Added')->body('All provided slots already existed and were skipped.')->warning()->send();
                 }

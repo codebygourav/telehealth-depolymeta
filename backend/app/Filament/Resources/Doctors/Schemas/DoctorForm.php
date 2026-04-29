@@ -7,6 +7,7 @@ use App\Models\{Department, DepartmentDoctor, Doctor};
 use App\Services\DoctorAvailabilityValidationService;
 use Carbon\Carbon;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\{Checkbox, DatePicker, FileUpload, Hidden, Placeholder, Repeater, Select, Textarea, TextInput, TimePicker, Toggle};
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\{Grid, Section, Tabs, Tabs\Tab};
@@ -603,7 +604,7 @@ class DoctorForm
             : 'inline-flex items-center rounded-xl border px-2 py-0.5 text-[11px] font-medium border-rose-200 bg-rose-50 text-rose-700';
 
         // Tailwind-style classes so it looks like native Filament UI, but keep layout very simple.
-        $html = '<div class="rounded-lg border border-gray-200 bg-white px-4 py-3 space-y-1">';
+        $html = '<div class="px-4 py-3 space-y-1 bg-white border border-gray-200 rounded-lg">';
 
         // Row 1: time + status
         $html .= '<div class="flex items-center justify-between gap-3">';
@@ -647,7 +648,16 @@ class DoctorForm
             $dayKeyLower = strtolower($dayKey);
 
             $listingSections[] = Section::make($dayKeyLower)
-                ->heading(fn($get) => $dayLabels[$dayKey] . ' (' . count($get("slots_{$dayKeyLower}") ?? []) . ')')
+                ->heading(function ($get) use ($dayLabels, $dayKey, $dayKeyLower) {
+                    $slots = $get("slots_{$dayKeyLower}") ?? [];
+                    $total = is_array($slots) ? count($slots) : 0;
+                    $selected = is_array($slots)
+                        ? collect($slots)->filter(fn($slot) => is_array($slot) && ! empty($slot['is_selected']))->count()
+                        : 0;
+
+                    $selectedPart = $selected > 0 ? " • {$selected} selected" : '';
+                    return $dayLabels[$dayKey] . " ({$total}{$selectedPart})";
+                })
                 ->description(fn($get) => count($get("slots_{$dayKeyLower}") ?? []) > 0
                     ? "Consultation slots for {$dayLabels[$dayKey]}"
                     : 'No slots scheduled')
@@ -660,7 +670,12 @@ class DoctorForm
 
                 ->icon('heroicon-o-clock')
                 ->iconColor(fn($get) => count($get("slots_{$dayKeyLower}") ?? []) > 0 ? 'success' : 'gray')
-                ->visible(fn($get) => count($get("slots_{$dayKeyLower}") ?? []) > 0)
+                ->visible(function ($get) use ($dayKeyLower) {
+                    $selectedDay = strtolower((string) ($get('overview_day_filter') ?? strtolower(now()->format('l'))));
+                    $matchesFilter = $selectedDay === 'all' || $selectedDay === $dayKeyLower;
+
+                    return $matchesFilter && count($get("slots_{$dayKeyLower}") ?? []) > 0;
+                })
                 ->extraAttributes([
                     'class' => 'border border-gray-300 rounded-xl bg-white',
                 ])
@@ -685,7 +700,8 @@ class DoctorForm
                             $isRecurring = $state['is_recurring'] ?? false;
                             $recurringStartDate = $state['recurring_start_date'] ?? null;
                             $recurringEndDate = $state['recurring_end_date'] ?? null;
-
+                            $isAvailable = (bool) ($state['is_available'] ?? true);
+                            $consultationType = strtolower((string) ($state['consultation_type'] ?? 'in-person'));
                             $labelParts = [];
 
                             if ($isRecurring) {
@@ -741,6 +757,9 @@ class DoctorForm
                                 }
                             }
 
+                            $labelParts[] = $isAvailable ? '[Active]' : '[Inactive]';
+                            $labelParts[] = $consultationType === 'video' ? '[Video]' : '[In-Person]';
+
                             return implode(' | ', $labelParts);
                         })
                         ->deleteAction(function (\Filament\Actions\Action $action) {
@@ -775,6 +794,45 @@ class DoctorForm
                                 });
                         })
                         ->extraItemActions([
+                            Action::make('toggle_select_slot')
+                                ->label(function (array $arguments, Repeater $component) {
+                                    $itemKey = $arguments['item'] ?? null;
+                                    if (! $itemKey) {
+                                        return 'Select';
+                                    }
+
+                                    $state = $component->getState();
+                                    return ! empty($state[$itemKey]['is_selected']) ? 'Unselect' : 'Select';
+                                })
+                                ->icon(function (array $arguments, Repeater $component) {
+                                    $itemKey = $arguments['item'] ?? null;
+                                    if (! $itemKey) {
+                                        return 'heroicon-m-check-circle';
+                                    }
+
+                                    $state = $component->getState();
+                                    return ! empty($state[$itemKey]['is_selected'])
+                                        ? 'heroicon-m-check-circle'
+                                        : 'heroicon-m-plus-circle';
+                                })
+                                ->iconButton()
+                                ->color(function (array $arguments, Repeater $component) {
+                                    $itemKey = $arguments['item'] ?? null;
+                                    if (! $itemKey) {
+                                        return 'gray';
+                                    }
+
+                                    $state = $component->getState();
+                                    return ! empty($state[$itemKey]['is_selected']) ? 'success' : 'gray';
+                                })
+                                ->action(function (array $arguments, Repeater $component) {
+                                    $itemKey = $arguments['item'] ?? null;
+                                    if (! $itemKey) return;
+
+                                    $state = $component->getState();
+                                    $state[$itemKey]['is_selected'] = ! (bool) ($state[$itemKey]['is_selected'] ?? false);
+                                    $component->state($state);
+                                }),
 
                             Action::make('edit_details')
                                 ->icon('heroicon-m-pencil-square')
@@ -854,6 +912,7 @@ class DoctorForm
                         ->schema([
                             \Filament\Forms\Components\Hidden::make('id'),
                             \Filament\Forms\Components\Hidden::make('is_editing')->live(),
+                            Hidden::make('is_selected')->default(false),
                             Hidden::make('start_time')->dehydrated(),
                             Hidden::make('end_time')->dehydrated(),
                             Hidden::make('date')->dehydrated(),
@@ -890,7 +949,7 @@ class DoctorForm
                                                     $get('opd_type') ?? 'general',
                                                     (float) ($get('consultation_fee') ?? 0),
                                                     (int) ($get('capacity') ?? 1),
-                                                    $get('doctor_room') ?? 'fd',
+                                                    $get('doctor_room') ?? null,
                                                 )
                                             );
                                         }),
@@ -966,11 +1025,319 @@ class DoctorForm
                             return $total > 0 ? $total : null;
                         })
                         ->schema([
+                            Section::make('Slots Toolbar')
+                                ->compact()
+                                ->schema([
+                                    Grid::make(4)
+                                        ->schema([
+
+                                            Select::make('overview_day_filter')
+                                                ->label('Show Slots For')
+                                                ->options(function () use ($dayLabels) {
+                                                    $options = ['all' => 'All Days'];
+                                                    foreach ($dayLabels as $key => $label) {
+                                                        $options[strtolower($key)] = $label;
+                                                    }
+
+                                                    return $options;
+                                                })
+                                                ->default(strtolower(now()->format('l')))
+                                                ->native(false)
+                                                ->searchable()
+                                                ->live()
+                                                ->columnSpan(1),
+                                            \Filament\Schemas\Components\Actions::make([
+                                                Action::make('clear_selected_slots_topbar')
+                                                    ->label(function ($get) use ($dayKeys) {
+                                                        $scope = strtolower((string) ($get('overview_day_filter') ?? 'all'));
+                                                        $targetDays = $scope === 'all' ? array_map('strtolower', $dayKeys) : [$scope];
+                                                        $selectedCount = 0;
+
+                                                        foreach ($targetDays as $day) {
+                                                            $slots = $get("slots_{$day}") ?? [];
+                                                            if (! is_array($slots)) {
+                                                                continue;
+                                                            }
+
+                                                            $selectedCount += collect($slots)
+                                                                ->filter(fn($slot) => is_array($slot) && ! empty($slot['is_selected']))
+                                                                ->count();
+                                                        }
+
+                                                        return "Clear Selection ({$selectedCount})";
+                                                    })
+                                                    ->icon('heroicon-m-x-circle')
+                                                    ->color('gray')
+                                                    ->size('sm')
+                                                    ->visible(function ($get) use ($dayKeys) {
+                                                        $scope = strtolower((string) ($get('overview_day_filter') ?? 'all'));
+                                                        $targetDays = $scope === 'all' ? array_map('strtolower', $dayKeys) : [$scope];
+
+                                                        foreach ($targetDays as $day) {
+                                                            $slots = $get("slots_{$day}") ?? [];
+                                                            if (! is_array($slots)) {
+                                                                continue;
+                                                            }
+
+                                                            $hasSelected = collect($slots)
+                                                                ->contains(fn($slot) => is_array($slot) && ! empty($slot['is_selected']));
+
+                                                            if ($hasSelected) {
+                                                                return true;
+                                                            }
+                                                        }
+
+                                                        return false;
+                                                    })
+                                                    ->action(function ($get, $set) use ($dayKeys) {
+                                                        $scope = strtolower((string) ($get('overview_day_filter') ?? 'all'));
+                                                        $targetDays = $scope === 'all' ? array_map('strtolower', $dayKeys) : [$scope];
+
+                                                        foreach ($targetDays as $day) {
+                                                            $slots = $get("slots_{$day}") ?? [];
+                                                            if (! is_array($slots)) {
+                                                                continue;
+                                                            }
+
+                                                            foreach ($slots as &$slot) {
+                                                                if (is_array($slot)) {
+                                                                    $slot['is_selected'] = false;
+                                                                }
+                                                            }
+
+                                                            $set("slots_{$day}", $slots);
+                                                        }
+                                                    }),
+                                                ActionGroup::make([
+                                                    Action::make('bulk_select_all_slots')
+                                                        ->label('Select All Slots')
+                                                        ->icon('heroicon-m-check-badge')
+                                                        ->action(function ($get, $set) use ($dayKeys) {
+                                                            $scope = strtolower((string) ($get('overview_day_filter') ?? 'all'));
+                                                            $targetDays = $scope === 'all' ? array_map('strtolower', $dayKeys) : [$scope];
+
+                                                            foreach ($targetDays as $day) {
+                                                                $slots = $get("slots_{$day}") ?? [];
+                                                                if (! is_array($slots)) {
+                                                                    continue;
+                                                                }
+
+                                                                foreach ($slots as &$slot) {
+                                                                    if (is_array($slot)) {
+                                                                        $slot['is_selected'] = true;
+                                                                    }
+                                                                }
+
+                                                                $set("slots_{$day}", $slots);
+                                                            }
+                                                        }),
+                                                    Action::make('bulk_clear_selected_slots')
+                                                        ->label('Clear Selection')
+                                                        ->icon('heroicon-m-x-circle')
+                                                        ->action(function ($get, $set) use ($dayKeys) {
+                                                            $scope = strtolower((string) ($get('overview_day_filter') ?? 'all'));
+                                                            $targetDays = $scope === 'all' ? array_map('strtolower', $dayKeys) : [$scope];
+
+                                                            foreach ($targetDays as $day) {
+                                                                $slots = $get("slots_{$day}") ?? [];
+                                                                if (! is_array($slots)) {
+                                                                    continue;
+                                                                }
+
+                                                                foreach ($slots as &$slot) {
+                                                                    if (is_array($slot)) {
+                                                                        $slot['is_selected'] = false;
+                                                                    }
+                                                                }
+
+                                                                $set("slots_{$day}", $slots);
+                                                            }
+                                                        }),
+                                                    Action::make('bulk_activate_selected_slots')
+                                                        ->label('Bulk Activate')
+                                                        ->icon('heroicon-m-check-circle')
+                                                        ->color('success')
+                                                        ->action(function ($get, $set) use ($dayKeys) {
+                                                            $scope = strtolower((string) ($get('overview_day_filter') ?? 'all'));
+                                                            $targetDays = $scope === 'all' ? array_map('strtolower', $dayKeys) : [$scope];
+                                                            $updated = 0;
+
+                                                            foreach ($targetDays as $day) {
+                                                                $slots = $get("slots_{$day}") ?? [];
+                                                                if (! is_array($slots)) {
+                                                                    continue;
+                                                                }
+
+                                                                foreach ($slots as &$slot) {
+                                                                    if (is_array($slot) && ! empty($slot['is_selected'])) {
+                                                                        $slot['is_available'] = true;
+                                                                        $updated++;
+                                                                    }
+                                                                }
+
+                                                                $set("slots_{$day}", $slots);
+                                                            }
+
+                                                            if ($updated > 0) {
+                                                                Notification::make()
+                                                                    ->title('Bulk Update Applied')
+                                                                    ->body("Marked {$updated} selected slot(s) as active. Click Save Schedule to persist.")
+                                                                    ->success()
+                                                                    ->send();
+                                                            }
+                                                        }),
+                                                    Action::make('bulk_deactivate_selected_slots')
+                                                        ->label('Bulk Deactivate')
+                                                        ->icon('heroicon-m-minus-circle')
+                                                        ->color('warning')
+                                                        ->action(function ($get, $set) use ($dayKeys) {
+                                                            $scope = strtolower((string) ($get('overview_day_filter') ?? 'all'));
+                                                            $targetDays = $scope === 'all' ? array_map('strtolower', $dayKeys) : [$scope];
+                                                            $updated = 0;
+
+                                                            foreach ($targetDays as $day) {
+                                                                $slots = $get("slots_{$day}") ?? [];
+                                                                if (! is_array($slots)) {
+                                                                    continue;
+                                                                }
+
+                                                                foreach ($slots as &$slot) {
+                                                                    if (is_array($slot) && ! empty($slot['is_selected'])) {
+                                                                        $slot['is_available'] = false;
+                                                                        $updated++;
+                                                                    }
+                                                                }
+
+                                                                $set("slots_{$day}", $slots);
+                                                            }
+
+                                                            if ($updated > 0) {
+                                                                Notification::make()
+                                                                    ->title('Bulk Update Applied')
+                                                                    ->body("Marked {$updated} selected slot(s) as inactive. Click Save Schedule to persist.")
+                                                                    ->success()
+                                                                    ->send();
+                                                            }
+                                                        }),
+                                                    Action::make('bulk_delete_selected_slots')
+                                                        ->label('Bulk Delete')
+                                                        ->icon('heroicon-m-trash')
+                                                        ->color('danger')
+                                                        ->requiresConfirmation()
+                                                        ->modalHeading('Delete selected slots?')
+                                                        ->modalDescription('Selected slots will be removed from the chosen day scope. This action cannot be undone once saved.')
+                                                        ->action(function ($get, $set) use ($dayKeys, $dayLabels) {
+                                                            $scope = strtolower((string) ($get('overview_day_filter') ?? 'all'));
+                                                            $targetDays = $scope === 'all' ? array_map('strtolower', $dayKeys) : [$scope];
+                                                            $deletedCount = 0;
+
+                                                            foreach ($targetDays as $day) {
+                                                                $slots = $get("slots_{$day}") ?? [];
+                                                                if (! is_array($slots)) {
+                                                                    continue;
+                                                                }
+
+                                                                $remaining = [];
+                                                                foreach ($slots as $slot) {
+                                                                    if (! is_array($slot) || empty($slot['is_selected'])) {
+                                                                        $remaining[] = $slot;
+                                                                        continue;
+                                                                    }
+
+                                                                    $deletedCount++;
+                                                                    if (! empty($slot['id'])) {
+                                                                        $record = \App\Models\DoctorAvailability::find($slot['id']);
+                                                                        if ($record) {
+                                                                            $record->delete();
+                                                                            $record->forceDelete();
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                $set("slots_{$day}", array_values($remaining));
+                                                            }
+
+                                                            if ($deletedCount > 0) {
+                                                                $scopeLabel = $scope === 'all'
+                                                                    ? 'all days'
+                                                                    : ($dayLabels[ucfirst($scope)] ?? ucfirst($scope));
+
+                                                                Notification::make()
+                                                                    ->title('Selected Slots Deleted')
+                                                                    ->body("Removed {$deletedCount} slot(s) from {$scopeLabel}.")
+                                                                    ->success()
+                                                                    ->send();
+                                                            } else {
+                                                                Notification::make()
+                                                                    ->title('Nothing Selected')
+                                                                    ->body('Select one or more slots first, then run bulk delete.')
+                                                                    ->warning()
+                                                                    ->send();
+                                                            }
+                                                        }),
+                                                ])
+                                                    ->label(function ($get) use ($dayKeys) {
+                                                        $scope = strtolower((string) ($get('overview_day_filter') ?? 'all'));
+                                                        $targetDays = $scope === 'all' ? array_map('strtolower', $dayKeys) : [$scope];
+                                                        $selectedCount = 0;
+
+                                                        foreach ($targetDays as $day) {
+                                                            $slots = $get("slots_{$day}") ?? [];
+                                                            if (! is_array($slots)) {
+                                                                continue;
+                                                            }
+
+                                                            $selectedCount += collect($slots)
+                                                                ->filter(fn($slot) => is_array($slot) && ! empty($slot['is_selected']))
+                                                                ->count();
+                                                        }
+
+                                                        return $selectedCount > 0
+                                                            ? "Bulk Actions - {$selectedCount} selected"
+                                                            : 'Bulk Actions';
+                                                    })
+                                                    ->icon('heroicon-m-chevron-down')
+                                                    ->button()
+                                                    ->color('primary')
+                                                    ->size('sm'),
+                                            ])
+                                            ->extraAttributes(['class' => 'flex items-start justify-end'])
+                                            ->alignStart()
+                                            ->columnSpan(3),
+                                            ])
+
+                                ])
+
+                                ->visible(function ($get) use ($dayKeys) {
+                                    foreach ($dayKeys as $day) {
+                                        if (count($get('slots_' . strtolower($day)) ?? []) > 0) {
+                                            return true;
+                                        }
+                                    }
+
+                                    return false;
+                                }),
+
                             // Empty state - simple
                             Placeholder::make('no_slots_message')
                                 ->label(null)
-                                ->content('No availability slots scheduled yet. Use the "Add New Slot" tab to create consultation times.')
+                                ->content(function ($get) use ($dayLabels, $dayKeys) {
+                                    $selectedDay = strtolower((string) ($get('overview_day_filter') ?? strtolower(now()->format('l'))));
+
+                                    if ($selectedDay !== 'all') {
+                                        $dayLabel = $dayLabels[ucfirst($selectedDay)] ?? ucfirst($selectedDay);
+                                        return "No slots found for {$dayLabel}. Choose another day from the dropdown or switch to All Days.";
+                                    }
+
+                                    return 'No availability slots scheduled yet. Use "Add New Slot" to create them. Same date/time is supported for different consultation modes.';
+                                })
                                 ->visible(function ($get) use ($dayKeys) {
+                                    $selectedDay = strtolower((string) ($get('overview_day_filter') ?? strtolower(now()->format('l'))));
+
+                                    if ($selectedDay !== 'all') {
+                                        return count($get("slots_{$selectedDay}") ?? []) === 0;
+                                    }
+
                                     foreach ($dayKeys as $day) {
                                         if (count($get('slots_' . strtolower($day)) ?? []) > 0) {
                                             return false;
@@ -990,7 +1357,7 @@ class DoctorForm
                                 ->hiddenLabel()
                                 ->content(function () {
                                     return new \Illuminate\Support\HtmlString(\Illuminate\Support\Facades\Blade::render(<<<'BLADE'
-                                        <div class="flex items-center gap-x-3 mt-6 pt-6 border-t border-gray-200 dark:border-white/10">
+                                        <div class="flex items-center pt-6 mt-6 border-t border-gray-200 gap-x-3 dark:border-white/10">
                                             <x-filament::button type="submit" color="primary">
                                                 Save Schedule
                                             </x-filament::button>
@@ -1191,7 +1558,7 @@ class DoctorForm
                             \Filament\Schemas\Components\Actions::make([
                                 \Filament\Actions\Action::make('global_add_slot')
                                     ->label('Add Consultation Slot')
-                                    ->color('success')
+                                    ->color('primary')
                                     ->size('md')
                                     ->icon('heroicon-m-plus-circle')
                                     ->action(function ($get, $set, $livewire) {
@@ -1229,11 +1596,13 @@ class DoctorForm
 
                                         // Validate using centralized service
                                         $doctorId = $livewire->record?->id;
+                                        $consultationType = $get('temp_cons') ?? 'in-person';
                                         $errors = $validationService->validateSlot(
                                             $doctorId,
                                             $newDate,
                                             $newStart,
                                             $newEnd,
+                                            $consultationType,
                                             $isRec,
                                             null,
                                             $allSlots,
@@ -1269,7 +1638,6 @@ class DoctorForm
                                         }
 
                                         // Figure out correct opd_type
-                                        $consultationType = $get('temp_cons') ?? 'in-person';
                                         $opdType = $consultationType === 'video' ? null : ($get('temp_opd') ?? 'general');
 
                                         // Prepare slot data
@@ -1358,7 +1726,7 @@ class DoctorForm
                                             } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
                                                 Notification::make()
                                                     ->title('Duplicate Schedule')
-                                                    ->body('This time slot already exists for this doctor. Please choose a different time.')
+                                                    ->body('This slot already exists. Please change the time, date, or consultation mode and try again.')
                                                     ->danger()
                                                     ->send();
 
@@ -1396,7 +1764,8 @@ class DoctorForm
                                         $set('temp_rec', false);
                                         $set('temp_fee', 0);
                                     }),
-                            ])->fullWidth(),
+                            ])->columns(4)->extraAttributes(['class' => 'ms-auto fi-align-end']),
+
                         ]),
                 ])->columnSpanFull(),
         ];

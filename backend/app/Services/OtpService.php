@@ -44,7 +44,6 @@ class OtpService
         // Log::info('Sending OTP email', ['email' => $email, 'otp' => $otp, 'context' => $displayContext]);
         $subject = "Your " . $displayContext . " OTP";
         $message = "Your " . $displayContext . " OTP is: {$otp}\n\nThis OTP will expire in {$expiryDisplay}.";
-
         Mail::raw($message, function ($mailMessage) use ($email, $subject) {
             $mailMessage->to($email)
                 ->subject($subject);

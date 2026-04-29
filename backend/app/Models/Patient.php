@@ -39,7 +39,21 @@ class Patient extends Model
         'state',
         'nationality',
         'marital_status',
+        'partner_relation_type',
+        'spouse_name',
         'blood_group',
+        'allergies',
+        'existing_conditions',
+        'current_medications',
+        'past_medical_history',
+        'emergency_contact_name',
+        'emergency_contact_relationship',
+        'emergency_contact_phone',
+        'insurance_provider',
+        'insurance_policy_number',
+        'insurance_policy_expiry',
+        'insurance_tpa_details',
+        'treatment_consent_accepted',
         'source',
         'is_existing_patient',
         'existing_patient_id',
@@ -50,6 +64,8 @@ class Patient extends Model
     protected $casts = [
         'is_existing_patient' => 'boolean',
         'create_user_account' => 'boolean',
+        'treatment_consent_accepted' => 'boolean',
+        'insurance_policy_expiry' => 'date',
     ];
 
     protected $appends = ['avatar'];

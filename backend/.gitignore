@@ -10,6 +10,11 @@
 /.idea
 /.nova
 /.phpunit.cache
+/repo2
+/repo2/*
+/repo2/.env
+/repo2/frontend
+/repo2/backend
 /.vscode
 /.cursor
 .cursor
