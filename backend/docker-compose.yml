@@ -3,46 +3,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: cmc-telehealth_app
+    container_name: repo2-backend-app
     working_dir: /var/www/html
     volumes:
       - .:/var/www/html
     depends_on:
       - db
-    networks:
-      - cmc_net
+    command: sh -c "composer install --no-interaction --prefer-dist && php artisan key:generate --force && php-fpm"
+    restart: unless-stopped
 
   web:
     image: nginx:alpine
-    container_name: cmc-telehealth_web
+    container_name: repo2-backend-web
     ports:
-      - "8800:80"
+      - "8100:80"
     volumes:
       - .:/var/www/html
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - app
-    networks:
-      - cmc_net
-
-  db:
-    image: mysql:8
-    container_name: cmc-telehealth_db
-    environment:
-      MYSQL_DATABASE: cmc_telehealth
-      MYSQL_USER: cmc_user
-      MYSQL_PASSWORD: cmc_pass
-      MYSQL_ROOT_PASSWORD: root
-    ports:  
-      - "3307:3306"
-    volumes:
-      - cmc_db_data:/var/lib/mysql
-    networks:
-      - cmc_net
+    restart: unless-stopped
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
-    container_name: cmc-telehealth_phpmyadmin
+    container_name: repo2-backend-phpmyadmin
     environment:
       PMA_HOST: db
       PMA_PORT: 3306
@@ -50,14 +34,23 @@ services:
       PMA_PASSWORD: cmc_pass
       PMA_ARBITRARY: 1
     ports:
-      - "9900:80"
+      - "9100:80"
     depends_on:
       - db
-    networks:
-      - cmc_net
 
-networks:
-  cmc_net:
+  db:
+    image: mysql:8
+    container_name: repo2-backend-db
+    environment:
+      MYSQL_DATABASE: cmc_telehealth
+      MYSQL_USER: cmc_user
+      MYSQL_PASSWORD: cmc_pass
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - repo2_backend_db_data:/var/lib/mysql
+    restart: unless-stopped
 
 volumes:
-  cmc_db_data:
+  repo2_backend_db_data:

@@ -7,6 +7,20 @@ use Carbon\Carbon;
 
 class DoctorAvailabilityValidationService
 {
+    private function normalizeModelDateValue($value): ?string
+    {
+        if ($value instanceof Carbon) {
+            return $value->format('Y-m-d');
+        }
+
+        return $this->normalizeDate($value);
+    }
+
+    private function normalizeConsultationType(?string $consultationType): string
+    {
+        return strtolower((string) $consultationType) === 'video' ? 'video' : 'in-person';
+    }
+
     private function isNonRecurringSlotInFutureWindow(?string $date, string $endTime): bool
     {
         $normalizedDate = $this->normalizeDate($date);
@@ -58,7 +72,7 @@ class DoctorAvailabilityValidationService
             return (isset($time['hour']) && isset($time['minute']))
                 ? sprintf('%02d:%02d', $time['hour'], $time['minute']) : null;
         }
-        
+
         if (is_numeric($time)) {
             try {
                 return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($time)->format('H:i');
@@ -70,7 +84,7 @@ class DoctorAvailabilityValidationService
         if (is_string($time)) {
             $time = trim($time);
             if (empty($time)) return null;
-            
+
             try {
                 return Carbon::parse($time)->format('H:i');
             } catch (\Exception $e) {
@@ -150,6 +164,7 @@ class DoctorAvailabilityValidationService
         ?string $date,
         string $startTime,
         string $endTime,
+        ?string $consultationType = null,
         ?string $excludeId = null,
         ?string $dayOfWeek = null,
         ?string $recurringStartDate = null,
@@ -198,6 +213,10 @@ class DoctorAvailabilityValidationService
             $query->where('id', '!=', $excludeId);
         }
 
+        if ($consultationType !== null) {
+            $query->where('consultation_type', $this->normalizeConsultationType($consultationType));
+        }
+
         // Exclude soft-deleted records and ignore expired windows
         return $query->get()->contains(function ($slot) {
             if (!$slot->is_recurring) {
@@ -221,6 +240,7 @@ class DoctorAvailabilityValidationService
         ?string $date,
         string $startTime,
         string $endTime,
+        ?string $consultationType = null,
         ?string $excludeId = null,
         ?string $dayOfWeek = null,
         ?string $recurringStartDate = null,
@@ -230,6 +250,7 @@ class DoctorAvailabilityValidationService
         $normalizedDate = $this->normalizeDate($date);
         $normalizedStart = $this->normalizeTime($startTime);
         $normalizedEnd = $this->normalizeTime($endTime);
+        $normalizedConsultationType = $this->normalizeConsultationType($consultationType);
         $normalizedRecurringStart = $this->normalizeDate($recurringStartDate);
         $normalizedRecurringEnd = $this->normalizeDate($recurringEndDate);
 
@@ -263,14 +284,14 @@ class DoctorAvailabilityValidationService
 
         foreach ($existingSlots as $slot) {
             if (!$slot->is_recurring && !$this->isNonRecurringSlotInFutureWindow(
-                $slot->date?->format('Y-m-d') ?? $slot->date,
+                $this->normalizeModelDateValue($slot->date),
                 $slot->end_time
             )) {
                 continue;
             }
 
             if ($slot->is_recurring && $this->hasRecurringWindowPassed(
-                $slot->recurring_end_date?->format('Y-m-d') ?? $slot->recurring_end_date
+                $this->normalizeModelDateValue($slot->recurring_end_date)
             )) {
                 continue;
             }
@@ -278,14 +299,24 @@ class DoctorAvailabilityValidationService
             if (! $normalizedDate && ! $this->recurringRangesOverlap(
                 $normalizedRecurringStart,
                 $normalizedRecurringEnd,
-                $slot->recurring_start_date?->format('Y-m-d') ?? $slot->recurring_start_date,
-                $slot->recurring_end_date?->format('Y-m-d') ?? $slot->recurring_end_date
+                $this->normalizeModelDateValue($slot->recurring_start_date),
+                $this->normalizeModelDateValue($slot->recurring_end_date)
             )) {
                 continue;
             }
 
             $existingStart = $this->normalizeTime($slot->start_time);
             $existingEnd = $this->normalizeTime($slot->end_time);
+            $existingConsultationType = $this->normalizeConsultationType($slot->consultation_type ?? null);
+
+            // Allow identical time windows across different consultation modes.
+            if (
+                $existingConsultationType !== $normalizedConsultationType &&
+                $existingStart === $normalizedStart &&
+                $existingEnd === $normalizedEnd
+            ) {
+                continue;
+            }
 
             if ($existingStart && $existingEnd && $this->timeRangesOverlap(
                 $normalizedStart,
@@ -328,6 +359,7 @@ class DoctorAvailabilityValidationService
         ?string $date,
         string $startTime,
         string $endTime,
+        ?string $consultationType = 'in-person',
         bool $isRecurring = false,
         ?string $slotId = null,
         array $existingFormSlots = [],
@@ -346,6 +378,7 @@ class DoctorAvailabilityValidationService
         $normalizedDate = $isRecurring ? null : $this->normalizeDate($date);
         $normalizedStart = $this->normalizeTime($startTime);
         $normalizedEnd = $this->normalizeTime($endTime);
+        $normalizedConsultationType = $this->normalizeConsultationType($consultationType);
 
         if (!$normalizedStart || !$normalizedEnd) {
             $errors[] = 'Both start time and end time are required for availability.';
@@ -378,6 +411,7 @@ class DoctorAvailabilityValidationService
             $existingIsRecurring = (bool)($existingSlot['is_recurring'] ?? false);
             $existingDate = $existingIsRecurring ? null : $this->normalizeDate($existingSlot['date'] ?? null);
             $existingRecurringEndDate = $existingSlot['recurring_end_date'] ?? null;
+            $existingConsultationType = $this->normalizeConsultationType($existingSlot['consultation_type'] ?? null);
 
             if (!$existingStart || !$existingEnd) {
                 continue;
@@ -398,6 +432,7 @@ class DoctorAvailabilityValidationService
             if (
                 $normalizedStart === $existingStart &&
                 $normalizedEnd === $existingEnd &&
+                $normalizedConsultationType === $existingConsultationType &&
                 $isRecurring === $existingIsRecurring &&
                 (
                     // Non-recurring → compare exact date
@@ -423,6 +458,14 @@ class DoctorAvailabilityValidationService
                 ($normalizedDate === $existingDate && !$isRecurring) ||
                 ($isRecurring && $existingIsRecurring && $currentDay === $existingDay)
             ) {
+                if (
+                    $normalizedConsultationType !== $existingConsultationType &&
+                    $normalizedStart === $existingStart &&
+                    $normalizedEnd === $existingEnd
+                ) {
+                    continue;
+                }
+
                 if ($this->timeRangesOverlap($normalizedStart, $normalizedEnd, $existingStart, $existingEnd)) {
                     $dateStr = $normalizedDate
                         ? Carbon::parse($normalizedDate)->format('M d, Y')
@@ -436,16 +479,17 @@ class DoctorAvailabilityValidationService
         // 3. Check against database (if doctor exists)
         if ($doctorId) {
             // Check for exact duplicate
-            if ($this->slotExistsInDatabase($doctorId, $normalizedDate, $normalizedStart, $normalizedEnd, $slotId, $dayOfWeek)) {
+            if ($this->slotExistsInDatabase($doctorId, $normalizedDate, $normalizedStart, $normalizedEnd, $normalizedConsultationType, $slotId, $dayOfWeek)) {
                 $dateStr = $normalizedDate
                     ? Carbon::parse($normalizedDate)->format('M d, Y')
                     : 'this recurring pattern';
-                $errors[] = "This doctor already has an availability slot from {$normalizedStart} to {$normalizedEnd} on {$dateStr}. Duplicate availability is not allowed in telehealth scheduling.";
+                $modeLabel = $normalizedConsultationType === 'video' ? 'Video' : 'In-Person';
+                $errors[] = "A {$modeLabel} slot already exists from {$normalizedStart} to {$normalizedEnd} on {$dateStr}. Use a different time or change the consultation type.";
                 return $errors;
             }
 
             // Check for overlaps
-            $overlaps = $this->slotOverlapsInDatabase($doctorId, $normalizedDate, $normalizedStart, $normalizedEnd, $slotId, $dayOfWeek);
+            $overlaps = $this->slotOverlapsInDatabase($doctorId, $normalizedDate, $normalizedStart, $normalizedEnd, $normalizedConsultationType, $slotId, $dayOfWeek);
             if (!empty($overlaps)) {
                 $overlap = $overlaps[0];
                 $dateStr = $normalizedDate
@@ -535,6 +579,7 @@ class DoctorAvailabilityValidationService
                 $date,
                 $startTime,
                 $endTime,
+                $slot['consultation_type'] ?? 'in-person',
                 $isRecurring,
                 $slotId,
                 $otherSlots,
@@ -562,6 +607,7 @@ class DoctorAvailabilityValidationService
                 $tempDate,
                 $tempStart,
                 $tempEnd,
+                $formData['temp_cons'] ?? 'in-person',
                 $tempRec,
                 null,
                 $allSlotsForComparison,

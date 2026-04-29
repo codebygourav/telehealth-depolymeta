@@ -42,6 +42,7 @@ class TestRazorpayBooking extends Page implements HasForms
     public array $appointmentDateOptions = [];
     public string $paymentMode = 'Live';
     public ?string $currentAppointmentId = null;
+    public ?array $autoCheckout = null;
     // public static function canAccess(): bool
     // {
     //     return app()->isLocal();
@@ -60,7 +61,29 @@ class TestRazorpayBooking extends Page implements HasForms
     public function mount(): void
     {
         $this->paymentMode = SettingService::isAppointmentMockPaymentEnabled() ? 'Mock' : 'Live';
-        $this->form->fill();
+        $patientId = request()->query('patient_id');
+        $payload = [];
+        if (is_string($patientId) && $patientId !== '' && Patient::query()->whereKey($patientId)->exists()) {
+            $payload['patient_id'] = $patientId;
+        }
+        $this->form->fill($payload);
+
+        $openCheckout = (string) request()->query('open_checkout', '0') === '1';
+        $orderId = request()->query('order_id');
+        $appointmentId = request()->query('appointment_id');
+        $amountPaise = (int) request()->query('amount_paise', 0);
+        $keyId = request()->query('key_id');
+
+        if ($openCheckout && is_string($orderId) && is_string($appointmentId) && $amountPaise > 0 && is_string($keyId)) {
+            $this->autoCheckout = [
+                'appointment_id' => $appointmentId,
+                'payment' => [
+                    'order_id' => $orderId,
+                    'amount_paise' => $amountPaise,
+                    'razorpay_key_id' => $keyId,
+                ],
+            ];
+        }
     }
 
     public function form(Schema $form): Schema

@@ -6,8 +6,10 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\DoctorCredentialsMail;
 use Illuminate\Support\Facades\Http;
+use App\Http\Controllers\PatientNotificationController;
 
 Route::view('/test-upload', 'test-upload');
+Route::view('/test-patient-registration', 'test-patient-registration');
 
 Route::get('/', function () {
     return redirect('/admin');
@@ -39,6 +41,11 @@ Route::get('/vendor/register', VendorRegistration::class)->name('vendor.register
 Route::get('/thankyou-demo', function () {
     return view('templates.thankyou');
 });
+
+// Admin: notify the patient about their next upcoming appointment (no API change).
+Route::post('/admin/patients/{patient}/notify-next', [PatientNotificationController::class, 'notifyNextAppointment'])
+    ->middleware(['web', 'auth'])
+    ->name('admin.patients.notify-next');
 
 //  to make the storage symlink work, run the following command on live using SSH:
 // cd public

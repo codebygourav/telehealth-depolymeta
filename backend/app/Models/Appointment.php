@@ -25,7 +25,7 @@ class Appointment extends Model
         'appointment_end_time',
         'status',
         'consultation_type',
-        'notes',
+        'visit_reason',
         'instructions_by_doctor',
         'next_visit_date',
         'stamp_preference',
@@ -46,9 +46,25 @@ class Appointment extends Model
         'consultation_type' => 'string',
         'instructions_by_doctor' => 'array',
         'next_visit_date' => 'date',
-        'notes' => 'array',
+        'visit_reason' => 'array',
         'status' => AppointmentStatus::class,
     ];
+
+    /**
+     * Backward compatibility: map legacy notes attribute to visit_reason.
+     */
+    public function getNotesAttribute()
+    {
+        return $this->visit_reason;
+    }
+
+    /**
+     * Backward compatibility: allow old code to set notes.
+     */
+    public function setNotesAttribute($value): void
+    {
+        $this->attributes['visit_reason'] = is_array($value) ? json_encode($value) : $value;
+    }
     protected static function boot()
     {
         parent::boot();

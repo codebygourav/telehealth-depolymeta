@@ -599,6 +599,11 @@ class BookAppointmentController extends Controller
 
         try {
             $data = $request->validate($validationRules);
+            Log::info('Razorpay verifyPayment hit', [
+                'appointment_id' => $data['appointment_id'] ?? null,
+                'razorpay_order_id' => $data['razorpay_order_id'] ?? null,
+                'razorpay_payment_id' => $data['razorpay_payment_id'] ?? null,
+            ]);
 
             // ---------------- LOCK START ----------------
             // Use appointment_id for the lock to prevent multiple simultaneous verifications for the same booking
@@ -641,10 +646,18 @@ class BookAppointmentController extends Controller
                 // ---------------- SUCCESS FLOW ----------------
 
                 if ($payment->status === PaymentStatus::PAID) {
+                    Log::info('Razorpay payment marked PAID', [
+                        'appointment_id' => $appointment->id,
+                        'payment_id' => $payment->id ?? null,
+                    ]);
                     $this->finalizeSuccessfulPayment($appointment, $payment);
                 }
 
                 if ($payment->status === PaymentStatus::FAILED) {
+                    Log::warning('Razorpay payment marked FAILED', [
+                        'appointment_id' => $appointment->id,
+                        'payment_id' => $payment->id ?? null,
+                    ]);
                     $appointment->update([
                         'status' => AppointmentStatus::FAILED->value,
                     ]);

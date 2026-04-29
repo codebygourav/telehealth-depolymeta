@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Patients\Pages;
 
 use App\Filament\Resources\Patients\PatientResource;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
@@ -20,6 +21,11 @@ class EditPatient extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('bookNow')
+                ->label('Book Now')
+                ->icon('heroicon-o-calendar-days')
+                ->color('success')
+                ->url(fn () => url('/admin/test-razorpay-booking?patient_id=' . $this->record->id)),
             ActionGroup::make([
                 ViewAction::make()
                     ->icon('heroicon-o-eye'),
