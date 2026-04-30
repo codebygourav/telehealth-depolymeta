@@ -15,6 +15,7 @@ export function AvailableDoctors({
   doctors,
   onBookNow,
   onShowAll,
+  
 }: AvailableDoctorsProps) {
   if (!doctors || doctors.length === 0) {
     return null;
@@ -25,10 +26,12 @@ export function AvailableDoctors({
         <SectionHeader
           title="Available Doctors"
           showAction={true}
+          actionText="Show All Doctors"
+          subtitle="With Super specialist doctors and state-of-the-art technology, we cover the complete spectrum of medical specialties"
           onActionClick={onShowAll}
         />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {doctors.map((doc) => (
           <DoctorCard key={doc.id} doctor={doc} onBookNow={onBookNow} />
         ))}

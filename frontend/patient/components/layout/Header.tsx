@@ -49,27 +49,27 @@ export function Header() {
         {
             title: "Dashboard",
             href: "/",
-            icon: <LayoutDashboard className="h-4 w-4" />,
+            icon: <LayoutDashboard className="w-4 h-4" />,
         },
         {
             title: "Find Doctors",
             href: "/find-doctors",
-            icon: <Stethoscope className="h-4 w-4" />,
+            icon: <Stethoscope className="w-4 h-4" />,
         },
         {
             title: "My Appointments",
             href: "/appointments",
-            icon: <CalendarCheck className="h-4 w-4" />,
+            icon: <CalendarCheck className="w-4 h-4" />,
         },
         {
             title: "Medical Reports",
             href: "/medical-records",
-            icon: <FileText className="h-4 w-4" />,
+            icon: <FileText className="w-4 h-4" />,
         },
         {
             title: "My Medicine",
             href: "/my-medicines",
-            icon: <Pill className="h-4 w-4" />,
+            icon: <Pill className="w-4 h-4" />,
         },
     ];
 
@@ -90,16 +90,16 @@ export function Header() {
                 isScrolled && "shadow-sm",
             )}
         >
-            <div className="mx-auto flex h-[72px] container-max-width items-center gap-4 px-4 sm:px-6">
+            <div className="mx-auto flex h-[72px] container-max-width items-center gap-4">
        
        
-                <Link href="/" className="flex shrink-0 items-center">
+                <Link href="/" className="flex items-center shrink-0">
                     <Image
                         src={logo}
                         alt="CMC Telehealth"
                         width={190}
                         height={42}
-                        className="h-10 w-auto object-contain"
+                        className="object-contain w-auto h-10"
                         priority
                     />
                 </Link>
@@ -112,7 +112,7 @@ export function Header() {
                     isActivePath={isActivePath}
                 />
 
-                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 ml-auto sm:gap-4">
                     <Link href="/notifications" className="relative">
                         <Button
                             variant="outline"
@@ -141,7 +141,7 @@ export function Header() {
                     ) : (
                         <Link
                             href="/auth/login"
-                            className="rounded-2xl border border-border/70 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                            className="px-4 py-2 text-sm font-semibold transition-colors border rounded-2xl border-border/70 text-foreground hover:bg-muted"
                         >
                             Sign In
                         </Link>

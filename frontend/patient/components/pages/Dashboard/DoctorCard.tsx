@@ -81,7 +81,7 @@ import { ChevronRight } from "lucide-react";
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center mt-3 text-sm gap-x-2 gap-y-1 text-foreground/80">
+              <div className="flex flex-wrap items-center mt-2 text-sm gap-x-2 gap-y-1 text-foreground/80">
                 <span className="flex items-center gap-1.5 text-span-12">
                   <Clock className="size-3.5" />
                   Exp: {doctor.years_experience || 14} yrs
@@ -118,7 +118,7 @@ import { ChevronRight } from "lucide-react";
                 onBookNow?.(doctor.id);
                 router.push(`/find-doctors/${doctor.id}`);
               }}
-              className="btn-primary-cta"
+              className="btn-primary-cta !h-12 w-full"
             >
               Book Your Appointment
               <ChevronRight />

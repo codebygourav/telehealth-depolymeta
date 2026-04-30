@@ -85,7 +85,7 @@
   --global-h2-22: 22px;
   --global-h3-20: 20px;
   --global-h4-18: 18px;
-  --global-h5-18: 18px;
+  --global-h5-16: 16px;
   --global-span-14: 14px;
   --global-span-12: 12px;
 
@@ -211,7 +211,12 @@
 
   h4 {
     font-size: var(--global-h4-18);
-    font-weight: bold;
+    font-weight: normal;
+    line-height: 30px;
+  }
+  h5{
+    font-size: var(--global-h5-16);
+    font-weight: var(--font-weight-medium);
     line-height: 1.5;
   }
 
@@ -246,8 +251,9 @@
   .span-12 {
     font-size: var(--global-span-12);
     font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: 23px;
   }
+ 
 
   .text-span-14 {
     font-size: var(--global-span-14);
@@ -260,19 +266,19 @@
   /* Global button styles */
   .btn-primary {
     border-radius: var(--global-radius);
-    @apply bg-primary text-primary-foreground font-semibold transition-colors hover:bg-primary/95;
+    @apply font-semibold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
   }
 
   /* Full-width primary CTA button used across cards/forms */
   .btn-primary-cta {
     border-radius: var(--global-radius);
-    @apply bg-primary text-primary-foreground font-semibold transition-colors hover:bg-primary/95 mt-5 h-12 w-full text-base;
+    @apply mt-5 text-base font-semibold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
   }
 
   /* Animate trailing icon (e.g. ChevronRight) consistently */
   .btn-primary > svg:last-child,
   .btn-primary-cta > svg:last-child {
-    @apply ml-2 size-4 transition-transform duration-200;
+    @apply ml-2 transition-transform duration-200 size-4;
   }
 
   .btn-primary:hover > svg:last-child,
@@ -408,8 +414,28 @@
   .secondary-menu-color {
     background-color: var(--color-secondary-menu-color);
   }
+  .container-max-width-full {
+    max-width: 100%;
+  }
   .container-max-width {
     max-width: var(--container-max-width);
+  }
+  .full-bleed {
+    position: relative;
+    width: 100vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    max-width: 100vw;
+  }
+  .full-bleed-bg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 100vw;
+    transform: translateX(-50%);
   }
   .bg-light-gray {
     background-color: var(--light-gray);

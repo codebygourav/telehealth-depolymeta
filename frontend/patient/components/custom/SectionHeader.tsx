@@ -14,6 +14,8 @@ interface SectionHeaderProps {
     actionText?: string;
     onActionClick?: () => void;
     headingClassName?: string;
+    subtitleClassName?: string;
+    containerClassName?: string;
 }
 
 export function SectionHeader({
@@ -23,39 +25,43 @@ export function SectionHeader({
     actionText = "Show All",
     onActionClick,
     headingClassName,
+    subtitleClassName,
+    containerClassName,
 }: SectionHeaderProps) {
     return (
-        <div className="mb-5 flex items-center justify-between gap-4 pb-5">
+        <div className={cn("grid grid-cols-1 md:grid-cols-2 justify-between gap-4 pb-5 mb-5 ", containerClassName)}>
 
             {/* Left Content */}
             <div>
-                <h2
+                <h1
                     className={cn(
-                        "text-[24px] font-bold text-foreground font-headline tracking-tight",
+                        "font-bold text-foreground font-headline tracking-tight",
                         headingClassName
                     )}
                 >
                     {title}
-                </h2>
+                </h1>
 
                 {subtitle && (
-                    <p className="mt-1 text-base text-on-surface-variant">
+                    <h4 className={cn("mt-1 text-on-surface-variant", subtitleClassName)}>
                         {subtitle}
-                    </p>
+                    </h4>
                 )}
             </div>
 
             {/* Right Action */}
+            <div className="flex justify-end text-end">
             {showAction && (
                 <Button
-                    variant="ghost"
                     onClick={onActionClick}
-                    className="text-white font-bold hover-bg-light-gray bg-primary flex items-center gap-1 text-xs py-1.5 px-2.5 shrink-0"
+                    className="flex items-center w-auto h-10 gap-1 ml-0 btn-primary-cta"
                 >
                     {actionText}
-                    <ChevronRight className="size-4" />
+                    <ChevronRight className="size-4.5 ml-0" />
                 </Button>
+                
             )}
+            </div>
         </div>
     );
 }

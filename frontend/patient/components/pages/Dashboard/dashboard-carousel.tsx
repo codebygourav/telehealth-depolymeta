@@ -90,10 +90,14 @@ export function DashboardCarousel<T>({
               key={i}
               onClick={() => api?.scrollTo(i)}
               className={cn(
-                "h-2 rounded-full transition-all duration-300",
+                "rounded-full transition-all duration-300",
                 i === current
-                  ? cn("w-4 bg-primary opacity-100", activeDotClassName)
-                  : cn("w-2 bg-primary/20 hover:bg-primary/40", dotClassName)
+                  ? activeDotClassName
+                    ? cn("w-4 opacity-100", activeDotClassName)
+                    : "w-4 h-2 bg-primary opacity-100"
+                  : dotClassName
+                    ? cn("w-2", dotClassName)
+                    : "w-2 h-2 bg-primary/20 hover:bg-primary/40"
               )}
               aria-label={`Go to slide ${i + 1}`}
             />
