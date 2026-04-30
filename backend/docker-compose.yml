@@ -9,15 +9,8 @@ services:
       - .:/var/www/html
     depends_on:
       - db
-    command: >
-      sh -c "
-      if [ ! -f .env ]; then cp .env.example .env; fi &&
-      composer install --no-interaction --prefer-dist &&
-      if ! grep -q '^APP_KEY=base64:' .env; then php artisan key:generate --force; fi &&
-      php-fpm"
+    command: sh -c "composer install --no-interaction --prefer-dist && php artisan key:generate --force && php-fpm"
     restart: unless-stopped
-    networks:
-      - cmc_net
 
   web:
     image: nginx:alpine
