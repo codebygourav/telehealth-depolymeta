@@ -50,7 +50,7 @@ class PatientHomeController extends Controller
 
         // ---------------- Departments + Symptoms ----------------
         $specialityData = Cache::remember('home_speciality_symptoms', 60, function () {
-            $departments = $this->departmentRepository->getDepartmentsWithSymptoms(['limit' => 6]);
+            $departments = $this->departmentRepository->getDepartmentsWithSymptoms(['limit' => 5]);
             $symptoms = $this->departmentRepository->getSymptomsMap($departments);
 
             return compact('departments', 'symptoms');
