@@ -4,15 +4,14 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useBrowseDoctors } from '@/queries/useBrowseDoctors';
 import { useDepartmentsAndSymptoms } from '@/queries/useDepartmentsAndSymptoms';
-import SearchBar from '@/components/pages/find-doctor/searchBar';
-import FilterSidebar from '@/components/pages/find-doctor/FilterSidebar';
-import SortDropdown from '@/components/pages/find-doctor/SortDropdown';
+import SearchBar from '@/components/pages/find-doctor/searchBar'
 import DoctorCard from '@/components/pages/find-doctor/DoctorCard';
 import LoadingSkeleton from '@/components/pages/find-doctor/LoadingSkeleton';
 import CustomDialog from '@/components/custom/Dialogboxs';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ConsultationType, SortOption, Doctor } from '@/types/browse-doctors';
+import SelectField from '@/components/custom/SelectField';
 
 import HeroSection from '@/components/hero-section';
 
@@ -57,10 +56,14 @@ const FindDoctors = () => {
         }
     }, [searchParams]);
 
+    const consultationTypeOptions = [
+        { value: "all", label: "All Types" },
+        { value: "video", label: "Video Consultation" },
+        { value: "in-person", label: "In-person Consultation" },
+    ];
+
     // Queries
     const { data: doctorsData, error, isLoading, refetch } = useBrowseDoctors();
-
-    console.log("doctor data", doctorsData);
 
     const { data: departmentsData } = useDepartmentsAndSymptoms();
 
@@ -211,30 +214,55 @@ const FindDoctors = () => {
                     description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
                 />
 
-                <div className='max-w-1440 w-full mx-auto'>
-                    <div className='flex items-center justify-between'>
-                        <div className='flex-1'>
+                <div className='max-w-1440 w-full mx-auto xl:px-0 px-5'>
+                    <div className='flex items-center justify-between lg:flex-row flex-col'>
+
+                        <div className='lg:basis-1/5 basis-full lg:w-auto w-full'>
                             <h3 className='text-2xl font-semibold text-black'>Find a Doctor</h3>
                         </div>
-                        <div className='flex-1'>
+
+                        <div className='lg:basis-4/5 basis-full lg:w-auto w-full flex md:items-center items-start justify-end  gap-4 md:flex-row flex-col flex-wrap lg:mt-0 mt-2'>
+
+                            <button
+                                onClick={handleClearFilters}
+                                className="text-sm text-surface-tint font-semibold hover:underline transition-colors pr-4"
+                            >
+                                Clear all
+                            </button>
+
+                            <div className='max-w-48 w-full'>
+                                <SelectField
+                                    name="specialty"
+                                    value={consultationType}
+                                    onChange={(value) =>
+                                        setConsultationType(value as ConsultationType)
+                                    }
+                                    options={consultationTypeOptions}
+                                    placeholder="Select specialty"
+                                    className="w-full!"
+                                    triggerClassName="w-full !h-auto bg-transparent border border-light-gray rounded-md px-5 py-3.5 text-sm font-medium"
+                                />
+                            </div>
+
+                            <div className='max-w-60 w-full'>
+                                <SelectField
+                                    name="specialty"
+                                    value={specialty}
+                                    onChange={setSpecialty}
+                                    options={specialtyOptions}
+                                    placeholder="Select specialty"
+                                    className="w-full!"
+                                    triggerClassName="w-full !h-auto bg-transparent border border-light-gray rounded-md px-5 py-3.5 text-sm font-medium"
+                                />
+                            </div>
+
                             <SearchBar value={searchTerm} onChange={setSearchTerm} />
                         </div>
                     </div>
                 </div>
 
                 {/* Main Content */}
-                <div className="flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-10">
-
-
-
-                    <FilterSidebar
-                        specialty={specialty}
-                        consultationType={consultationType}
-                        specialtyOptions={specialtyOptions}
-                        onSpecialtyChange={setSpecialty}
-                        onConsultationTypeChange={setConsultationType}
-                        onClearFilters={handleClearFilters}
-                    />
+                <div className="max-w-1440 w-full mx-auto flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-10 xl:px-0 px-5">
 
                     <div className="flex-grow">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-6 md:mb-8">
@@ -243,7 +271,7 @@ const FindDoctors = () => {
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 lg:gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
                             {sortedDoctors.map((doctor) => (
                                 <DoctorCard
                                     key={doctor.id}

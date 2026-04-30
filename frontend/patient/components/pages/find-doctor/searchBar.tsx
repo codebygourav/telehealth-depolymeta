@@ -16,7 +16,7 @@ const SearchBar = ({ value, onChange }: SearchBarProps) => {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search Doctor"
-        className="max-w-72 w-full border border-light-gray rounded-md pl-12 py-4 outline-none"
+        className="max-w-80 w-full border border-light-gray rounded-md pl-12 py-4 outline-none"
       />
     </div>
   );

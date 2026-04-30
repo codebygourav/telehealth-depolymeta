@@ -7,6 +7,7 @@ export interface Doctor {
   years_experience: string;
   languages_known: string[];
   consultation_fee: number;
+  consultation_type: string;
   consultation_type_label: string[];
   hospital?: string;
   availability?: string;

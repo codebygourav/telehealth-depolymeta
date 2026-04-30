@@ -1,4 +1,4 @@
-import { Star, Clock, Languages, MapPin } from 'lucide-react';
+import { Star, Clock, Languages, MapPin, ChevronRight, Video, Hospital } from 'lucide-react';
 import type { Doctor } from '@/types/browse-doctors';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -19,176 +19,116 @@ const DoctorCard = ({ doctor, onBook, onError, onSuccess, isLoading = false }: D
     };
 
     return (
-        <div className="bg-surface-container-lowest rounded-2xl sm:rounded-3xl shadow-sm border border-outline-variant/10 hover:shadow-md transition-shadow group h-full flex flex-col overflow-hidden">
+        <div className="shadow-[0px_2px_4px_rgba(0,0,0,0.1)] rounded-lg border border-light-gray transition-shadow group h-full flex flex-col overflow-hidden">
 
-            {/* MOBILE LAYOUT (visible only on mobile) */}
-            <div className="sm:hidden">
-                {/* Mobile Header */}
-                <div className="bg-muted/10 p-4">
-                    <div className="flex gap-3">
+            {/* DESKTOP LAYOUT (visible only on tablet and above) */}
+            <div className="">
+
+                {/* Desktop Header */}
+                <div className="p-5">
+
+                    <div className="flex gap-4">
                         <img
                             src={doctor.avatar}
                             alt={doctor.name}
-                            className="w-14 h-14 rounded-xl object-cover shrink-0"
+                            className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-full object-cover shrink-0"
                             referrerPolicy="no-referrer"
                         />
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-grow min-w-0">
+
                             {/* Name and Rating */}
-                            <div className="flex flex-wrap items-start justify-between gap-1">
-                                <h3 className="font-headline font-bold text-base text-primary-container break-words flex-1">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                                <h3 className="font-semibold text-lg md:text-xl text-black break-words flex-1">
                                     {doctor.name}
                                 </h3>
                                 {doctor?.rating ? (
-                                    <div className="flex items-center gap-1 bg-secondary-container px-1.5 py-0.5 rounded-lg shrink-0">
-                                        <Star className="w-2.5 h-2.5 text-on-secondary-container fill-current" />
-                                        <span className="text-[10px] font-bold text-on-secondary-container">
+                                    <div className="flex items-center gap-1 bg-secondary-menu-color px-2 py-1.5 rounded shrink-0">
+                                        <Star size={12} color="#4D4D4D" fill="#4D4D4D" />
+                                        <span className="text-xs font-semibold text-[#4D4D4D]">
                                             {doctor.rating}
                                         </span>
                                     </div>
                                 ) : null}
                             </div>
+
                             {/* Category */}
-                            <p className="text-on-primary-container font-semibold text-xs mt-0.5 truncate">
+                            <p className="font-medium text-sm text-[#4D4D4D] md:text-base mt-1">
                                 {Array.isArray(doctor.speciality) && doctor.speciality.length > 0
                                     ? doctor.speciality[0].name
                                     : ""}
                             </p>
+
+                            {/* Experience & Languages - Inline on desktop */}
+                            <div className="flex flex-wrap items-center gap-4 md:gap-6 text-xs md:text-sm text-on-surface-variant font-medium mt-2">
+                                <span className="flex items-center gap-1.5 text-xs font-medium text-[#4D4D4D]">
+                                    <Clock size={14} />
+                                    Exp: {doctor.years_experience} yrs
+                                </span>
+                                <span className="flex items-center gap-1.5 text-xs font-medium text-[#4D4D4D]">
+                                    <Languages size={14} />
+                                    Lang: {doctor.languages_known?.join(', ') || 'N/A'}
+                                </span>
+                            </div>
+
                         </div>
                     </div>
-                    {/* Experience & Languages - Full width on mobile */}
-                    <div className="w-full flex flex-wrap items-center gap-2 text-[10px] text-on-surface-variant font-medium mt-3 pt-2 border-gray-100">
-                        <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Exp: {doctor.years_experience} yrs
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <Languages className="w-3 h-3" />
-                            Lang: {doctor.languages_known?.join(', ') || 'N/A'}
-                        </span>
-                    </div>
-                </div>
 
-                {/* Mobile Consultation Details */}
-                <div className="p-4 pt-3">
-                    <div className="flex flex-col gap-3">
-                        <div>
-                            <p className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant mb-0.5">
-                                Consultation Type
-                            </p>
-                            <div className="flex items-center gap-1.5 text-emerald-600">
-                                <MapPin className="w-3 h-3 shrink-0" />
-                                <p className="text-xs font-bold capitalize break-words">
-                                    {Array.isArray(doctor.consultation_type_label)
-                                        ? doctor.consultation_type_label?.join(' / ')
-                                        : doctor.consultation_type_label}
+                    {/* Desktop Consultation Details */}
+                    <div className="p-5 bg-light-gray mt-5">
+                        <div className="flex md:flex-row flex-col gap-6 md:gap-8 mb-5 md:mb-6 relative">
+
+                            <div className="flex-1 md:text-right text-left flex md:flex-col flex-row items-center justify-between">
+                                <p className="text-sm font-semibold text-black">
+                                    Consultation Type
+                                </p>
+                                <div className="flex items-center gap-1.5 md:mt-1.5">
+                                    {
+                                        doctor.consultation_type === 'video' ? (
+                                            <Video size={18} color='#18CE1E' fill="#18CE1E" />
+                                        ) : doctor.consultation_type === 'in-person' ? (
+                                            <Hospital size={18} color='#18CE1E' />
+                                        ) : (
+                                            <>
+                                                <Video size={18} color='#18CE1E' fill="#18CE1E" />
+                                                <Hospital size={18} color='#18CE1E' />
+                                            </>
+                                        )
+                                    }
+                                    <p className="text-xs font-bold capitalize break-words">
+                                        {doctor.consultation_type_label}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className='absolute left-1/2 top-0 w-px h-10 mx-auto bg-[#E7E8EB] md:block hidden'></div>
+
+                            <div className="flex-1 md:text-right text-left flex md:flex-col flex-row items-center justify-between">
+                                <p className="text-sm font-semibold text-black">
+                                    Consultation Fee
+                                </p>
+                                <p className="text-xs font-semibold text-black md:mt-1.5">
+                                    ₹{doctor.consultation_fee}
                                 </p>
                             </div>
+
                         </div>
-                        <div>
-                            <p className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant mb-0.5">
-                                Consultation Fee
-                            </p>
-                            <p className="text-base font-bold text-primary-container">
-                                ₹{doctor.consultation_fee}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="pt-3">
+
                         <Button
                             onClick={handleBookNow}
                             disabled={isLoading}
                             variant="default"
-                            className="w-full py-2.5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl transition-all shadow-md"
+                            className="w-full py-3.5 h-auto text-sm font-semibold"
                         >
-                            Book Now
+                            Book Your Appointment
+                            <ChevronRight size={22} strokeWidth={3.5} />
                         </Button>
                     </div>
+
                 </div>
+
+
             </div>
 
-            {/* DESKTOP LAYOUT (visible only on tablet and above) */}
-            <div className="hidden sm:block">
-                {/* Desktop Header */}
-                <div className="p-5 md:p-6">
-                    <div className="flex gap-4 md:gap-5">
-                        <img
-                            src={doctor.avatar}
-                            alt={doctor.name}
-                            className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-xl md:rounded-2xl object-cover shrink-0"
-                            referrerPolicy="no-referrer"
-                        />
-                        <div className="flex-grow min-w-0">
-                            {/* Name and Rating */}
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                                <h3 className="font-headline font-bold text-xl md:text-2xl text-primary-container break-words flex-1">
-                                    {doctor.name}
-                                </h3>
-                                {doctor?.rating ? (
-                                    <div className="flex items-center gap-1 bg-secondary-container px-2 py-1 rounded-lg shrink-0">
-                                        <Star className="w-3.5 h-3.5 md:w-4 md:h-4 text-on-secondary-container fill-current" />
-                                        <span className="text-xs font-bold text-on-secondary-container">
-                                            {doctor.rating}
-                                        </span>
-                                    </div>
-                                ) : null}
-                            </div>
-                            {/* Category */}
-                            <p className="text-on-primary-container font-semibold text-sm md:text-base mt-1 truncate">
-                                {Array.isArray(doctor.speciality) && doctor.speciality.length > 0
-                                    ? doctor.speciality[0].name
-                                    : ""}
-                            </p>
-                            {/* Experience & Languages - Inline on desktop */}
-                            <div className="flex flex-wrap items-center gap-4 md:gap-6 text-xs md:text-sm text-on-surface-variant font-medium mt-2">
-                                <span className="flex items-center gap-1">
-                                    <Clock className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                    Exp: {doctor.years_experience} yrs
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <Languages className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                    Lang: {doctor.languages_known?.join(', ') || 'N/A'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Desktop Consultation Details */}
-                <div className="p-5 md:p-6 pt-0 md:pt-5 mt-auto">
-                    <div className="flex flex-row gap-6 md:gap-8 mb-5 md:mb-6">
-                        <div className="flex-1">
-                            <p className="text-[10px] md:text-xs uppercase tracking-wider font-bold text-on-surface-variant mb-1">
-                                Consultation Type
-                            </p>
-                            <div className="flex items-center gap-1.5 text-emerald-600">
-                                <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
-                                <p className="text-sm md:text-base font-bold capitalize break-words">
-                                    {Array.isArray(doctor.consultation_type_label)
-                                        ? doctor.consultation_type_label?.join(' / ')
-                                        : doctor.consultation_type_label}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-[10px] md:text-xs uppercase tracking-wider font-bold text-on-surface-variant mb-1">
-                                Consultation Fee
-                            </p>
-                            <p className="text-lg md:text-xl font-bold text-primary-container">
-                                ₹{doctor.consultation_fee}
-                            </p>
-                        </div>
-                    </div>
-
-                    <Button
-                        onClick={handleBookNow}
-                        disabled={isLoading}
-                        variant="default"
-                        className="w-full py-4 md:py-5 text-sm md:text-base font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl transition-all shadow-md"
-                    >
-                        Book Now
-                    </Button>
-                </div>
-            </div>
         </div>
     );
 };
