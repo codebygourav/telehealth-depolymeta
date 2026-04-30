@@ -1,6 +1,7 @@
 "use client";
 
 import { CustomAvatar } from "@/components/custom/custom-avatar";
+import { DashboardSection } from "@/components/pages/Dashboard/DashboardSection";
 import { SectionHeader } from "@/components/custom/SectionHeader";
 import { DashboardCarousel } from "@/components/pages/Dashboard/dashboard-carousel";
 import { Separator } from "@/components/ui";
@@ -72,7 +73,7 @@ export function TestimonialsCarousel({
   if (!testimonials || testimonials.length === 0) return null;
 
   return (
-    <section className="py-6 sm:py-8 w-full max-w-full overflow-hidden">
+    <DashboardSection className="w-full max-w-full overflow-hidden py-6 sm:py-8">
       <SectionHeader
         title="Here's what our satisfied customers are saying..."
         subtitle="See what your patients are saying about their experiences with you."
@@ -149,6 +150,6 @@ export function TestimonialsCarousel({
           </div>
         )}
       />
-    </section>
+    </DashboardSection>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useBrowseDoctors } from '@/queries/useBrowseDoctors';
 import { useDepartmentsAndSymptoms } from '@/queries/useDepartmentsAndSymptoms';
 import SearchBar from '@/components/pages/find-doctor/searchBar';
@@ -23,6 +23,7 @@ interface DialogState {
 
 const FindDoctors = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     // State
     const [searchTerm, setSearchTerm] = useState('');
@@ -36,6 +37,23 @@ const FindDoctors = () => {
         title: '',
         description: '',
     });
+
+    useEffect(() => {
+        const consultationTypeParam = searchParams.get('consultationType');
+        const specialtyParam = searchParams.get('specialty');
+
+        if (
+            consultationTypeParam === 'all' ||
+            consultationTypeParam === 'video' ||
+            consultationTypeParam === 'in-person'
+        ) {
+            setConsultationType(consultationTypeParam);
+        }
+
+        if (specialtyParam) {
+            setSpecialty(specialtyParam);
+        }
+    }, [searchParams]);
 
     // Queries
     const { data: doctorsData, error, isLoading, refetch } = useBrowseDoctors();

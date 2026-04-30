@@ -1,5 +1,6 @@
 "use client";
 
+import { DashboardSection } from "@/components/pages/Dashboard/DashboardSection";
 import { CustomAvatar } from "@/components/custom/custom-avatar";
 import { SectionHeader } from "@/components/custom/SectionHeader";
 import { DashboardCarousel } from "@/components/pages/Dashboard/dashboard-carousel";
@@ -145,7 +146,7 @@ export function Advertisements({ ads }: AdvertisementsProps) {
     };
 
     return (
-        <section>
+        <DashboardSection>
 
             <SectionHeader title="Safe & Advanced Surgical Care" />
 
@@ -161,6 +162,6 @@ export function Advertisements({ ads }: AdvertisementsProps) {
                     />
                 </CardContent>
             </Card>
-        </section>
+        </DashboardSection>
     );
 }

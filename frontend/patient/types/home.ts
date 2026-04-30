@@ -34,7 +34,7 @@ export interface PatientReview {
   total_reviews: number;
   doctor_name: string;
   doctor_avatar: string;
-  doctor_experience: string;
+  doctor_experience: string | null;
   doctor_departments: string;
   rating_stars: string;
   created_at: string;
@@ -64,7 +64,7 @@ export interface AppointmentDoctor {
   user_id: string;
   name: string;
   avatar: string;
-  department: string;
+  department: string | null;
   slug: string;
   years_experience: string;
   average_rating: number;
@@ -94,8 +94,8 @@ export interface UpcomingAppointment {
   status_label: string;
   fee_amount: string;
   call_now: boolean;
-  notes: string;
-  opd_type: string;
+  notes: string | null;
+  opd_type?: string;
   doctor: AppointmentDoctor;
 }
 
@@ -115,23 +115,4 @@ export interface GetPatientHomeResponse {
   path: string;
   timestamp: string;
   data: PatientHomeData;
-}
-
-// ─── UI Mapped Types ─────────────────────────────────────────────────────────
-export interface MappedAppointmentDoctor {
-  specialty?: string;
-  experience?: string;
-  languages?: string[];
-}
-
-export interface MappedAppointment {
-  id: string | number;
-  doctorId: string | number;
-  doctorName: string;
-  doctorImage: string;
-  date: string;
-  time: string;
-  type: string;
-  typeLabel: string;
-  doctor?: MappedAppointmentDoctor;
 }

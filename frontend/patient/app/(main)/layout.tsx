@@ -6,17 +6,23 @@ import { Header } from "@/components/layout/Header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "sonner";
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+export default function MainLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <Header />
+      <div
+        className="container-max-width flex-1 p-5 lg:py-8 overflow-y-auto"
+        style={{ marginLeft: "auto", marginRight: "auto", width: "100%" }}
+      >
+        {children}
+      </div>
 
-    return (
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset className="flex min-h-screen w-auto md:pl-5 pl-0 flex-col overflow-hidden">
-                <Header />
-                <div className="flex-1 p-5 lg:py-8 overflow-y-auto">{children}</div>
-                <Toaster richColors position="top-right" />
-                <Footer />
-            </SidebarInset>
-        </SidebarProvider>
-    );
+      <Toaster richColors position="top-right" />
+      <Footer />
+    </>
+  );
 }
