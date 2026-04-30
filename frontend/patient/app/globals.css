@@ -79,7 +79,7 @@
 
   --radius-2xl: 1.5rem;
   --radius-3xl: 2rem;
-  --container-max-width: 1640px;
+  --container-max-width: 1440px;
 
   --global-h1-24: 24px;
   --global-h2-22: 22px;
@@ -132,6 +132,8 @@
   --secondary-menu-color: #F5F6F8;
   --container-max-width: 1640px;
   --light-gray: #F5F6F8;
+  --black: #1E1E1E;
+  --gray: #373737
 }
 
 .dark {
@@ -171,7 +173,7 @@
   --success-foreground: oklch(0.985 0 0);
   --feature-green: #6f9c84;
   --secondary-menu-color: #F5F6F8;
-  --container-max-width: 1640px;
+  --container-max-width: 1440px;
   --light-gray: #F5F6F8;
 }
 
@@ -283,7 +285,7 @@
   /* Animate trailing icon (e.g. ChevronRight) consistently */
   .btn-primary>svg:last-child,
   .btn-primary-cta>svg:last-child {
-    @apply ml-2 transition-transform duration-200 size-4;
+    @apply ml-2 size-4 transition-transform duration-200;
   }
 
   .btn-primary:hover>svg:last-child,
@@ -326,6 +328,11 @@
 }
 
 @layer utilities {
+
+  .max-w-1440 {
+    max-width: 1440px;
+  }
+
   .status-confirmed {
     @apply text-blue-800 bg-blue-100;
   }
@@ -412,7 +419,6 @@
   .primary-card-shadow {
     background: #055BD9;
     box-shadow: 0px 2px 4px 0px #0000001A;
-
   }
 
   .shadow-card-lg {
@@ -421,7 +427,7 @@
   }
 
   .border-light-gray {
-    border: #E7E8EB;
+    border-color: #E7E8EB;
   }
 
   .secondary-menu-color {

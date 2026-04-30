@@ -14,6 +14,8 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ConsultationType, SortOption, Doctor } from '@/types/browse-doctors';
 
+import HeroSection from '@/components/hero-section';
+
 interface DialogState {
     open: boolean;
     type: 'danger' | 'success';
@@ -59,7 +61,7 @@ const FindDoctors = () => {
     const { data: doctorsData, error, isLoading, refetch } = useBrowseDoctors();
 
     console.log("doctor data", doctorsData);
-    
+
     const { data: departmentsData } = useDepartmentsAndSymptoms();
 
     const doctors = doctorsData?.data || [];
@@ -203,21 +205,28 @@ const FindDoctors = () => {
     return (
         <>
             <div className="space-y-6 sm:space-y-8 md:space-y-10 lg:space-y-12">
-                {/* Hero Section */}
-                <section>
-                    <div className="max-w-3xl">
-                        <h1 className="font-headline text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-primary-container tracking-tight mb-3 sm:mb-4">
-                            Find the right care, <span className="text-on-primary-container">effortlessly.</span>
-                        </h1>
-                        <p className="text-on-surface-variant text-sm sm:text-base md:text-lg max-w-xl mb-5 sm:mb-6 md:mb-8">
-                            Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch.
-                        </p>
-                        <SearchBar value={searchTerm} onChange={setSearchTerm} />
+
+                <HeroSection
+                    title="Find the right care, effortlessly."
+                    description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
+                />
+
+                <div className='max-w-1440 w-full mx-auto'>
+                    <div className='flex items-center justify-between'>
+                        <div className='flex-1'>
+                            <h3 className='text-2xl font-semibold text-black'>Find a Doctor</h3>
+                        </div>
+                        <div className='flex-1'>
+                            <SearchBar value={searchTerm} onChange={setSearchTerm} />
+                        </div>
                     </div>
-                </section>
+                </div>
 
                 {/* Main Content */}
                 <div className="flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-10">
+
+
+
                     <FilterSidebar
                         specialty={specialty}
                         consultationType={consultationType}

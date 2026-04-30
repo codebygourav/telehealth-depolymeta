@@ -52,26 +52,14 @@ const FilterSidebar = ({
                             Specialty
                         </label>
 
-                        {/* <select
+                        <SelectField
+                            name="specialty"
                             value={specialty}
-                            onChange={(e) => onSpecialtyChange(e.target.value)}
-                            className="w-full bg-surface-container-lowest border border-border rounded-xl h-12 px-4 shadow-sm text-sm font-medium focus:ring-2 focus:ring-surface-tint/20 focus:border-transparent transition-all"
-                        >
-                            {specialtyOptions.map((spec) => (
-                                <option key={spec.value} value={spec.value}>
-                                    {spec.label}
-                                </option>
-                            ))}
-                        </select> */}
-
-                        <SelectField 
-                            name="specialty" 
-                            value={specialty} 
-                            onChange={onSpecialtyChange} 
-                            options={specialtyOptions} 
-                            placeholder="Select specialty" 
+                            onChange={onSpecialtyChange}
+                            options={specialtyOptions}
+                            placeholder="Select specialty"
                             className="w-full!"
-                            triggerClassName="w-full bg-surface-container-lowest border-border rounded-xl h-12 px-4 shadow-sm text-sm font-medium focus:ring-2 focus:ring-surface-tint/20 focus:border-transparent transition-all"
+                            triggerClassName="w-full !h-auto bg-transparent border border-light-gray rounded-md px-5 py-3.5 text-sm font-medium"
                         />
                     </div>
 

@@ -9,14 +9,14 @@ const SearchBar = ({ value, onChange }: SearchBarProps) => {
   return (
     <div className="relative group">
       <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-outline-variant">
-        <Search className="w-6 h-6" />
+        <Search size={16} color='#4D4D4D' />
       </div>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Search by name, specialty, or hospital..."
-        className="w-full h-16 pl-14 pr-6 bg-surface-container-lowest border border-border rounded-2xl shadow-sm text-on-surface placeholder:text-outline-variant/60 focus:ring-2 focus:ring-surface-tint/20 focus:border-transparent transition-all text-lg font-medium"
+        placeholder="Search Doctor"
+        className="max-w-72 w-full border border-light-gray rounded-md pl-12 py-4 outline-none"
       />
     </div>
   );
