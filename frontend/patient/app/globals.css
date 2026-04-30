@@ -173,7 +173,7 @@
   --secondary-menu-color: #F5F6F8;
   --container-max-width: 1640px;
   --light-gray: #F5F6F8;
-  }
+}
 
 @layer base {
   * {
@@ -214,7 +214,8 @@
     font-weight: normal;
     line-height: 30px;
   }
-  h5{
+
+  h5 {
     font-size: var(--global-h5-16);
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
@@ -225,7 +226,8 @@
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
   }
-  span{
+
+  span {
     font-size: var(--global-span-14);
     font-weight: var(--font-weight-medium);
     line-height: 19.5px;
@@ -245,7 +247,9 @@
   }
 
 }
+
 @layer utilities {
+
   /* Custom text-size helpers (use these instead of `text-[12px]`) */
   .text-span-12,
   .span-12 {
@@ -253,7 +257,7 @@
     font-weight: var(--font-weight-medium);
     line-height: 23px;
   }
- 
+
 
   .text-span-14 {
     font-size: var(--global-span-14);
@@ -263,6 +267,7 @@
 }
 
 @layer components {
+
   /* Global button styles */
   .btn-primary {
     border-radius: var(--global-radius);
@@ -276,16 +281,17 @@
   }
 
   /* Animate trailing icon (e.g. ChevronRight) consistently */
-  .btn-primary > svg:last-child,
-  .btn-primary-cta > svg:last-child {
+  .btn-primary>svg:last-child,
+  .btn-primary-cta>svg:last-child {
     @apply ml-2 transition-transform duration-200 size-4;
   }
 
-  .btn-primary:hover > svg:last-child,
-  .btn-primary-cta:hover > svg:last-child {
+  .btn-primary:hover>svg:last-child,
+  .btn-primary-cta:hover>svg:last-child {
     transform: translateX(0.25rem);
   }
 }
+
 .html-content h3 {
   font-size: 16px;
   font-weight: 500;
@@ -323,12 +329,15 @@
   .status-confirmed {
     @apply text-blue-800 bg-blue-100;
   }
+
   .global-radius {
     border-radius: var(--global-radius);
   }
+
   .global-radius-10 {
-    border-radius:  var(--global-radius-10);
+    border-radius: var(--global-radius-10);
   }
+
   .status-failed {
     @apply text-red-800 bg-red-100;
   }
@@ -375,6 +384,7 @@
   .text-xs-custom {
     @apply text-xs text-muted-foreground;
   }
+
   .text-primary-strong {
     @apply font-semibold text-primary;
   }
@@ -387,7 +397,7 @@
     box-shadow: 0px 1px 10px 0px #0000000A;
   }
 
-  .custom-card-design{
+  .custom-card-design {
     border: 1px solid #E7E8EB;
     box-shadow: 0px 2px 4px 0px #0000001A;
     background: #FFFFFF;
@@ -398,6 +408,7 @@
   .shadow-card {
     box-shadow: 0px 1px 17px 0px #0000001A;
   }
+
   .primary-card-shadow {
     background: #055BD9;
     box-shadow: 0px 2px 4px 0px #0000001A;
@@ -408,18 +419,23 @@
     box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.1);
     border: 1px solid #E7E8EB;
   }
+
   .border-light-gray {
     border: #E7E8EB;
   }
+
   .secondary-menu-color {
     background-color: var(--color-secondary-menu-color);
   }
+
   .container-max-width-full {
     max-width: 100%;
   }
+
   .container-max-width {
     max-width: var(--container-max-width);
   }
+
   .full-bleed {
     position: relative;
     width: 100vw;
@@ -429,6 +445,7 @@
     margin-right: -50vw;
     max-width: 100vw;
   }
+
   .full-bleed-bg {
     position: absolute;
     top: 0;
@@ -437,20 +454,450 @@
     width: 100vw;
     transform: translateX(-50%);
   }
+
   .bg-light-gray {
     background-color: var(--light-gray);
   }
-  .card-heading-size{
+
+  .card-heading-size {
     font-size: 20px !important;
     color: #1F1E1E;
     font-weight: 600 !important;
   }
+
   .hover-bg-light-gray:hover {
     background-color: var(--light-gray);
   }
-    .card-sub-heading-size{
+
+  .card-sub-heading-size {
     font-size: 16px !important;
     color: #4D4D4D !important;
     font-weight: 400 !important;
+  }
+}
+
+
+/* ============================================================
+   ✦  GLOBAL DESIGN SYSTEM — Custom Utility Classes
+      All project-wide reusable classes are defined below,
+      grouped into clearly labelled sections.
+   ============================================================ */
+
+
+/* ──────────────────────────────────────────────
+   § 1. TYPOGRAPHY — Headings
+      Usage: <h1 class="g-h1"> or <p class="g-h2">
+      These mirror the native h1–h5 base styles but
+      can be applied to any element.
+   ────────────────────────────────────────────── */
+@layer utilities {
+
+  /* H1 — Page title / Hero heading */
+  .g-h1 {
+    font-size: var(--global-h1-24);
+    /* 24px */
+    font-weight: 600;
+    line-height: 1.4;
+    color: #1F1E1E;
+  }
+
+  /* H2 — Section title */
+  .g-h2 {
+    font-size: var(--global-h2-22);
+    /* 22px */
+    font-weight: 600;
+    line-height: 1.4;
+    color: #1F1E1E;
+  }
+
+  /* H3 — Sub-section title (primary blue accent) */
+  .g-h3 {
+    font-size: var(--global-h3-20);
+    /* 20px */
+    font-weight: 500;
+    line-height: 1.5;
+    color: #055BD9;
+  }
+
+  /* H4 — Card / widget title */
+  .g-h4 {
+    font-size: var(--global-h4-18);
+    /* 18px */
+    font-weight: 500;
+    line-height: 1.5;
+    color: #1F1E1E;
+  }
+
+  /* H5 — Small heading / label heading */
+  .g-h5 {
+    font-size: var(--global-h5-16);
+    /* 16px */
+    font-weight: 500;
+    line-height: 1.5;
+    color: #1F1E1E;
+  }
+}
+
+
+/* ──────────────────────────────────────────────
+   § 2. TYPOGRAPHY — Body & Inline Text
+      Usage: <p class="g-body-md">, <span class="g-text-sm">
+   ────────────────────────────────────────────── */
+@layer utilities {
+
+  /* Standard body copy */
+  .g-body-md {
+    font-size: var(--global-span-14);
+    /* 14px */
+    font-weight: 400;
+    line-height: 1.6;
+    color: #4D4D4D;
+  }
+
+  /* Small helper / caption text */
+  .g-body-sm {
+    font-size: var(--global-span-12);
+    /* 12px */
+    font-weight: 400;
+    line-height: 1.5;
+    color: #6B7280;
+  }
+
+  /* Medium-weight inline text (span / label) */
+  .g-text-md {
+    font-size: var(--global-span-14);
+    /* 14px */
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  /* Small medium-weight text */
+  .g-text-sm {
+    font-size: var(--global-span-12);
+    /* 12px */
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  /* Muted / secondary text colour */
+  .g-text-muted {
+    color: #6B7280;
+  }
+
+  /* Primary brand text colour */
+  .g-text-primary {
+    color: #055BD9;
+  }
+
+  /* Dark text for headings / emphasis */
+  .g-text-dark {
+    color: #1F1E1E;
+  }
+
+  /* Medium-dark for body content */
+  .g-text-body {
+    color: #4D4D4D;
+  }
+}
+
+
+/* ──────────────────────────────────────────────
+   § 3. BOX SHADOWS
+      Usage: <div class="g-shadow-xs">
+   ────────────────────────────────────────────── */
+@layer utilities {
+
+  /* Ultra-light lift — inputs, small tiles */
+  .g-shadow-xs {
+    box-shadow: 0px 1px 4px 0px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Subtle card shadow — default card */
+  .g-shadow-sm {
+    box-shadow: 0px 1px 10px 0px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Standard card / modal shadow */
+  .g-shadow-md {
+    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.10);
+    border: 1px solid #E7E8EB;
+  }
+
+  /* Elevated panel / dropdown */
+  .g-shadow-lg {
+    box-shadow: 0px 1px 17px 0px rgba(0, 0, 0, 0.10);
+  }
+
+  /* Heavy elevation — dialogs / popovers */
+  .g-shadow-xl {
+    box-shadow: 0px 8px 24px 0px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Primary (blue) card glow */
+  .g-shadow-primary {
+    background: #055BD9;
+    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.10);
+  }
+}
+
+
+/* ──────────────────────────────────────────────
+   § 4. BACKGROUND COLOURS
+      Usage: <section class="g-bg-light-gray">
+   ────────────────────────────────────────────── */
+@layer utilities {
+
+  /* Page / section light-gray surface */
+  .g-bg-light-gray {
+    background-color: #F5F6F8;
+  }
+
+  /* Pure white surface */
+  .g-bg-white {
+    background-color: #ffffff;
+  }
+
+  /* Primary brand blue */
+  .g-bg-primary {
+    background-color: #055BD9;
+  }
+
+  /* Very light blue tint — info sections */
+  .g-bg-primary-light {
+    background-color: #EEF4FF;
+  }
+
+  /* Surface (near-white page background) */
+  .g-bg-surface {
+    background-color: #F7F9FB;
+  }
+
+  /* Surface container — slightly darker surface */
+  .g-bg-surface-container {
+    background-color: #ECEEF0;
+  }
+
+  /* Light success green background */
+  .g-bg-success-light {
+    background-color: #E6F4EC;
+  }
+
+  /* Light destructive red background */
+  .g-bg-error-light {
+    background-color: #FEE2E2;
+  }
+}
+
+
+/* ──────────────────────────────────────────────
+   § 5. BORDER RADIUS
+      Usage: <div class="g-radius-sm">
+   ────────────────────────────────────────────── */
+@layer utilities {
+
+  /* 4px — tags, chips */
+  .g-radius-xs {
+    border-radius: 4px;
+  }
+
+  /* 6px — buttons, inputs (default global) */
+  .g-radius-sm {
+    border-radius: var(--global-radius);
+    /* 6px */
+  }
+
+  /* 10px — cards, panels */
+  .g-radius-md {
+    border-radius: var(--global-radius-10);
+    /* 10px */
+  }
+
+  /* 16px — modals, large cards */
+  .g-radius-lg {
+    border-radius: 16px;
+  }
+
+  /* 24px — hero sections, pills */
+  .g-radius-xl {
+    border-radius: 24px;
+  }
+
+  /* Full pill / avatar */
+  .g-radius-full {
+    border-radius: 9999px;
+  }
+}
+
+
+/* ──────────────────────────────────────────────
+   § 6. BORDER
+      Usage: <div class="g-border">
+   ────────────────────────────────────────────── */
+@layer utilities {
+
+  /* Standard light border */
+  .g-border {
+    border: 1px solid #E7E8EB;
+  }
+
+  /* Subtle divider */
+  .g-border-light {
+    border: 1px solid #F0F1F3;
+  }
+
+  /* Primary brand border */
+  .g-border-primary {
+    border: 1px solid #055BD9;
+  }
+}
+
+
+/* ──────────────────────────────────────────────
+   § 7. LAYOUT — Container & Spacing
+      Usage: <main class="g-container">
+   ────────────────────────────────────────────── */
+@layer utilities {
+
+  /* Centred max-width page container */
+  .g-container {
+    width: 100%;
+    max-width: var(--container-max-width);
+    /* 1640px */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.25rem;
+    /* 20px */
+    padding-right: 1.25rem;
+  }
+
+  /* Horizontal padding only (no max-width) */
+  .g-section-px {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  /* Standard section vertical rhythm */
+  .g-section-py {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  /* Card internal padding */
+  .g-card-p {
+    padding: 1.25rem;
+    /* 20px */
+  }
+
+  /* Full-bleed breakout (escape centred container) */
+  .g-full-bleed {
+    position: relative;
+    width: 100vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    max-width: 100vw;
+  }
+}
+
+
+/* ──────────────────────────────────────────────
+   § 8. CARD STYLES
+      Usage: <div class="g-card">
+   ────────────────────────────────────────────── */
+@layer utilities {
+
+  /* Default white card */
+  .g-card {
+    background: #ffffff;
+    border: 1px solid #E7E8EB;
+    border-radius: var(--global-radius-10);
+    /* 10px */
+    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.10);
+  }
+
+  /* Flat card — no shadow, border only */
+  .g-card-flat {
+    background: #ffffff;
+    border: 1px solid #E7E8EB;
+    border-radius: var(--global-radius-10);
+  }
+
+  /* Primary blue card */
+  .g-card-primary {
+    background: #055BD9;
+    border-radius: var(--global-radius-10);
+    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.10);
+    color: #ffffff;
+  }
+
+  /* Light-gray surface card */
+  .g-card-surface {
+    background: #F5F6F8;
+    border-radius: var(--global-radius-10);
+  }
+}
+
+
+/* ──────────────────────────────────────────────
+   § 9. BADGE / STATUS CHIPS
+      Usage: <span class="g-badge g-badge-success">
+   ────────────────────────────────────────────── */
+@layer utilities {
+
+  /* Base badge */
+  .g-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    font-size: var(--global-span-12);
+    /* 12px */
+    font-weight: 500;
+    line-height: 1.5;
+    border-radius: 9999px;
+  }
+
+  .g-badge-primary {
+    background-color: #EEF4FF;
+    color: #055BD9;
+  }
+
+  .g-badge-success {
+    background-color: #E6F4EC;
+    color: #15803D;
+  }
+
+  .g-badge-warning {
+    background-color: #FEF9EC;
+    color: #B45309;
+  }
+
+  .g-badge-error {
+    background-color: #FEE2E2;
+    color: #DC2626;
+  }
+
+  .g-badge-neutral {
+    background-color: #F0F1F3;
+    color: #6B7280;
+  }
+}
+
+
+/* ──────────────────────────────────────────────
+   § 10. DIVIDERS
+      Usage: <hr class="g-divider">
+   ────────────────────────────────────────────── */
+@layer utilities {
+  .g-divider {
+    border: none;
+    border-top: 1px solid #E7E8EB;
+    margin: 1rem 0;
+  }
+
+  .g-divider-light {
+    border: none;
+    border-top: 1px solid #F0F1F3;
+    margin: 0.75rem 0;
   }
 }
