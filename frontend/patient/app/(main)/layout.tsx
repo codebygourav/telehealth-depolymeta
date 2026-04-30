@@ -15,7 +15,7 @@ export default function MainLayout({
     <>
       <Header />
       <div
-        className="flex-1 pt-5 pb-5 container-max-width"
+        className="flex-1 min-h-screen pt-5 pb-5 container-max-width"
         style={{ marginLeft: "auto", marginRight: "auto", width: "100%" }}
       >
         {children}

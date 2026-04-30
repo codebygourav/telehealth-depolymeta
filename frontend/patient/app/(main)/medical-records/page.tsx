@@ -2,13 +2,17 @@
 
 import React, { useState, useMemo } from 'react';
 import {
+    CloudUpload,
     Plus,
+    Upload,
 } from 'lucide-react';
 import { useMedicalReports } from '@/queries/useGetMedicalReports';
 import { useAuth } from '@/context/userContext';
 import { DataTable } from '@/components/custom/data-table';
 import { medicalRecordsColumns } from './column';
 import { UploadReportModal } from '@/components/pages/medical-records/UploadReportModal';
+import HeroSection from '@/components/hero-section';
+import { Button } from '@/components/ui/button';
 
 const MedicalRecordsPage = () => {
     const { user } = useAuth();
@@ -56,26 +60,18 @@ const MedicalRecordsPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     return (
-        <div className="space-y-8 max-w-6xl mx-auto pb-12">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="space-y-1.5 sm:space-y-2 md:space-y-3">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-[#0A2E1F] tracking-tight">
-                        Medical Records
-                    </h1>
-                    <p className="text-sm sm:text-base md:text-lg lg:text-xl font-medium text-gray-500">
-                        Access your clinical history, lab results, and prescriptions.
-                    </p>
-                </div>
-                <button
+        <div className="pb-12 mx-auto space-y-8">
+            
+            <HeroSection title="Medical Records" description="Access your clinical history, lab results, and prescriptions." />
+            <div className="flex items-center justify-end">
+            <Button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 bg-[#0A2E1F] text-white px-6 py-3.5 rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-sm"
+                    className="flex items-center justify-center h-12 font-bold global-radius btn-primary-cta"
                 >
-                    <Plus className="w-5 h-5" />
+                    <Upload className="w-5 h-5" />
                     <span>Upload New Report</span>
-                </button>
-            </div>
-
+                </Button>
+                </div>
             {/* DataTable */}
             <DataTable
                 columns={medicalRecordsColumns}
@@ -105,7 +101,7 @@ const MedicalRecordsPage = () => {
                     },
                     {
                         column: 'report_type',
-                        label: 'Type',
+                        label: 'Report Type',
                         value: reportType,
                         onChange: (val) => {
                             setReportType(val);

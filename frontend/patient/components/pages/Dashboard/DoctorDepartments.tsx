@@ -34,15 +34,15 @@ export function DoctorDepartments({
             <div className="grid grid-cols-1 gap-4 md:grid-cols-5 xl:grid-cols-6 ">
                 {departments.map((department) => (
                     <Link key={department.id} href={department.href} className="flex h-full">
-                        <Card className="custom-card-design w-full bg-light-gray rounded-[10px] border-light-gray p-0 transition-shadow hover:shadow-card-lg">
-                            <CardContent className="flex h-full flex-col gap-5 p-5">
-                            <div className="flex items-center gap-3 flex-col md:flex-col">
-                                <div className="bg-white rounded-full p-5">
-                                        <Avatar className="size-7 rounded-full bg-white after:hidden">
+                        <Card className="w-full p-0 transition-shadow custom-card-design bg-light-gray global-radius-10 border-light-gray hover:shadow-card-lg">
+                            <CardContent className="flex flex-col h-full gap-5 p-5">
+                            <div className="flex flex-col items-center gap-3 md:flex-col">
+                                <div className="p-5 bg-white rounded-full">
+                                        <Avatar className="bg-white rounded-full size-7 after:hidden">
                                             <AvatarImage
                                                 src={department.icon}
                                                 alt={department.name}
-                                                className="rounded-2xl object-cover"
+                                                className="object-cover rounded-2xl"
                                             />
                                             <AvatarFallback className="rounded-2xl bg-primary/10 text-primary">
                                                 <CircleDot className="size-5" />
@@ -50,7 +50,7 @@ export function DoctorDepartments({
                                         </Avatar>
                                         </div>
                                         <div className="space-y-1">
-                                            <CardTitle className="font-xs text-foreground">
+                                            <CardTitle className="text-span-14">
                                                 {department.name}
                                             </CardTitle>
                                             

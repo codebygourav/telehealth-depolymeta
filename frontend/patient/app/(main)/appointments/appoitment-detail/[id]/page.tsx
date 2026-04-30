@@ -39,21 +39,21 @@ export default function AppointmentDetailPage() {
         if (id) getData();
     }, [id]);
 
-    if (loading) return <p className="text-center mt-10">Loading...</p>;
-    if (!data) return <p className="text-center mt-10">No Data</p>;
+    if (loading) return <p className="mt-10 text-center">Loading...</p>;
+    if (!data) return <p className="mt-10 text-center">No Data</p>;
 
     const { medical_reports, notes } = data;
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <div className="max-w-8xl mx-auto">
+            <div className="mx-auto max-w-8xl">
                 <DetailHeader
                     title="Appointment Details"
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* LEFT COLUMN - Main Content */}
-                    <div className="lg:col-span-3 space-y-6">
+                    <div className="space-y-6 lg:col-span-3">
                         <AppointmentInfoCards data={data} />
                     </div>
 
@@ -61,7 +61,7 @@ export default function AppointmentDetailPage() {
                 </div>
                 <div className="overflow-hidden">
                     <div className="pt-8 pb-4 border-b border-gray-100 bg-gray-50">
-                        <h3 className="font-semibold md:text-2xl text-lg text-gray-900 flex items-center gap-2">
+                        <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900 md:text-2xl">
                             <Pill className="w-5 h-5 text-emerald-600" />
                             Medical Details & Prescription
                         </h3>
@@ -69,9 +69,9 @@ export default function AppointmentDetailPage() {
 
                     {/* Show notes if they exist */}
                     {notes && (
-                        <div className=" p-6 bg-gray-100  rounded-xl italic text-gray-600 border-l-4 border-emerald-500">
+                        <div className="p-6 italic text-gray-600 bg-gray-100 border-l-4 rounded-xl border-emerald-500">
                             <h3 className="text-sm">Symptoms Reported</h3>
-                            <div className="text-base mt-2">"{notes}"</div>
+                            <div className="mt-2 text-base">"{notes}"</div>
                         </div>
                     )}
 
@@ -81,11 +81,12 @@ export default function AppointmentDetailPage() {
                             prescriptionId={id as string}
                             doctorUserId={data.doctor.user_id}
                             onBack={() => { }}
-                            showTopHeader={false}
-                            showDoctorHead={false}
+                            showHeroSection={false}
+                            showDoctorHeader={false}
                             cardGrid="grid-cols-1 md:grid-cols-2 gap-6"
                             footerActionGrid="grid-cols-1 md:grid-cols-2 gap-6"
                         />
+                  
                     </div>
 
                     <AddReviewsDialouge

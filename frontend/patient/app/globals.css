@@ -79,7 +79,7 @@
 
   --radius-2xl: 1.5rem;
   --radius-3xl: 2rem;
-  --container-max-width: 1440px;
+  --container-max-width: 1640px;
 
   --global-h1-24: 24px;
   --global-h2-22: 22px;
@@ -88,6 +88,7 @@
   --global-h5-16: 16px;
   --global-span-14: 14px;
   --global-span-12: 12px;
+  --global-span-16: 16px;
 
 }
 
@@ -132,8 +133,6 @@
   --secondary-menu-color: #F5F6F8;
   --container-max-width: 1640px;
   --light-gray: #F5F6F8;
-  --black: #1E1E1E;
-  --gray: #373737
 }
 
 .dark {
@@ -173,7 +172,7 @@
   --success-foreground: oklch(0.985 0 0);
   --feature-green: #6f9c84;
   --secondary-menu-color: #F5F6F8;
-  --container-max-width: 1440px;
+  --container-max-width: 1640px;
   --light-gray: #F5F6F8;
 }
 
@@ -213,7 +212,7 @@
 
   h4 {
     font-size: var(--global-h4-18);
-    font-weight: normal;
+    font-weight: var(--font-weight-semibold);
     line-height: 30px;
   }
 
@@ -256,8 +255,13 @@
   .text-span-12,
   .span-12 {
     font-size: var(--global-span-12);
-    font-weight: var(--font-weight-medium);
-    line-height: 23px;
+    font-weight: var(--font-weight-bold);
+    line-height: 14px;
+  }
+  .text-span-16 {
+    font-size: var(--global-span-16);
+    font-weight: var(--font-weight-bold);
+    line-height: 16px;
   }
 
 
@@ -266,6 +270,7 @@
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
   }
+  
 }
 
 @layer components {
@@ -273,19 +278,26 @@
   /* Global button styles */
   .btn-primary {
     border-radius: var(--global-radius);
-    @apply font-semibold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
+    @apply font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
   }
 
   /* Full-width primary CTA button used across cards/forms */
   .btn-primary-cta {
     border-radius: var(--global-radius);
-    @apply mt-5 text-base font-semibold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
+    font-weight: bold !important;
+    @apply mt-5 text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
   }
+  .btn-primary-without-transition {
+    border-radius: var(--global-radius);
+    @apply mt-5 text-base font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
+  }
+
 
   /* Animate trailing icon (e.g. ChevronRight) consistently */
   .btn-primary>svg:last-child,
-  .btn-primary-cta>svg:last-child {
-    @apply ml-2 size-4 transition-transform duration-200;
+  .btn-primary-cta>svg:last-child,
+  btn-primary-cta a>svg:last-child{
+    @apply ml-2 transition-transform duration-200 size-4;
   }
 
   .btn-primary:hover>svg:last-child,
@@ -304,7 +316,7 @@
 
 .html-content p {
   font-size: 14px;
-  line-height: 24px;
+  line-height: 14px;
   color: #4D4D4D;
   margin-bottom: 10px;
 }
@@ -328,11 +340,6 @@
 }
 
 @layer utilities {
-
-  .max-w-1440 {
-    max-width: 1440px;
-  }
-
   .status-confirmed {
     @apply text-blue-800 bg-blue-100;
   }
@@ -419,6 +426,7 @@
   .primary-card-shadow {
     background: #055BD9;
     box-shadow: 0px 2px 4px 0px #0000001A;
+
   }
 
   .shadow-card-lg {
@@ -427,7 +435,7 @@
   }
 
   .border-light-gray {
-    border-color: #E7E8EB;
+    border: #E7E8EB;
   }
 
   .secondary-menu-color {
@@ -573,7 +581,7 @@
   .g-text-md {
     font-size: var(--global-span-14);
     /* 14px */
-    font-weight: 500;
+    font-weight: bold;
     line-height: 1.5;
   }
 
@@ -588,6 +596,9 @@
   /* Muted / secondary text colour */
   .g-text-muted {
     color: #6B7280;
+  }
+  .g-text-primary-muted {
+    color: #a2a2a4;
   }
 
   /* Primary brand text colour */
@@ -607,29 +618,23 @@
 }
 
 
-/* ──────────────────────────────────────────────
-   § 3. BOX SHADOWS
-      Usage: <div class="g-shadow-xs">
-   ────────────────────────────────────────────── */
+
 @layer utilities {
 
-  /* Ultra-light lift — inputs, small tiles */
   .g-shadow-xs {
     box-shadow: 0px 1px 4px 0px rgba(0, 0, 0, 0.06);
   }
 
-  /* Subtle card shadow — default card */
   .g-shadow-sm {
     box-shadow: 0px 1px 10px 0px rgba(0, 0, 0, 0.04);
   }
 
-  /* Standard card / modal shadow */
+
   .g-shadow-md {
     box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.10);
     border: 1px solid #E7E8EB;
   }
 
-  /* Elevated panel / dropdown */
   .g-shadow-lg {
     box-shadow: 0px 1px 17px 0px rgba(0, 0, 0, 0.10);
   }
@@ -748,7 +753,7 @@
 
   /* Subtle divider */
   .g-border-light {
-    border: 1px solid #F0F1F3;
+    border: 1px solid rgba(245, 246, 248, 1);
   }
 
   /* Primary brand border */

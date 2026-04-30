@@ -7,6 +7,8 @@ import CustomTabs from "@/components/custom/CustomTabs";
 import { usePrescriptions } from "@/queries/usePrescriptions";
 import { useAuth } from "@/context/userContext";
 import { useState } from "react";
+import HeroSection from "@/components/hero-section";
+import { EmptyState } from "@/components/custom/EmptyState";
 
 interface MedicineListViewProps {
     onViewDetail: (id: string) => void;
@@ -28,15 +30,11 @@ export const MedicineListView = ({ onViewDetail }: MedicineListViewProps) => {
     console.log("prescriptions : ", prescriptions);
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="space-y-1.5 sm:space-y-2 md:space-y-3">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-primary font-headline">
-                    Medicines
-                </h1>
-                <p className="text-sm sm:text-base md:text-lg text-on-surface-variant">
-                    Track your current and past medications.
-                </p>
-            </header>
+        <div className="space-y-8 duration-500 animate-in fade-in">
+            <HeroSection
+                title="Medicines"
+                description="Track your current and past medications."
+            />
 
             <CustomTabs
                 variant="pill"
@@ -54,12 +52,12 @@ export const MedicineListView = ({ onViewDetail }: MedicineListViewProps) => {
             {isListLoading ? (
                 <div className="grid grid-cols-1 gap-6">
                     {[1, 2, 3, 4].map((i) => (
-                        <Skeleton key={i} className="h-[200px] w-full rounded-[2rem]" />
+                        <Skeleton key={i} className="h-[200px] w-full global-radius" />
                     ))}
                 </div>
             ) : isListError ? (
-                <div className="text-center py-20 bg-destructive/5 rounded-[2rem] border border-dashed border-destructive/20">
-                    <h3 className="text-xl font-bold text-destructive mb-2">
+                <div className="py-20 text-center border border-dashed bg-destructive/5 global-radius border-destructive/20">
+                    <h3 className="mb-2 text-xl font-bold text-destructive">
                         Failed to load medicines
                     </h3>
                     <p className="text-on-surface-variant">
@@ -72,23 +70,16 @@ export const MedicineListView = ({ onViewDetail }: MedicineListViewProps) => {
                         <MedicineCard
                             key={prescription.appointment_id}
                             prescription={prescription}
-                            status={activeTab}
                             onViewDetail={(id) => onViewDetail(id)}
                         />
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-20 bg-surface-container-low rounded-[2rem] border border-dashed border-outline-variant/20">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 text-on-surface-variant/30">
-                        <Pill className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-xl font-bold text-primary mb-2">
-                        No medicines found
-                    </h3>
-                    <p className="text-on-surface-variant">
-                        You don't have any {activeTab} medications at the moment.
-                    </p>
-                </div>
+                <EmptyState
+                    icon={<Pill />}
+                    title="No medicines found"
+                    description={`You don't have any ${activeTab} medications at the moment.`}
+                />
             )}
         </div>
     );

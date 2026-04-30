@@ -49,7 +49,7 @@ export const PrescribeMedicineDialog = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl sm:max-w-2xl p-0 gap-0 rounded-[2rem] overflow-hidden border-none shadow-2xl">
+            <DialogContent className="max-w-2xl sm:max-w-2xl p-0 gap-0 global-radius overflow-hidden border-none shadow-2xl">
                 <DialogHeader className="p-8 bg-[#013220] text-white">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">

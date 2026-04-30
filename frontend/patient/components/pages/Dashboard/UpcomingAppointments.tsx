@@ -24,8 +24,8 @@ function AppointmentMetaItem({
                 <Icon className="size-4" />
             </div>
             <div>
-                <p className="text-xs text-white/100 font-medium">{label}</p>
-                <p className="text-md font-semibold text-white">{value}</p>
+                <p className="text-xs font-medium text-white/100">{label}</p>
+                <p className="font-semibold text-white text-md">{value}</p>
             </div>
         </div>
     );
@@ -41,24 +41,24 @@ function AppointmentCard({
     const doctor = appointment.doctor;
 
     return (
-        <Card className="h-full overflow-hidden rounded-lg primary-card-shadow p-0">
-            <CardContent className="flex h-full flex-col justify-between p-5 sm:p-6">
-                <div className="flex flex-1 flex-col gap-5 justify-between sm-justify-between">
+        <Card className="h-full p-0 overflow-hidden rounded-lg primary-card-shadow">
+            <CardContent className="flex flex-col justify-between h-full p-5 sm:p-6">
+                <div className="flex flex-col justify-between flex-1 gap-5 sm-justify-between">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex items-center gap-4 sm:gap-5">
                             <Avatar className="h-[100px] w-[100px] global-radius shadow-lg after:hidden sm:h-[108px] sm:w-[108px]">
                                 <AvatarImage
                                     src={appointment.doctorImage}
                                     alt={appointment.doctorName}
-                                    className="global-radius object-cover"
+                                    className="object-cover global-radius"
                                 />
-                                <AvatarFallback className="global-radius bg-white/15 text-white">
+                                <AvatarFallback className="text-white global-radius bg-white/15">
                                     <UserRound className="size-8" />
                                 </AvatarFallback>
                             </Avatar>
 
                             <div className="min-w-0 pt-1">
-                                <h3 className="text-2xl leading-tight font-semibold text-white sm:text-2xl">
+                                <h3 className="text-2xl font-semibold leading-tight text-white sm:text-2xl">
                                     {appointment.doctorName}
                                 </h3>
                                 <p className="mt-2 text-lg font-semibold text-white/100">
@@ -72,12 +72,12 @@ function AppointmentCard({
                             </div>
                         </div>
 
-                        <Badge className="w-fit global-radius bg-white px-3 py-3 text-sm font-medium text-green-600 hover:bg-white">
+                        <Badge className="px-3 py-3 text-sm font-medium text-green-600 bg-white w-fit global-radius hover:bg-white">
                             Upcoming Session
                         </Badge>
                     </div>
 
-                    <div className="grid gap-4  sm:grid-cols-3 sm:gap-6 ">
+                    <div className="grid gap-4 sm:grid-cols-3 sm:gap-6 ">
                         <AppointmentMetaItem icon={Calendar} label="Date" value={appointment.date} />
                         <AppointmentMetaItem icon={Clock3} label="Time" value={appointment.time} />
                         <AppointmentMetaItem icon={Video} label="Type" value={appointment.typeLabel} />
@@ -95,7 +95,7 @@ function AppointmentCard({
                                 "_blank"
                             );
                         }}
-                        className="h-11 w-full rounded-md bg-white text-base font-semibold text-black hover:bg-white/95"
+                        className="w-full mt-0 text-base font-semibold text-black bg-white h-11 global-radius btn-primary-without-transition"
                     >
                         <Video className="mr-2 size-4" />
                         Start Video Call
@@ -111,21 +111,7 @@ export function UpcomingAppointments({
     onStartCall,
     onBookFirst,
 }: UpcomingAppointmentsProps) {
-    // const appointment = {
-    //   doctorName: "Dr. Emily Carter",
-    //   doctorImage: "https://randomuser.me/api/portraits/women/44.jpg",
-    //   date: "Fri, Apr 10",
-    //   time: "07:00 PM",
-    //   type: "video",
-    //   typeLabel: "Video",
-    //   doctor: {
-    //     specialty: "Cardiology",
-    //     experience: "14 years",
-    //     languages: ["English", "Hindi"],
-    //   },
-    // };
-
-    // No appointments
+   
     if (!appointments || appointments.length === 0) {
         return (
             <Card className="rounded-[5px] border border-border/50 h-full flex flex-col justify-center text-center shadow-card-lg">
@@ -134,11 +120,11 @@ export function UpcomingAppointments({
                         <Calendar className="h-6.5 w-6.5 text-muted-foreground" />
                     </div>
 
-                    <h3 className="text-lg font-semibold text-primary font-headline mt-4">
+                    <h3 className="mt-4 text-lg font-semibold text-primary font-headline">
                         No Upcoming Sessions
                     </h3>
 
-                    <p className="text-sm font-normal text-muted-foreground px-4 mt-2">
+                    <p className="px-4 mt-2 text-sm font-normal text-muted-foreground">
                         You don&apos;t have any appointments scheduled at the moment.
                     </p>
 
@@ -150,75 +136,6 @@ export function UpcomingAppointments({
                     </Button>
                 </CardContent>
             </Card>
-
-            // <Card className="bg-[#1e5cc8] border-0 rounded-xl overflow-hidden shadow-none">
-
-            //   {/* Top Section */}
-            //   <CardDescription className="px-5 flex flex-col gap-4">
-
-            //     <div className="flex justify-between items-center">
-
-            //     </div>
-
-            //     {/* Doctor Info */}
-            //     <div className="flex gap-3 items-center">
-            //       <CustomAvatar
-            //         src={appointment.doctorImage}
-            //         className="w-24 h-24 rounded-lg border border-white/30"
-            //       />
-
-            //       <div>
-            //         <div className="flex justify-center items-center gap-2">
-            //           <h3 className="text-white text-lg font-semibold leading-tight">
-            //             {appointment.doctorName}
-            //           </h3>
-            //           <Badge className="bg-white/20 text-white text-[10px] px-2 py-1 rounded-full border-0">
-            //             Upcoming Session
-            //           </Badge>
-            //         </div>
-            //         <p className="text-white/80 text-sm">
-            //           {appointment.doctor.specialty}
-            //         </p>
-            //         <p className="text-white/60 text-xs mt-1">
-            //           {appointment.doctor.experience} •{" "}
-            //           {appointment.doctor.languages.join(", ")}
-            //         </p>
-            //         <div className="flex text-white text-xs mt-2 gap-5">
-
-            //           <div className="flex items-center gap-1">
-            //             <Calendar className="w-3 h-3" />
-            //             <span>{appointment.date}</span>
-            //           </div>
-
-            //           <div className="flex items-center gap-1">
-            //             <Clock className="w-3 h-3" />
-            //             <span>{appointment.time}</span>
-            //           </div>
-
-            //           <div className="flex items-center gap-1">
-            //             <Video className="w-3 h-3" />
-            //             <span>{appointment.typeLabel}</span>
-            //           </div>
-            //         </div>
-            //       </div>
-            //     </div>
-
-            //   </CardDescription>
-
-            //   {/* Bottom Section */}
-            //   <CardContent className="bg-[#1b56bd] p-4 flex flex-col gap-4">
-
-            //     {/* Info Row */}
-
-
-            //     {/* EXACT BUTTON */}
-            //     <Button className="w-full bg-white text-black text-sm font-medium py-2 rounded-md hover:bg-gray-100 shadow-none">
-            //       <Video className="w-4 h-4 mr-2" />
-            //       Start Video Call
-            //     </Button>
-
-            //   </CardContent>
-            // </Card>
         );
     }
 

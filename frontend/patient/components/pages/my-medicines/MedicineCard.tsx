@@ -10,12 +10,50 @@ import { motion } from "motion/react";
 
 interface MedicineCardProps {
   prescription: any; // Using any for now to match the user's detailed JSON
-  status: "current" | "past";
   onViewDetail?: (id: string) => void;
 }
 
-export const MedicineCard = ({ prescription, status, onViewDetail }: MedicineCardProps) => {
-  const isCurrent = status === "current" || prescription.status === "Active";
+interface InfoBadgeProps {
+  icon: React.ReactNode;
+  value: string | number;
+  label?: string;
+}
+
+function InfoBadges({ prescription }: { prescription: any }) {
+  console.log(prescription);
+  const items: InfoBadgeProps[] = [
+    {
+      icon: <User className="w-4 h-4" />,
+      value: prescription?.doctor_name ?? "Unknown doctor",
+    },
+    {
+      icon: <Calendar className="w-4 h-4" />,
+      value: prescription?.timing
+        ? prescription?.timing
+        : "N/A",
+    },
+    // Add more items as needed.
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 pt-1">
+      {items.map((item, i) => (
+        <span
+          key={i}
+          className="inline-flex items-center gap-1 px-4 py-2.5 text-span-12 g-text-muted font-semibold bg-light-gray global-radius"
+        >
+          {item.icon}
+          <span className="font-semibold">{item.value}</span>
+          {item.label && (
+            <span className="ml-1 font-normal text-gray-400">{item.label}</span>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export const MedicineCard = ({ prescription, onViewDetail }: MedicineCardProps) => {
 
   return (
     <motion.div
@@ -24,62 +62,38 @@ export const MedicineCard = ({ prescription, status, onViewDetail }: MedicineCar
       transition={{ duration: 0.3 }}
       className="w-full"
     >
-      <Card className="rounded-3xl p-5 shadow-sm border border-outline-variant/5 bg-white hover:shadow-md transition-all group overflow-hidden">
-        <CardContent className="p-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <Card className="p-5 overflow-hidden bg-white global-radius-10 group">
+        <CardContent className="flex flex-col justify-between gap-4 p-0 md:flex-row md:items-center">
           <div className="flex-1 space-y-3">
             {/* Header: Label */}
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>Health Issue</span>
+            <div className="flex items-center gap-1.5 font-bold uppercase tracking-widest g-text-muted">
+              <AlertCircle className="w-3.5 h-3.5 text-error" />
+              <span className="font-semibold g-text-muted">Health Issue</span>
             </div>
 
             {/* Problem Title */}
-            <h3 className="text-xl md:text-2xl font-bold text-[#052116] font-headline line-clamp-1">
+            <h2 className="font-bold g-text-dark line-clamp-1">
               {prescription.problem}
-            </h3>
+            </h2>
 
             {/* Info Badges */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Badge
-                variant="secondary"
-                className="p-3 md:p-4 bg-surface-container-low rounded-xl font-semibold text-sm border-none transition-colors"
-              >
-                <User className="w-5 h-5 md:w-6 md:h-6 mr-1 text-muted-foreground/80" />
-                {prescription.doctor_name}
-              </Badge>
-
-              {/* Optional Medication Count Badge */}
-              <Badge
-                variant="secondary"
-                className={cn(
-                  "p-3 md:p-4 bg-surface-container-low rounded-xl font-semibold text-sm border-none transition-colors",
-                )}
-              >
-                <Calendar className="w-5 h-5 md:w-6 md:h-6 mr-1 text-muted-foreground/80" />
-                {prescription.timing || "Prescribed"}
-              </Badge>
-            </div>
+            <InfoBadges prescription={prescription} />
           </div>
+      
 
           {/* Action Button */}
-          <div className="shrink-0 flex items-center pt-2 md:pt-0">
+          <div className="flex items-center pt-2 shrink-0 md:pt-0">
             {onViewDetail ? (
               <Button
-                className="bg-[#052116] text-white hover:bg-[#052116]/90 font-bold rounded-full h-12 px-8 flex items-center gap-2 shadow-sm group/btn"
+                className="h-10 btn-primary-cta"
                 onClick={() => onViewDetail(prescription.appointment_id)}
               >
                 View Detail
-                <ChevronRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+                <ChevronRight className="m-0 size-4" />
               </Button>
             ) : (
-              <Button
-                className="bg-[#052116] text-white hover:bg-[#052116]/90 font-bold rounded-full h-12 px-8 flex items-center gap-2 shadow-sm group/btn"
-                asChild
-              >
-                <Link href={`/my-medicines/${prescription.appointment_id}`}>
-                  View Detail
-                  <ChevronRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
-                </Link>
+              <Button className="btn-primary-cta" asChild>
+                <Link href={`/my-medicines/${prescription.appointment_id}`}>View Detail</Link>
               </Button>
             )}
           </div>

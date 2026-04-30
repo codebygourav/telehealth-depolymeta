@@ -71,7 +71,7 @@ const AppointmentsPage = () => {
     const LoadingState = () => (
         <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+                <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-primary" />
                 <p className="text-on-surface-variant">Loading appointments...</p>
             </div>
         </div>
@@ -81,9 +81,9 @@ const AppointmentsPage = () => {
     const ErrorState = () => (
         <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-                <div className="bg-red-100 text-red-800 p-4 rounded-lg">
+                <div className="p-4 text-red-800 bg-red-100 rounded-lg">
                     <p className="font-bold">Error loading appointments</p>
-                    <p className="text-sm mt-1">{error?.message || 'Please try again later'}</p>
+                    <p className="mt-1 text-sm">{error?.message || 'Please try again later'}</p>
                 </div>
             </div>
         </div>
@@ -93,11 +93,11 @@ const AppointmentsPage = () => {
     const EmptyState = ({ type }: { type: 'upcoming' | 'past' }) => (
         <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-                <div className="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-surface-container-low">
                     <Calendar className="w-8 h-8 text-on-surface-variant/50" />
                 </div>
-                <h3 className="text-lg font-bold text-on-surface mb-1">No {type} appointments</h3>
-                <p className="text-on-surface-variant text-sm">
+                <h3 className="mb-1 text-lg font-bold text-on-surface">No {type} appointments</h3>
+                <p className="text-sm text-on-surface-variant">
                     {type === 'upcoming'
                         ? 'You have no upcoming appointments scheduled.'
                         : 'You have no past appointments to show.'}
@@ -122,12 +122,12 @@ const AppointmentsPage = () => {
         const pagination = data?.pagination;
 
         if (upcomingApps.length === 0 && (!pagination || pagination.total === 0)) {
-            return <EmptyState type="upcoming" />;
+            return <EmptyState title="No upcoming appointments" description="You have no upcoming appointments scheduled." icon={<Calendar className="w-8 h-8 text-on-surface-variant/50" />} />;
         }
 
         return (
             <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {upcomingApps.map((app: AppointmentResponse) => {
                         const transformedApp = transformToAppointment(app);
                         const transformedDoctor = transformToDoctor(app);
@@ -175,7 +175,7 @@ const AppointmentsPage = () => {
 
         return (
             <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {pastApps.map((app: AppointmentResponse) => {
                         const transformedApp = transformToAppointment(app);
                         const transformedDoctor = transformToDoctor(app);

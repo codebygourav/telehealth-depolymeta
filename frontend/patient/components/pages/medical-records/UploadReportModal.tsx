@@ -103,7 +103,7 @@ export const UploadReportModal: React.FC<UploadReportModalProps> = ({
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+                <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -124,7 +124,7 @@ export const UploadReportModal: React.FC<UploadReportModalProps> = ({
                                 </h2>
                                 <button
                                     onClick={handleClose}
-                                    className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-all"
+                                    className="p-2 text-gray-500 transition-all rounded-full hover:bg-gray-100"
                                 >
                                     <X className="w-6 h-6" />
                                 </button>
@@ -132,7 +132,7 @@ export const UploadReportModal: React.FC<UploadReportModalProps> = ({
 
                             {uploadSuccess ? (
                                 <div className="py-12 text-center">
-                                    <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-50">
                                         <CheckCircle2 className="w-10 h-10 text-emerald-600" />
                                     </div>
                                     <h3 className="text-xl font-bold text-[#0A2E1F] mb-2">
@@ -144,13 +144,13 @@ export const UploadReportModal: React.FC<UploadReportModalProps> = ({
                                 </div>
                             ) : uploadError ? (
                                 <div className="py-12 text-center">
-                                    <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-red-50">
                                         <AlertCircle className="w-10 h-10 text-red-600" />
                                     </div>
                                     <h3 className="text-xl font-bold text-[#0A2E1F] mb-2">
                                         Upload Failed
                                     </h3>
-                                    <p className="text-gray-500 mb-8 max-w-xs mx-auto">
+                                    <p className="max-w-xs mx-auto mb-8 text-gray-500">
                                         {uploadError}
                                     </p>
                                     <Button
@@ -166,12 +166,12 @@ export const UploadReportModal: React.FC<UploadReportModalProps> = ({
                                         <button
                                             key={type}
                                             onClick={() => handleTypeSelect(type)}
-                                            className="w-full text-left px-6 py-5 rounded-2xl hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-all group flex items-center justify-between"
+                                            className="flex items-center justify-between w-full px-6 py-5 text-left transition-all border-b border-gray-100 rounded-2xl hover:bg-gray-50 last:border-0 group"
                                         >
                                             <span className="text-lg font-medium text-gray-800 group-hover:text-[#0A2E1F]">
                                                 {type}
                                             </span>
-                                            <ChevronRight className="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-all" />
+                                            <ChevronRight className="w-5 h-5 text-gray-400 transition-all opacity-0 group-hover:opacity-100" />
                                         </button>
                                     ))}
                                 </div>
@@ -194,7 +194,7 @@ export const UploadReportModal: React.FC<UploadReportModalProps> = ({
                                         />
 
                                         <div className="space-y-2">
-                                            <label className="text-sm font-bold text-gray-500 ml-1">
+                                            <label className="ml-1 text-sm font-bold text-gray-500">
                                                 Attach a document
                                             </label>
                                             <div className="relative group">
@@ -204,10 +204,10 @@ export const UploadReportModal: React.FC<UploadReportModalProps> = ({
                                                     onChange={(e) =>
                                                         setFile(e.target.files?.[0] || null)
                                                     }
-                                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                    className="absolute inset-0 z-10 opacity-0 cursor-pointer"
                                                 />
-                                                <div className="w-full px-6 py-4 border border-gray-200 rounded-2xl flex items-center justify-between bg-white group-hover:bg-gray-50 transition-all">
-                                                    <span className="text-gray-500 font-medium">
+                                                <div className="flex items-center justify-between w-full px-6 py-4 transition-all bg-white border border-gray-200 rounded-2xl group-hover:bg-gray-50">
+                                                    <span className="font-medium text-gray-500">
                                                         {file ? file.name : 'Choose File'}
                                                     </span>
                                                     <Upload className="w-5 h-5 text-[#0A2E1F]/40" />
@@ -223,7 +223,7 @@ export const UploadReportModal: React.FC<UploadReportModalProps> = ({
                                             >
                                                 {isUploading ? (
                                                     <>
-                                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                        <div className="w-5 h-5 border-2 rounded-full border-white/30 border-t-white animate-spin" />
                                                         Uploading...
                                                     </>
                                                 ) : (
@@ -232,11 +232,11 @@ export const UploadReportModal: React.FC<UploadReportModalProps> = ({
                                             </Button>
                                             <Button
                                                 onClick={() => setStep(1)}
-                                                className="w-full py-3 text-gray-500 font-medium text-sm hover:text-gray-700 transition-all bg-transparent border-none"
+                                                className="w-full py-3 text-sm font-medium text-gray-500 transition-all bg-transparent border-none hover:text-gray-700"
                                             >
                                                 ← Back to report types
                                             </Button>
-                                            <p className="text-sm text-gray-400 text-center leading-relaxed font-source-sans">
+                                            <p className="text-sm leading-relaxed text-center text-gray-400 font-source-sans">
                                                 Upload your medical documents or images (up to 10 files/photos)
                                             </p>
                                         </div>

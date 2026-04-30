@@ -12,11 +12,11 @@ export type { MedicalReport };
 const getStatusStyle = (status: string) => {
     switch (status?.toLowerCase()) {
         case 'shared':
-            return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            return 'bg-success text-white border-success';
         case 'pending':
-            return 'bg-amber-50 text-amber-700 border-amber-200';
+            return 'bg-warning text-white border-warning';
         default:
-            return 'bg-gray-100 text-gray-600 border-gray-200';
+            return 'bg-light-gray g-text-muted border-light-gray';
     }
 };
 
@@ -27,7 +27,7 @@ function ActionCell({ row }: { row: { original: MedicalReport } }) {
     const timeStatus = record.doctor?.appointment_time_status;
 
     return (
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
             <a
                 href={record.file_url}
                 target="_blank"
@@ -41,19 +41,13 @@ function ActionCell({ row }: { row: { original: MedicalReport } }) {
                 <Button
                     variant="outline"
                     size="sm"
-                    className="gap-1 rounded-lg p-5 font-semibold text-sm border-gray-200 hover:border-primary hover:text-primary whitespace-nowrap"
+                    className="gap-1 p-5 text-sm font-semibold rounded-lg g-border-light hover:border-primary hover:text-primary whitespace-nowrap"
                     onClick={() => {
                         const route = timeStatus === 'upcoming'
                             ? `/appointments/manage-appointment/${appointmentId}`
                             : `/appointments/appoitment-detail/${appointmentId}`;
                         router.push(route);
                     }}
-                    // onClick={() => {
-                    //     const route = timeStatus === 'past'
-                    //         ? `/my-appointments/past-appointments/appoitment-detail/${appointmentId}`
-                    //         : `/appointments/appoitment-detail/${appointmentId}`;
-                    //     router.push(route);
-                    // }}
                 >
                     Appointment
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -69,10 +63,10 @@ export const medicalRecordsColumns: ColumnDef<MedicalReport>[] = [
         header: 'Record Name',
         cell: ({ row }) => (
             <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 shrink-0">
+                <div className="flex items-center justify-center w-10 h-10 text-gray-600 bg-gray-100 rounded-lg shrink-0">
                     <FileText className="w-5 h-5" />
                 </div>
-                <span className="font-bold text-primary text-base">
+                <span className="text-base font-bold text-primary">
                     {row.original.report_name ?? '-'}
                 </span>
             </div>
@@ -82,7 +76,7 @@ export const medicalRecordsColumns: ColumnDef<MedicalReport>[] = [
         accessorKey: 'type_label',
         header: 'Type',
         cell: ({ row }) => (
-            <span className="text-gray-500 font-medium">
+            <span className="font-medium text-gray-500">
                 {row.original.type_label ?? '-'}
             </span>
         ),
@@ -91,7 +85,7 @@ export const medicalRecordsColumns: ColumnDef<MedicalReport>[] = [
         accessorKey: 'report_date_formatted',
         header: 'Date',
         cell: ({ row }) => (
-            <span className="text-gray-500 font-medium">
+            <span className="font-medium text-gray-500">
                 {row.original.report_date_formatted ?? '-'}
             </span>
         ),

@@ -37,7 +37,7 @@ export default function Home() {
 	if (isError || !homeData) {
 		return (
 			<div className="flex items-center justify-center min-h-[60vh]">
-				<p className="text-destructive font-semibold">
+				<p className="font-semibold text-destructive">
 					Failed to load dashboard. Please try again.
 				</p>
 			</div>
@@ -45,18 +45,16 @@ export default function Home() {
 	}
 	return (
 		<div className="space-y-5">
-			<header className="w-full global-radius bg-white shadow-card-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+			<header className="flex flex-col justify-between w-full gap-6 p-5 bg-white global-radius shadow-card-lg md:flex-row md:items-center">
 
 				{/* Left Content */}
 				<div>
-					<h1 className="text-[24px]  font-bold tracking-tight text-foreground">
+					<h1 className="font-bold tracking-tight text-foreground">
 						Welcome back{user?.first_name || user?.last_name ? "," : ""}{" "}
-						<span className="text-foreground">
-							{user?.first_name ?? ""} {user?.last_name ?? ""}
-						</span>
+						{user?.first_name ?? ""} {user?.last_name ?? ""}
 					</h1>
 
-					<p className="text-muted-foreground/150 font-normal text-base">
+					<p className="!font-normal text-span-16 g-text-muted">
 						Your health summary is looking stable today.
 					</p>
 				</div>
@@ -68,12 +66,12 @@ export default function Home() {
 					}}
 					className="flex items-center justify-center gap-2 font-semibold py-4.5 text-sm md:text-xs global-radius bg-primary text-white hover:bg-primary/90 shadow-none transition-all"
 				>
-					<Plus className="h-4 w-4" />
+					<Plus className="w-4 h-4" />
 					Book Appointment
 				</Button>
 
 			</header>
-			<div className="flex flex-col lg:flex-row gap-5 items-stretch">
+			<div className="flex flex-col items-stretch gap-5 lg:flex-row">
 
 				{/* Left - 40% */}
 				<div className="w-full lg:basis-[40%]">

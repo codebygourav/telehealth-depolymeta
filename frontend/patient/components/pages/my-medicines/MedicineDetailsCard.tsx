@@ -101,7 +101,7 @@ export const MedicineDetailsCard = ({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="bg-white rounded-[2rem] p-8 shadow-sm border border-outline-variant/10 space-y-4"
+                    className="bg-white global-radius p-8 shadow-sm border border-outline-variant/10 space-y-4"
                 >
                     <div className="flex items-center gap-3 text-primary mb-2">
                         <CheckCircle2 className="w-6 h-6" />
@@ -120,7 +120,7 @@ export const MedicineDetailsCard = ({
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="bg-[#052116] text-white rounded-[2rem] p-8 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6"
+                    className="bg-primary text-white global-radius p-8 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6"
                 >
                     <div className="flex items-center gap-6">
                         <div className="p-4 bg-white/10 rounded-2xl">

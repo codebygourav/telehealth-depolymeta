@@ -25,34 +25,26 @@ export function Advertisements({ ads }: AdvertisementsProps) {
 
     const AdvertisementCard = ({ ad }: { ad: Advertisement }) => {
         return (
-            <Card className="rounded-[5px] shadow-card-lg py-0">
-                <CardContent className="flex-1 py-4">
-                        <img
-                            src={ad.image}
-                            alt={ad.title}
-                            className="w-full h-[400px] sm:h-[400px] object-cover"
-                            loading="lazy"
-                        />
-
-                    {ad.link && ad.link !== "#" ? (
-                    <div className="flex items-end justify-between w-full gap-2 mt-auto sm:gap-3">
-                       
-                            <Button
-                                asChild
-                                variant="outline"
-                                size="sm"
-                                className="rounded-[5px] border-gray-300 bg-white text-[#103228] hover:bg-gray-100 hover:text-[#103228] shrink-0"
-                            >
-                                <a href={ad.link} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="mr-2" />
-                                    View
-                                </a>
-                            </Button>
-                        
-                    </div>
-                    ) : null}
-                </CardContent>
-            </Card>
+            <>
+            {ad.link && ad.link !== "#" ? (
+                <a href={ad.link} target="_blank" rel="noopener noreferrer">
+                    <img
+                        src={ad.image}
+                        alt={ad.title}
+                        className="object-cover w-full"
+                        loading="lazy"
+                    />
+                </a>
+            ) : (
+                <img
+                    src={ad.image}
+                    alt={ad.title}
+                    className="object-cover w-full"
+                    loading="lazy"
+                />
+            )}
+            </>
+           
         );
     };
 

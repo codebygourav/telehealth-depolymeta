@@ -20,8 +20,8 @@ import { ChevronRight } from "lucide-react";
   ) {
     return (
       <div className={cn("gap-2 space-y-2", classNameValue)}>
-        <p className="text-lg font-semibold text-foreground">{title}</p>
-        <p className="text-base font-semibold text-foreground/85">{value}</p>
+        <p className="font-semibold text-foreground text-span-14">{title}</p>
+        <p className="font-semibold text-foreground/85 text-span-12">{value}</p>
       </div>
     );
   }
@@ -44,7 +44,7 @@ import { ChevronRight } from "lucide-react";
     const ConsultationTypeIcon = isVideoConsultation ? Video : UserRound;
     const consultationTypeValue = (
       <span className="inline-flex items-center gap-2">
-        <ConsultationTypeIcon className="text-green-500 size-4" />
+        <ConsultationTypeIcon className="text-green-500 size-5" />
         <span>{consultationTypeLabel}</span>
       </span>
     );
@@ -65,10 +65,10 @@ import { ChevronRight } from "lucide-react";
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h4 className="truncate font-xs text-foreground">
+                  <h4>
                     {doctor.name}
                   </h4>
-                  <span className="mt-1 font-xs text-foreground/85">
+                  <span className="text-span-14">
                     {specialty}
                   </span>
                 </div>
@@ -76,7 +76,7 @@ import { ChevronRight } from "lucide-react";
                 {doctor.rating > 0 && (
                   <div className="flex items-center gap-1 px-2 py-1 rounded-md shrink-0 bg-primary/8 text-primary">
                     <Star className="size-3.5 fill-current text-primary" />
-                    <span className="text-sm font-semibold">{doctor.rating}</span>
+                    <span className="font-bold text-span-12">{doctor.rating}</span>
                   </div>
                 )}
               </div>
@@ -118,7 +118,7 @@ import { ChevronRight } from "lucide-react";
                 onBookNow?.(doctor.id);
                 router.push(`/find-doctors/${doctor.id}`);
               }}
-              className="btn-primary-cta !h-12 w-full"
+              className="btn-primary-cta !h-12 w-full global-radius"
             >
               Book Your Appointment
               <ChevronRight />

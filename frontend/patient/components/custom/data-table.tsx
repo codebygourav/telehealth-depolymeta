@@ -1,255 +1,285 @@
-'use client';
-import React from 'react';
+"use client";
+
+import * as React from "react";
 
 import {
-    ColumnDef,
-    flexRender,
-    getCoreRowModel,
-    getFilteredRowModel,
-    getSortedRowModel,
-    useReactTable,
-} from '@tanstack/react-table';
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
+import { ArrowUpDown, Loader2, Search, X } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-
-import PaginationControls from '@/components/ui/PaginationControls';
-import { Button } from '@/components/ui/button';
-import SelectField from '@/components/custom/SelectField';
-import { Filter, Loader2, Search, X } from 'lucide-react';
+  Button,
+  Card,
+  CardContent,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  TableFooter,
+} from "@/components/ui";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export interface FilterOption {
-    label: string;
-    value: string;
+  label: string;
+  value: string;
 }
 
 export interface DataTableFilter {
-    column: string;
-    label: string;
-    options: FilterOption[];
-    value?: string;
-    onChange: (value: string) => void;
+  column: string;
+  label: string;
+  options: FilterOption[];
+  value?: string;
+  onChange: (value: string) => void;
 }
 
 interface DataTableProps<T> {
-    columns: ColumnDef<T>[];
-    data: T[];
+  columns: ColumnDef<T>[];
+  data: T[];
 
-    loading?: boolean;
+  loading?: boolean;
 
-    pageCount?: number;
-    currentPage?: number;
-    totalItems?: number;
-    itemsPerPage?: number;
-    onPageChange?: (page: number) => void;
+  pageCount?: number;
+  currentPage?: number;
+  totalItems?: number;
+  itemsPerPage?: number;
+  onPageChange?: (page: number) => void;
 
-    enableSearch?: boolean;
-    searchValue?: string;
-    onSearch?: (value: string) => void;
+  enableSearch?: boolean;
+  searchValue?: string;
+  onSearch?: (value: string) => void;
 
-    filters?: DataTableFilter[];
-    onClearFilters?: () => void;
+  filters?: DataTableFilter[];
+  onClearFilters?: () => void;
 }
 
 export function DataTable<T>({
-    columns,
-    data,
-    loading = false,
-    pageCount = 1,
-    currentPage = 1,
-    totalItems = 0,
-    itemsPerPage = 10,
-    onPageChange,
-    enableSearch = true,
-    searchValue = '',
-    onSearch,
-    filters = [],
-    onClearFilters,
+  columns,
+  data,
+  loading = false,
+  pageCount = 1,
+  currentPage = 1,
+  totalItems = 0,
+  itemsPerPage = 10,
+  onPageChange,
+  enableSearch = true,
+  searchValue = "",
+  onSearch,
+  filters = [],
+  onClearFilters,
 }: DataTableProps<T>) {
-    const table = useReactTable({
-        data,
-        columns,
-        pageCount,
-        manualPagination: true,
-        manualFiltering: true,
-        manualSorting: true,
-        state: {},
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-    });
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const safePageCount = Math.max(1, pageCount);
 
-    const [showFilters, setShowFilters] = React.useState(false);
+  const table = useReactTable({
+    data,
+    columns,
+    manualPagination: true,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
-    return (
-        <div className="space-y-4">
-            {/* Toolbar: Search + Filters */}
-            <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-                {enableSearch && (
-                    <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                            placeholder="Search records by name, doctor, or type..."
-                            value={searchValue}
-                            onChange={(e) => onSearch?.(e.target.value)}
-                            className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-gray-100 transition-all"
-                        />
-                    </div>
-                )}
+  const showClear =
+    !!onClearFilters &&
+    (searchValue.trim().length > 0 || filters.some((f) => (f.value ?? "all") !== "all"));
 
-                {filters.length > 0 && (
-                    <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        className={`flex items-center gap-2 px-8 py-4 bg-white border rounded-2xl shadow-sm font-bold text-gray-700 hover:bg-gray-50 transition-all ${showFilters ? 'border-gray-300 bg-gray-50' : 'border-gray-100'
-                            }`}
-                    >
-                        <Filter className="w-5 h-5" />
-                        <span>Filters</span>
-                    </button>
-                )}
+  const entriesFrom = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const entriesTo = totalItems === 0 ? 0 : Math.min(currentPage * itemsPerPage, totalItems);
+
+  const pageNumbers = React.useMemo(() => {
+    const maxButtons = 5;
+    const safeCurrent = Math.min(Math.max(1, currentPage), safePageCount);
+    const half = Math.floor(maxButtons / 2);
+
+    let start = Math.max(1, safeCurrent - half);
+    let end = Math.min(safePageCount, start + maxButtons - 1);
+    start = Math.max(1, end - maxButtons + 1);
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }, [pageCount, currentPage]);
+
+  return (
+    <>
+      {/* Filter/Search header section */}
+      <Card className="g-border-light">
+        <CardContent>
+      <div className="flex flex-col justify-between gap-3 global-radius sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between w-full gap-3">
+          {enableSearch && (
+            <div className="relative w-full sm:max-w-[380px]">
+              <Search className="absolute -translate-y-1/2 pointer-events-none left-3 top-1/2 size-4 text-muted-foreground" />
+              <Input
+                placeholder="Search"
+                value={searchValue}
+                onChange={(e) => onSearch?.(e.target.value)}
+                className="h-12 pl-9 global-radius"
+              />
             </div>
+          )}
 
-            {/* Collapsible Filters section */}
-            {showFilters && filters.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 p-1 bg-gray-50/50 rounded-2xl">
-
-                    {/* {filters.map((filter) => (
-                        <Select
-                            key={filter.column}
-                            value={filter.value || 'all'}
-                            onValueChange={filter.onChange}
-                        >
-                            <SelectTrigger className="h-[50px] w-fit min-w-[150px] rounded-xl border-gray-100 shadow-sm bg-white">
-                                <SelectValue placeholder={filter.label} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    All {filter.label}
-                                </SelectItem>
-                                {filter.options.map((option) => (
-                                    <SelectItem
-                                        key={option.value}
-                                        value={option.value}
-                                    >
-                                        {option.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    ))} */}
-                
-                    {filters.map((filter) => (
-                        <SelectField
-                            key={filter.column}
-                            name={filter.column}
-                            value={filter.value || 'all'}
-                            onChange={filter.onChange}
-                            placeholder={filter.label}
-                            options={[
-                                { value: 'all', label: `All ${filter.label}` },
-                                ...filter.options,
-                            ]}
-                            triggerClassName="h-[50px] w-fit min-w-[150px] rounded-xl border-gray-100 shadow-sm bg-white"
-                        />
+          <div className="flex flex-col w-full gap-2 sm:w-auto sm:flex-row sm:items-center">
+            {filters.map((filter) => {
+              // always default to 'all'
+              const value = (filter.value ?? "all") === "all" ? "all" : (filter.value ?? "all");
+              return (
+                <Select
+                  key={filter.column}
+                  value={value}
+                  onValueChange={(val) => filter.onChange(val || "all")}
+                >
+                  <SelectTrigger className="w-full sm:w-[170px]">
+                    <SelectValue placeholder={filter.label} />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value="all">All</SelectItem>
+                    {filter.options.map((opt) => (
+                      <SelectItem key={`${filter.column}-${opt.value}`} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              );
+            })}
 
-                    {onClearFilters && (
-                        <Button
-                            variant="ghost"
-                            onClick={onClearFilters}
-                            className="h-[50px] px-4 rounded-xl text-gray-500 border border-gray-100 shadow-sm bg-white hover:bg-gray-50 flex items-center gap-2"
-                        >
-                            Reset
-                            <X className="h-4 w-4" />
-                        </Button>
-                    )}
-                </div>
+            {showClear && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onClearFilters}
+                className="justify-start sm:justify-center"
+              >
+                <X className="mr-2 size-4" />
+                Clear
+              </Button>
             )}
-
-            {/* Table */}
-            <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                <div className="overflow-x-auto">
-                    <Table className="w-full text-left">
-                        <TableHeader>
-                            <TableRow className="bg-gray-50/50 border-b border-gray-100 hover:bg-gray-50/50">
-                                {table.getHeaderGroups().map((headerGroup) =>
-                                    headerGroup.headers.map((header) => (
-                                        <TableHead
-                                            key={header.id}
-                                            className="px-8 py-5 text-[11px] font-bold text-gray-500 uppercase tracking-[0.15em]"
-                                        >
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                    header.column.columnDef.header,
-                                                    header.getContext(),
-                                                )}
-                                        </TableHead>
-                                    ))
-                                )}
-                            </TableRow>
-                        </TableHeader>
-
-                        <TableBody className="divide-y divide-gray-50">
-                            {loading ? (
-                                <TableRow className="hover:bg-transparent">
-                                    <TableCell
-                                        colSpan={columns.length}
-                                        className="text-center py-16"
-                                    >
-                                        <Loader2 className="animate-spin mx-auto h-6 w-6 text-gray-400" />
-                                    </TableCell>
-                                </TableRow>
-                            ) : table.getRowModel().rows.length ? (
-                                table.getRowModel().rows.map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        className="hover:bg-gray-50/30 transition-colors"
-                                    >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell
-                                                key={cell.id}
-                                                className="px-8 py-6 align-middle"
-                                            >
-                                                {flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext(),
-                                                )}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow className="hover:bg-transparent">
-                                    <TableCell
-                                        colSpan={columns.length}
-                                        className="text-center py-16 text-gray-400 font-medium"
-                                    >
-                                        No data found
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
-
-            {/* Pagination */}
-            {onPageChange && (
-                <PaginationControls
-                    currentPage={currentPage}
-                    totalPages={pageCount}
-                    totalItems={totalItems}
-                    itemsPerPage={itemsPerPage}
-                    onPageChange={onPageChange}
-                />
-            )}
+          </div>
         </div>
-    );
+      </div>
+      </CardContent>
+      </Card>
+      {/* Table section */}
+      <div className="overflow-hidden g-border global-radius">
+        <Table className="w-full">
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="border-none bg-light-gray hover:bg-light-gray" >
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    className="h-12 px-4 text-xs font-semibold g-text-dark"
+                  >
+                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      <button
+                        type="button"
+                        onClick={header.column.getToggleSortingHandler()}
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        <ArrowUpDown className="size-3.5 text-muted-foreground/70" />
+                      </button>
+                    ) : (
+                      flexRender(header.column.columnDef.header, header.getContext())
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+
+          <TableBody>
+            {loading ? (
+              <TableRow className="hover:bg-transparent g-border-light">
+                <TableCell colSpan={columns.length} className="py-16 text-center">
+                  <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} className="hover:bg-muted/20">
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="px-4 py-4 align-middle">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={columns.length}
+                  className="py-16 text-sm text-center text-muted-foreground"
+                >
+                  No data found
+                </TableCell>
+              </TableRow>
+            )}
+            
+          </TableBody>
+        </Table>
+            {/* Pagination section */}
+            {onPageChange ? (
+                    <div className="flex flex-col w-full gap-3 px-5 py-5.5 m-0  border-t sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-muted-foreground">
+                        Showing {entriesFrom} to {entriesTo} of {totalItems} entries
+                    </p>
+
+                    <div className="flex items-center gap-1.5">
+                        <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                        disabled={currentPage <= 1}
+                        >
+                        Prev
+                        </Button>
+
+                        {pageNumbers.map((p) => (
+                        <Button
+                            key={p}
+                            type="button"
+                            variant={p === currentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => onPageChange(p)}
+                            className={cn("h-8 w-8 px-0", p === currentPage && "hover:bg-primary/95")}
+                        >
+                            {p}
+                        </Button>
+                        ))}
+
+                        <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onPageChange(Math.min(safePageCount, currentPage + 1))}
+                        disabled={currentPage >= safePageCount}
+                        >
+                        Next
+                        </Button>
+                    </div>
+                    </div>
+                ) : null}
+      </div>
+
+     
+    </>
+  );
 }

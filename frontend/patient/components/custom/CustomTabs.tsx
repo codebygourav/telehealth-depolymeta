@@ -23,7 +23,7 @@ interface CustomTabsProps {
     activeTabBg?: string;
     activeTabColor?: string;
     variant?: "default" | "pill";
-    rightSlot?: React.ReactNode; // ✅ new prop
+    rightSlot?: React.ReactNode;
 }
 
 const CustomTabs = ({
@@ -35,7 +35,7 @@ const CustomTabs = ({
     tabsListClassName,
     tabsTriggerClassName,
     tabsContentClassName,
-    color = "primary",
+    color, // Don't need to allow override, force primary
     activeTabBg,
     activeTabColor,
     variant = "default",
@@ -64,14 +64,15 @@ const CustomTabs = ({
             className={cn("w-full", className)}
         >
             {/* Top Row */}
-            <div className="flex w-full items-center justify-between gap-4">
+            <div className="flex items-center justify-between w-full gap-4">
                 <TabsList
                     className={cn(
-                        "flex items-center transition-all duration-300",
+                        "flex items-center transition-all duration-300 g-border-light",
                         rightSlot ? "w-auto justify-start" : "w-full justify-center",
+                        // Always use bg-primary for background
                         isPill
-                            ? "bg-surface-container-low py-7 rounded-2xl gap-1 px-2"
-                            : "bg-transparent gap-4",
+                            ? "bg-light-gray py-7 global-radius gap-1 px-2"
+                            : "bg-primary gap-4",
                         tabsListClassName
                     )}
                 >
@@ -79,29 +80,19 @@ const CustomTabs = ({
                         <TabsTrigger
                             key={tab.key}
                             value={tab.key}
-                            style={
-                                {
-                                    ["--tab-active-bg" as string]:
-                                        activeTabBg || (isPill ? "white" : `var(--${color})`),
-                                    ["--tab-active-text" as string]:
-                                        activeTabColor ||
-                                        (isPill
-                                            ? "var(--primary)"
-                                            : `var(--${color}-foreground)`),
-                                } as React.CSSProperties
-                            }
                             className={cn(
-                                "transition-all duration-300 font-source-sans font-bold",
+                                "transition-all duration-300 font-source-sans font-bold g-text-md ",
+                                // Always apply text-primary for tab text and active tab text
                                 isPill
                                     ? cn(
-                                        "px-6 py-5 rounded-[1.5rem] flex-1 text-[#333333]",
-                                        "data-[state=active]:bg-(--tab-active-bg) data-[state=active]:text-(--tab-active-text) data-[state=active]:shadow-sm"
-                                    )
+                                          "px-6 py-5 global-radius flex-1 g-text-dark g-text-md",
+                                          "data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm "
+                                      )
                                     : cn(
-                                        "px-6 py-3.5 rounded-xl",
-                                        "data-[state=active]:bg-(--tab-active-bg) data-[state=active]:text-(--tab-active-text)",
-                                        `hover:bg-${color}-50`
-                                    ),
+                                          "px-6 py-3.5 global-radius g-text-dark",
+                                          "data-[state=active]:bg-primary data-[state=active]:text-white",
+                                          "hover:bg-primary/80"
+                                      ),
                                 tabsTriggerClassName
                             )}
                         >
