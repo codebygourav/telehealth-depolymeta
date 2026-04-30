@@ -77,7 +77,7 @@ const DoctorCard = ({ doctor, onBook, onError, onSuccess, isLoading = false }: D
                     <div className="p-5 bg-light-gray mt-5">
                         <div className="flex md:flex-row flex-col gap-6 md:gap-8 mb-5 md:mb-6 relative">
 
-                            <div className="flex-1 md:text-right text-left flex md:flex-col flex-row items-center justify-between">
+                            <div className="flex-1 md:text-right text-left flex md:flex-col flex-row md:items-start item-center justify-between">
                                 <p className="text-sm font-semibold text-black">
                                     Consultation Type
                                 </p>
@@ -102,7 +102,7 @@ const DoctorCard = ({ doctor, onBook, onError, onSuccess, isLoading = false }: D
 
                             <div className='absolute left-1/2 top-0 w-px h-10 mx-auto bg-[#E7E8EB] md:block hidden'></div>
 
-                            <div className="flex-1 md:text-right text-left flex md:flex-col flex-row items-center justify-between">
+                            <div className="flex-1 md:text-right text-left flex md:flex-col flex-row md:items-end item-center justify-between">
                                 <p className="text-sm font-semibold text-black">
                                     Consultation Fee
                                 </p>
