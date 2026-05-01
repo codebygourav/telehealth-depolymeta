@@ -62,17 +62,18 @@ export default function Home() {
 					</p>
 				</div>
 
-				{/* Right Action */}
-				<Button
-					onClick={() => {
-						window.open("/find-doctors", "_blank");
-					}}
-					className="flex items-center justify-center gap-2 font-semibold py-4.5 text-sm md:text-xs global-radius bg-primary text-white hover:bg-primary/90 shadow-none transition-all"
-				>
-					<Plus className="w-4 h-4" />
-					Book Appointment
-				</Button>
-
+				{appointments.length > 0 && (
+					// Right Action
+					<Button
+						onClick={() => {
+							window.open("/find-doctors", "_blank");
+						}}
+						className="flex items-center justify-center gap-2 font-semibold py-4.5 text-sm md:text-xs global-radius bg-primary text-white hover:bg-primary/90 shadow-none transition-all"
+					>
+						<Plus className="w-4 h-4" />
+						<span>Book Appointment</span>
+					</Button>
+				)}
 			</header>
 			<div className="flex flex-col items-stretch gap-5 lg:flex-row">
 
@@ -92,12 +93,11 @@ export default function Home() {
 				</div>
 			</div>
 
-			<DoctorDepartments
-				departments={departmentCards}
-				showAction={true}
-				onShowAll={() => router.push("/find-doctors")}
-			/>
-
+			{departmentCards.length > 0 ? (
+				<DoctorDepartments departments={departmentCards} />
+			) : (
+				null
+			)}
 			<AvailableDoctors
 				doctors={homeData.available_doctors}
 				onShowAll={() => router.push("/find-doctors")}

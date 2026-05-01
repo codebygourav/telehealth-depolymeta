@@ -1,7 +1,6 @@
 'use client';
 
 import { MedicineActionPlan } from '@/components/pages/my-medicines/MedicineActionPlan';
-import { DoctorInfoHeader } from '@/components/pages/my-medicines/sections/DoctorInfoHeader';
 import { PdfButtonSection } from '@/components/pages/my-medicines/sections/PdfButtonSection';
 import { PrescribedMedicinesSection } from '@/components/pages/my-medicines/sections/PrescribedMedicinesSection';
 import { PrescriptionHeroSection } from '@/components/pages/my-medicines/sections/PrescriptionHeroSection';
@@ -26,6 +25,7 @@ interface MedicineDetailViewProps {
     doctorUserId?: string;
     cardGrid?: string;
     footerActionGrid?: string;
+    appointmentDetailLayout?: boolean;
 }
 
 export const MedicineDetailView = ({
@@ -43,7 +43,8 @@ export const MedicineDetailView = ({
     symptoms,
     doctorUserId,
     cardGrid = 'grid-cols-3 gap-6',
-    footerActionGrid = 'grid-cols-1 gap-6',
+    footerActionGrid = 'grid-cols-1 gap-3.5',
+    appointmentDetailLayout = false,
 }: MedicineDetailViewProps) => {
     const {
         data: detailResponse,
@@ -79,50 +80,80 @@ export const MedicineDetailView = ({
                         <PdfButtonSection pdfUrl={detailResponse.data.pdf_url} />
                     )}
 
-                    {/* ── Prescription card (Doctor header + Medicines) */}
-                    {(showDoctorHeader || showPrescribedMedicines) &&
-                        detailResponse.data.medicines.length > 0 && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="p-5 bg-white border shadow-sm global-radius sm:p-8 border-outline-variant/10"
-                            >
-                                <div className="space-y-8">
+                    {appointmentDetailLayout ? (
+                        <div className="grid grid-cols-1 gap-1.5 md:grid-cols-6">
+                            {/* ── Prescription card (Medicines) */}
+                            {(showDoctorHeader || showPrescribedMedicines) &&
+                                detailResponse.data.medicines.length > 0 && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="p-4 bg-white border-light-gray g-border global-radius sm:p-5 md:col-span-6"
+                                    >
+                                        <div className="space-y-8">
+                                            {showPrescribedMedicines && (
+                                                <PrescribedMedicinesSection
+                                                    doctorName={detailResponse.data.doctor_name}
+                                                    showInlinePdfLink={true}
+                                                    prescribedAt={detailResponse.data.medicines[0]?.date}
+                                                    medicines={detailResponse.data.medicines}
+                                                    pdfUrl={detailResponse.data.pdf_url}
+                                                    cardGrid={cardGrid}
+                                                />
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
 
-                                    {/* Doctor info row */}
-                                    {showDoctorHeader && (
-                                        <DoctorInfoHeader
-                                            doctorName={detailResponse.data.doctor_name}
-                                            prescribedAt={
-                                                detailResponse.data.medicines[0]?.date
-                                            }
-                                            pdfUrl={detailResponse.data.pdf_url}
-                                        />
-                                    )}
-
-                                    {/* Prescribed medicines grid */}
-                                    {showPrescribedMedicines && (
-                                        <PrescribedMedicinesSection
-                                            medicines={detailResponse.data.medicines}
-                                            pdfUrl={detailResponse.data.pdf_url}
-                                            showInlinePdfLink={!showDoctorHeader}
-                                            cardGrid={cardGrid}
-                                        />
-                                    )}
+                            {/* ── Next Visit only (hide Conclusion) */}
+                            {showActionPlan ? (
+                                <div className="md:col-span-4 md:col-start-9">
+                                    <MedicineActionPlan
+                                        conclusion={detailResponse.data.instructions_by_doctor}
+                                        nextVisitDate={detailResponse.data.next_visit_date}
+                                        doctor_id={doctorUserId || detailResponse.data.doctor_id}
+                                        footerActionGridClassName="grid-cols-1 gap-6"
+                                        showConclusion={false}
+                                    />
                                 </div>
-                            </motion.div>
-                        )}
+                            ) : null}
+                        </div>
+                    ) : (
+                        <>
+                            {/* ── Prescription card (Doctor header + Medicines) */}
+                            {(showDoctorHeader || showPrescribedMedicines) &&
+                                detailResponse.data.medicines.length > 0 && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="p-4 bg-white border-light-gray shadow-sm global-radius sm:p-5"
+                                    >
+                                        <div className="space-y-8">
+                                            {/* Prescribed medicines grid */}
+                                            {showPrescribedMedicines && (
+                                                <PrescribedMedicinesSection
+                                                    doctorName={detailResponse.data.doctor_name}
+                                                    showInlinePdfLink={true}
+                                                    prescribedAt={detailResponse.data.medicines[0]?.date}
+                                                    medicines={detailResponse.data.medicines}
+                                                    pdfUrl={detailResponse.data.pdf_url}
+                                                    cardGrid={cardGrid}
+                                                />
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
 
-                    {/* ── Conclusion + Next Visit ──────────────────── */}
-                    {showActionPlan && (
-                        <MedicineActionPlan
-                            conclusion={detailResponse.data.instructions_by_doctor}
-                            nextVisitDate={detailResponse.data.next_visit_date}
-                            doctor_id={
-                                doctorUserId || detailResponse.data.doctor_id
-                            }
-                            footerActionGridClassName={footerActionGrid}
-                        />
+                            {/* ── Conclusion + Next Visit ──────────────────── */}
+                            {showActionPlan && (
+                                <MedicineActionPlan
+                                    conclusion={detailResponse.data.instructions_by_doctor}
+                                    nextVisitDate={detailResponse.data.next_visit_date}
+                                    doctor_id={doctorUserId || detailResponse.data.doctor_id}
+                                    footerActionGridClassName={footerActionGrid}
+                                />
+                            )}
+                        </>
                     )}
                 </div>
             )}

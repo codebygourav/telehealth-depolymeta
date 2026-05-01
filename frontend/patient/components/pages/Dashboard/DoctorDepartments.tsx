@@ -2,66 +2,85 @@
 
 import { DashboardSection } from "@/components/pages/Dashboard/DashboardSection";
 import { SectionHeader } from "@/components/custom/SectionHeader";
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, CardContent, CardDescription, CardTitle } from "@/components/ui";
+import { Avatar, AvatarFallback, AvatarImage, Card, CardContent, CardTitle } from "@/components/ui";
 import type { HomeScreenDepartmentCard } from "@/types/home-screen";
-import { ArrowRight, CircleDot } from "lucide-react";
+import { CircleDot, FolderIcon } from "lucide-react";
+import { EmptyState } from "@/components/custom/EmptyState";
 import Link from "next/link";
+import { DashboardCarousel } from "@/components/pages/Dashboard/dashboard-carousel";
 
 interface DoctorDepartmentsProps {
     departments: HomeScreenDepartmentCard[];
-    showAction?: boolean;
     onShowAll?: () => void;
+    carouselOnMobile?: boolean;
 }
 
 export function DoctorDepartments({
     departments,
-    showAction = false,
     onShowAll,
+    carouselOnMobile = true,
 }: DoctorDepartmentsProps) {
-    if (!departments.length) {
-        return null;
-    }
+    const renderDepartmentCard = (department: HomeScreenDepartmentCard) => (
+        <Link key={department.id} href={department.href} className="flex h-full">
+            <Card className="w-full p-0 shadow-card-sm bg-light-gray global-radius-10">
+                <CardContent className="flex h-full flex-col gap-5 p-5">
+                    <div className="flex flex-col items-center gap-3 md:flex-col">
+                        <div className="rounded-full bg-white p-5">
+                            <Avatar className="size-7 rounded-full bg-white after:hidden">
+                                <AvatarImage
+                                    src={department.icon}
+                                    alt={department.name}
+                                    className="rounded-2xl object-cover"
+                                />
+                                <AvatarFallback className="rounded-2xl bg-primary/10 text-primary">
+                                    <CircleDot className="size-5" />
+                                </AvatarFallback>
+                            </Avatar>
+                        </div>
+                        <div className="space-y-1">
+                            <CardTitle className="text-span-14">{department.name}</CardTitle>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </Link>
+    );
 
     return (
         <DashboardSection>
             <SectionHeader
                 title="Specialised Doctors Categories"
-                showAction={showAction}
-                subtitle="With Super specialist doctors and state-of-the-art technology, we cover the complete spectrum of medical specialties"
+                showAction={Boolean(onShowAll)}
+                actionText="Show All"
                 onActionClick={onShowAll}
+                subtitle="With Super specialist doctors and state-of-the-art technology, we cover the complete spectrum of medical specialties"
             />
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-5 xl:grid-cols-6 ">
-                {departments.map((department) => (
-                    <Link key={department.id} href={department.href} className="flex h-full">
-                        <Card className="w-full p-0 transition-shadow custom-card-design bg-light-gray global-radius-10 border-light-gray hover:shadow-card-lg">
-                            <CardContent className="flex flex-col h-full gap-5 p-5">
-                            <div className="flex flex-col items-center gap-3 md:flex-col">
-                                <div className="p-5 bg-white rounded-full">
-                                        <Avatar className="bg-white rounded-full size-7 after:hidden">
-                                            <AvatarImage
-                                                src={department.icon}
-                                                alt={department.name}
-                                                className="object-cover rounded-2xl"
-                                            />
-                                            <AvatarFallback className="rounded-2xl bg-primary/10 text-primary">
-                                                <CircleDot className="size-5" />
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <CardTitle className="text-span-14">
-                                                {department.name}
-                                            </CardTitle>
-                                            
-                                        </div>
-                                    </div>
+            {departments.length === 0 ? (
+                <EmptyState
+                    title="No departments found"
+                    description="No departments found"
+                    icon={<FolderIcon className="size-10" />}
+                />
+            ) : carouselOnMobile ? (
+                <>
+                    <div className="md:hidden">
+                        <DashboardCarousel
+                            items={departments}
+                            basisClassName="basis-[75%] sm:basis-1/2"
+                            renderItem={(department) => renderDepartmentCard(department)}
+                        />
+                    </div>
 
-                            </CardContent>
-                        </Card>
-                    </Link>
-                ))}
-            </div>
+                    <div className="hidden md:grid grid-cols-1 gap-4 md:grid-cols-5 xl:grid-cols-6">
+                        {departments.map((department) => renderDepartmentCard(department))}
+                    </div>
+                </>
+            ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-5 xl:grid-cols-6">
+                    {departments.map((department) => renderDepartmentCard(department))}
+                </div>
+            )}
         </DashboardSection>
     );
 }

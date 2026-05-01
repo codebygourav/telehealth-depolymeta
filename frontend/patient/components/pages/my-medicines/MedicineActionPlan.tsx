@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 import { ArrowRight, Calendar, CheckCircle2, LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/userContext';
 
 interface ActionPlanProps {
     conclusion: string;
@@ -17,6 +16,8 @@ interface ActionPlanProps {
     buttonTextColor?: string;
     buttonText?: string;
     footerActionGridClassName?: string;
+    showConclusion?: boolean;
+    nextVisitCardClassName?: string;
 }
 
 export const MedicineActionPlan = ({
@@ -28,40 +29,48 @@ export const MedicineActionPlan = ({
     buttonBgColor = 'bg-white',
     buttonTextColor = 'text-primary',
     buttonText = 'Reschedule Visit',
-    footerActionGridClassName = 'grid-cols-1 gap-6',
+    footerActionGridClassName = 'grid-cols-1 gap-6 md:grid-cols-12',
+    showConclusion = true,
+    nextVisitCardClassName,
 }: ActionPlanProps) => {
     const router = useRouter();
 
     return (
         <div className={`grid ${footerActionGridClassName}`}>
             {/* Conclusion Card */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="p-5 space-y-4 bg-light-gray g-border global-radius sm:p-8"
-            >
-                <div className="flex items-center gap-3 mb-2 text-primary">
-                    <ConclusionIcon className="w-6 h-6" />
-                    <h3 className="text-xl font-bold font-headline">
-                        Conclusion
-                    </h3>
-                </div>
-                <p className="font-medium leading-relaxed text-on-surface-variant">
-                    {conclusion || 'No conclusion provided.'}
-                </p>
-            </motion.div>
+            {showConclusion ? (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="p-5 space-y-4  g-border global-radius sm:p-8 md:col-span-6"
+                >
+                    <div className="flex items-center gap-3 mb-2 text-primary">
+                        <ConclusionIcon className="w-6 h-6" />
+                        <h3 className="text-xl g-text-dark font-bold font-headline">
+                            Conclusion
+                        </h3>
+                    </div>
+                    <p className="font-medium leading-relaxed text-on-surface-variant">
+                        {conclusion || 'No conclusion provided.'}
+                    </p>
+                </motion.div>
+            ) : null}
 
             {/* Next Visit Card */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="relative flex flex-col items-center justify-between gap-6 p-5 overflow-hidden text-white shadow-xl bg-primary global global-radius sm:p-8 md:flex-row group"
+                className={cn(
+                    "relative flex flex-col items-center justify-between gap-6 p-5 overflow-hidden text-white bg-primary global global-radius sm:p-8 md:flex-row group",
+                    showConclusion ? "md:col-span-4 md:col-start-9" : null,
+                    nextVisitCardClassName
+                )}
             >
                 <div className="relative z-10 flex items-center w-full gap-4 sm:gap-6 md:w-auto">
                     <div className="p-3 sm:p-4 global-radius bg-light-gray shrink-0">
-                        <NextVisitIcon className="h-8 w-7 h-7 sm:w-8 text-primary" />
+                        <NextVisitIcon className="size-8 text-primary" />
                     </div>
                     <div>
                         <h3 className="text-xl sm:text-2xl font-bold font-headline mb-0.5 text-white">
@@ -88,7 +97,7 @@ export const MedicineActionPlan = ({
                 </Button>
 
                 {/* Decorative background element */}
-                <div className="absolute top-0 right-0 w-32 h-32 -mt-16 -mr-16 transition-transform duration-500 rounded-full bg-white/5 group-hover:scale-110" />
+                <div className="absolute top-0 right-0 w-32 h-32 -mt-16 -mr-14 transition-transform duration-500 rounded-full bg-white/5 group-hover:scale-110" />
             </motion.div>
         </div>
     );

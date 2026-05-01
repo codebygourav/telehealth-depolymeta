@@ -4,7 +4,7 @@ import { CustomAvatar } from "@/components/custom/custom-avatar";
 import { DashboardSection } from "@/components/pages/Dashboard/DashboardSection";
 import { SectionHeader } from "@/components/custom/SectionHeader";
 import { DashboardCarousel } from "@/components/pages/Dashboard/dashboard-carousel";
-import { Card, CardContent, CardFooter, Separator } from "@/components/ui";
+import { Card, CardContent, CardFooter } from "@/components/ui";
 import { Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -21,6 +21,7 @@ export interface Testimonial {
   reviewCount: number;
   doctorName: string;
   doctorImage: string;
+  patientImage?: string;
   time: string;
 }
 
@@ -84,14 +85,15 @@ export function TestimonialsCarousel({
         items={testimonials}
         basisClassName="basis-[100%] sm:basis-[70%] md:basis-1/2 lg:basis-[400px]"
         contentClassName="-ml-3 sm:-ml-4 py-3 sm:py-4 px-1"
-        dotClassName="bg-gray-300 h-1 sm:h-1.5"
-        activeDotClassName="bg-primary h-1 sm:h-1.5"
+        dotColorClassName="bg-gray-300"
+        activeDotColorClassName="bg-primary"
+        dotBaseClassName="h-1 sm:h-1.5"
         renderItem={(t) => (
           <Card className="flex flex-col gap-0 p-0 border bg-surface-lowest sm:p- md:p-0 global-radius-10 border-outline-variant/10 shadow-card-lg">
             <CardContent className="flex flex-col justify-between gap-5 p-4 sm:flex-row sm:items-start ">
               <div className="flex gap-3 sm:gap-4">
                 <CustomAvatar
-                src={(t as any).patientImage}
+                src={t.patientImage}
                 name={t.name}
                 radius="full"
                 size="default"
@@ -124,11 +126,11 @@ export function TestimonialsCarousel({
                 ))}
               </div>
               <h5 className="font-bold italic text-on-surface mb-1.5 sm:mb-2 text-sm sm:text-base">
-                "{t.subject}"
+                &quot;{t.subject}&quot;
               </h5>
               <ReadMoreText text={t.feedback} maxLength={70} />
             </CardContent>
-            <CardFooter className="flex items-center justify-between gap-3 py-1.5 mt-auto bg-light-gray sm:items-center sm:gap-4">
+            <CardFooter className="flex items-center justify-between gap-3 py-1.5 mt-auto bg-light-gray border-t border-outline-variant/10 sm:items-center sm:gap-4">
               <p className="text-[10px] sm:text-xs font-bold text-on-surface-variant">
                 {(t.reviewCount > 5 ? "5+" : t.reviewCount) +
                   " Reviews for " +

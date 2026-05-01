@@ -23,7 +23,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  TableFooter,
 } from "@/components/ui";
 import {
   Table,
@@ -82,6 +81,11 @@ export function DataTable<T>({
   filters = [],
   onClearFilters,
 }: DataTableProps<T>) {
+  type ColumnMeta = {
+    headerClassName?: string;
+    cellClassName?: string;
+  };
+
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const safePageCount = Math.max(1, pageCount);
 
@@ -108,11 +112,11 @@ export function DataTable<T>({
     const half = Math.floor(maxButtons / 2);
 
     let start = Math.max(1, safeCurrent - half);
-    let end = Math.min(safePageCount, start + maxButtons - 1);
+    const end = Math.min(safePageCount, start + maxButtons - 1);
     start = Math.max(1, end - maxButtons + 1);
 
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-  }, [pageCount, currentPage]);
+  }, [currentPage, safePageCount]);
 
   return (
     <>
@@ -177,14 +181,20 @@ export function DataTable<T>({
       </Card>
       {/* Table section */}
       <div className="overflow-hidden g-border global-radius">
-        <Table className="w-full">
+        <Table className="w-full table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="border-none bg-light-gray hover:bg-light-gray" >
                 {headerGroup.headers.map((header) => (
+                  (() => {
+                    const meta = header.column.columnDef.meta as unknown as ColumnMeta | undefined;
+                    return (
                   <TableHead
                     key={header.id}
-                    className="h-12 px-4 text-xs font-semibold g-text-dark"
+                    className={cn(
+                      "h-12 px-4 text-xs font-semibold g-text-dark border-none",
+                      meta?.headerClassName
+                    )}
                   >
                     {header.isPlaceholder ? null : header.column.getCanSort() ? (
                       <button
@@ -199,6 +209,8 @@ export function DataTable<T>({
                       flexRender(header.column.columnDef.header, header.getContext())
                     )}
                   </TableHead>
+                    );
+                  })()
                 ))}
               </TableRow>
             ))}
@@ -206,19 +218,25 @@ export function DataTable<T>({
 
           <TableBody>
             {loading ? (
-              <TableRow className="hover:bg-transparent g-border-light">
+              <TableRow className="hover:bg-transparent border-b">
                 <TableCell colSpan={columns.length} className="py-16 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="hover:bg-muted/20">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4 py-4 align-middle">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                <TableRow key={row.id} className="hover:bg-muted/20 border-b dsfdsgdf">
+                  {row.getVisibleCells().map((cell) => {
+                    const meta = cell.column.columnDef.meta as unknown as ColumnMeta | undefined;
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={cn("px-4 py-4 align-middle", meta?.cellClassName)}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (
@@ -236,7 +254,7 @@ export function DataTable<T>({
         </Table>
             {/* Pagination section */}
             {onPageChange ? (
-                    <div className="flex flex-col w-full gap-3 px-5 py-5.5 m-0  border-t sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col w-full gap-3 px-5 py-5.5 m-0 border-light-gray-top  sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-muted-foreground">
                         Showing {entriesFrom} to {entriesTo} of {totalItems} entries
                     </p>

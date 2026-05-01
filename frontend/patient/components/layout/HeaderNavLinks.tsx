@@ -34,7 +34,7 @@ export function HeaderNavLinks({
     
         <>
             <nav className="items-center justify-center flex-1 hidden lg:flex">
-                <div className="flex items-center gap-2 p-1 rounded-2xl">
+                <div className="flex items-center gap-2 p-1 global-radius">
                     {items.map((item) => {
                         const isActive = isActivePath(item.href);
 
@@ -74,7 +74,7 @@ export function HeaderNavLinks({
                         <Button
                             variant="outline"
                             size="icon"
-                            className="shadow-sm h-11 w-11 rounded-2xl border-border/70 bg-background"
+                            className="shadow-sm h-11 w-11 global-radius border-border/70 bg-background"
                         >
                             <Menu className="w-5 h-5" />
                         </Button>
@@ -97,7 +97,7 @@ export function HeaderNavLinks({
                                         href={item.href}
                                         onClick={() => setMobileMenuOpen(false)}
                                         className={cn(
-                                            "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all duration-200",
+                                            "flex items-center gap-3 global-radius px-4 py-3 text-sm font-bold transition-all duration-200",
                                             isActive
                                                 ? "bg-primary text-primary-foreground shadow-sm"
                                                 : "text-foreground/75 hover:bg-muted hover:text-foreground",
@@ -124,7 +124,7 @@ export function HeaderNavLinks({
                                 href="/notifications"
                                 onClick={() => setMobileMenuOpen(false)}
                                 className={cn(
-                                    "mt-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all duration-200",
+                                    "mt-2 flex items-center gap-3 global-radius px-4 py-3 text-sm font-bold transition-all duration-200",
                                     pathname === "/notifications"
                                         ? "bg-primary text-primary-foreground shadow-sm"
                                         : "text-foreground/75 hover:bg-muted hover:text-foreground",

@@ -86,11 +86,11 @@ export function Header() {
     return (
         <header
             className={cn(
-                "sticky top-0 z-50 w-full border-b border-border/60 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80",
+                "sticky top-0 z-50 w-full border-b border-border/60 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 px-5 sm:px-5",
                 isScrolled && "shadow-sm",
             )}
         >
-            <div className="mx-auto flex h-[72px] container-max-width items-center gap-4">
+            <div className="mx-auto flex h-[72px] container-max-width items-center gap-4 justify-between">
        
        
                 <Link href="/" className="flex items-center shrink-0">
@@ -112,7 +112,7 @@ export function Header() {
                     isActivePath={isActivePath}
                 />
 
-                <div className="flex items-center gap-3 ml-auto sm:gap-4">
+                <div className="hidden lg:flex items-center gap-3 ml-auto sm:gap-4">
                     <Link href="/notifications" className="relative">
                         <Button
                             variant="outline"

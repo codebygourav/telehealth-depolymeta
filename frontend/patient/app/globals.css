@@ -177,14 +177,6 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-
-  body {
-    /* @apply bg-background text-foreground; */
-    @apply bg-surface text-on-surface;
-  }
 
   html {
     @apply font-sans;
@@ -282,13 +274,15 @@
   }
 
   /* Full-width primary CTA button used across cards/forms */
-  .btn-primary-cta {
+  .btn-primary-cta,
+  .button{
     border-radius: var(--global-radius);
     font-weight: bold !important;
-    @apply mt-5 text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
+    height: 39px !important;
+    @apply mt-5 text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95 py-3.5 px-5;
   }
   .btn-primary-without-transition {
-    border-radius: var(--global-radius);
+    border-radius: var(--global-radius); 
     @apply mt-5 text-base font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
   }
 
@@ -408,7 +402,7 @@
   }
 
   .shadow-card-sm {
-    box-shadow: 0px 1px 10px 0px #0000000A;
+    box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.1);
   }
 
   .custom-card-design {
@@ -435,9 +429,16 @@
   }
 
   .border-light-gray {
-    border: #E7E8EB;
+    border: 1px solid #E7E8EB;
   }
 
+
+  .border-b {
+    border-bottom: 1px solid #E7E8EB  !important;
+  }
+  .border-t {
+    border-top: 1px solid #E7E8EB  !important;
+  }
   .secondary-menu-color {
     background-color: var(--color-secondary-menu-color);
   }
@@ -490,23 +491,8 @@
   }
 }
 
-
-/* ============================================================
-   ✦  GLOBAL DESIGN SYSTEM — Custom Utility Classes
-      All project-wide reusable classes are defined below,
-      grouped into clearly labelled sections.
-   ============================================================ */
-
-
-/* ──────────────────────────────────────────────
-   § 1. TYPOGRAPHY — Headings
-      Usage: <h1 class="g-h1"> or <p class="g-h2">
-      These mirror the native h1–h5 base styles but
-      can be applied to any element.
-   ────────────────────────────────────────────── */
 @layer utilities {
 
-  /* H1 — Page title / Hero heading */
   .g-h1 {
     font-size: var(--global-h1-24);
     /* 24px */
@@ -515,7 +501,6 @@
     color: #1F1E1E;
   }
 
-  /* H2 — Section title */
   .g-h2 {
     font-size: var(--global-h2-22);
     /* 22px */
@@ -911,4 +896,10 @@
     border-top: 1px solid #F0F1F3;
     margin: 0.75rem 0;
   }
-}
+
+  .g-success-badge {
+    background:rgba(244, 251, 247, 1);
+    color: rgba(24, 206, 30, 1) !important;
+    border-color: transparent !important;
+  }
+} 

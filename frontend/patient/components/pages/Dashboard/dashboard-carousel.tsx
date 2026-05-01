@@ -15,10 +15,15 @@ interface DashboardCarouselProps<T> {
   basisClassName?: string;
   className?: string;
   contentClassName?: string;
+  dotBaseClassName?: string;
+  dotInactiveClassName?: string;
+  dotActiveClassName?: string;
+  dotColorClassName?: string;
+  activeDotColorClassName?: string;
   dotClassName?: string;
   activeDotClassName?: string;
   dotsContainerClassName?: string;
-  opts?: any;
+  opts?: React.ComponentProps<typeof Carousel>["opts"];
 }
 
 /**
@@ -31,6 +36,11 @@ export function DashboardCarousel<T>({
   basisClassName = "basis-full sm:basis-1/2 md:basis-1/3",
   className,
   contentClassName,
+  dotBaseClassName,
+  dotInactiveClassName,
+  dotActiveClassName,
+  dotColorClassName,
+  activeDotColorClassName,
   dotClassName,
   activeDotClassName,
   dotsContainerClassName,
@@ -91,13 +101,18 @@ export function DashboardCarousel<T>({
               onClick={() => api?.scrollTo(i)}
               className={cn(
                 "rounded-full transition-all duration-300",
+                dotBaseClassName,
                 i === current
-                  ? activeDotClassName
-                    ? cn("w-4 opacity-100", activeDotClassName)
-                    : "w-4 h-2 bg-primary opacity-100"
-                  : dotClassName
-                    ? cn("w-2", dotClassName)
-                    : "w-2 h-2 bg-primary/20 hover:bg-primary/40"
+                  ? cn(
+                      dotActiveClassName ?? "w-4 h-2 opacity-100",
+                      activeDotColorClassName ?? "bg-primary",
+                      activeDotClassName
+                    )
+                  : cn(
+                      dotInactiveClassName ?? "w-2 h-2",
+                      dotColorClassName ?? "bg-primary/20 hover:bg-primary/40",
+                      dotClassName
+                    )
               )}
               aria-label={`Go to slide ${i + 1}`}
             />

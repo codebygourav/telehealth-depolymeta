@@ -1,9 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
-// import { Header } from "@/components/layout/Header";
 
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "sonner";
 
 export default function MainLayout({
@@ -15,9 +13,10 @@ export default function MainLayout({
     <>
       <Header />
       <div
-        className="flex-1 min-h-screen pt-5 pb-5 container-max-width"
-        style={{ marginLeft: "auto", marginRight: "auto", width: "100%" }}
+        className="flex-1 min-h-screen container-max-width   px-5 sm:px-5 py-5 sm:py-5"
+        style={{ marginLeft: "auto", marginRight: "auto", width: "100%"  }}
       >
+
         {children}
       </div>
 

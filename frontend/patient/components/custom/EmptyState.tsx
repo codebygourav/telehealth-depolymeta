@@ -1,20 +1,29 @@
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui";
 
 interface EmptyStateProps {
   title: ReactNode;
   description?: ReactNode;
   icon?: ReactNode;
+  button?: ReactNode;
+  extra?: ReactNode;
   className?: string;
 }
 
-export function EmptyState({ title, description, icon, className }: EmptyStateProps) {
+export function EmptyState({ title, description, icon, button, extra, className }: EmptyStateProps) {
   return (
     <Empty
       className={cn(
-        "py-20 px-6 bg-light-gray global-radius g-border",
+        "py-4 lg:py-20 px-6 bg-light-gray global-radius g-border",
         className,
       )}
     >
@@ -31,7 +40,13 @@ export function EmptyState({ title, description, icon, className }: EmptyStatePr
           <EmptyDescription className="text-on-surface-variant">{description}</EmptyDescription>
         ) : null}
       </EmptyHeader>
+
+      {extra || button ? (
+        <EmptyContent className="max-w-2xl">
+          {extra}
+          {button}
+        </EmptyContent>
+      ) : null}
     </Empty>
   );
 }
-

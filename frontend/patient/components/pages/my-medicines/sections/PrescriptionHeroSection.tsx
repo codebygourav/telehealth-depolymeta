@@ -17,9 +17,8 @@ export const PrescriptionHeroSection = ({
                 title="Medicine Details"
                 description="Detailed information about your prescription."
             />
-            <Button onClick={onBack} className="global-radius btn-primary-cta">
-                <ChevronLeft className="w-6 h-6 m-0" />
-                Back
+            <Button onClick={onBack} className="bg-light-gray g-border rounded-full text-primary h-10 w-10">
+                <ChevronLeft className="size-6" />
             </Button>
         </>
     );

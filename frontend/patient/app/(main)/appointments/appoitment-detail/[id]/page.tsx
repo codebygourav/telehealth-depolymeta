@@ -6,14 +6,25 @@ import AddReviewsDialouge from '@/components/pages/appointments/addReviewsDialou
 import { AppointmentInfoCards } from '@/components/pages/appointments/AppointmentInfoCards';
 import { MedicineDetailView } from '@/components/pages/my-medicines/MedicineDetailView';
 import { Pill } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+type AppointmentDetail = {
+    notes?: string;
+    doctor: {
+        user_id: string;
+        id?: string;
+        name?: string;
+    };
+    status?: string;
+    can_add_review?: boolean;
+    appointment_id?: string;
+};
 
 export default function AppointmentDetailPage() {
     const { id } = useParams();
-    const router = useRouter();
 
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<AppointmentDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
     console.log(data);
@@ -42,7 +53,7 @@ export default function AppointmentDetailPage() {
     if (loading) return <p className="mt-10 text-center">Loading...</p>;
     if (!data) return <p className="mt-10 text-center">No Data</p>;
 
-    const { medical_reports, notes } = data;
+    const { notes } = data;
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -71,7 +82,9 @@ export default function AppointmentDetailPage() {
                     {notes && (
                         <div className="p-6 italic text-gray-600 bg-gray-100 border-l-4 rounded-xl border-emerald-500">
                             <h3 className="text-sm">Symptoms Reported</h3>
-                            <div className="mt-2 text-base">"{notes}"</div>
+                            <div className="mt-2 text-base">
+                                &quot;{notes}&quot;
+                            </div>
                         </div>
                     )}
 
@@ -83,8 +96,8 @@ export default function AppointmentDetailPage() {
                             onBack={() => { }}
                             showHeroSection={false}
                             showDoctorHeader={false}
+                            appointmentDetailLayout={true}
                             cardGrid="grid-cols-1 md:grid-cols-2 gap-6"
-                            footerActionGrid="grid-cols-1 md:grid-cols-2 gap-6"
                         />
                   
                     </div>

@@ -25,7 +25,7 @@ export function Advertisements({ ads }: AdvertisementsProps) {
 
     const AdvertisementCard = ({ ad }: { ad: Advertisement }) => {
         return (
-            <>
+            <div className="p-5">
             {ad.link && ad.link !== "#" ? (
                 <a href={ad.link} target="_blank" rel="noopener noreferrer">
                     <img
@@ -43,26 +43,26 @@ export function Advertisements({ ads }: AdvertisementsProps) {
                     loading="lazy"
                 />
             )}
-            </>
+            </div>
            
         );
     };
 
     return (
-        <FullWidthDashboardSection className="pt-9 pb-9 bg-primary">
+        <FullWidthDashboardSection className="pt-9 pb-9 bg-primary ">
             <SectionHeader
                 title="Safe & Advanced Surgical Care"
                 subtitle="With Super specialist doctors and state-of-the-art technology, we cover the complete spectrum of medical specialties"
                 headingClassName="text-primary-foreground"
                 subtitleClassName="text-primary-foreground/80"
-                containerClassName="mb-2 pb-2"
+                containerClassName="mb-2 px-5 sm:px-5"
             />
             <DashboardCarousel
                 items={ads}
                 contentClassName="-ml-3 sm:-ml-4 md:-ml-6 py-3 sm:py-4 px-1"
                 basisClassName="pl-3 sm:pl-4 md:pl-6 basis-full sm:basis-1/2 lg:basis-1/3"
-                dotClassName="bg-white/35 opacity-100 hover:bg-white/55 h-1 sm:h-1.5"
-                activeDotClassName="bg-white opacity-100 h-1 sm:h-1.5  z-10"
+                dotClassName="bg-white/35 opacity-100 hover:bg-white/55"
+                activeDotClassName="bg-white opacity-100  z-10"
                 renderItem={(ad) => <AdvertisementCard key={ad.id} ad={ad} />}
             />
         </FullWidthDashboardSection>

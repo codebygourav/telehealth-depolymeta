@@ -1,7 +1,6 @@
 // import { ArrowRight } from "lucide-react";
 // import { Button } from "../ui";
 
-import { ArrowRight } from "lucide-react";
 import { Button } from "../ui";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
@@ -33,6 +32,7 @@ export function SectionHeader({
 
             {/* Left Content */}
             <div>
+                <div className="flex items-start justify-between gap-2">
                 <h1
                     className={cn(
                         "font-bold text-foreground font-headline tracking-tight",
@@ -41,6 +41,17 @@ export function SectionHeader({
                 >
                     {title}
                 </h1>
+                {showAction && (
+                    <button
+                        type="button"
+                        onClick={onActionClick}
+                        className="md:hidden flex items-center gap-2  text-primary justify-between mt-2"
+                        aria-label={actionText}
+                    >
+                        <ChevronRight className="size-6 ml-0" />
+                    </button>
+                )}
+                </div>
 
                 {subtitle && (
                     <h4 className={cn("mt-1 text-on-surface-variant", subtitleClassName)}>
@@ -54,7 +65,7 @@ export function SectionHeader({
             {showAction && (
                 <Button
                     onClick={onActionClick}
-                    className="flex items-center w-auto h-10 gap-1 ml-0 btn-primary-cta"
+                    className="hidden md:flex items-center w-auto h-10 gap-1 ml-0 btn-primary-cta"
                 >
                     {actionText}
                     <ChevronRight className="size-4.5 ml-0" />

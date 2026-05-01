@@ -1,7 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, CardContent, Separator } from "@/components/ui";
 import type { HomeScreenAppointment } from "@/types/home-screen";
 import { Calendar, Clock3, type LucideIcon, UserRound, Video } from "lucide-react";
-
+import { EmptyState } from "@/components/custom/EmptyState";
+import { ChevronRight } from "lucide-react";
 interface UpcomingAppointmentsProps {
     appointments: HomeScreenAppointment[];
     onViewAll: () => void;
@@ -112,34 +113,20 @@ export function UpcomingAppointments({
     onBookFirst,
 }: UpcomingAppointmentsProps) {
    
+    const button = <Button onClick={onBookFirst} className="btn-primary-cta global-radius px-5">Book Your First Appointment <ChevronRight className="size-4 m-0" /></Button>;
     if (!appointments || appointments.length === 0) {
         return (
-            <Card className="rounded-[5px] border border-border/50 h-full flex flex-col justify-center text-center shadow-card-lg">
-                <CardContent className="py-3.75 px-5 flex flex-col items-center">
-                    <div className="h-13.75 w-14.5 bg-muted rounded-[6px] flex items-center justify-center">
-                        <Calendar className="h-6.5 w-6.5 text-muted-foreground" />
-                    </div>
-
-                    <h3 className="mt-4 text-lg font-semibold text-primary font-headline">
-                        No Upcoming Sessions
-                    </h3>
-
-                    <p className="px-4 mt-2 text-sm font-normal text-muted-foreground">
-                        You don&apos;t have any appointments scheduled at the moment.
-                    </p>
-
-                    <Button
-                        onClick={onBookFirst}
-                        className="mt-5 bg-primary text-primary-foreground rounded-[5px] px-3 font-semibold py-4.5 shadow-sm hover:bg-primary/90 transition-all text-xs w-full sm:w-auto"
-                    >
-                        Book Your First Appointment
-                    </Button>
-                </CardContent>
-            </Card>
+                <EmptyState
+                title="No Upcoming Sessions"
+                description="You don't have any appointments scheduled at the moment."
+                button={button}
+                icon={<Calendar className="size-10" />}
+                className="h-full"
+            />
         );
     }
 
-    // Show only one upcoming appointment
+    // Show only one upcoming appointment  
     return (
         <AppointmentCard
             appointment={appointments[0]}
