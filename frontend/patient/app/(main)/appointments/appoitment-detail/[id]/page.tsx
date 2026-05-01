@@ -80,11 +80,11 @@ export default function AppointmentDetailPage() {
                 </div>
 
                 {/* Medical Details & prescriptions - MedicineDetailView shown by default */}
-                <div className="overflow-hidden">
+                <div className="overflow-hidden mb-10">
                     <div className="pt-8 pb-4 border-b border-gray-100 bg-gray-50">
-                        <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900 md:text-2xl">
-                            <Pill className="w-5 h-5 text-emerald-600" />
-                            Medical Details & prescriptions
+                        <h3 className="flex items-center gap-2 text-lg font-semibold text-[#1F1E1E]">
+                            <Pill size={20} color='#055BD9' />
+                            Medical Details & Prescriptions
                         </h3>
                     </div>
 
@@ -101,19 +101,12 @@ export default function AppointmentDetailPage() {
 
                     <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
                         <div className="lg:col-span-8 h-full w-full g-border global-radius p-4 bg-white flex flex-col">
-                            <h3 className="mb-3 text-sm font-semibold text-emerald-800">
-                                Medical Details & Prescription
-                            </h3>
+
                             <div className="flex-1 h-full">
                                 {data.prescriptions ? (
                                     <MedicineCard
-                                        prescription={{
-                                            ...data.prescriptions,
-                                            problem: data.prescriptions.notes || data.notes || "Medical Prescription",
-                                            timing: data.prescriptions.date || "N/A",
-                                            appointment_id: data.appointment_id
-                                        }}
-                                        onViewDetail={id => setSelectedMedicineId(id)}
+                                        prescription={data.prescriptions}
+                                        onViewDetail={(id) => setSelectedMedicineId(id)}
                                     />
                                 ) : (
                                     <div className="p-8 h-full flex items-center justify-center text-center text-gray-400 bg-white border border-gray-100 rounded-2xl">

@@ -6,7 +6,7 @@ export const STATUS_STYLES = {
     failed:
       "bg-red-100 text-red-700 border border-red-200",
     completed:
-      "bg-emerald-100 text-[#18CE1E] border border-[#F4FBF7]",
+      "bg-[F4FBF7] text-[#18CE1E] border border-[#F4FBF7]",
     rescheduled:
       "bg-yellow-100 text-gray-700 border border-gray-200",
     pending:
@@ -45,9 +45,9 @@ export const STATUS_STYLES = {
 
   payment: {
     paid:
-      "bg-emerald-100 text-emerald-700 border border-emerald-200",
+      "bg-[F4FBF7] text-[#18CE1E] border border-[#F4FBF7]",
     success:
-      "bg-emerald-100 text-emerald-700 border border-emerald-200",
+      "bg-[F4FBF7] text-[#18CE1E] border border-[#F4FBF7]",
     pending:
       "bg-amber-100 text-amber-700 border border-amber-200",
     failed:
