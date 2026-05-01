@@ -109,9 +109,9 @@ export const MedicineDetailView = ({
                             {showActionPlan ? (
                                 <div className="md:col-span-4 md:col-start-9">
                                     <MedicineActionPlan
-                                        conclusion={detailResponse.data.instructions_by_doctor}
-                                        nextVisitDate={detailResponse.data.next_visit_date}
-                                        doctor_id={doctorUserId || detailResponse.data.doctor_id}
+                                        conclusion={detailResponse.data.instructions_by_doctor ?? ""}
+                                        nextVisitDate={detailResponse.data.next_visit_date ?? ""}
+                                        doctor_id={doctorUserId || detailResponse.data.doctor_id || ""}
                                         footerActionGridClassName="grid-cols-1 gap-6"
                                         showConclusion={false}
                                     />
@@ -147,9 +147,9 @@ export const MedicineDetailView = ({
                             {/* ── Conclusion + Next Visit ──────────────────── */}
                             {showActionPlan && (
                                 <MedicineActionPlan
-                                    conclusion={detailResponse.data.instructions_by_doctor}
-                                    nextVisitDate={detailResponse.data.next_visit_date}
-                                    doctor_id={doctorUserId || detailResponse.data.doctor_id}
+                                    conclusion={detailResponse.data.instructions_by_doctor ?? ""}
+                                    nextVisitDate={detailResponse.data.next_visit_date ?? ""}
+                                    doctor_id={doctorUserId || detailResponse.data.doctor_id || ""}
                                     footerActionGridClassName={footerActionGrid}
                                 />
                             )}

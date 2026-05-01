@@ -119,8 +119,8 @@ export default function AppointmentDetailPage() {
                         <div className="lg:col-span-4 h-full">
                             <MedicineActionPlan
                                 showConclusion={false}
-                                nextVisitDate={data?.prescriptions?.next_visit_date}
-                                doctor_id={data?.doctor?.id}
+                                nextVisitDate={data?.prescriptions?.next_visit_date ?? ""}
+                                doctor_id={data?.doctor?.id ?? ""}
                                 footerActionGridClassName="grid-cols-1 h-full p-0"
                                 buttonClass="!p-2"
                                 nextVisitCardClassName="!p-4"
