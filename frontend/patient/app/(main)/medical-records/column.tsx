@@ -55,10 +55,6 @@ export const medicalRecordsColumns: ColumnDef<MedicalReport>[] = [
     {
         accessorKey: 'report_name',
         header: 'Record Name',
-        meta: {
-            headerClassName: "w-[18%]",
-            cellClassName: "w-[18%]",
-        } satisfies ColumnMeta,
         cell: ({ row }) => (
             <div className="flex items-center gap-4 min-w-0">
                 <div className="flex items-center justify-center w-10 h-10 text-gray-600 bg-gray-100 rounded-lg shrink-0">
@@ -73,10 +69,6 @@ export const medicalRecordsColumns: ColumnDef<MedicalReport>[] = [
     {
         accessorKey: 'type_label',
         header: 'Type',
-        // meta: {
-        //     headerClassName: "w-[16%]",
-        //     cellClassName: "w-[16%]",
-        // } satisfies ColumnMeta,
         cell: ({ row }) => (
             <span className="font-medium g-text-muted">
                 {row.original.type_label ?? '-'}
@@ -86,10 +78,6 @@ export const medicalRecordsColumns: ColumnDef<MedicalReport>[] = [
     {
         accessorKey: 'report_date_formatted',
         header: 'Date',
-        // meta: {
-        //     headerClassName: "w-[14%]",
-        //     cellClassName: "w-[14%]",
-        // } satisfies ColumnMeta,
         cell: ({ row }) => (
             <span className="font-medium g-text-muted">
                 {row.original.report_date_formatted ?? '-'}
@@ -101,10 +89,6 @@ export const medicalRecordsColumns: ColumnDef<MedicalReport>[] = [
         
         accessorKey: 'status',
         header: 'Status',
-        // meta: {
-        //     headerClassName: "w-[14%]",
-        //     cellClassName: "w-[14%]",
-        // } satisfies ColumnMeta,
         cell: ({ row }) => {
             const status = row.original.status;
             const isShared = status === 'shared';
@@ -123,10 +107,10 @@ export const medicalRecordsColumns: ColumnDef<MedicalReport>[] = [
     {
         id: 'action',
         header: 'Action',
-        // meta: {
-        //     headerClassName: "w-[18%]",
-        //     cellClassName: "w-[18%]",
-        // } satisfies ColumnMeta,
+        meta: {
+            headerClassName: "flex-wrap items-center justify-center",
+            cellClassName: "flex-wrap items-center justify-center",
+        } satisfies ColumnMeta,
         cell: ({ row }) => <ActionCell row={row} />,
     },
 ];

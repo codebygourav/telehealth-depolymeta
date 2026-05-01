@@ -260,6 +260,7 @@ const FindDoctors = () => {
                                 <DoctorCard
                                     key={doctor.id}
                                     doctor={doctor}
+                                    onBook={() => setBookingDoctorId(doctor.id)}
                                     isLoading={bookingDoctorId === doctor.id}
                                 />
                             ))}

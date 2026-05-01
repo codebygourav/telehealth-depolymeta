@@ -60,10 +60,10 @@ export const MedicineCard = ({ prescription, onViewDetail }: MedicineCardProps) 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="w-full"
+      className="w-full h-full"
     >
-      <Card className="p-5 overflow-hidden bg-white global-radius-10 group">
-        <CardContent className="flex flex-col justify-between gap-4 p-0 md:flex-row md:items-center">
+      <Card className="p-5 h-full overflow-hidden bg-white global-radius-10 group">
+        <CardContent className="flex flex-col h-full justify-between gap-4 p-0 md:flex-row md:items-center">
           <div className="flex-1 space-y-3">
             {/* Header: Label */}
             <div className="flex items-center gap-1.5 font-bold uppercase tracking-widest g-text-muted">
@@ -79,13 +79,13 @@ export const MedicineCard = ({ prescription, onViewDetail }: MedicineCardProps) 
             {/* Info Badges */}
             <InfoBadges prescription={prescription} />
           </div>
-
+      
 
           {/* Action Button */}
           <div className="flex items-center pt-2 shrink-0 md:pt-0">
             {onViewDetail ? (
               <Button
-                className="h-10 btn-primary-cta"
+                className="h-10 btn-primary-cta mt-0"
                 onClick={() => onViewDetail(prescription.appointment_id)}
               >
                 View Detail

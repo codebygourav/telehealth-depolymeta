@@ -28,7 +28,6 @@ export default function Home() {
 	const departmentCards = useMemo(() => mapHomeScreenDepartmentCards(homeData), [homeData]);
 	const advertisements = useMemo(() => mapHomeScreenAdvertisements(homeData), [homeData]);
 	const testimonials = useMemo(() => mapHomeScreenTestimonials(homeData), [homeData]);
-
 	if (isLoading) {
 		return (
 			<div className="flex items-center justify-center min-h-[60vh]">

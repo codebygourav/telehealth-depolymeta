@@ -28,9 +28,9 @@ const getStatusClasses = (status: StatusBadgeStatus) => {
       return "g-success-badge";
     case "uploaded":
     case "success":
-      return "bg-success/10 text-success border-success/10";
+      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/10";
     case "pending":
-      return "bg-warning/10 text-warning border-warning/10";
+      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/10";
     case "conclusion_report":
       return "bg-info/10 text-info border-info/10";
     case "failed":

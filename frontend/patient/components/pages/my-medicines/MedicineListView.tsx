@@ -1,7 +1,7 @@
 "use client";
 
 import { Pill } from "lucide-react";
-import { MedicineCard } from "@/components/pages/my-medicines/MedicineCard";
+import { MedicineCard } from "@/components/MedicineCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import CustomTabs from "@/components/custom/CustomTabs";
 import { usePrescriptions } from "@/queries/usePrescriptions";

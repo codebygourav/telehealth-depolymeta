@@ -18,6 +18,7 @@ interface ActionPlanProps {
     footerActionGridClassName?: string;
     showConclusion?: boolean;
     nextVisitCardClassName?: string;
+    buttonClass?: string
 }
 
 export const MedicineActionPlan = ({
@@ -32,11 +33,12 @@ export const MedicineActionPlan = ({
     footerActionGridClassName = 'grid-cols-1 gap-6 md:grid-cols-12',
     showConclusion = true,
     nextVisitCardClassName,
+    buttonClass,
 }: ActionPlanProps) => {
     const router = useRouter();
 
     return (
-        <div className={`grid ${footerActionGridClassName}`}>
+        <div className={cn("grid items-stretch", footerActionGridClassName)}>
             {/* Conclusion Card */}
             {showConclusion ? (
                 <motion.div
@@ -63,12 +65,12 @@ export const MedicineActionPlan = ({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
                 className={cn(
-                    "relative flex flex-col items-center justify-between gap-6 p-5 overflow-hidden text-white bg-primary global global-radius sm:p-8 md:flex-row group",
-                    showConclusion ? "md:col-span-4 md:col-start-9" : null,
+                    "relative flex flex-col  items-start justify-between gap-6 p-5 overflow-hidden text-white bg-primary global global-radius sm:p-8 group h-full",
+                    showConclusion ? "md:flex-row md:col-span-4 md:col-start-9" : "md:col-span-12",
                     nextVisitCardClassName
                 )}
             >
-                <div className="relative z-10 flex items-center w-full gap-4 sm:gap-6 md:w-auto">
+                <div className="relative z-10 flex items-center w-full gap-4 sm:gap-6 md:w-auto ">
                     <div className="p-3 sm:p-4 global-radius bg-light-gray shrink-0">
                         <NextVisitIcon className="size-8 text-primary" />
                     </div>
@@ -86,14 +88,16 @@ export const MedicineActionPlan = ({
 
                 <Button
                     className={cn(
-                        'w-full md:w-auto px-8 py-6 sm:py-7 font-bold btn-primary-cta global-radius',
+                        'w-full px-8 py-6 sm:py-7 font-bold btn-primary-cta global-radius flex items-center justify-center gap-2',
+                        showConclusion ? 'md:w-auto' : 'md:w-full',
                         buttonBgColor,
                         buttonTextColor,
+                        buttonClass,
                     )}
                     onClick={() => router.push(`/find-doctors/${doctor_id}`)}
                 >
                     {buttonText}
-                    <ArrowRight className="w-4 h-4 m-0" />
+                    <ArrowRight className="w-4 h-4" />
                 </Button>
 
                 {/* Decorative background element */}

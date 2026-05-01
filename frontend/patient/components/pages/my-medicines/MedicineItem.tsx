@@ -37,7 +37,7 @@ export const MedicineItem = ({ medicine }: MedicineItemProps) => {
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between pt-3 border-t sm:block sm:text-right sm:border-t-0 sm:pt-0 border-outline-variant/5">
+        <div className="flex items-center justify-between pt-3 sm:block sm:text-right sm:border-t-0 sm:pt-0 border-outline-variant/5">
           <div className="flex items-center sm:justify-end gap-1.5 g-text-dark font-bold">
             <Info className="w-3.5 h-3.5" />
             <p className="text-sm tracking-widest uppercase">

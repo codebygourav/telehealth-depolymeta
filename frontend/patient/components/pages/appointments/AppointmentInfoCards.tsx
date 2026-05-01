@@ -99,22 +99,22 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                 Schedule
                             </h3>
                             <div className="space-y-2.5 sm:space-y-3">
-                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Date</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                         {schedule?.date_formatted || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Time</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                         {schedule?.time_formatted || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Consultation Type</span>
                                     <span
-                                        className={`text-[10px] sm:text-xs px-2 py-1 rounded-full ${getStatusColor(
+                                        className={`text-[10px] sm:text-xs px-2 py-1 rounded-full w-fit ${getStatusColor(
                                             "session",
                                             schedule?.consultation_type_label
                                         )}`}
@@ -122,7 +122,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                         {schedule?.consultation_type_label || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Booking Type</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                         {schedule?.booking_type || "N/A"}
@@ -140,37 +140,37 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                 Patient Info
                             </h3>
                             <div className="space-y-2.5 sm:space-y-3">
-                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Name</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                         {patient?.name || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Age</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                         {patient?.age_formatted || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Gender</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                         {patient?.gender_formatted || "N/A"}
                                     </span>
                                 </div>
                                 {patient?.blood_group && (
-                                    <div className="flex justify-between items-center flex-wrap gap-2">
+                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                         <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Blood Group</span>
                                         <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{patient.blood_group}</span>
                                     </div>
                                 )}
-                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Phone</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{patient?.phone || "N/A"}</span>
                                 </div>
-                                <div className="flex justify-between items-center flex-wrap gap-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Email</span>
-                                    <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-all text-right">{patient?.email || "N/A"}</span>
+                                    <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-all text-left sm:text-right">{patient?.email || "N/A"}</span>
                                 </div>
                             </div>
                         </CardContent>

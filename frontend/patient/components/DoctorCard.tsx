@@ -3,6 +3,9 @@ import type { Doctor } from '@/types/browse-doctors';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
+import { CustomAvatar } from '@/components/custom/custom-avatar';
+import { constructNow } from 'date-fns';
+
 interface DoctorCardProps {
     doctor: Doctor;
     isLoading?: boolean;
@@ -15,7 +18,6 @@ const DoctorCard = ({ doctor, isLoading = false }: DoctorCardProps) => {
     const handleBookNow = () => {
         router.push(`/find-doctors/${doctor.id}`);
     };
-
     return (
         <div className="shadow-[0px_2px_4px_rgba(0,0,0,0.1)] rounded-lg border border-light-gray transition-shadow group h-full flex flex-col overflow-hidden">
 
@@ -80,17 +82,30 @@ const DoctorCard = ({ doctor, isLoading = false }: DoctorCardProps) => {
                                     Consultation Type
                                 </p>
                                 <div className="flex items-center gap-1.5 md:mt-1.5">
-                                    {
-                                        doctor.consultation_type === 'video' || doctor.consultation_type === 'Video' ? (
+
+                                    {Array.isArray(doctor.consultation_type)
+                                        ? (
+                                            <>
+                                                {doctor.consultation_type.includes('video') && (
+                                                    <Video size={18} color='#18CE1E' fill="#18CE1E" />
+                                                )}
+                                                {doctor.consultation_type.includes('in-person') && (
+                                                    <Hospital size={18} color='#18CE1E' />
+                                                )}
+                                                {!doctor.consultation_type.includes('video') && !doctor.consultation_type.includes('in-person') || doctor.consultation_type === 'both' && null}
+                                            </>
+                                        )
+                                        : doctor.consultation_type === 'video' ? (
+
                                             <Video size={18} color='#18CE1E' fill="#18CE1E" />
                                         ) : doctor.consultation_type === 'in-person' || doctor.consultation_type === 'In Person' ? (
                                             <Hospital size={18} color='#18CE1E' />
-                                        ) : (
+                                        ) : doctor.consultation_type === 'both' ? (
                                             <>
                                                 <Video size={18} color='#18CE1E' fill="#18CE1E" />
                                                 <Hospital size={18} color='#18CE1E' />
                                             </>
-                                        )
+                                        ) : null
                                     }
                                     <p className="text-xs font-bold capitalize break-words">
                                         {doctor.consultation_type_label}

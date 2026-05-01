@@ -8,7 +8,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { Pill, Loader2, XCircle } from "lucide-react";
-import { MedicineCard } from "@/components/pages/my-medicines/MedicineCard";
+import { MedicineCard } from "@/components/MedicineCard";
 import { useAppointmentDetail } from "@/queries/useAppointmentSummary";
 import { usePrescriptions } from "@/queries/usePrescriptions";
 import { ScrollArea } from "@/components/ui/scroll-area";

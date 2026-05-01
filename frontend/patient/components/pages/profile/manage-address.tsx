@@ -14,10 +14,8 @@ interface ManageAddressFormProps {
 }
 
 export default function ManageAddressForm({ user }: ManageAddressFormProps) {
-
     const { updateUser } = useAuth();
 
-    // ✅ FORM STATE
     const [formData, setFormData] = useState({
         address: "",
         area: "",
@@ -28,13 +26,10 @@ export default function ManageAddressForm({ user }: ManageAddressFormProps) {
     });
 
     const [loading, setLoading] = useState(false);
-
-    // ✅ DIALOG STATE
     const [dialogOpen, setDialogOpen] = useState(false);
     const [dialogMessage, setDialogMessage] = useState("");
     const [dialogType, setDialogType] = useState<"success" | "danger">("success");
 
-    // ✅ USER DATA SYNC
     useEffect(() => {
         if (user?.address) {
             setFormData({
@@ -48,18 +43,16 @@ export default function ManageAddressForm({ user }: ManageAddressFormProps) {
         }
     }, [user]);
 
-    // ✅ HANDLE CHANGE
     const handleChange = (field: string, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
-    // ✅ SAVE FUNCTION
     const handleSave = async () => {
         try {
             setLoading(true);
 
             const payload = {
-                group: "address", // 🔥 VERY IMPORTANT
+                group: "address",
                 address: formData.address,
                 area: formData.area,
                 landmark: formData.landmark,
@@ -70,8 +63,6 @@ export default function ManageAddressForm({ user }: ManageAddressFormProps) {
 
             const response = await updatePatientPersonalInfo(user.id, payload);
 
-
-            // ✅ CONTEXT UPDATE (CORRECT FIX)
             updateUser({
                 ...user,
                 address: {
@@ -80,119 +71,101 @@ export default function ManageAddressForm({ user }: ManageAddressFormProps) {
                 },
             });
 
-            // ✅ INSTANT UI UPDATE
-            setFormData((prev) => ({
-                ...prev,
-                ...response,
-            }));
-
-            // ✅ SUCCESS DIALOG
             setDialogType("success");
             setDialogMessage("Address updated successfully!");
             setDialogOpen(true);
 
         } catch (err: any) {
             console.error("Error updating address:", err);
-
             const errorMsg =
                 err?.response?.data?.errors?.message ||
                 err?.response?.data?.message ||
                 "Something went wrong";
 
-            // ❌ ERROR DIALOG
             setDialogType("danger");
             setDialogMessage(errorMsg);
             setDialogOpen(true);
-
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="w-full mt-7">
-
-            <div className="space-y-6">
-
-                {/* Address */}
-                <div className="space-y-2">
-                    <Label className="text-sm text-primary font-bold">
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 md:col-span-2">
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                         House / Floor / Flat Number
                     </Label>
                     <Input
                         value={formData.address}
                         onChange={(e) => handleChange("address", e.target.value)}
-                        className="h-11 rounded-lg bg-gray-50 border-primary"
+                        className="h-11 rounded-xl border-slate-200 dark:border-slate-700 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter house/flat number"
                     />
                 </div>
 
-                {/* Area */}
                 <div className="space-y-2">
-                    <Label className="text-sm text-primary font-bold">Area</Label>
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Area</Label>
                     <Input
                         value={formData.area}
                         onChange={(e) => handleChange("area", e.target.value)}
-                        className="h-11 rounded-lg bg-gray-50 border-primary"
+                        className="h-11 rounded-xl border-slate-200 dark:border-slate-700 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter area"
                     />
                 </div>
 
-                {/* Landmark */}
                 <div className="space-y-2">
-                    <Label className="text-sm text-primary font-bold">Landmark</Label>
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Landmark</Label>
                     <Input
                         value={formData.landmark}
                         onChange={(e) => handleChange("landmark", e.target.value)}
-                        className="h-11 rounded-lg bg-gray-50 border-primary"
+                        className="h-11 rounded-xl border-slate-200 dark:border-slate-700 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter landmark"
                     />
                 </div>
 
-                {/* Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                    <div className="space-y-2">
-                        <Label className="text-sm text-primary font-bold">Pincode</Label>
-                        <Input
-                            value={formData.pincode}
-                            onChange={(e) => handleChange("pincode", e.target.value)}
-                            className="h-11 rounded-lg bg-gray-50 border-primary"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="text-sm text-primary font-bold">City</Label>
-                        <Input
-                            value={formData.city}
-                            onChange={(e) => handleChange("city", e.target.value)}
-                            className="h-11 rounded-lg bg-gray-50 border-primary"
-                        />
-                    </div>
-
+                <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">Pincode</Label>
+                    <Input
+                        value={formData.pincode}
+                        onChange={(e) => handleChange("pincode", e.target.value)}
+                        className="h-11 rounded-xl border-slate-200 dark:border-slate-700 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter pincode"
+                    />
                 </div>
 
-                {/* State */}
                 <div className="space-y-2">
-                    <Label className="text-sm text-primary font-bold">State</Label>
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">City</Label>
+                    <Input
+                        value={formData.city}
+                        onChange={(e) => handleChange("city", e.target.value)}
+                        className="h-11 rounded-xl border-slate-200 dark:border-slate-700 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter city"
+                    />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                    <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">State</Label>
                     <Input
                         value={formData.state}
                         onChange={(e) => handleChange("state", e.target.value)}
-                        className="h-11 rounded-lg bg-gray-50 border-primary"
+                        className="h-11 rounded-xl border-slate-200 dark:border-slate-700 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter state"
                     />
                 </div>
-
-                {/* Button */}
-                <div className="flex justify-end">
-                    <Button
-                        className="py-6 px-4 font-bold text-sm"
-                        onClick={handleSave}
-                        disabled={loading}
-                    >
-                        {loading ? "Saving..." : "Save"}
-                    </Button>
-                </div>
-
             </div>
 
-            {/* ✅ DIALOG */}
+            <div className="flex justify-end pt-4">
+                <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 h-11 rounded-xl font-semibold shadow-sm transition-all"
+                    onClick={handleSave}
+                    disabled={loading}
+                >
+                    {loading ? "Saving..." : "Save"}
+                </Button>
+            </div>
+
             <CustomDialog
                 open={dialogOpen}
                 onClose={() => setDialogOpen(false)}

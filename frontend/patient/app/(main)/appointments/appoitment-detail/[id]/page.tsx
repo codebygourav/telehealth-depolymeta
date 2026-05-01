@@ -4,10 +4,12 @@ import { fetchAppointmentById } from '@/api/appointment-detail';
 import { DetailHeader } from '@/components/custom/DetailHeader';
 import AddReviewsDialouge from '@/components/pages/appointments/addReviewsDialouge';
 import { AppointmentInfoCards } from '@/components/pages/appointments/AppointmentInfoCards';
-import { MedicineDetailView } from '@/components/pages/my-medicines/MedicineDetailView';
+import { MedicineCard } from '@/components/MedicineCard';
 import { Pill } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { MedicineDetailView } from '@/components/pages/my-medicines/MedicineDetailView';
+import { MedicineActionPlan } from '@/components/pages/my-medicines/MedicineActionPlan';
 
 type AppointmentDetail = {
     notes?: string;
@@ -19,6 +21,7 @@ type AppointmentDetail = {
     status?: string;
     can_add_review?: boolean;
     appointment_id?: string;
+    prescriptions?: any;
 };
 
 export default function AppointmentDetailPage() {
@@ -26,14 +29,8 @@ export default function AppointmentDetailPage() {
 
     const [data, setData] = useState<AppointmentDetail | null>(null);
     const [loading, setLoading] = useState(true);
-
+    const [selectedMedicineId, setSelectedMedicineId] = useState<string | null>(null);
     console.log(data);
-    console.log("appointment id :", data?.appointment_id);
-    console.log("appointment status :", data?.status);
-    console.log("appointment doctor id :", data?.doctor?.id);
-    console.log("appointment doctor name :", data?.doctor?.name);
-
-
     useEffect(() => {
         const getData = async () => {
             try {
@@ -53,6 +50,15 @@ export default function AppointmentDetailPage() {
     if (loading) return <p className="mt-10 text-center">Loading...</p>;
     if (!data) return <p className="mt-10 text-center">No Data</p>;
 
+    if (selectedMedicineId) {
+        return (
+            <MedicineDetailView
+                prescriptionId={selectedMedicineId}
+                onBack={() => setSelectedMedicineId(null)}
+            />
+        );
+    }
+
     const { notes } = data;
 
     return (
@@ -67,14 +73,13 @@ export default function AppointmentDetailPage() {
                     <div className="space-y-6 lg:col-span-3">
                         <AppointmentInfoCards data={data} />
                     </div>
-
-                    {/* Medical Details & Prescription - MedicineDetailView shown by default */}
                 </div>
+                {/* Medical Details & prescriptions - MedicineDetailView shown by default */}
                 <div className="overflow-hidden">
                     <div className="pt-8 pb-4 border-b border-gray-100 bg-gray-50">
                         <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900 md:text-2xl">
                             <Pill className="w-5 h-5 text-emerald-600" />
-                            Medical Details & Prescription
+                            Medical Details & prescriptions
                         </h3>
                     </div>
 
@@ -88,18 +93,41 @@ export default function AppointmentDetailPage() {
                         </div>
                     )}
 
-                    {/* Show medicine details without header */}
-                    <div className="mt-6 w-full [&>div]:max-w-full [&>div]:mx-0">
-                        <MedicineDetailView
-                            prescriptionId={id as string}
-                            doctorUserId={data.doctor.user_id}
-                            onBack={() => { }}
-                            showHeroSection={false}
-                            showDoctorHeader={false}
-                            appointmentDetailLayout={true}
-                            cardGrid="grid-cols-1 md:grid-cols-2 gap-6"
-                        />
-                  
+
+                    <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                        <div className="lg:col-span-8 h-full w-full g-border global-radius p-4 bg-white flex flex-col">
+                            <h3 className="mb-3 text-sm font-semibold text-emerald-800">
+                                Medical Details & Prescription
+                            </h3>
+                            <div className="flex-1 h-full">
+                                {data.prescriptions ? (
+                                    <MedicineCard
+                                        prescription={{
+                                            ...data.prescriptions,
+                                            problem: data.prescriptions.notes || data.notes || "Medical Prescription",
+                                            timing: data.prescriptions.date || "N/A",
+                                            appointment_id: data.appointment_id
+                                        }}
+                                        onViewDetail={id => setSelectedMedicineId(id)}
+                                    />
+                                ) : (
+                                    <div className="p-8 h-full flex items-center justify-center text-center text-gray-400 bg-white border border-gray-100 rounded-2xl">
+                                        No prescription details available.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="lg:col-span-4 h-full">
+                            <MedicineActionPlan
+                                showConclusion={false}
+                                nextVisitDate={data?.prescriptions?.next_visit_date}
+                                doctor_id={data?.doctor?.id}
+                                footerActionGridClassName="grid-cols-1 h-full p-0"
+                                buttonClass="!p-2"
+                                nextVisitCardClassName="!p-4"
+                            />
+                        </div>
                     </div>
 
                     <AddReviewsDialouge

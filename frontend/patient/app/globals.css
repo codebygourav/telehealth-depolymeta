@@ -279,7 +279,16 @@
     border-radius: var(--global-radius);
     font-weight: bold !important;
     height: 39px !important;
-    @apply mt-5 text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95 py-3.5 px-5;
+    @apply  text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95 py-3.5 px-5;
+  }
+  .btn-primary-cta-outline {
+    border-radius: var(--global-radius);
+    font-weight: bold !important;
+    height: 39px !important;
+    @apply  text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95 py-3.5 px-5;
+    border: 1px solid #E7E8EB;
+    background: #FFFFFF;
+    color: #055BD9;
   }
   .btn-primary-without-transition {
     border-radius: var(--global-radius); 

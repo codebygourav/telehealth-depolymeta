@@ -123,10 +123,11 @@ export function DataTable<T>({
       {/* Filter/Search header section */}
       <Card className="g-border-light">
         <CardContent>
-      <div className="flex flex-col justify-between gap-3 global-radius sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center justify-between w-full gap-3">
+      <div className="flex flex-col gap-3 global-radius sm:flex-row sm:items-center sm:justify-between">
+        {/* Filters/Search section for mobile: stacked vertically; desktop: horizontal */}
+        <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between">
           {enableSearch && (
-            <div className="relative w-full sm:max-w-[380px]">
+            <div className="relative w-full md:w-auto">
               <Search className="absolute -translate-y-1/2 pointer-events-none left-3 top-1/2 size-4 text-muted-foreground" />
               <Input
                 placeholder="Search"
@@ -137,7 +138,8 @@ export function DataTable<T>({
             </div>
           )}
 
-          <div className="flex flex-col w-full gap-2 sm:w-auto sm:flex-row sm:items-center">
+          {/* Filters row with proper spacing and full width on mobile */}
+          <div className="flex flex-row gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
             {filters.map((filter) => {
               // always default to 'all'
               const value = (filter.value ?? "all") === "all" ? "all" : (filter.value ?? "all");
@@ -147,7 +149,9 @@ export function DataTable<T>({
                   value={value}
                   onValueChange={(val) => filter.onChange(val || "all")}
                 >
-                  <SelectTrigger className="w-full sm:w-[170px]">
+           
+           
+                  <SelectTrigger className="w-full sm:w-[170px] ">
                     <SelectValue placeholder={filter.label} />
                   </SelectTrigger>
                   <SelectContent position="popper">
@@ -180,8 +184,8 @@ export function DataTable<T>({
       </CardContent>
       </Card>
       {/* Table section */}
-      <div className="overflow-hidden g-border global-radius">
-        <Table className="w-full table-fixed">
+      <div className="w-full overflow-x-auto g-border global-radius">
+        <Table className="w-full table-auto">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="border-none bg-light-gray hover:bg-light-gray" >
@@ -192,7 +196,7 @@ export function DataTable<T>({
                   <TableHead
                     key={header.id}
                     className={cn(
-                      "h-12 px-4 text-xs font-semibold g-text-dark border-none",
+                      "h-12 px-3 sm:px-4 text-xs font-semibold g-text-dark border-none flex-wrap items-center",
                       meta?.headerClassName
                     )}
                   >
@@ -231,7 +235,7 @@ export function DataTable<T>({
                     return (
                       <TableCell
                         key={cell.id}
-                        className={cn("px-4 py-4 align-middle", meta?.cellClassName)}
+                        className={cn("px-3 sm:px-4 py-4 align-middle", meta?.cellClassName)}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>

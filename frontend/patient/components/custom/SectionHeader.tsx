@@ -61,8 +61,8 @@ export function SectionHeader({
             </div>
 
             {/* Right Action */}
-            <div className="flex justify-end text-end">
             {showAction && (
+            <div className="flex justify-end text-end">
                 <Button
                     onClick={onActionClick}
                     className="hidden md:flex items-center w-auto h-10 gap-1 ml-0 btn-primary-cta"
@@ -71,8 +71,8 @@ export function SectionHeader({
                     <ChevronRight className="size-4.5 ml-0" />
                 </Button>
                 
-            )}
             </div>
+            )}
         </div>
     );
 }

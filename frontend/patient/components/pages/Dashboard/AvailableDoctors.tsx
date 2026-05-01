@@ -6,28 +6,13 @@ import DoctorCard from "@/components/DoctorCard";
 
 import { SectionHeader } from "@/components/custom/SectionHeader";
 import type { DashboardAvailableDoctor } from "@/types/dashboard-doctors";
-import { useBrowseDoctors } from "@/queries/useBrowseDoctors";
-import type { Doctor } from "@/types/browse-doctors";
+
 
 interface AvailableDoctorsProps {
   doctors: DashboardAvailableDoctor[];
   onShowAll: () => void;
 }
 
-const mapDashboardDoctorToBrowseDoctor = (doc: DashboardAvailableDoctor): Doctor => {
-  return {
-    id: doc.id,
-    name: doc.name,
-    speciality: { id: "unknown", name: doc.speciality?.[0] ?? "" },
-    avatar: doc.avatar,
-    rating: doc.rating,
-    years_experience: String(doc.years_experience),
-    languages_known: doc.languages_known,
-    consultation_fee: doc.consultation_fee,
-    consultation_type: doc.consultation_type,
-    consultation_type_label: [doc.consultation_type],
-  };
-};
 
 export function AvailableDoctors({
   doctors,
@@ -54,13 +39,14 @@ export function AvailableDoctors({
           const mappedDoctor = {
             ...doc,
             years_experience: String(doc.years_experience),
-            consultation_type_label: [doc.consultation_type],
+            consultation_type_label: doc.consultation_type_label,
           } as unknown as any;
 
           return (
             <DoctorCard
               key={doc.id}
               doctor={mappedDoctor}
+              isLoading={false}
             />
           );
         })}
