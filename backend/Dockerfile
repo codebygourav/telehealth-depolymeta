@@ -6,9 +6,7 @@ WORKDIR /var/www/html
 RUN apt-get update && apt-get install -y \
     git curl unzip libpng-dev libonig-dev libxml2-dev libzip-dev libicu-dev libpq-dev \
     && docker-php-ext-configure intl \
-    && docker-php-ext-install intl pdo_mysql mbstring bcmath gd zip exif \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+    && docker-php-ext-install intl pdo_mysql mbstring bcmath gd zip exif xml \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
