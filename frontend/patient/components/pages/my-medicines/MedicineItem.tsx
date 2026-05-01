@@ -9,59 +9,69 @@ interface MedicineItemProps {
 
 export const MedicineItem = ({ medicine }: MedicineItemProps) => {
   const isPast = medicine.status?.toLowerCase() === 'past';
-  console.table(medicine);
+
   return (
-    <div className="p-6 bg-light-gray global-radius-10 shadow-card-sm space-y-4 group transition-all">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-        <div className="flex items-start gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h4 className="text-xl font-bold g-text-dark">{medicine.name}</h4>
-              <Badge variant="outline" className={cn(
-                "rounded-full uppercase font-semibold py-0 h-5 border-none",
-                isPast ? "bg-surface-container text-red" : "bg-emerald-100 text-emerald-700"
-              )}>
-                {medicine.status || "Active"}
-              </Badge>
-            </div>
-            <p className="mt-1 text-sm font-medium g-text-muted">
-              {medicine.dosage} • {medicine.frequencylabel || medicine.frequency} • {medicine.meal && (
-                <span className="text-sm capitalize" > {medicine.meal.replace('_', ' ')}</span>
+    <div className="p-4 sm:p-6 bg-light-gray global-radius-10 shadow-card-sm space-y-4 group transition-all">
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-lg sm:text-xl font-bold g-text-dark leading-tight">{medicine.name}</h4>
+            <Badge variant="outline" className={cn(
+              "rounded-full uppercase font-bold py-0 h-5 border-none text-[10px]",
+              isPast ? "bg-surface-container text-red" : "bg-emerald-100 text-emerald-700"
+            )}>
+              {medicine.status || "Active"}
+            </Badge>
+          </div>
+          
+          <div className="space-y-1">
+            <p className="text-sm font-medium g-text-muted flex flex-wrap gap-1 items-center">
+              <span>{medicine.dosage}</span>
+              <span className="opacity-50">•</span>
+              <span>{medicine.frequencylabel || medicine.frequency}</span>
+              {medicine.meal && (
+                <>
+                  <span className="opacity-50">•</span>
+                  <span className="capitalize">{medicine.meal.replace('_', ' ')}</span>
+                </>
               )}
             </p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-semibold tracking-widest g-text-muted ">Period:</span>
-              <span className="text-xs font-semibold g-text-muted ">
+            
+            <div className="flex flex-wrap items-start gap-1 sm:gap-2">
+              <span className="text-[10px] sm:text-xs font-semibold tracking-wider g-text-muted uppercase opacity-70 mt-0.5">Period:</span>
+              <span className="text-xs font-semibold g-text-muted flex-1 min-w-[140px]">
                 {medicine.start_date} - {medicine.end_date}
               </span>
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between pt-3 sm:block sm:text-right sm:border-t-0 sm:pt-0 border-outline-variant/5">
+
+        <div className="flex items-center justify-between sm:flex-col sm:items-end sm:justify-start pt-3 sm:pt-0 sm:border-t-0 border-outline-variant/10">
           <div className="flex items-center sm:justify-end gap-1.5 g-text-dark font-bold">
-            <Info className="w-3.5 h-3.5" />
+            <Info className="w-4 h-4 text-primary opacity-70" />
             <p className="text-sm tracking-widest uppercase">
               {medicine.times}
             </p>
           </div>
-          <p className="text-sm font-medium g-text-muted  mt-0.5 sm:mt-1">
+          <p className="text-sm font-medium g-text-muted mt-0.5 sm:mt-1">
             {medicine.type}
           </p>
         </div>
       </div>
 
-      <div className="pt-3 space-y-2 border-t border-outline-variant/10">
-        {medicine.instructions && medicine.instructions.length > 0 && (
-          <div className="flex items-start gap-2 g-text-muted ">
-            <Info className="flex-shrink-0 w-4 h-4 mt-1 text-success" />
-            <div className="text-sm font-medium leading-relaxed">
+      {(medicine.instructions && medicine.instructions.length > 0) && (
+        <div className="pt-3 border-t border-outline-variant/10">
+          <div className="flex items-start gap-2.5">
+            <div className="mt-1 flex-shrink-0">
+               <Info className="w-4 h-4 text-success" />
+            </div>
+            <div className="text-sm font-medium leading-relaxed g-text-muted">
               <span className="mr-1 font-bold g-text-dark">Instruction:</span>
-              {medicine.instructions.join(', ')}
+              <span className="break-words">{medicine.instructions.join(', ')}</span>
             </div>
           </div>
-        )}
-
-      </div>
+        </div>
+      )}
     </div>
   );
 };

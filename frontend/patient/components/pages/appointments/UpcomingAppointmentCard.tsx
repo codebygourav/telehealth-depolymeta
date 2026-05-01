@@ -125,19 +125,19 @@ const UpcomingAppointmentCard = ({
                         <Button
                             variant="default"
                             onClick={() => window.open(`/start-consultation?room_url=${joinUrl}&appointment_id=${appointment.id}`, "_blank")}
-                            className="w-full py-3.5 h-auto text-sm font-semibold"
+                            className="w-full  h-auto text-sm font-semibold btn-primary-cta"
                         >
-                            <Phone className="w-4 h-4" />
+                            <Phone size={22} strokeWidth={3.5} className="m-0" />
                             Join Now
                         </Button>
                     ) : (
                         <Button
                             variant="default"
                             onClick={() => router.push(`/appointments/manage-appointment/${appointment.id}`)}
-                            className="w-full py-3.5 h-auto text-sm font-semibold"
+                            className="w-full  h-auto text-sm font-semibold btn-primary-cta"
                         >
                             Manage Appointment
-                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight size={22} strokeWidth={3.5} className="m-0" />
                         </Button>
                     )}
                 </div>

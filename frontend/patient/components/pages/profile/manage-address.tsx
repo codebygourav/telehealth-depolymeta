@@ -158,7 +158,7 @@ export default function ManageAddressForm({ user }: ManageAddressFormProps) {
 
             <div className="flex justify-end pt-4">
                 <Button
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 h-11 rounded-xl font-semibold shadow-sm transition-all"
+                    className="btn-primary-cta"
                     onClick={handleSave}
                     disabled={loading}
                 >

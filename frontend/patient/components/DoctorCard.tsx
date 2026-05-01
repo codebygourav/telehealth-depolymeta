@@ -130,10 +130,10 @@ const DoctorCard = ({ doctor, isLoading = false }: DoctorCardProps) => {
                             onClick={handleBookNow}
                             disabled={isLoading}
                             variant="default"
-                            className="w-full py-3.5 h-auto text-sm font-semibold"
+                            className="w-full  h-auto text-sm font-semibold btn-primary-cta"
                         >
                             Book Your Appointment
-                            <ChevronRight size={22} strokeWidth={3.5} />
+                            <ChevronRight size={22} strokeWidth={3.5} className="m-0" />
                         </Button>
                     </div>
 

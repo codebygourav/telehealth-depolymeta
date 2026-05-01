@@ -115,23 +115,21 @@ export default function PersonalInfoForm({ user }: PersonalInfoFormProps) {
                 {/* Profile Section */}
                 <div className="flex items-center gap-6">
                     <div className="relative">
-                        <div className="h-24 w-24 global-radius-10 overflow-hidden border-4 border-slate-100 dark:border-slate-800 shadow-sm bg-slate-100 dark:bg-slate-800">
-                            <img
-                                src={
-                                    avatarFile
-                                        ? URL.createObjectURL(avatarFile)
-                                        : user?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-                                }
-                                alt="Profile"
-                                className="h-full w-full object-cover"
-                            />
-                        </div>
+                        <img
+                            src={
+                                avatarFile
+                                    ? URL.createObjectURL(avatarFile)
+                                    : user?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                            }
+                            alt="Profile"
+                            className="w-[105px] h-[105px] rounded-full object-cover shrink-0"
+                        />
                         <button
                             type="button"
                             onClick={() => document.getElementById("avatarInput")?.click()}
-                            className="absolute bottom-0 right-0 p-1.5 bg-white dark:bg-slate-700 global-radius-10 border border-slate-200 dark:border-slate-600 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                            className="absolute bottom-3 right-0 p-1.5 bg-white dark:bg-slate-700 rounded-full border border-slate-200 dark:border-slate-600 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
                         >
-                            <Camera className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                            <Camera className="w-4 h-4 text-primary" />
                         </button>
                     </div>
 
@@ -237,7 +235,7 @@ export default function PersonalInfoForm({ user }: PersonalInfoFormProps) {
                 {/* Actions */}
                 <div className="flex justify-end pt-4">
                     <Button
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 h-11 global-radius-10 font-semibold shadow-sm transition-all"
+                        className="btn-primary-cta"
                         onClick={handleSave}
                         disabled={loading}
                     >

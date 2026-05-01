@@ -32,7 +32,6 @@ export const PrescribedMedicinesSection = ({
                     <Pill className="size-6" />
                 </div>
                 
-
                 {(doctorName || prescribedAt) && (
                             <div>
                                 <h2 className="text-lg font-bold sm:text-xl g-text-dark font-headline">Prescribed Medicines</h2>
@@ -65,7 +64,7 @@ export const PrescribedMedicinesSection = ({
             </div>
 
             {/* Medicines grid */}
-            <div className={`grid ${cardGrid}`}>
+            <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3`}>
                 {medicines.map((med, idx) => (
                     <MedicineItem key={idx} medicine={med} />
                 ))}

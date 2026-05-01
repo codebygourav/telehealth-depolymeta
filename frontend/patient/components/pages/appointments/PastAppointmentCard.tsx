@@ -139,10 +139,10 @@ const PastAppointmentCard = ({
                     <Button
                         onClick={() => onViewDetails(appointment.id)}
                         variant="default"
-                        className="w-full py-3.5 h-auto text-sm font-semibold"
+                        className="w-full  h-auto text-sm font-semibold btn-primary-cta"
                     >
                         View Details
-                        <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <ChevronRight size={22} strokeWidth={3.5} className="m-0" />
                     </Button>
                 </div>
 

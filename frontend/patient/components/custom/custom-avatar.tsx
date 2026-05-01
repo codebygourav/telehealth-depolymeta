@@ -79,7 +79,7 @@ export function CustomAvatar({
             size === "sm" && "size-2",
             size === "default" && "size-2.5",
             size === "lg" && "size-3",
-            size === "xl" && "size-3.5",
+            size === "xl" && "size-6",
             status === "online" && "bg-green-500",
             status === "offline" && "bg-gray-400",
             status === "busy" && "bg-red-500",

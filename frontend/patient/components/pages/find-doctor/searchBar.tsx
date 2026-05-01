@@ -7,7 +7,7 @@ interface SearchBarProps {
 
 const SearchBar = ({ value, onChange }: SearchBarProps) => {
     return (
-        <div className="relative group">
+        <div className="relative group w-full md:max-w-80">
             <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-outline-variant">
                 <Search size={16} color='#4D4D4D' />
             </div>

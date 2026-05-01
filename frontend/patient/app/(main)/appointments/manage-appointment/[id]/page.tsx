@@ -19,6 +19,7 @@ import ReportsAndNotes from '@/components/pages/appointments/manage-appointment/
 import AddReportModal from '@/components/pages/appointments/manage-appointment/AddReportModal';
 import CancelConfirmationModal from '@/components/pages/appointments/manage-appointment/CancelConfirmationModal';
 import { DetailHeader } from '@/components/custom/DetailHeader';
+import HeroSection from '@/components/hero-section';
 
 interface PageProps {
     params: Promise<{
@@ -216,18 +217,20 @@ export default function ManageAppointment({ params }: PageProps) {
     return (
         <div>
 
-            {/* Header */}
-            <header className="flex items-center gap-4 mb-8">
-                <DetailHeader
-                    title='Manage Appointment'
-                />
-            </header>
+         <HeroSection
+            title="Manage Appointment"
+            description="Detailed information about your appointment."
+            onBack={() => router.back()}
+            showBackButton={true}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
                 {/* Left Column: Info */}
                 <div className="lg:col-span-7 space-y-8">
-                    <DoctorInfoCard doctor={appointment?.doctor} />
+                    <DoctorInfoCard 
+                    doctor={appointment?.doctor}
+                    appointmentStatus={appointment?.status_label} />
                     <AppointmentInfo
                         date={appointment?.schedule?.date_formatted}
                         time={appointment?.schedule?.time_formatted}

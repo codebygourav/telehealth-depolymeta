@@ -36,11 +36,11 @@ export default function ProfilePage() {
     ];
 
     return (
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
             <div className="flex flex-col md:flex-row gap-8">
                 {/* Sidebar */}
-                <aside className="w-full md:w-80 space-y-2">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm">
+                <aside className="w-full md:w-96 space-y-2">
+                    <div className="bg-white dark:bg-slate-900 global-radius border border-slate-200 dark:border-slate-800 p-4 shadow-sm h-full">
                         {sidebarItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = activeTab === item.key;
@@ -50,10 +50,10 @@ export default function ProfilePage() {
                                     variant="outline"
                                     onClick={() => setActiveTab(item.key)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-3 btn-primary-cta-outline",
+                                        "w-full flex items-center justify-start gap-3 px-4 py-3 btn-primary-cta-outline text-start",
                                         isActive
-                                            ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                                            : "text-on-surface-variant hover:bg-light-gray border border-transparent"
+                                            ? "text-primary"
+                                            : "g-text-dark border border-transparent"
                                     )}
                                 >
                                     <Icon className={cn("w-5 h-5", isActive ? "text-primary" : "text-on-surface-variant")} />
@@ -65,7 +65,7 @@ export default function ProfilePage() {
                 </aside>
 
                 {/* Content Area */}
-                <main className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm min-h-[600px]">
+                <main className="flex-1 bg-white dark:bg-slate-900 global-radius border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm min-h-[600px]">
                     {activeTab === "personal_info" && (
                         <div>
                             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-8">Basic Information</h2>
