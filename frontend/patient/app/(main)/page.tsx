@@ -19,6 +19,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
+
 	const { user } = useAuth();
 	const { data, isLoading, isError } = usePatientHome();
 	const homeData = data?.data;
@@ -27,6 +28,7 @@ export default function Home() {
 	const departmentCards = useMemo(() => mapHomeScreenDepartmentCards(homeData), [homeData]);
 	const advertisements = useMemo(() => mapHomeScreenAdvertisements(homeData), [homeData]);
 	const testimonials = useMemo(() => mapHomeScreenTestimonials(homeData), [homeData]);
+
 	if (isLoading) {
 		return (
 			<div className="flex items-center justify-center min-h-[60vh]">
@@ -43,6 +45,7 @@ export default function Home() {
 			</div>
 		);
 	}
+
 	return (
 		<div className="space-y-5">
 			<header className="flex flex-col justify-between w-full gap-6 p-5 bg-white global-radius shadow-card-lg md:flex-row md:items-center">
@@ -78,7 +81,7 @@ export default function Home() {
 					<UpcomingAppointments
 						appointments={appointments}
 						onViewAll={() => router.push("/appointments")}
-						onStartCall={() => {}}
+						onStartCall={() => { }}
 						onBookFirst={() => router.push("/find-doctors")}
 					/>
 				</div>
@@ -88,6 +91,7 @@ export default function Home() {
 					<QuickLinks />
 				</div>
 			</div>
+
 			<DoctorDepartments
 				departments={departmentCards}
 				showAction={true}
@@ -96,9 +100,9 @@ export default function Home() {
 
 			<AvailableDoctors
 				doctors={homeData.available_doctors}
-				onBookNow={() => {}}
 				onShowAll={() => router.push("/find-doctors")}
 			/>
+
 			{/* Advertisements */}
 			<Advertisements ads={advertisements} />
 

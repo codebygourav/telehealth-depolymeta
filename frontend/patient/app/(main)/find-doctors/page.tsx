@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useBrowseDoctors } from '@/queries/useBrowseDoctors';
 import { useDepartmentsAndSymptoms } from '@/queries/useDepartmentsAndSymptoms';
 import SearchBar from '@/components/pages/find-doctor/searchBar'
-import DoctorCard from '@/components/pages/find-doctor/DoctorCard';
+import DoctorCard from '@/components/DoctorCard';
 import LoadingSkeleton from '@/components/pages/find-doctor/LoadingSkeleton';
 import CustomDialog from '@/components/custom/Dialogboxs';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -14,6 +14,7 @@ import type { ConsultationType, SortOption, Doctor } from '@/types/browse-doctor
 import SelectField from '@/components/custom/SelectField';
 
 import HeroSection from '@/components/hero-section';
+import PaginationControls from '@/components/ui/PaginationControls';
 
 interface DialogState {
     open: boolean;
@@ -32,6 +33,8 @@ const FindDoctors = () => {
     const [consultationType, setConsultationType] = useState<ConsultationType>('all');
     const [sortBy, setSortBy] = useState<SortOption>('highest-rated');
     const [bookingDoctorId, setBookingDoctorId] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 9;
     const [dialogState, setDialogState] = useState<DialogState>({
         open: false,
         type: 'danger',
@@ -142,42 +145,23 @@ const FindDoctors = () => {
         });
     }, [filteredDoctors, sortBy]);
 
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, specialty, consultationType, sortBy]);
+
+    // Paginate doctors
+    const paginatedDoctors = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return sortedDoctors.slice(startIndex, startIndex + itemsPerPage);
+    }, [sortedDoctors, currentPage, itemsPerPage]);
+
     // Handlers
     const handleClearFilters = useCallback(() => {
         setSpecialty("all");
         setConsultationType("all");
         setSearchTerm('');
     }, []);
-
-    const handleBooking = useCallback(async (doctorId: string) => {
-        setBookingDoctorId(doctorId);
-
-        try {
-            // Simulate API call - replace with actual booking API
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            setDialogState({
-                open: true,
-                type: 'success',
-                title: 'Appointment Booked!',
-                description: 'Your appointment has been successfully scheduled. Check your email for details.',
-            });
-
-            setTimeout(() => {
-                router.push('/appointments');
-            }, 2000);
-        } catch (error) {
-            console.error('Booking failed:', error);
-            setDialogState({
-                open: true,
-                type: 'danger',
-                title: 'Booking Failed',
-                description: error instanceof Error ? error.message : 'Unable to book appointment. Please try again later.',
-            });
-        } finally {
-            setBookingDoctorId(null);
-        }
-    }, [router]);
 
     const handleCloseDialog = useCallback(() => {
         setDialogState(prev => ({ ...prev, open: false }));
@@ -272,11 +256,10 @@ const FindDoctors = () => {
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
-                            {sortedDoctors.map((doctor) => (
+                            {paginatedDoctors.map((doctor) => (
                                 <DoctorCard
                                     key={doctor.id}
                                     doctor={doctor}
-                                    onBook={() => handleBooking(doctor.id)}
                                     isLoading={bookingDoctorId === doctor.id}
                                 />
                             ))}
@@ -293,6 +276,16 @@ const FindDoctors = () => {
                                     Clear all filters
                                 </Button>
                             </div>
+                        )}
+
+                        {sortedDoctors.length > 0 && (
+                            <PaginationControls
+                                currentPage={currentPage}
+                                totalPages={Math.ceil(sortedDoctors.length / itemsPerPage)}
+                                totalItems={sortedDoctors.length}
+                                itemsPerPage={itemsPerPage}
+                                onPageChange={setCurrentPage}
+                            />
                         )}
                     </div>
                 </div>

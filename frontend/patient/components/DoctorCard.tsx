@@ -5,13 +5,11 @@ import { useRouter } from 'next/navigation';
 
 interface DoctorCardProps {
     doctor: Doctor;
-    onBook: () => void;
-    onError?: () => void;
-    onSuccess?: () => void;
     isLoading?: boolean;
 }
 
-const DoctorCard = ({ doctor, onBook, onError, onSuccess, isLoading = false }: DoctorCardProps) => {
+const DoctorCard = ({ doctor, isLoading = false }: DoctorCardProps) => {
+
     const router = useRouter();
 
     const handleBookNow = () => {
@@ -42,9 +40,9 @@ const DoctorCard = ({ doctor, onBook, onError, onSuccess, isLoading = false }: D
                                     {doctor.name}
                                 </h3>
                                 {doctor?.rating ? (
-                                    <div className="flex items-center gap-1 bg-secondary-menu-color px-2 py-1.5 rounded shrink-0">
-                                        <Star size={12} color="#4D4D4D" fill="#4D4D4D" />
-                                        <span className="text-xs font-semibold text-[#4D4D4D]">
+                                    <div className="flex items-center gap-1 bg-primary/8 text-primary px-2 py-1.5 rounded shrink-0">
+                                        <Star size={12} color="#055bd9" fill="#055bd9" />
+                                        <span className="text-xs font-semibold">
                                             {doctor.rating}
                                         </span>
                                     </div>
@@ -54,8 +52,8 @@ const DoctorCard = ({ doctor, onBook, onError, onSuccess, isLoading = false }: D
                             {/* Category */}
                             <p className="font-medium text-sm text-[#4D4D4D] md:text-base mt-1">
                                 {Array.isArray(doctor.speciality) && doctor.speciality.length > 0
-                                    ? doctor.speciality[0].name
-                                    : ""}
+                                    ? (typeof doctor.speciality[0] === 'string' ? doctor.speciality[0] : doctor.speciality[0].name)
+                                    : (typeof doctor.speciality === 'string' ? doctor.speciality : (doctor.speciality as any)?.name || "")}
                             </p>
 
                             {/* Experience & Languages - Inline on desktop */}
@@ -83,9 +81,9 @@ const DoctorCard = ({ doctor, onBook, onError, onSuccess, isLoading = false }: D
                                 </p>
                                 <div className="flex items-center gap-1.5 md:mt-1.5">
                                     {
-                                        doctor.consultation_type === 'video' ? (
+                                        doctor.consultation_type === 'video' || doctor.consultation_type === 'Video' ? (
                                             <Video size={18} color='#18CE1E' fill="#18CE1E" />
-                                        ) : doctor.consultation_type === 'in-person' ? (
+                                        ) : doctor.consultation_type === 'in-person' || doctor.consultation_type === 'In Person' ? (
                                             <Hospital size={18} color='#18CE1E' />
                                         ) : (
                                             <>
