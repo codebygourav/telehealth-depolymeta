@@ -6,7 +6,7 @@ export const STATUS_STYLES = {
     failed:
       "bg-red-100 text-red-700 border border-red-200",
     completed:
-      "bg-emerald-100 text-emerald-700 border border-emerald-200",
+      "bg-emerald-100 text-[#18CE1E] border border-[#F4FBF7]",
     rescheduled:
       "bg-yellow-100 text-gray-700 border border-gray-200",
     pending:

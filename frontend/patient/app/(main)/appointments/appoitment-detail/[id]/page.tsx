@@ -10,6 +10,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { MedicineDetailView } from '@/components/pages/my-medicines/MedicineDetailView';
 import { MedicineActionPlan } from '@/components/pages/my-medicines/MedicineActionPlan';
+import HeroSection from '@/components/hero-section';
 
 type AppointmentDetail = {
     notes?: string;
@@ -64,16 +65,20 @@ export default function AppointmentDetailPage() {
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="mx-auto max-w-8xl">
-                <DetailHeader
-                    title="Appointment Details"
+
+                <HeroSection
+                    title="Appointments Detail"
+                    description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
                 />
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-12">
+
                     {/* LEFT COLUMN - Main Content */}
                     <div className="space-y-6 lg:col-span-3">
                         <AppointmentInfoCards data={data} />
                     </div>
                 </div>
+
                 {/* Medical Details & prescriptions - MedicineDetailView shown by default */}
                 <div className="overflow-hidden">
                     <div className="pt-8 pb-4 border-b border-gray-100 bg-gray-50">

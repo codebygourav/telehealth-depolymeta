@@ -5,26 +5,26 @@ import { ChevronLeft } from "lucide-react";
 interface HeroSectionProps {
     title: string;
     description: string;
-    onBack: () => void;
-    showBackButton: boolean;
+    onBack?: () => void;
+    showBackButton?: boolean;
 }
 
 const HeroSection = ({ title, description, onBack, showBackButton = false }: HeroSectionProps) => {
     return (
         <>
-        <div className="w-full px-4 py-6 mx-auto max-w-1440 md:py-12 md:px-10 bg-secondary-menu-color rounded-xl g-border-light">
-            <div className="max-w-[600px] mx-auto flex flex-col items-center justify-center">
-                <h1 className="text-2xl font-bold text-center text-black md:text-4xl">{title}</h1>
-                <p className="mt-2 text-base text-center text-gray-500 md:text-lg text-gray md:mt-4">{description}</p>
+            <div className="w-full px-4 py-6 mx-auto max-w-1440 md:py-12 md:px-10 bg-secondary-menu-color rounded-xl g-border-light">
+                <div className="max-w-[600px] mx-auto flex flex-col items-center justify-center">
+                    <h1 className="text-2xl font-bold text-center text-black md:text-4xl">{title}</h1>
+                    <p className="mt-2 text-base text-center text-gray-500 md:text-lg text-gray md:mt-4">{description}</p>
+                </div>
             </div>
-        </div>
-        {showBackButton && (
-                <div className="mt-4 mb-4"> 
-        <Button onClick={onBack} className="bg-light-gray g-border rounded-full text-primary h-10 w-10 flex justify-center items-center">
-                <ChevronLeft className="size-5" />
-        </Button>
-        </div>
-        )}
+            {showBackButton && (
+                <div className="mt-4 mb-4">
+                    <Button onClick={onBack} className="bg-light-gray g-border rounded-full text-primary h-10 w-10 flex justify-center items-center">
+                        <ChevronLeft className="size-5" />
+                    </Button>
+                </div>
+            )}
         </>
 
     );

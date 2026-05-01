@@ -198,8 +198,9 @@ const FindDoctors = () => {
                     description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
                 />
 
-                <div className='w-full mx-auto xl:px-0'>
-                    <div className=' border-light-gray p-4 global-radius'>
+
+                <div className='max-w-1440 w-full mx-auto'>
+                    <div className='flex items-center justify-between lg:flex-row flex-col'>
 
                         <div className='lg:basis-1/5 basis-full lg:w-auto w-full'>
                             <h3 className='text-2xl font-semibold text-black'>Find a Doctor</h3>
@@ -207,7 +208,7 @@ const FindDoctors = () => {
 
                         <div className='lg:basis-4/5 basis-full lg:w-auto w-full flex md:items-center items-start justify-end  gap-2 md:flex-row flex-col flex-wrap lg:mt-0 mt-2 !justify-between sm:justify-start'>
                             <SearchBar value={searchTerm} onChange={setSearchTerm} />
-                           
+
 
                             <div className='sm:max-w-[500px] w-full flex-col sm:flex-row md:flex-col lg:flex-row flex-1 flex !justify-between gap-2'>
                                 <SelectField
@@ -230,24 +231,25 @@ const FindDoctors = () => {
                                     className="w-full!"
                                     triggerClassName="w-full !h-auto bg-transparent border border-light-gray rounded-md px-5 py-3.5 text-sm font-medium"
                                 />
-                                 {(searchTerm.trim() !== '' || specialty !== "all" || consultationType !== "all") && (
-                                <button
-                                    onClick={handleClearFilters}
-                                    className="text-sm text-left text-surface-tint font-semibold hover:underline transition-colors pr-4 w-40"
-                                >
-                                    Clear all
-                                </button>
-                            )}
+                                {(searchTerm.trim() !== '' || specialty !== "all" || consultationType !== "all") && (
+                                    <button
+                                        onClick={handleClearFilters}
+                                        className="text-sm text-left text-surface-tint font-semibold hover:underline transition-colors pr-4 w-40"
+                                    >
+                                        Clear all
+                                    </button>
+                                )}
                             </div>
 
-                            
+
                         </div>
-                 
+
                     </div>
                 </div>
 
                 {/* Main Content */}
-                <div className="w-full mx-auto flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-10 xl:px-0 ">
+
+                <div className="max-w-1440 w-full mx-auto flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-10">
 
                     <div className="flex-grow">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-6 md:mb-8">

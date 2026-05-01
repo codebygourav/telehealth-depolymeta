@@ -9,29 +9,33 @@ interface AppointmentInfoCardsProps {
 }
 
 export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
+
     const { doctor, schedule, patient, payment, medical_reports } = data;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4  sm:gap-5 md:gap-6">
+
             {/* LEFT COLUMN - Main Info */}
             <div className="lg:col-span-2 space-y-4 sm:space-y-5 md:space-y-6">
+
                 {/* Doctor Card */}
-                <Card className="bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                <Card className="rounded-lg p-4 sm:p-5 md:p-6 border-light-gray shadow-[0px_2px_4px_rgba(0,0,0,0.1)]">
                     <CardContent className="p-0">
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+
                             <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 flex-1">
                                 <img
                                     src={doctor?.avatar || "https://via.placeholder.com/96"}
                                     alt={doctor?.name}
-                                    className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-xl sm:rounded-2xl object-cover mx-auto sm:mx-0"
+                                    className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 rounded-full object-cover mx-auto sm:mx-0"
                                 />
 
                                 <div className="text-center sm:text-left flex-1">
-                                    <p className="text-emerald-600 dark:text-emerald-500 flex items-center justify-center sm:justify-start text-xs font-semibold uppercase tracking-wider">
-                                        <Stethoscope className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+                                    <p className="text-primary flex items-center justify-center sm:justify-start text-xs font-semibold uppercase tracking-wider">
+                                        <Stethoscope size={14} color="#055BD9" className="mr-1.5" />
                                         {doctor?.department || "Cardiology"}
                                     </p>
-                                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                                    <h2 className="text-2xl font-bold text-[#1F1E1E] mt-1">
                                         {doctor?.name || "Dr. Amit Sharma"}
                                     </h2>
 
@@ -48,26 +52,25 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                     </div>
 
                                     {/* Experience & Review Cards */}
-                                    <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 mt-3 sm:mt-4">
+                                    <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 mt-3">
+
                                         {/* Experience Card */}
-                                        <div className="bg-gray-100 dark:bg-gray-800 rounded-xl p-2.5 sm:p-3 min-w-[100px] sm:min-w-[110px]">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Experience</p>
-                                            <p className="font-semibold text-gray-900 dark:text-white text-base sm:text-lg">
+                                        <div className="flex items-center gap-x-1.5 bg-light-gray rounded-xl py-2 px-2.5 h-fit">
+                                            <p className="text-xs text-[#4D4D4D]">Experience</p>
+                                            <p className="text-xs font-semibold text-[#4D4D4D]">
                                                 {doctor?.years_experience || "N/A"}
                                             </p>
                                         </div>
 
                                         {/* Review Card */}
-                                        <div className="bg-gray-100 dark:bg-gray-800 rounded-xl p-2.5 sm:p-3 min-w-[100px] sm:min-w-[110px]">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1 flex items-center gap-1 sm:gap-2">
-                                                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400" />
+                                        <div className="flex items-center gap-x-1.5 bg-light-gray rounded-xl py-2 px-2.5 h-fit">
+                                            <p className="text-xs text-[#4D4D4D] flex items-center gap-x-1">
+                                                <Star size={14} color="#FABD2E" fill="#FABD2E" />
                                                 Rating
                                             </p>
-                                            <div className="flex items-center gap-1">
-                                                <div className="font-semibold text-gray-900 dark:text-white text-base sm:text-lg">
-                                                    {doctor?.average_rating || "N/A"}
-                                                    <span className="text-xs text-gray-400"> ({doctor?.total_reviews || "0"})</span>
-                                                </div>
+                                            <div className="text-[#4D4D4D] font-bold">
+                                                {doctor?.average_rating || "N/A"}
+                                                <span className="text-xs text-gray-400"> ({doctor?.total_reviews || "0"})</span>
                                             </div>
                                         </div>
                                     </div>
