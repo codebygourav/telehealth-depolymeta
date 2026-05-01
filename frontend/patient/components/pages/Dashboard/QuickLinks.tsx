@@ -5,8 +5,10 @@ import { ChevronRight, CalendarCheck2, Video } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { DashboardCarousel } from "@/components/pages/Dashboard/dashboard-carousel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function QuickLinks() {
+    const isMobile = useIsMobile();
     const cards = [
         {
             title: "Instant Video Consultation",
@@ -68,7 +70,7 @@ export default function QuickLinks() {
         );
     };
 
-    if (cards.length > 1) {
+    if (isMobile) {
         return (
             <DashboardCarousel
                 items={cards}

@@ -7,9 +7,9 @@ import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 
 interface ActionPlanProps {
-    conclusion: string;
-    nextVisitDate: string;
-    doctor_id: string;
+    conclusion?: string;
+    nextVisitDate?: string;
+    doctor_id?: string;
     conclusionIcon?: LucideIcon;
     nextVisitIcon?: LucideIcon;
     buttonBgColor?: string;
@@ -94,7 +94,7 @@ export const MedicineActionPlan = ({
                         buttonTextColor,
                         buttonClass,
                     )}
-                    onClick={() => router.push(`/find-doctors/${doctor_id}`)}
+                    onClick={() => doctor_id && router.push(`/find-doctors/${doctor_id}`)}
                 >
                     {buttonText}
                     <ArrowRight className="w-4 h-4" />
