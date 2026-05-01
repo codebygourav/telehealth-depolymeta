@@ -9,6 +9,7 @@ import { useAppointments } from '@/queries/useAppointments';
 import { Loader2, Calendar } from 'lucide-react';
 import { AppointmentResponse } from '@/types/appointment';
 import { useRouter } from 'next/navigation';
+import HeroSection from '@/components/hero-section';
 
 const AppointmentsPage = () => {
 
@@ -127,7 +128,8 @@ const AppointmentsPage = () => {
 
         return (
             <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
                     {upcomingApps.map((app: AppointmentResponse) => {
                         const transformedApp = transformToAppointment(app);
                         const transformedDoctor = transformToDoctor(app);
@@ -155,14 +157,13 @@ const AppointmentsPage = () => {
                         onPageChange={handlePageChange}
                     />
                 )}
-
-                <PreAppointmentChecklist />
             </div>
         );
     };
 
     // Past Tab Content
     const PastContent = () => {
+
         if (isLoading) return <LoadingState />;
         if (isError) return <ErrorState />;
 
@@ -175,7 +176,7 @@ const AppointmentsPage = () => {
 
         return (
             <>
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
                     {pastApps.map((app: AppointmentResponse) => {
                         const transformedApp = transformToAppointment(app);
                         const transformedDoctor = transformToDoctor(app);
@@ -228,6 +229,10 @@ const AppointmentsPage = () => {
 
     return (
         <>
+            <HeroSection
+                title="My Appointments"
+                description='Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch.'
+            />
             <div className="space-y-6">
                 <CustomTabs
                     variant="pill"

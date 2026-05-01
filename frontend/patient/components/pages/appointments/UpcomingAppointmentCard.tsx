@@ -1,7 +1,8 @@
 'use client';
-import { Calendar, Clock, Star, Video, ChevronRight, Phone, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar, Clock, Star, Video, ChevronRight, Phone, Calendar as CalendarIcon, Hospital } from 'lucide-react';
 import { Doctor, Appointment } from '@/types/appointment';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui';
 
 interface UpcomingAppointmentCardProps {
     appointment: Appointment;
@@ -17,7 +18,7 @@ const UpcomingAppointmentCard = ({
     appointment,
     doctor,
     onManageClick,
-    consultationType = "Video consultation",
+    consultationType = "Video",
     fee = "0",
     joinUrl,
     call_now
@@ -28,6 +29,7 @@ const UpcomingAppointmentCard = ({
     return (
         <div className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div className="p-4 sm:p-5 md:p-6">
+
                 {/* Header Section - Doctor Info */}
                 <div className="flex sm:flex-row sm:justify-between sm:items-start gap-4 mb-4 sm:mb-5 md:mb-6">
                     <div className="flex gap-3 sm:gap-4">
@@ -45,19 +47,19 @@ const UpcomingAppointmentCard = ({
                             </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="text-base sm:text-lg md:text-xl font-bold text-primary font-headline leading-tight break-words">
+                            <h3 className="font-semibold text-lg md:text-xl text-black break-words flex-1">
                                 {appointment.doctorName}
                             </h3>
-                            <p className="text-xs sm:text-sm text-on-surface-variant font-medium mt-0.5 break-words">
+                            <p className="text-sm text-[#4D4D4D] font-medium">
                                 {doctor?.specialty} ({doctor?.experience})
                             </p>
                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 mt-1.5 sm:mt-2">
-                                <div className="flex items-center gap-1 text-on-surface-variant/70 text-[10px] sm:text-xs font-bold">
-                                    <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                <div className="flex items-center gap-1.5 text-[#4D4D4D] text-xs font-medium">
+                                    <Calendar size={14} color='#4D4D4D' />
                                     {appointment.date}
                                 </div>
-                                <div className="flex items-center gap-1 text-on-surface-variant/70 text-[10px] sm:text-xs font-bold">
-                                    <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                <div className="flex items-center gap-1.5 text-[#4D4D4D] text-xs font-medium">
+                                    <Clock size={14} color='#4D4D4D' />
                                     {appointment.time}
                                 </div>
                             </div>
@@ -66,60 +68,82 @@ const UpcomingAppointmentCard = ({
 
                     {/* Rating Badge */}
                     {doctor?.rating !== 0 && doctor?.rating && (
-                        <div className="flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded-lg self-start sm:self-auto">
-                            <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-primary text-primary" />
-                            <span className="text-xs sm:text-sm font-bold text-primary">{doctor?.rating}</span>
+                        <div className="flex items-center gap-1 bg-primary/8 text-primary px-2 py-1.5 rounded h-fit">
+                            <Star size={12} color="#055bd9" fill="#055bd9" />
+                            <span className="text-xs font-semibold">{doctor?.rating}</span>
                         </div>
                     )}
                 </div>
 
                 {/* Consultation Details Section */}
-                <div className="bg-surface-container-lowest/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-outline-variant/5 mb-4 sm:mb-5">
-                    <div className="flex flex-col sm:flex-row sm:divide-x sm:divide-outline-variant/10">
-                        <div className="flex-1 pb-3 sm:pb-0 sm:pr-4">
-                            <p className="text-[10px] sm:text-xs font-bold text-primary mb-1.5 sm:mb-2">
+                <div className="p-5 bg-light-gray mt-5">
+
+                    <div className="flex md:flex-row flex-col gap-6 md:gap-8 mb-5 md:mb-6 relative">
+
+                        <div className="flex-1 md:text-right text-left flex md:flex-col flex-row md:items-start item-center justify-between">
+                            <p className="text-sm font-semibold text-black">
                                 Consultation Type
                             </p>
-                            <div className="flex items-center gap-1.5 sm:gap-2 text-emerald-600">
-                                {appointment.type === 'video' ? (
-                                    <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                ) : (
-                                    <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                )}
-                                <span className="text-xs sm:text-sm font-bold break-words">{consultationType}</span>
+                            <div className="flex items-center gap-1.5 md:mt-1.5">
+                                {
+                                    appointment.type === 'video' ? (
+                                        <Video size={18} color='#18CE1E' fill="#18CE1E" />
+                                    ) : appointment.type === 'in-person' ? (
+                                        <Hospital size={18} color='#18CE1E' />
+                                    ) : (
+                                        <>
+                                            <Video size={18} color='#18CE1E' fill="#18CE1E" />
+                                            <Hospital size={18} color='#18CE1E' />
+                                        </>
+                                    )
+                                }
+                                <p className="text-xs font-bold capitalize break-words hidden md:block">
+                                    {consultationType}
+                                </p>
+                                <p className="text-xs font-bold capitalize break-words md:hidden">
+                                    {consultationType === "Video consultation" ? "Video" : "In Person"}
+                                </p>
                             </div>
                         </div>
-                        <div className="flex-1 pt-3 sm:pt-0 sm:pl-4 border-t sm:border-t-0 border-outline-variant/10">
-                            <p className="text-[8px] sm:text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-wider mt-1">
+
+                        <div className='absolute left-1/2 top-0 w-px h-10 mx-auto bg-[#E7E8EB] md:block hidden'></div>
+
+                        <div className="flex-1 md:text-right text-left flex md:flex-col flex-row md:items-end item-center justify-between">
+                            <p className="text-sm font-semibold text-black">
                                 Consultation Fee
                             </p>
-                            <p className="text-base sm:text-lg md:text-xl mt-2 font-bold text-primary leading-none">
+                            <p className="text-xs font-semibold text-black md:mt-1.5">
                                 ₹{parseFloat(fee).toFixed(2)}
                             </p>
                         </div>
+
                     </div>
-                </div >
-                <div className="flex gap-3">
+
+                    {/* View Details Button */}
+
                     {call_now && joinUrl ? (
-                        <button
+                        <Button
+                            variant="default"
                             onClick={() => window.open(`/start-consultation?room_url=${joinUrl}&appointment_id=${appointment.id}`, "_blank")}
-                            className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all"
+                            className="w-full py-3.5 h-auto text-sm font-semibold"
                         >
                             <Phone className="w-4 h-4" />
                             Join Now
-                        </button>
+                        </Button>
                     ) : (
-                        <button
+                        <Button
+                            variant="default"
                             onClick={() => router.push(`/appointments/manage-appointment/${appointment.id}`)}
-                            className="flex-1 py-3.5 bg-[#0A2E1F] text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all"
+                            className="w-full py-3.5 h-auto text-sm font-semibold"
                         >
                             Manage Appointment
                             <ChevronRight className="w-4 h-4" />
-                        </button>
+                        </Button>
                     )}
                 </div>
-            </div >
-        </div >
+
+            </div>
+        </div>
     );
 };
 

@@ -67,9 +67,8 @@ const CustomTabs = ({
             <div className="flex items-center justify-between w-full gap-4">
                 <TabsList
                     className={cn(
-                        "flex items-center transition-all duration-300 g-border-light",
+                        "flex items-center transition-all duration-300 !border border-light-gray",
                         rightSlot ? "w-auto justify-start" : "w-full justify-center",
-                        // Always use bg-primary for background
                         isPill
                             ? "bg-light-gray py-7 global-radius gap-1 px-2"
                             : "bg-primary gap-4",
@@ -81,18 +80,18 @@ const CustomTabs = ({
                             key={tab.key}
                             value={tab.key}
                             className={cn(
-                                "transition-all duration-300 font-source-sans font-bold g-text-md ",
+                                "transition-all duration-300 font-source-sans font-bold g-text-md",
                                 // Always apply text-primary for tab text and active tab text
                                 isPill
                                     ? cn(
-                                          "px-6 py-5 global-radius flex-1 g-text-dark g-text-md",
-                                          "data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm "
-                                      )
+                                        "px-6 py-3 h-auto global-radius flex-1 g-text-dark g-text-md",
+                                        "data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+                                    )
                                     : cn(
-                                          "px-6 py-3.5 global-radius g-text-dark",
-                                          "data-[state=active]:bg-primary data-[state=active]:text-white",
-                                          "hover:bg-primary/80"
-                                      ),
+                                        "px-6 py-3 h-auto global-radius g-text-dark",
+                                        "data-[state=active]:bg-primary data-[state=active]:text-white",
+                                        "hover:bg-primary/80"
+                                    ),
                                 tabsTriggerClassName
                             )}
                         >

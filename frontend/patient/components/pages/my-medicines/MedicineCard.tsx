@@ -79,7 +79,7 @@ export const MedicineCard = ({ prescription, onViewDetail }: MedicineCardProps) 
             {/* Info Badges */}
             <InfoBadges prescription={prescription} />
           </div>
-      
+
 
           {/* Action Button */}
           <div className="flex items-center pt-2 shrink-0 md:pt-0">
