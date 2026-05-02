@@ -51,7 +51,7 @@ export default function Home() {
 
 				{/* Left Content */}
 				<div>
-					<h1 className="font-bold tracking-tight text-foreground">
+					<h1 className="font-bold sm:text-2xl text-base tracking-tight text-foreground">
 						Welcome back{user?.first_name || user?.last_name ? "," : ""}{" "}
 						{user?.first_name ?? ""} {user?.last_name ?? ""}
 					</h1>

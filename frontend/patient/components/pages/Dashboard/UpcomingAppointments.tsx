@@ -59,13 +59,13 @@ function AppointmentCard({
                             </Avatar>
 
                             <div className="min-w-0 pt-1">
-                                <h3 className="text-2xl font-semibold leading-tight text-white sm:text-2xl">
+                                <h3 className="text-lg font-semibold leading-tight text-white sm:text-2xl">
                                     {appointment.doctorName}
                                 </h3>
-                                <p className="mt-2 text-lg font-semibold text-white/100">
+                                <p className="mt-2 text-sm sm:text-lg font-semibold text-white/100">
                                     {doctor?.specialty || "Cardiology"}
                                 </p>
-                                <p className="mt-1.5 text-base font-semibold text-white/85 sm:text-base">
+                                <p className="mt-1.5 text-base sm:text-sm font-semibold text-white/85 ">
                                     Exp: {doctor?.experience || "14 years"}
                                     <span className="px-1.5">•</span>
                                     {doctor?.languages?.join(", ") || "English, Hindi, Punjabi"}

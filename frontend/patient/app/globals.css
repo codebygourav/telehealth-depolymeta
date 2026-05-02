@@ -462,7 +462,7 @@
 
   .full-bleed {
     position: relative;
-    width: 100vw;
+    width: 99vw;
     left: 50%;
     right: 50%;
     margin-left: -50vw;
@@ -796,7 +796,7 @@
   /* Full-bleed breakout (escape centred container) */
   .g-full-bleed {
     position: relative;
-    width: 100vw;
+    width: 99vw;
     left: 50%;
     right: 50%;
     margin-left: -50vw;

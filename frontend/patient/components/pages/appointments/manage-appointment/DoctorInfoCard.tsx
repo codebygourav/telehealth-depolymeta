@@ -1,5 +1,5 @@
 "use client";
-import { Star, Stethoscope } from "lucide-react";
+import { LanguagesIcon, Star, Stethoscope } from "lucide-react";
 import { motion } from "motion/react";
 
 import type { AppointmentDoctor } from "@/types/appointment-summary";
@@ -23,41 +23,77 @@ export default function DoctorInfoCard({
       className=" rounded-[40px] p-8 shadow-sm border border-outline-variant/10"
     >
       <div className="flex flex-row gap-4 items-left text-center">
-        <img
+        {/* <img
           src={
             doctor.avatar ||
             "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
           }
-          alt="Profile"
+          alt="
           className="w-[105px] h-[105px] rounded-full object-cover shrink-0"
-        />
-        <div>
-          <div className="flex items-center gap-2 text-emerald-600 mb-2">
-            <Stethoscope className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-widest">
-              {doctor.department}
-            </span>
+        /> */}
+
+
+      </div>
+
+      <div className="flex flex-col items-center md:flex-row md:items-start gap-6 md:gap-8">
+
+        {/* Avatar Section */}
+        <div className="relative group shrink-0">
+          <div className="w-24 h-24 rounded-full">
+            <img
+              src={doctor.avatar}
+              alt={doctor.name}
+              className="w-full h-full rounded-full object-cover"
+              referrerPolicy="no-referrer"
+            />
           </div>
-          <h2 className="text-2xl font-bold font-headline text-primary">
-            {doctor.name}
-          </h2>
-          <div className="flex flex-row gap-4 items-center">
-        {/* Experience */}
-        <div className="flex items-center gap-2 text-muted-foreground text-xs px-3 py-1 bg-slate-50 rounded-md border border-slate-200">
-          <span className="font-semibold text-slate-700">Experience: </span>
-          <span className="font-bold">{doctor.years_experience ?? "N/A"}</span>
         </div>
-        {/* Rating */}
-        <div className="flex items-center gap-2 text-muted-foreground text-xs px-3 py-1 bg-slate-50 rounded-md border border-slate-200">
-        <Star className="w-4 h-4" fill="#facc15" />
-          <span className="font-semibold">Rating: </span>
-          <span className="font-bold">{doctor.average_rating ?? "N/A"}</span>
+
+        {/* Info Section */}
+        <div className="flex-1 text-center md:text-left space-y-3 sm:space-y-4">
+
+          {/* department and name */}
+          <div>
+            <p className="text-primary flex items-center justify-center sm:justify-start text-xs font-semibold uppercase tracking-wider">
+              <Stethoscope size={14} color="#055BD9" className="mr-1.5" />
+              {doctor.department}
+            </p>
+            <h2 className="text-2xl font-bold text-[#1F1E1E] mt-1">
+              {doctor.name}
+            </h2>
+          </div>
+
+          {/* Experience & Review Cards */}
+          <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 mt-2">
+
+            {/* Experience Card */}
+            <div className="flex items-center gap-x-1.5 bg-light-gray rounded-xl py-2 px-2.5 h-fit">
+              <p className="text-xs text-[#4D4D4D]">Experience</p>
+              <p className="text-xs font-semibold text-[#4D4D4D]">
+                {doctor.years_experience + "Years Experience" || "N/A"}
+              </p>
+            </div>
+
+
+
+            {/* Review Card */}
+            <div className="flex items-center gap-x-1.5 bg-light-gray rounded-xl py-2 px-2.5 h-fit">
+              <p className="text-xs text-[#4D4D4D] flex items-center gap-x-1">
+                <Star size={14} color="#FABD2E" fill="#FABD2E" />
+                Rating
+              </p>
+              <div className="text-[#4D4D4D] font-bold">
+                {/* {doctor.review_summary?.average_rating || "N/A"} */}
+                {/* <span className="text-xs text-gray-400"> ({doctor.review_summary?.total_reviews || "0"})</span> */}
+              </div>
+            </div>
+
+          </div>
+
         </div>
       </div>
-        </div>
-      </div>
-     
-      <div className="flex flex-row items-center justify-between mt-3">
+
+      {/* <div className="flex flex-row items-center justify-between mt-3">
         <span
           className={`text-xs font-semibold px-3 py-1 rounded-full border ${
             appointmentStatus === "Completed"
@@ -69,7 +105,7 @@ export default function DoctorInfoCard({
         >
           {appointmentStatus}
         </span>
-      </div>
+      </div> */}
     </motion.div>
   );
 }
