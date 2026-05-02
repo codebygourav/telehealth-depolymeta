@@ -61,6 +61,8 @@ export default function AppointmentDetailPage() {
     }
 
     const { notes } = data;
+    const doctorId = data?.doctor?.id || "";
+    const nextVisitDate = data?.prescriptions?.next_visit_date || "";
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -119,8 +121,8 @@ export default function AppointmentDetailPage() {
                         <div className="lg:col-span-4 h-full">
                             <MedicineActionPlan
                                 showConclusion={false}
-                                nextVisitDate={data?.prescriptions?.next_visit_date ?? ""}
-                                doctor_id={data?.doctor?.id ?? ""}
+                                nextVisitDate={nextVisitDate}
+                                doctor_id={doctorId}
                                 footerActionGridClassName="grid-cols-1 h-full p-0"
                                 buttonClass="!p-2"
                                 nextVisitCardClassName="!p-4"
