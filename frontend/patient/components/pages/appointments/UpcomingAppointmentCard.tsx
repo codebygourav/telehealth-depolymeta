@@ -27,7 +27,7 @@ const UpcomingAppointmentCard = ({
     const router = useRouter();
 
     return (
-        <div className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white shadow-[0px_2px_4px_rgba(0,0,0,0.1)] rounded-lg border-light-gray overflow-hidden">
             <div className="p-4 sm:p-5 md:p-6">
 
                 {/* Header Section - Doctor Info */}

@@ -119,7 +119,7 @@ export default function Notifications() {
         );
     } else {
         content = (
-            <div className="space-y-3 mt-5">
+            <div className="space-y-5 mt-5">
                 {filteredNotifications.length === 0 ? (
                     <EmptyState
                         title="No notifications found"

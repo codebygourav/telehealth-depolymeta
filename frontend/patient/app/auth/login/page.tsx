@@ -11,6 +11,8 @@ import { useAuth } from "@/context/userContext"
 import { User, UserRole } from "@/types/user-context"
 import { log } from "console"
 
+import Logo from "@/public/assets/icon/logo-light.png"
+
 interface LoginFormData {
     email: string
     password: string
@@ -133,11 +135,12 @@ const LoginPage = () => {
 
     return (
         <AuthLayout title="" subtitle="">
-            <div className="mb-6 text-center">
+
+            <div className="mb-10 text-center">
                 <div className="mb-4 flex justify-center">
                     {mounted && (
                         <Image
-                            src="/icons/logo-light.png"
+                            src={Logo}
                             alt="Company Logo"
                             width={120}
                             height={40}
@@ -148,20 +151,6 @@ const LoginPage = () => {
                         />
                     )}
                 </div>
-
-                {imageError && (
-                    <div className="mb-4 flex justify-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary">
-                            <span className="text-2xl font-bold text-primary-foreground">
-                                A
-                            </span>
-                        </div>
-                    </div>
-                )}
-
-                <p className="text-sm text-muted-foreground">
-                    Sign in to your account to continue
-                </p>
 
                 {isError && !verifiedLink && (
                     <div className="mt-3 rounded-md bg-destructive/10 border border-destructive/20 p-3">

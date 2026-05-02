@@ -128,7 +128,7 @@ const AppointmentsPage = () => {
         return (
             <div className="space-y-6">
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 mt-3">
                     {upcomingApps.map((app: AppointmentResponse) => {
                         const transformedApp = transformToAppointment(app);
                         const transformedDoctor = transformToDoctor(app);
@@ -175,7 +175,7 @@ const AppointmentsPage = () => {
 
         return (
             <>
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 mt-3">
                     {pastApps.map((app: AppointmentResponse) => {
                         const transformedApp = transformToAppointment(app);
                         const transformedDoctor = transformToDoctor(app);

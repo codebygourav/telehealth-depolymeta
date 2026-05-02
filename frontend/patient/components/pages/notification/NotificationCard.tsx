@@ -40,22 +40,24 @@ export function NotificationCard({ notification, onMarkAsRead }: NotificationCar
 
     return (
         <Card
-            className={`group hover:shadow-md transition-all rounded-4xl duration-300 cursor-pointer ${!notification.is_read ? 'bg-muted/5' : ''}`}
+            className={`rounded-lg p-5 border border-[#E7E8EB] shadow-[0px_2px_4px_0px_#0000001A]${!notification.is_read ? 'bg-muted/5' : ''}`}
             onClick={() => console.log("View notification:", notification.id)}
         >
-            <CardContent className="p-4 relative">
+            <CardContent className="relative pl-0">
+
                 <div className="relative flex items-start gap-4">
+
                     <div className={`p-2.5 rounded-xl ${bg} shrink-0`}>
                         <Icon className={`h-6 w-6 ${color}`} />
                     </div>
 
                     {!notification.is_read && (
-                        <div className="absolute -top-5 -right-1 h-3 w-3 bg-green-500 rounded-full ring-2 ring-white dark:ring-gray-950 animate-pulse" />
+                        <div className="absolute -top-2 -right-5 h-3 w-3 bg-green-500 rounded-full ring-2 ring-white dark:ring-gray-950 animate-pulse" />
                     )}
 
                     <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 flex-wrap mb-1">
-                            <h3 className={`text-primary text-lg font-semibold ${!notification.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            <h3 className={`text-[#1F1E1E] text-lg font-semibold ${!notification.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
                                 {notification.title}
                             </h3>
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -63,7 +65,7 @@ export function NotificationCard({ notification, onMarkAsRead }: NotificationCar
                                 {notification.created_at}
                             </div>
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className="text-base text-[#4D4D4D]">
                             {notification.desc}
                         </p>
                     </div>
