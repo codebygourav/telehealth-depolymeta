@@ -9,7 +9,7 @@ interface DoctorHeaderProps {
 
 const DoctorHeader = ({ doctor }: DoctorHeaderProps) => {
     return (
-        <section className="bg-surface-container-lowest rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-outline-variant/10">
+        <section className="rounded-lg p-5 shadow-[0px_2px_4px_0px_#0000001A] border border-[#E7E8EB]">
             <div className="flex flex-col items-center md:flex-row md:items-start gap-6 md:gap-8">
 
                 {/* Avatar Section */}

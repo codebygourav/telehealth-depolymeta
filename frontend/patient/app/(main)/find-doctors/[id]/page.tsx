@@ -42,12 +42,7 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
     });
 
     const { data, error, isLoading, refetch } = useDoctorDetail(id);
-
-    console.log("schdule data", data);
-
     const doctor = data?.data;
-    console.log("doctor data", data);
-
 
     const handleBookingSuccess = (appointmentId: string) => {
         setDialogState({
@@ -103,17 +98,17 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
 
                         {/* Tabs Container - Centered on all devices */}
                         <div className="flex justify-center md:justify-start">
-                            <div className="flex gap-4 sm:gap-8 border-b border-outline-variant/20 overflow-x-auto no-scrollbar px-2">
+                            <div className="flex gap-2.5 overflow-x-auto no-scrollbar p-1.5 border border-[#E7E8EB] bg-[#F5F6F8] rounded-md">
                                 <button
                                     onClick={() => setActiveTab('overview')}
                                     className={`
-                                                pb-3 sm:pb-4 
+                                                
                                                 transition-all 
                                                 whitespace-nowrap
-                                                text-sm sm:text-base
+                                                text-sm font-semibold py-2 px-7 rounded-md
                                                 ${activeTab === 'overview'
-                                            ? 'text-primary font-bold border-b-2 border-primary'
-                                            : 'text-on-surface-variant font-medium hover:text-primary'
+                                            ? 'text-white bg-[#055BD9]'
+                                            : 'text-[#4D4D4D]'
                                         }
                                      `}
                                 >
@@ -122,13 +117,12 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
                                 <button
                                     onClick={() => setActiveTab('reviews')}
                                     className={`
-                                                pb-3 sm:pb-4 
-                                                transition-all 
+                                            transition-all 
                                                 whitespace-nowrap
-                                                text-sm sm:text-base
+                                                text-sm font-semibold py-2 px-7 rounded-md
                                                 ${activeTab === 'reviews'
-                                            ? 'text-primary font-bold border-b-2 border-primary'
-                                            : 'text-on-surface-variant font-medium hover:text-primary'
+                                            ? 'text-white bg-[#055BD9]'
+                                            : 'text-[#4D4D4D]'
                                         }
                                 `}
                                 >
@@ -139,14 +133,14 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
 
                         {/* Content Sections */}
                         {activeTab === 'overview' && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                            <>
                                 <DoctorAbout about={doctor.about} className="md:col-span-2" />
+                                <DoctorEducation education={doctor.education} />
                                 <DoctorStats
                                     patientsHelped={5000}
                                     experience={doctor.profile.years_experience}
                                 />
-                                <DoctorEducation education={doctor.education} />
-                            </div>
+                            </>
                         )}
 
                         {activeTab === 'reviews' && (
