@@ -185,7 +185,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                 {medical_reports?.length > 0 && (
                     <div className="space-y-3 sm:space-y-4 pt-2 sm:pt-4">
                         <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 px-1 text-base sm:text-lg">
-                            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+                            <FileText size={20} color="#055BD9" />
                             Medical Reports
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -196,7 +196,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                 >
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center shrink-0">
-                                            <Download className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+                                            <Download size={20} color="#055BD9" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">

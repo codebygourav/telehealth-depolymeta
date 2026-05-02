@@ -15,6 +15,7 @@ import CustomDialog from '@/components/custom/Dialogboxs';
 import CustomTabs from '@/components/custom/CustomTabs';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import HeroSection from '@/components/hero-section';
 
 interface DoctorProfileProps {
     params: Promise<{
@@ -42,8 +43,8 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
 
     const { data, error, isLoading, refetch } = useDoctorDetail(id);
 
-    console.log("schdule data" ,data);
-    
+    console.log("schdule data", data);
+
     const doctor = data?.data;
     console.log("doctor data", data);
 
@@ -85,12 +86,21 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
 
     return (
         <>
+
+            <HeroSection
+                title="Doctor Detail"
+                description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
+            />
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
                 {/* Left Column - Doctor Info */}
                 <div className="lg:col-span-8 space-y-8">
+
                     <DoctorHeader doctor={doctor} />
 
                     <div className="space-y-6">
+
                         {/* Tabs Container - Centered on all devices */}
                         <div className="flex justify-center md:justify-start">
                             <div className="flex gap-4 sm:gap-8 border-b border-outline-variant/20 overflow-x-auto no-scrollbar px-2">

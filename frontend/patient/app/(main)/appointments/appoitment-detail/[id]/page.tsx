@@ -92,14 +92,13 @@ export default function AppointmentDetailPage() {
 
                     {/* Show notes if they exist */}
                     {notes && (
-                        <div className="p-6 italic text-gray-600 bg-gray-100 border-l-4 rounded-xl border-emerald-500">
+                        <div className="p-6 italic text-gray-600 bg-gray-100 border-l-4 rounded-xl border-[#055BD9]">
                             <h3 className="text-sm">Symptoms Reported</h3>
                             <div className="mt-2 text-base">
                                 &quot;{notes}&quot;
                             </div>
                         </div>
                     )}
-
 
                     <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
                         <div className="lg:col-span-8 h-full w-full g-border global-radius p-4 bg-white flex flex-col">

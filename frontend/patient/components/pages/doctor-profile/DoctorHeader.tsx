@@ -1,70 +1,80 @@
-import { Star, Verified, Languages as LanguagesIcon } from 'lucide-react';
-import type { DoctorDetailData } from '@/types/doctor-details';
+import { Star, Verified, Languages as LanguagesIcon, Stethoscope } from 'lucide-react';
 import DoctorTags from './DoctorTags';
+import type { DoctorDetailData } from '@/types/doctor-details';
+
 
 interface DoctorHeaderProps {
-  doctor: DoctorDetailData;
+    doctor: DoctorDetailData;
 }
 
 const DoctorHeader = ({ doctor }: DoctorHeaderProps) => {
-  return (
-    <section className="bg-surface-container-lowest rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-outline-variant/10">
-      <div className="flex flex-col items-center md:flex-row md:items-start gap-6 md:gap-8">
-        {/* Avatar Section */}
-        <div className="relative group shrink-0">
-          <div className="h-32 w-32 sm:h-36 sm:w-36 md:h-40 md:w-40 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl ring-4 ring-surface-container">
-            <img
-              src={doctor.profile.avatar}
-              alt={doctor.profile.name}
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-          <div className="absolute -bottom-2 -right-2 bg-primary text-white px-2 py-1 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold font-label flex items-center gap-1 shadow-lg">
-            <Verified className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
-            {doctor.status}
-          </div>
-        </div>
+    return (
+        <section className="bg-surface-container-lowest rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-outline-variant/10">
+            <div className="flex flex-col items-center md:flex-row md:items-start gap-6 md:gap-8">
 
-        {/* Info Section */}
-        <div className="flex-1 text-center md:text-left space-y-3 sm:space-y-4">
-          {/* Name and Rating */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold font-headline tracking-tight text-primary break-words">
-              {doctor.profile.name}
-            </h1>
-            <div className="flex items-center justify-center md:justify-start gap-1 text-on-surface-variant font-medium">
-              <Star className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 fill-current" />
-              <span className="text-sm sm:text-base text-on-surface">
-                {doctor.review_summary?.average_rating || 0}
-              </span>
-              <span className="text-xs sm:text-sm opacity-60">
-                ({doctor.review_summary?.total_reviews || 0} Reviews)
-              </span>
+                {/* Avatar Section */}
+                <div className="relative group shrink-0">
+                    <div className="w-24 h-24 rounded-full">
+                        <img
+                            src={doctor.profile.avatar}
+                            alt={doctor.profile.name}
+                            className="w-full h-full rounded-full object-cover"
+                            referrerPolicy="no-referrer"
+                        />
+                    </div>
+                </div>
+
+                {/* Info Section */}
+                <div className="flex-1 text-center md:text-left space-y-3 sm:space-y-4">
+
+                    {/* department and name */}
+                    <div>
+                        <p className="text-primary flex items-center justify-center sm:justify-start text-xs font-semibold uppercase tracking-wider">
+                            <Stethoscope size={14} color="#055BD9" className="mr-1.5" />
+                            {doctor.profile.department}
+                        </p>
+                        <h2 className="text-2xl font-bold text-[#1F1E1E] mt-1">
+                            {doctor.profile.name}
+                        </h2>
+                    </div>
+
+                    {/* Experience & Review Cards */}
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 mt-2">
+
+                        {/* Experience Card */}
+                        <div className="flex items-center gap-x-1.5 bg-light-gray rounded-xl py-2 px-2.5 h-fit">
+                            <p className="text-xs text-[#4D4D4D]">Experience</p>
+                            <p className="text-xs font-semibold text-[#4D4D4D]">
+                                {doctor.profile.years_experience + "Years Experience" || "N/A"}
+                            </p>
+                        </div>
+
+                        {/* Languages */}
+                        <div className="flex items-center gap-x-1.5 bg-light-gray rounded-xl py-2 px-2.5 h-fit">
+                            <LanguagesIcon className="w-4 h-4 shrink-0" />
+                            <span className="text-xs text-[#4D4D4D]">
+                                {doctor.languages?.join(', ') || 'English'}
+                            </span>
+                        </div>
+
+                        {/* Review Card */}
+                        <div className="flex items-center gap-x-1.5 bg-light-gray rounded-xl py-2 px-2.5 h-fit">
+                            <p className="text-xs text-[#4D4D4D] flex items-center gap-x-1">
+                                <Star size={14} color="#FABD2E" fill="#FABD2E" />
+                                Rating
+                            </p>
+                            <div className="text-[#4D4D4D] font-bold">
+                                {doctor.review_summary?.average_rating || "N/A"}
+                                <span className="text-xs text-gray-400"> ({doctor.review_summary?.total_reviews || "0"})</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
             </div>
-          </div>
-
-          {/* Department & Experience */}
-          <p className="text-base sm:text-lg md:text-xl text-surface-tint font-medium font-headline break-words">
-            {doctor.profile.department} • {doctor.profile.years_experience}+ Years Experience
-          </p>
-
-          {/* Languages */}
-          <div className="flex items-center justify-center md:justify-start gap-2 text-on-surface-variant font-medium flex-wrap">
-            <LanguagesIcon className="w-4 h-4 shrink-0" />
-            <span className="text-sm sm:text-base break-words">
-              {doctor.languages?.join(', ') || 'English'}
-            </span>
-          </div>
-
-          {/* Tags */}
-          <div className="flex justify-center md:justify-start">
-            <DoctorTags specialties={[doctor.profile.department]} />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+        </section>
+    );
 };
 
 export default DoctorHeader;
