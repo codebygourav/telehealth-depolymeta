@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import UpcomingAppointmentCard from '@/components/pages/appointments/UpcomingAppointmentCard';
 import PastAppointmentCard from '@/components/pages/appointments/PastAppointmentCard';
-import PreAppointmentChecklist from '@/components/pages/appointments/PreAppointmentChecklist';
 import CustomTabs from '@/components/custom/CustomTabs';
 import PaginationControls from '@/components/ui/PaginationControls';
 import { useAppointments } from '@/queries/useAppointments';
@@ -123,7 +122,7 @@ const AppointmentsPage = () => {
         const pagination = data?.pagination;
 
         if (upcomingApps.length === 0 && (!pagination || pagination.total === 0)) {
-            return <EmptyState title="No upcoming appointments" description="You have no upcoming appointments scheduled." icon={<Calendar className="w-8 h-8 text-on-surface-variant/50" />} />;
+            return <EmptyState type="upcoming" />;
         }
 
         return (

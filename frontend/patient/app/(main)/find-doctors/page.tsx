@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useBrowseDoctors } from '@/queries/useBrowseDoctors';
 import { useDepartmentsAndSymptoms } from '@/queries/useDepartmentsAndSymptoms';
@@ -23,7 +23,7 @@ interface DialogState {
     description: string;
 }
 
-const FindDoctors = () => {
+const FindDoctorsContent = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -311,6 +311,14 @@ const FindDoctors = () => {
                 }
             />
         </>
+    );
+};
+
+const FindDoctors = () => {
+    return (
+        <Suspense fallback={<LoadingSkeleton />}>
+            <FindDoctorsContent />
+        </Suspense>
     );
 };
 
