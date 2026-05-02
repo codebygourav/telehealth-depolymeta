@@ -109,7 +109,7 @@ const CustomTabs = ({
                         <TabsContent
                             key={tab.key}
                             value={tab.key}
-                            className={cn("mt-6 focus-visible:outline-none", tabsContentClassName)}
+                            className={cn("focus-visible:outline-none", tabsContentClassName)}
                         >
                             {tab.content}
                         </TabsContent>

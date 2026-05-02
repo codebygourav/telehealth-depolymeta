@@ -36,7 +36,7 @@ export default function ProfilePage() {
     ];
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className=" sm:p-6 lg:p-8">
             <div className="flex flex-col md:flex-row gap-8">
                 {/* Sidebar */}
                 <aside className="w-full md:w-96 space-y-2">
@@ -65,7 +65,7 @@ export default function ProfilePage() {
                 </aside>
 
                 {/* Content Area */}
-                <main className="flex-1 bg-white dark:bg-slate-900 global-radius border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm min-h-[600px]">
+                <main className="flex-1 bg-white dark:bg-slate-900 global-radius border border-slate-200 dark:border-slate-800 p-4 md:p-8 shadow-sm min-h-[600px]">
                     {activeTab === "personal_info" && (
                         <div>
                             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-8">Basic Information</h2>

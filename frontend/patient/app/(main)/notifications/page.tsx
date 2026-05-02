@@ -10,6 +10,10 @@ import CustomTabs from "@/components/custom/CustomTabs";
 import { fetchNotifications, markAllAsRead, markNotificationAsRead } from "@/api/notifications";
 import { useQueryClient } from "@tanstack/react-query";
 import { NotificationCard } from "@/components/pages/notification/NotificationCard";
+import HeroSection from "@/components/hero-section";
+import { EmptyState } from "@/components/custom/EmptyState";
+import { CustomPagination } from "@/components/custom/CustomPagination";
+
 
 
 interface Notification {
@@ -23,7 +27,7 @@ interface Notification {
 
 interface NotificationsResponse {
     data: Notification[];
-    pagination?: {
+    CustomPagination?: {
         current_page: number;
         last_page: number;
         per_page: number;
@@ -32,14 +36,13 @@ interface NotificationsResponse {
 }
 
 export default function Notifications() {
-    const { data, isLoading, error } = useNotifications() as {
+    const [currentPage, setCurrentPage] = useState(1);
+    const { data, isLoading, error } = useNotifications(currentPage) as {
         data: NotificationsResponse | undefined;
         isLoading: boolean;
         error: any;
     };
     const [activeTab, setActiveTab] = useState("all");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [loadingMore, setLoadingMore] = useState(false);
     const [allNotifications, setAllNotifications] = useState<Notification[]>([]);
     const [totalPages, setTotalPages] = useState(1);
     const { data: totalUnread = 0 } = useUnreadCount();
@@ -76,45 +79,15 @@ export default function Notifications() {
     useEffect(() => {
         if (data?.data) {
             setAllNotifications(data.data);
-            setTotalPages(data?.pagination?.last_page || 1);
-            setCurrentPage(data?.pagination?.current_page || 1);
+            setTotalPages(data?.CustomPagination?.last_page || 1);
         }
     }, [data]);
 
-    if (isLoading && currentPage === 1) {
-        return (
-            <div className="flex items-center justify-center min-h-100">
-                <div className="animate-pulse text-muted-foreground">Loading notifications...</div>
-            </div>
-        );
-    }
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [currentPage]);
 
-    if (error && currentPage === 1) {
-        return (
-            <div className="flex items-center justify-center min-h-100">
-                <div className="text-red-500">Error loading notifications. Please try again.</div>
-            </div>
-        );
-    }
-
-    const hasMorePages = currentPage < totalPages;
     const filteredNotifications = activeTab === "unread" ? allNotifications.filter(item => !item.is_read) : allNotifications;
-
-    const loadMore = async () => {
-        if (loadingMore || !hasMorePages) return;
-        setLoadingMore(true);
-        try {
-            const newData = await fetchNotifications(currentPage + 1);
-            if (newData?.data?.length > 0) {
-                setAllNotifications(prev => [...prev, ...newData.data]);
-                setCurrentPage(prev => prev + 1);
-            }
-        } catch (error) {
-            console.error("Error loading more notifications:", error);
-        } finally {
-            setLoadingMore(false);
-        }
-    };
 
     const tabs = [
         { key: "all", label: <div className="flex items-center gap-1">All</div> },
@@ -129,66 +102,64 @@ export default function Notifications() {
         }
     ];
 
-    const renderNotifications = () => {
-        if (filteredNotifications.length === 0) {
-            return (
-                <Card className="border-dashed">
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                        <Bell className="h-12 w-12 text-muted-foreground mb-3 opacity-50" />
-                        <p className="text-muted-foreground text-center">
-                            No {activeTab === "unread" ? "unread" : ""} notifications
-                        </p>
-                        <p className="text-sm text-muted-foreground text-center">
-                            {activeTab === "all" ? "You're all caught up!" : "Check back later for updates."}
-                        </p>
-                    </CardContent>
-                </Card>
-            );
-        }
+    // Move all UI rendering logic to here, and do not use early return statements inside Notifications.
+    let content = null;
 
-        return (
-            <div className="space-y-3 mt-5">
-                {filteredNotifications.map(notification => (
-                    <NotificationCard key={notification.id} notification={notification} onMarkAsRead={handleMarkAsRead} />
-                ))}
-
-                {hasMorePages && (
-                    <div className="mt-8 text-center">
-                        <Button variant="outline" size="sm" className="text-primary text-lg gap-2 h-12 w-auto px-5" onClick={loadMore} disabled={loadingMore}>
-                            {loadingMore ? <><Loader2 className="h-4 w-4 animate-spin" /> Loading...</> : "Load more Notifications"}
-                        </Button>
-                    </div>
-                )}
-
-                {!hasMorePages && filteredNotifications.length > 0 && (
-                    <div className="mt-6 text-center">
-                        <p className="text-xs text-muted-foreground">You've seen all {filteredNotifications.length} notifications</p>
-                    </div>
-                )}
+    if (isLoading && currentPage === 1) {
+        content = (
+            <div className="flex items-center justify-center min-h-100">
+                <div className="animate-pulse text-muted-foreground">Loading notifications...</div>
             </div>
         );
-    };
+    } else if (error && currentPage === 1) {
+        content = (
+            <div className="flex items-center justify-center min-h-100">
+                <div className="text-red-500">Error loading notifications. Please try again.</div>
+            </div>
+        );
+    } else {
+        content = (
+            <div className="space-y-3 mt-5">
+                {filteredNotifications.length === 0 ? (
+                    <EmptyState
+                        title="No notifications found"
+                        description="You're all caught up!"
+                    />
+                ) : (
+                    filteredNotifications.map(notification => (
+                        <NotificationCard key={notification.id} notification={notification} onMarkAsRead={handleMarkAsRead} />
+                    ))
+                )}
 
-    const tabsWithContent = tabs.map(tab => ({ ...tab, content: renderNotifications() }));
+                <div className="flex flex-col items-center gap-4 py-8">
+                    <CustomPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                    />
+                    {data?.CustomPagination && (
+                        <p className="text-xs text-muted-foreground font-medium">
+                            Showing <span className="text-foreground">{(currentPage - 1) * (data.CustomPagination.per_page || 10) + 1}</span> to{" "}
+                            <span className="text-foreground">{Math.min(currentPage * (data.CustomPagination.per_page || 10), data.CustomPagination.total)}</span> of{" "}
+                            <span className="text-foreground">{data.CustomPagination.total} </span> notifications
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full mx-auto">
-            <div className="mb-6">
-                <h1 className="text-4xl font-bold text-primary mb-2">Notifications</h1>
-                <p className="text-muted-foreground">
-                    Stay updated on your health journey. Here you'll find reminders, test results, and messages from your clinical team.
-                </p>
-            </div>
-
             <CustomTabs
                 variant="pill"
                 activeTabBg="#013220"
                 activeTabColor="white"
-                tabs={tabsWithContent}
+                tabs={tabs}
                 defaultTab="all"
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                tabsListClassName="w-full max-w-md!"
+                tabsListClassName="w-full max-w-md! mt-1"
                 rightSlot={
                     <Button
                         variant="ghost"
@@ -202,6 +173,7 @@ export default function Notifications() {
                     </Button>
                 }
             />
+            {content}
         </div>
     );
 }
