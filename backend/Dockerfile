@@ -1,6 +1,6 @@
 FROM php:8.3-fpm
 
-WORKDIR /var/www/html
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git curl unzip libpng-dev libonig-dev libxml2-dev libzip-dev libicu-dev libpq-dev \
     && docker-php-ext-configure intl \
@@ -11,7 +11,18 @@ RUN apt-get update && apt-get install -y \
 RUN curl -sS https://getcomposer.org/installer | php \
     -- --install-dir=/usr/local/bin --filename=composer
 
-RUN chown -R www-data:www-data /var/www/html
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy existing application directory contents
+COPY . .
+
+# Install PHP dependencies
+RUN composer install --no-interaction --optimize-autoloader --no-dev
+
+# Set permissions for Laravel
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 EXPOSE 9000
 CMD ["php-fpm"]
+

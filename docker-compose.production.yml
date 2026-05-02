@@ -2,7 +2,7 @@ services:
   # --- Database ---
   db:
     image: mysql:8
-    container_name: repo2-db
+    container_name: telehealth-db
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-cmc_telehealth}
@@ -14,16 +14,14 @@ services:
     networks:
       - telehealth-network
 
-  # --- Backend (Laravel) ---
-  backend-app:
+  # --- Admin Dashboard (Laravel Backend) ---
+  admin-dashboard:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: repo2-backend-app
+    container_name: admin-dashboard-app
     restart: unless-stopped
     working_dir: /var/www/html
-    volumes:
-      - ./backend:/var/www/html
     depends_on:
       - db
     networks:
@@ -31,41 +29,40 @@ services:
     env_file:
       - ./backend/.env
 
-  backend-web:
+  admin-web:
     image: nginx:alpine
-    container_name: repo2-backend-web
+    container_name: admin-dashboard-web
     restart: unless-stopped
     volumes:
-      - ./backend:/var/www/html
       - ./backend/nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
-      - backend-app
+      - admin-dashboard
     networks:
       - telehealth-network
 
-  # --- Frontend (Patient) ---
-  frontend-patient:
+  # --- Patient Portal ---
+  patient-deploymeta:
     build:
       context: ./frontend/patient
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${PATIENT_API_URL}
-    container_name: repo2-frontend-patient
+    container_name: patient-deploymeta
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${PATIENT_API_URL}
     networks:
       - telehealth-network
 
-  # --- Frontend (Doctor) ---
-  frontend-doctor:
+  # --- Doctor Portal ---
+  doctor-deploymeta:
     build:
       context: ./frontend/doctor
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${DOCTOR_API_URL}
         NEXT_PUBLIC_API_URL: ${DOCTOR_API_URL}
-    container_name: repo2-frontend-doctor
+    container_name: doctor-deploymeta
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${DOCTOR_API_URL}
@@ -74,10 +71,9 @@ services:
       - telehealth-network
 
   # --- Reverse Proxy (Nginx) ---
-  # This container will route traffic from your domains to the correct services.
   proxy:
     image: nginx:alpine
-    container_name: repo2-proxy
+    container_name: telehealth-proxy
     restart: unless-stopped
     ports:
       - "80:80"
@@ -86,9 +82,9 @@ services:
       - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf
       - ./certs:/etc/nginx/certs
     depends_on:
-      - backend-web
-      - frontend-patient
-      - frontend-doctor
+      - admin-web
+      - patient-deploymeta
+      - doctor-deploymeta
     networks:
       - telehealth-network
 
@@ -98,3 +94,4 @@ networks:
 
 volumes:
   db_data:
+
