@@ -45,7 +45,7 @@ export default function ManageAppointment({ params }: PageProps) {
     const { data, isLoading, error } = useAppointmentDetail(appointmentId);
     const appointment = data?.data;
     // console.log("Appointments : ", appointment?.status);
-    
+
 
     const { user } = useAuth();
 
@@ -217,20 +217,20 @@ export default function ManageAppointment({ params }: PageProps) {
     return (
         <div>
 
-         <HeroSection
-            title="Manage Appointment"
-            description="Detailed information about your appointment."
-            onBack={() => router.back()}
-            showBackButton={true}
+            <HeroSection
+                title="Manage Appointment"
+                description="Detailed information about your appointment."
+                onBack={() => router.back()}
+                showBackButton={true}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
                 {/* Left Column: Info */}
                 <div className="lg:col-span-7 space-y-8">
-                    <DoctorInfoCard 
-                    doctor={appointment?.doctor}
-                    appointmentStatus={appointment?.status_label} />
+                    <DoctorInfoCard
+                        doctor={appointment?.doctor}
+                        appointmentStatus={appointment?.status_label || ''} />
                     <AppointmentInfo
                         date={appointment?.schedule?.date_formatted}
                         time={appointment?.schedule?.time_formatted}
