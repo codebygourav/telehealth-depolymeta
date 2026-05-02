@@ -134,94 +134,44 @@ const CompleteProfileStep: React.FC<CompleteProfileStepProps> = ({ email }) => {
               disabled={isPending}
             />
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputField
+              name="mobile_no"
+              label="Mobile Number"
+              placeholder="7325809632"
+              required
+              disabled={isPending}
+            />
 
-          <InputField
-            name="mobile_no"
-            label="Mobile Number"
-            placeholder="7325809632"
-            required
-            disabled={isPending}
-          />
+            <InputField
+              name="password"
+              label="Password"
+              type="password"
+              placeholder="••••••••"
+              required
+              disabled={isPending}
+            />
 
-          <InputField
-            name="password"
-            label="Password"
-            type="password"
-            placeholder="••••••••"
-            required
-            disabled={isPending}
-          />
 
-          {/* Health Profile Section */}
-          <div className="border-t border-border pt-6 mt-6">
-            <h3 className="text-lg font-semibold mb-4 text-foreground">Health Information</h3>
-            
-            <div className="space-y-5">
-              <MultiSelectField
-                name="allergies"
-                label="Allergies"
-                description="Select any allergies you have"
-                options={[
-                  { label: "Penicillin", value: "penicillin" },
-                  { label: "Sulfa drugs", value: "sulfa" },
-                  { label: "Aspirin", value: "aspirin" },
-                  { label: "Latex", value: "latex" },
-                  { label: "Pollen", value: "pollen" },
-                  { label: "Dust mites", value: "dust_mites" },
-                  { label: "Pet dander", value: "pet_dander" },
-                  { label: "Food - Nuts", value: "nuts" },
-                  { label: "Food - Shellfish", value: "shellfish" },
-                  { label: "Food - Eggs", value: "eggs" },
-                  { label: "Food - Dairy", value: "dairy" },
-                ]}
+            <div className="flex flex-col space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Blood Type</label>
+              <select
+                {...methods.register("blood_type")}
                 disabled={isPending}
-                direction="row"
-              />
-
-              <MultiSelectField
-                name="chronic_conditions"
-                label="Chronic Conditions"
-                description="Select any chronic conditions you have been diagnosed with"
-                options={[
-                  { label: "Diabetes Type 1", value: "diabetes_type1" },
-                  { label: "Diabetes Type 2", value: "diabetes_type2" },
-                  { label: "Hypertension", value: "hypertension" },
-                  { label: "Asthma", value: "asthma" },
-                  { label: "Heart Disease", value: "heart_disease" },
-                  { label: "COPD", value: "copd" },
-                  { label: "Arthritis", value: "arthritis" },
-                  { label: "Thyroid Disorder", value: "thyroid" },
-                  { label: "Kidney Disease", value: "kidney_disease" },
-                  { label: "Liver Disease", value: "liver_disease" },
-                  { label: "Cancer", value: "cancer" },
-                  { label: "Epilepsy", value: "epilepsy" },
-                  { label: "Mental Health Condition", value: "mental_health" },
-                ]}
-                disabled={isPending}
-                direction="row"
-              />
-
-              <div className="flex flex-col space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Blood Type</label>
-                <select
-                  {...methods.register("blood_type")}
-                  disabled={isPending}
-                  className="flex h-10 w-full rounded-md border border-input bg-accent/30 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="">Select blood type</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                </select>
-              </div>
+                className="flex h-10 w-full rounded-md border border-input bg-accent/30 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Select blood type</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+              </select>
             </div>
           </div>
-
           <button
             type="submit"
             disabled={isPending}

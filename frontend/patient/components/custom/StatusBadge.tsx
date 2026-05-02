@@ -18,27 +18,46 @@ export type StatusBadgeStatus =
 
 const getStatusClasses = (status: StatusBadgeStatus) => {
   const s = status?.toString().toLowerCase();
+  const commonClasses = "!global-radius p-3";
+  const statusClasses = {
+    active: "bg-primary/10 text-primary border-primary/10 " + commonClasses,
+    archived: "bg-muted/10 text-muted border-muted/10 " + commonClasses,
+    shared: "g-success-badge " + commonClasses,
+    uploaded: "g-success-badge " + commonClasses,
+    success: "g-success-badge " + commonClasses,
+    pending: "bg-yellow-400/10 text-yellow-500 border-yellow-500/10 " + commonClasses,
+    conclusion_report: "bg-info/10 text-info border-info/10",
+    error: "bg-destructive/10 text-destructive border-destructive/10 " + commonClasses,
+    default: "bg-light-gray g-text-muted border-light-gray " + commonClasses,
+    video: "bg-green-500/10 text-green-500 border-green-500/10 " + commonClasses,
+    in_person: "bg-blue-500/10 text-blue-500 border-blue-500/10 " + commonClasses,
+    paid: "bg-green-500/10 text-green-500 border-green-500/10 " + commonClasses,
+  }
   switch (s) {
     case "active":
-      return "bg-primary/10 text-primary border-primary/10";
+      return statusClasses.active;
     case "archived":
-      return "bg-muted/10 text-muted border-muted/10";
+      return statusClasses.archived;
     case "shared":
       // Tailwind arbitrary values cannot contain spaces.
-      return "g-success-badge";
+      return statusClasses.shared;
     case "uploaded":
     case "success":
-      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/10";
+      return statusClasses.success;
     case "pending":
-      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/10";
+      return statusClasses.pending;
     case "conclusion_report":
-      return "bg-info/10 text-info border-info/10";
+      return statusClasses.conclusion_report;
+    case "video":
+      return statusClasses.video;
+    case "paid":
+      return statusClasses.paid;
     case "failed":
     case "rejected":
     case "error":
-      return "bg-destructive/10 text-destructive border-destructive/10";
+      return statusClasses.error;
     default:
-      return "bg-light-gray g-text-muted border-light-gray";
+      return statusClasses.default;
   }
 };
 

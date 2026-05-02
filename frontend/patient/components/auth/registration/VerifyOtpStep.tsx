@@ -18,9 +18,10 @@ type OtpValues = z.infer<typeof otpSchema>;
 interface VerifyOtpStepProps {
   email: string;
   onSuccess: () => void;
+  onBack?: () => void;
 }
 
-const VerifyOtpStep: React.FC<VerifyOtpStepProps> = ({ email, onSuccess }) => {
+const VerifyOtpStep: React.FC<VerifyOtpStepProps> = ({ email, onSuccess, onBack }) => {
   const { mutate: verifyOtp, isPending: isVerifying } = useVerifyEmail();
   const { mutate: resendOtp, isPending: isResending } = useResendOtp();
   const [timer, setTimer] = useState(60);
@@ -101,14 +102,24 @@ const VerifyOtpStep: React.FC<VerifyOtpStepProps> = ({ email, onSuccess }) => {
         </form>
       </FormProvider>
 
-      <div className="text-center">
+      <div className="flex items-center justify-between pt-2">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+          >
+            &larr; Back
+          </button>
+        )}
         <button
+          type="button"
           onClick={handleResend}
           disabled={timer > 0 || isResending}
           className={`text-sm ${timer > 0 ? "text-muted-foreground cursor-not-allowed" : "text-primary hover:text-primary/80"
             } transition-colors font-medium`}
         >
-          {isResending ? "Sending..." : timer > 0 ? `Resend code in ${timer}s` : "Didn't receive code? Resend"}
+          {isResending ? "Sending..." : timer > 0 ? `Resend code in ${timer}s` : "Resend code"}
         </button>
       </div>
     </div>

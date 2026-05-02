@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { X } from "lucide-react";
+import { Button } from "@base-ui/react/button";
 
 interface CustomDialogProps {
     open: boolean;
@@ -37,19 +38,19 @@ export default function CustomDialog({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
 
             {/* Box */}
-            <div className="relative w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl">
+            <div className="relative w-full max-w-md p-6 text-center bg-white shadow-xl rounded-2xl">
 
                 {/* Close Button */}
-                <button
+                <Button
                     onClick={onClose}
-                    className="absolute right-4 top-4 text-gray-400 hover:text-gray-700"
+                    className="absolute text-gray-400 right-4 top-4 hover:text-gray-700"
                 >
-                    <X className="h-5 w-5" />
-                </button>
+                    <X className="w-5 h-5 cursor-pointer" />
+                </Button>
 
                 {/* Icon */}
                 <div
-                    className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full ${type === "danger" ? "bg-red-100" : "bg-green-100"
+                    className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center global-radius-10  ${type === "danger" ? "bg-red-100" : "bg-green-100"
                         }`}
                 >
                     {icon}
@@ -60,30 +61,29 @@ export default function CustomDialog({
 
                 {/* Description */}
                 {description && (
-                    <p className="text-sm text-gray-500 mt-1">{description}</p>
+                    <p className="mt-1 text-sm text-gray-500">{description}</p>
                 )}
 
                 {/* Buttons */}
                 <div className="flex gap-4 mt-6">
                     {type === "danger" && (
-                        <button
+                        <Button
                             onClick={onClose}
-                            className="flex-1 rounded-lg bg-gray-100 text-xs  font-medium hover:bg-gray-200"
+                            className="flex-1 text-xs font-medium btn-primary-cta"
                         >
                             {cancelText}
-                        </button>
+                        </Button>
                     )}
-
-                    <button
+                    <Button
                         onClick={onConfirm}
                         disabled={loading}
-                        className={`flex-1 rounded-lg py-2 text-xs font-medium text-white ${type === "danger"
-                            ? "bg-primary hover:bg-green-800"
-                            : "bg-primary hover:bg-green-800"
+                        className={`flex-1 rounded-lg py-2 text-xs font-medium  ${type === "danger"
+                            ? "btn-primary-cta-outline"
+                            : "btn-primary-cta"
                             }`}
                     >
                         {loading ? "Processing..." : confirmText}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

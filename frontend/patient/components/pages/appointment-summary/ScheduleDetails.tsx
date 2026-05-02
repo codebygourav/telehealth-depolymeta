@@ -1,77 +1,46 @@
-import { Building2, Calendar, Clock, Video } from 'lucide-react';
+import { StatusBadge, StatusBadgeStatus } from '@/components/custom/StatusBadge';
+import { Card, CardContent } from '@/components/ui/card';
+import { AppointmentSchedule } from '@/types/appointment-summary';
+import { Building2, Calendar, Clock, User, Video } from 'lucide-react';
 
 interface ScheduleDetailsProps {
-  date: string;
-  timeSlot: string;
-  consultationType: 'video' | 'in_person';
+  schedule: AppointmentSchedule;
 }
+function InfoBadges({ schedule }: { schedule: AppointmentSchedule }) {
+  return (
+    <div className="p-6 pt-4">
+      <div className="flex flex-col items-start justify-between gap-2 mb-3 md:flex-row ">
+        <div className="flex items-center gap-2">
+        <Calendar className="w-5 h-5 text-primary" />
+        <span className="text-lg font-semibold text-on-surface">Schedule Detail</span>
+        </div>
+        <StatusBadge status={schedule?.consultation_type as StatusBadgeStatus} label={schedule?.consultation_type_label || "N/A"} />
+      </div>
+      <div className="grid grid-cols-[140px_1fr] gap-y-3 text-sm leading-snug">
+        <div className="text-on-surface-variant">Date</div>
+        <div className="text-right">
+          {schedule?.date_formatted || "N/A"}
+        </div>
 
-const ScheduleDetails = ({ date, timeSlot, consultationType }: ScheduleDetailsProps) => {
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
+        <div className="text-on-surface-variant">Time</div>
+        <div className="text-right">{schedule?.time_formatted || "N/A"}</div>
+
+        <div className="text-on-surface-variant">Booking Type</div>
+        <div className="text-right capitalize">{schedule?.booking_type || "N/A"}</div>
+      </div>
+ 
+    </div>
+  );
+}
+const ScheduleDetails = ({ schedule, status, statusLabel }: ScheduleDetailsProps) => {
+  console.log("scheduleadsad dataasdasdasd", schedule);
 
   return (
-    <div className="p-8 pb-10 border-b border-dashed border-outline-variant/20">
-      <div className="flex items-center justify-between mb-8">
-        <div className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-          Schedule
-        </div>
-        <div className="px-3 py-1 bg-primary/5 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest">
-          Confirmed
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-surface-container-low rounded-2xl flex items-center justify-center text-primary">
-            <Calendar className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-              Date
-            </p>
-            <p className="text-lg font-bold text-primary">
-              {date}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-surface-container-low rounded-2xl flex items-center justify-center text-primary">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-              Time Slot
-            </p>
-            <p className="text-lg font-bold text-primary">
-              {timeSlot}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-surface-container-low rounded-2xl flex items-center justify-center text-primary">
-            {consultationType === 'video' ? <Video className="w-6 h-6" /> : <Building2 className="w-6 h-6" />}
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-              Consultation Type
-            </p>
-            <p className="text-lg font-bold text-primary capitalize">
-              {consultationType === 'video' ? 'Video Call' : 'In-Clinic Visit'}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Card className="w-full p-0 g-border global-radius-10">
+      <CardContent className="p-0">
+          <InfoBadges schedule={schedule} status={status} statusLabel={statusLabel} />
+      </CardContent>
+    </Card>
   );
 };
 

@@ -13,10 +13,10 @@ const ConfirmButton = ({ onClick, isLoading = false }: ConfirmButtonProps) => {
       disabled={isLoading}
       variant="default"
       size="lg"
-      className="w-full py-6 text-lg font-bold shadow-xl hover:shadow-2xl transition-all group"
+      className="w-full btn-primary-cta"
     >
       {isLoading ? "Processing..." : "Confirm & Book"}
-      <ChevronLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" />
+      <ChevronLeft className="w-4 h-4 transition-transform rotate-180 group-hover:translate-x-1" />
     </Button>
   );
 };

@@ -1,61 +1,69 @@
+import { StatusBadge, StatusBadgeStatus } from "@/components/custom/StatusBadge";
+import { Card, CardContent } from "@/components/ui";
+import { AppointmentPayment } from "@/types/appointment-summary";
+import { Calendar, CreditCard } from "lucide-react";
+
 interface PaymentSummaryProps {
-  fee: number;
-  serviceFee: number;
-  discount: number;
+  payment: AppointmentPayment;
 }
 
-const PaymentSummary = ({ fee, serviceFee, discount }: PaymentSummaryProps) => {
-  const total = fee + serviceFee - discount;
+const PaymentSummary = ({ payment }: PaymentSummaryProps) => {
 
   return (
-    <div className="p-8 pt-10 space-y-6">
-      <div className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">
-        Payment Summary
-      </div>
+    <Card className="p-0 global-radius-10 g-border">
+      <CardContent className="p-0">
+        <div className="p-4 sm:p-5 md:p-6">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-primary" />
+            <span className="text-lg font-semibold text-on-surface">Payment Summary</span>
+            </div>
+            <StatusBadge status={payment.status as StatusBadgeStatus} label={payment.status_label || "N/A"} />
+          </div>
       
       <div className="space-y-3">
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-on-surface-variant font-medium">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium text-on-surface-variant">
             Consultation Fee
           </span>
           <span className="font-bold text-primary">
-            ₹{fee}.00
+            {payment.consultation_fee_formatted}
           </span>
         </div>
         
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-on-surface-variant font-medium">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium text-on-surface-variant">
             Service Fee
           </span>
           <span className="font-bold text-primary">
-            ₹{serviceFee}.00
+            {payment.admin_fee_formatted}
           </span>
         </div>
         
-        {discount > 0 && (
-          <div className="flex justify-between items-center text-sm text-emerald-600">
+        {parseFloat(payment.discount_formatted) > 0 && (
+          <div className="flex items-center justify-between text-sm text-emerald-600">
             <span className="font-medium">
               Discount
             </span>
             <span className="font-bold">
-              -₹{discount}.00
+              -{payment.discount_formatted}
             </span>
           </div>
         )}
         
-        <div className="pt-4 border-t border-outline-variant/10">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">
+        <div className="flex items-center justify-between pt-4 border-t border-outline-variant/10">
+          <p className="flex flex-col items-start gap-2 mb-1 span-12">
             Total Amount
+            <span className="text-sm g-text-muted"> Inclusive of all taxes</span>
           </p>
-          <p className="text-3xl font-bold text-primary font-headline tracking-tight">
-            ₹{total}
+          <p className="text-2xl font-bold tracking-tight text-primary font-headline">
+            {payment.total_formatted}
           </p>
-          <p className="text-xs text-on-surface-variant mt-1">
-            Inclusive of all taxes
-          </p>
+          </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
