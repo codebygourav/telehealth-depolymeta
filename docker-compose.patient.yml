@@ -1,0 +1,19 @@
+services:
+  patient-deploymeta:
+    build:
+      context: ./frontend/patient
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${PATIENT_API_URL}
+    container_name: patient-deploymeta
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${PATIENT_API_URL}
+    networks:
+      - telehealth-network
+    ports:
+      - "3001:3000" # Expose to a specific port if not using the shared proxy, or let the proxy handle it
+
+networks:
+  telehealth-network:
+    external: true

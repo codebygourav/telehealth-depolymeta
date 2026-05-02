@@ -40,36 +40,6 @@ services:
     networks:
       - telehealth-network
 
-  # --- Patient Portal ---
-  patient-deploymeta:
-    build:
-      context: ./frontend/patient
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_BASE_URL: ${PATIENT_API_URL}
-    container_name: patient-deploymeta
-    restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_BASE_URL: ${PATIENT_API_URL}
-    networks:
-      - telehealth-network
-
-  # --- Doctor Portal ---
-  doctor-deploymeta:
-    build:
-      context: ./frontend/doctor
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_BASE_URL: ${DOCTOR_API_URL}
-        NEXT_PUBLIC_API_URL: ${DOCTOR_API_URL}
-    container_name: doctor-deploymeta
-    restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_BASE_URL: ${DOCTOR_API_URL}
-      NEXT_PUBLIC_API_URL: ${DOCTOR_API_URL}
-    networks:
-      - telehealth-network
-
   # --- Reverse Proxy (Nginx) ---
   proxy:
     image: nginx:alpine
@@ -83,15 +53,13 @@ services:
       - ./certs:/etc/nginx/certs
     depends_on:
       - admin-web
-      - patient-deploymeta
-      - doctor-deploymeta
     networks:
       - telehealth-network
 
 networks:
   telehealth-network:
+    name: telehealth-network
     driver: bridge
 
 volumes:
   db_data:
-
