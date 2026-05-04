@@ -61,10 +61,10 @@ const CustomTabs = ({
         <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
-            className={cn("w-full", className)}
+            className={cn("w-full container-max-width mx-auto", className)}
         >
             {/* Top Row */}
-            <div className="flex items-center justify-between w-full gap-4">
+            <div className="flex items-center justify-between gap-4">
                 <TabsList
                     className={cn(
                         "flex items-center transition-all duration-300 !border border-light-gray",

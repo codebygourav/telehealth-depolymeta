@@ -3,8 +3,6 @@
 import { FullWidthDashboardSection } from "@/components/pages/Dashboard/FullWidthDashboardSection";
 import { SectionHeader } from "@/components/custom/SectionHeader";
 import { DashboardCarousel } from "@/components/pages/Dashboard/dashboard-carousel";
-import { Button, Card, CardContent } from "@/components/ui";
-import { ExternalLink } from "lucide-react";
 
 export interface Advertisement {
     id: string;
@@ -26,30 +24,30 @@ export function Advertisements({ ads }: AdvertisementsProps) {
     const AdvertisementCard = ({ ad }: { ad: Advertisement }) => {
         return (
             <div className="p-5">
-            {ad.link && ad.link !== "#" ? (
-                <a href={ad.link} target="_blank" rel="noopener noreferrer">
+                {ad.link && ad.link !== "#" ? (
+                    <a href={ad.link} target="_blank" rel="noopener noreferrer">
+                        <img
+                            src={ad.image}
+                            alt={ad.title}
+                            className="object-cover w-full"
+                            loading="lazy"
+                        />
+                    </a>
+                ) : (
                     <img
                         src={ad.image}
                         alt={ad.title}
                         className="object-cover w-full"
                         loading="lazy"
                     />
-                </a>
-            ) : (
-                <img
-                    src={ad.image}
-                    alt={ad.title}
-                    className="object-cover w-full"
-                    loading="lazy"
-                />
-            )}
+                )}
             </div>
-           
+
         );
     };
 
     return (
-        <FullWidthDashboardSection className="pt-9 pb-9 bg-primary ">
+        <FullWidthDashboardSection className="pt-9 pb-9 bg-primary">
             <SectionHeader
                 title="Safe & Advanced Surgical Care"
                 subtitle="With Super specialist doctors and state-of-the-art technology, we cover the complete spectrum of medical specialties"

@@ -8,5 +8,5 @@ interface DashboardSectionProps {
 }
 
 export function DashboardSection({ children, className }: DashboardSectionProps) {
-    return <section className={cn("space-y-4 py-9", className)}>{children}</section>;
+    return <section className={cn("container-max-width mx-auto space-y-4 py-9", className)}>{children}</section>;
 }

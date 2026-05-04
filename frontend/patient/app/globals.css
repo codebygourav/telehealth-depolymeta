@@ -79,7 +79,7 @@
 
   --radius-2xl: 1.5rem;
   --radius-3xl: 2rem;
-  --container-max-width: 1640px;
+  --container-max-width: 1440px;
 
   --global-h1-24: 24px;
   --global-h2-22: 22px;
@@ -131,7 +131,7 @@
   --success-foreground: oklch(0.985 0 0);
   --feature-green: #6f9c84;
   --secondary-menu-color: #F5F6F8;
-  --container-max-width: 1640px;
+  --container-max-width: 1440px;
   --light-gray: #F5F6F8;
 }
 
@@ -172,7 +172,7 @@
   --success-foreground: oklch(0.985 0 0);
   --feature-green: #6f9c84;
   --secondary-menu-color: #F5F6F8;
-  --container-max-width: 1640px;
+  --container-max-width: 1440px;
   --light-gray: #F5F6F8;
 }
 
@@ -250,6 +250,7 @@
     font-weight: var(--font-weight-bold);
     line-height: 14px;
   }
+
   .text-span-16 {
     font-size: var(--global-span-16);
     font-weight: var(--font-weight-bold);
@@ -262,7 +263,7 @@
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
   }
-  
+
 }
 
 @layer components {
@@ -275,23 +276,25 @@
 
   /* Full-width primary CTA button used across cards/forms */
   .btn-primary-cta,
-  .button{
+  .button {
     border-radius: var(--global-radius);
     font-weight: bold !important;
     height: 39px !important;
-    @apply  text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95 py-3.5 px-5;
+    @apply text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95 py-3.5 px-5;
   }
+
   .btn-primary-cta-outline {
     border-radius: var(--global-radius);
     font-weight: bold !important;
     height: 39px !important;
-    @apply  text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95 py-3.5 px-5;
+    @apply text-base !font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95 py-3.5 px-5;
     border: 1px solid #E7E8EB;
     background: #FFFFFF;
     color: #055BD9;
   }
+
   .btn-primary-without-transition {
-    border-radius: var(--global-radius); 
+    border-radius: var(--global-radius);
     @apply mt-5 text-base font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/95;
   }
 
@@ -299,7 +302,7 @@
   /* Animate trailing icon (e.g. ChevronRight) consistently */
   .btn-primary>svg:last-child,
   .btn-primary-cta>svg:last-child,
-  btn-primary-cta a>svg:last-child{
+  btn-primary-cta a>svg:last-child {
     @apply ml-2 transition-transform duration-200 size-4;
   }
 
@@ -443,11 +446,13 @@
 
 
   .border-b {
-    border-bottom: 1px solid #E7E8EB  !important;
+    border-bottom: 1px solid #E7E8EB !important;
   }
+
   .border-t {
-    border-top: 1px solid #E7E8EB  !important;
+    border-top: 1px solid #E7E8EB !important;
   }
+
   .secondary-menu-color {
     background-color: var(--color-secondary-menu-color);
   }
@@ -591,6 +596,7 @@
   .g-text-muted {
     color: #6B7280;
   }
+
   .g-text-primary-muted {
     color: #a2a2a4;
   }
@@ -907,8 +913,8 @@
   }
 
   .g-success-badge {
-    background:rgba(244, 251, 247, 1);
+    background: rgba(244, 251, 247, 1);
     color: rgba(24, 206, 30, 1) !important;
     border-color: transparent !important;
   }
-} 
+}

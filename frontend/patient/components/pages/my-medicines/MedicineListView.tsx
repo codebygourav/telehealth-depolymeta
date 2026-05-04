@@ -27,10 +27,9 @@ export const MedicineListView = ({ onViewDetail }: MedicineListViewProps) => {
 
     const prescriptions = prescriptionsResponse?.data || [];
 
-    console.log("prescriptions : ", prescriptions);
-
     return (
         <div className="space-y-8 duration-500 animate-in fade-in">
+
             <HeroSection
                 title="Medicines"
                 description="Track your current and past medications."
@@ -46,17 +45,17 @@ export const MedicineListView = ({ onViewDetail }: MedicineListViewProps) => {
                 ]}
                 activeTab={activeTab}
                 onTabChange={(val) => setActiveTab(val as "current" | "past")}
-                className="max-w-md"
+                tabsListClassName="max-w-md"
             />
 
             {isListLoading ? (
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-6 container-max-width mx-auto w-full">
                     {[1, 2, 3, 4].map((i) => (
                         <Skeleton key={i} className="h-[200px] w-full global-radius" />
                     ))}
                 </div>
             ) : isListError ? (
-                <div className="py-20 text-center border border-dashed bg-destructive/5 global-radius border-destructive/20">
+                <div className="container-max-width mx-auto w-fullpy-20 text-center border border-dashed bg-destructive/5 global-radius border-destructive/20">
                     <h3 className="mb-2 text-xl font-bold text-destructive">
                         Failed to load medicines
                     </h3>
@@ -65,7 +64,7 @@ export const MedicineListView = ({ onViewDetail }: MedicineListViewProps) => {
                     </p>
                 </div>
             ) : prescriptions.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-6 container-max-width mx-auto w-full">
                     {prescriptions.map((prescription) => (
                         <MedicineCard
                             key={prescription.appointment_id}

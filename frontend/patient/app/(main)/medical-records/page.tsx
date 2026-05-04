@@ -61,17 +61,19 @@ const MedicalRecordsPage = () => {
 
     return (
         <div className="pb-12 mx-auto space-y-8">
-            
+
             <HeroSection title="Medical Records" description="Access your clinical history, lab results, and prescriptions." />
-            <div className="flex items-center justify-end">
-            <Button
+
+            <div className="flex items-center justify-end container-max-width mx-auto w-full">
+                <Button
                     onClick={() => setIsModalOpen(true)}
                     className="flex items-center justify-center h-12 font-bold global-radius btn-primary-cta"
                 >
                     <Upload className="w-5 h-5" />
                     <span>Upload New Report</span>
                 </Button>
-                </div>
+            </div>
+
             {/* DataTable */}
             <DataTable
                 columns={medicalRecordsColumns}

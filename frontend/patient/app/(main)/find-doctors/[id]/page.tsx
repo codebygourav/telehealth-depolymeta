@@ -87,7 +87,7 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
                 description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
             />
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="container-max-width w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
                 {/* Left Column - Doctor Info */}
                 <div className="lg:col-span-8 space-y-8">
@@ -102,7 +102,6 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
                                 <button
                                     onClick={() => setActiveTab('overview')}
                                     className={`
-                                                
                                                 transition-all 
                                                 whitespace-nowrap
                                                 text-sm font-semibold py-2 px-7 rounded-md

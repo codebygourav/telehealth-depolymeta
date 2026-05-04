@@ -198,8 +198,7 @@ const FindDoctorsContent = () => {
                     description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
                 />
 
-
-                <div className='max-w-1440 w-full mx-auto'>
+                <div className='container-max-width w-full mx-auto'>
                     <div className='flex items-center justify-between lg:flex-row flex-col'>
 
                         <div className='lg:basis-1/5 basis-full lg:w-auto w-full'>
@@ -249,7 +248,7 @@ const FindDoctorsContent = () => {
 
                 {/* Main Content */}
 
-                <div className="max-w-1440 w-full mx-auto flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-10">
+                <div className="container-max-width w-full mx-auto flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-10">
 
                     <div className="flex-grow">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-5 sm:mb-6 md:mb-8">

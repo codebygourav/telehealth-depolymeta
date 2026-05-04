@@ -232,7 +232,7 @@ const AppointmentsPage = () => {
                 title="My Appointments"
                 description='Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch.'
             />
-            <div className="space-y-6">
+            <div className="space-y-6 container-max-width mx-auto w-full">
                 <CustomTabs
                     variant="pill"
                     activeTabBg="#013220"
@@ -244,7 +244,6 @@ const AppointmentsPage = () => {
                     tabsListClassName="max-w-md"
                 />
             </div>
-
         </>
     );
 };

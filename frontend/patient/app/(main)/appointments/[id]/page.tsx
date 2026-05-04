@@ -203,7 +203,7 @@ const AppointmentSummaryPage = ({ params }: PageProps) => {
 
     if (error || !doctor) {
         return (
-            <div className="max-w-4xl pb-12 mx-auto">
+            <div className="container-max-width w-full mx-auto py-12 text-center">
                 <div className="py-12 text-center">
                     <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
                     <p className="text-destructive">
@@ -213,16 +213,16 @@ const AppointmentSummaryPage = ({ params }: PageProps) => {
             </div>
         );
     }
-    console.log("doctor.payment", doctor.payment);
+
     return (
         <>
-            <div className="container-max-width">
+            <div>
                 <HeroSection
                     title="Review Appointment"
                     description="Please confirm your session details"
                 />
 
-                <div className="grid items-start grid-cols-1 gap-5 lg:grid-cols-12">
+                <div className="container-max-width w-full mx-auto grid items-start grid-cols-1 gap-5 lg:grid-cols-12">
                     <div className="space-y-8 lg:col-span-7">
                         <div className="space-y-8">
                             <DoctorInfoCard doctor={doctor.doctor} />

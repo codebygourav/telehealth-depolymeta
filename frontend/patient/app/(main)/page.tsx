@@ -47,7 +47,8 @@ export default function Home() {
 
 	return (
 		<div className="space-y-5">
-			<header className="flex flex-col justify-between w-full gap-6 p-5 bg-white global-radius shadow-card-lg md:flex-row md:items-center">
+
+			<header className="container-max-width mx-auto flex flex-col justify-between w-full gap-6 p-5 bg-white global-radius shadow-card-lg md:flex-row md:items-center">
 
 				{/* Left Content */}
 				<div>
@@ -74,7 +75,8 @@ export default function Home() {
 					</Button>
 				)}
 			</header>
-			<div className="flex flex-col items-stretch gap-5 lg:flex-row">
+
+			<div className="container-max-width mx-auto flex flex-col items-stretch gap-5 lg:flex-row">
 
 				{/* Left - 40% */}
 				<div className="w-full lg:basis-[40%]">
