@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import RescheduleDialog from './RescheduleDialog';
 import { useRescheduleAppointment } from '@/mutations/useRescheduleAppointment';
 import { useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui';
+import { Card, CardContent } from '@/components/ui';
 
 interface ReportsAndNotesProps {
     reports: Report[];
@@ -38,12 +40,12 @@ export default function ReportsAndNotes({
     onCancel,
     appointmentStatus
 }: ReportsAndNotesProps) {
+
     const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
     const [isAlreadyRescheduled, setIsAlreadyRescheduled] = useState(
         appointmentStatus === "rescheduled"
     );
     const rescheduleMutation = useRescheduleAppointment();
-
     const queryClient = useQueryClient();
 
     useEffect(() => {
@@ -52,15 +54,11 @@ export default function ReportsAndNotes({
         }
     }, [appointmentStatus]);
 
-    // console.log("APPOINTMENT STATUS PROP:", appointmentStatus);
-
-
     const handleRescheduleClick = () => {
         if (isAlreadyRescheduled) {
             toast.error("You already rescheduled this appointment");
             return;
         }
-
 
         if (!doctorId) {
             toast.error('Doctor information not available');
@@ -82,16 +80,11 @@ export default function ReportsAndNotes({
             appointment_time: slot.booking_start_time
         };
 
-        // console.log("payload id", payload);
-
         rescheduleMutation.mutate(payload, {
             onSuccess: (data) => {
-                // console.log("response status", data?.data?.appointment_status);
+
                 const message = data.message || 'Appointment rescheduled successfully';
                 callbacks.onSuccess(message);
-                
-                // const status = data?.data?.appointment_status;
-                // console.log("status", status);
 
                 if (appointmentStatus === "rescheduled") {
                     setIsAlreadyRescheduled(true); // ✅ LOCK
@@ -100,7 +93,6 @@ export default function ReportsAndNotes({
 
             },
             onError: (error: any) => {
-                // console.error('Reschedule error:', error?.response?.data);
                 const errorMessage = error?.response?.data?.errors?.message
                     || error?.response?.data?.message
                     || 'Failed to reschedule appointment';
@@ -110,39 +102,37 @@ export default function ReportsAndNotes({
     };
 
     return (
-        <div className="lg:col-span-5 space-y-8">
-            <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-white rounded-[40px] p-8 shadow-sm border border-outline-variant/10"
-            >
+        <Card className="lg:col-span-5 space-y-8 rounded-lg p-5 justify-between">
+            <CardContent className='px-0'>
+
                 <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-lg font-bold font-headline text-primary">Manage Reports & Notes</h3>
+                    <h3 className="text-lg text-[#1F1E1E] font-semibold">Manage Reports & Notes</h3>
                     <button
                         onClick={onAddReport}
-                        className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors"
+                        className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"
                     >
-                        <Plus className="w-5 h-5" />
+                        <Plus size={18} strokeWidth={3} color='#055BD9' />
                     </button>
                 </div>
 
                 {reports.length === 0 ? (
                     <div className="text-center py-12 px-4">
-                        <div className="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-4 text-on-surface-variant/30">
-                            <FileText className="w-8 h-8" />
+                        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 text-on-surface-variant/30">
+                            <FileText size={32} color='#055BD9' />
                         </div>
-                        <p className="text-sm text-on-surface-variant font-medium leading-relaxed">
-                            You have not added any medical reports or notes. If you'd like to share them with your doctor, <button onClick={onAddReport} className="text-emerald-600 font-bold hover:underline">click here to upload</button>
+                        <p className="text-sm text-[#4D4D4D] font-medium leading-relaxed">
+                            You have not added any medical reports or notes. If you'd like to share them with your doctor,
+                            <button onClick={onAddReport} className="text-[#055BD9] font-semibold hover:underline"> click here to upload</button>
                         </p>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         {reports.map((report, index) => (
-                            <div key={`report-${report.id || index}`} className="p-5 bg-surface-container-low/30 rounded-3xl border border-outline-variant/5 relative">
-                                <div className="flex justify-between items-start mb-2">
+                            <div key={`report-${report.id || index}`} className="p-5 rounded-lg rounded-3xl border border-light-gray relative">
+                                <div className="flex justify-between items-start mb-1">
                                     <div>
-                                        <h4 className="font-bold text-primary text-sm mb-1">{report.title}</h4>
-                                        <p className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">{report.date}</p>
+                                        <h4 className="font-semibold text-[#1f1e1e] text-sm mb-1">{report.title}</h4>
+                                        <p className="text-[10px] text-[#4D4D4D]">{report.date}</p>
                                     </div>
                                     <div className="relative">
                                         <button
@@ -159,14 +149,14 @@ export default function ReportsAndNotes({
                                                     initial={{ opacity: 0, scale: 0.95, y: -10 }}
                                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                                    className="absolute right-0 top-full mt-2 w-36 bg-white rounded-2xl shadow-xl border border-outline-variant/10 z-20 overflow-hidden"
+                                                    className="absolute right-0 top-full mt-2 w-36 bg-white rounded-lg border-light-gray z-20 overflow-hidden"
                                                 >
                                                     <button
                                                         onClick={() => {
                                                             onViewReport(report);
                                                             setActiveMenu(null);
                                                         }}
-                                                        className="w-full px-4 py-3 text-left text-xs font-bold text-primary hover:bg-surface-container-low flex items-center gap-2"
+                                                        className="w-full px-4 py-3 text-left text-xs font-bold text-[#1F1E1E] hover:bg-surface-container-low flex items-center gap-2"
                                                     >
                                                         <Eye className="w-3.5 h-3.5 text-emerald-600" />
                                                         View
@@ -176,7 +166,7 @@ export default function ReportsAndNotes({
                                                             onEditReport(report);
                                                             setActiveMenu(null);
                                                         }}
-                                                        className="w-full px-4 py-3 text-left text-xs font-bold text-primary hover:bg-surface-container-low flex items-center gap-2"
+                                                        className="w-full px-4 py-3 text-left text-xs font-bold text-[#1F1E1E] hover:bg-surface-container-low flex items-center gap-2"
                                                     >
                                                         <Edit3 className="w-3.5 h-3.5 text-blue-600" />
                                                         Edit
@@ -193,46 +183,42 @@ export default function ReportsAndNotes({
                                         </AnimatePresence>
                                     </div>
                                 </div>
-                                <p className="text-xs font-bold text-on-surface-variant">Type: <span className="text-primary">{report.type}</span></p>
+                                <p className="text-xs font-semibold text-[#1f1e1e]">Type: <span className="text-primary">{report.type}</span></p>
                             </div>
                         ))}
 
                         {/* Note Section */}
                         <div className="mt-8 pt-8 border-t border-outline-variant/10">
                             <div className="flex items-center justify-between mb-4">
-                                <h4 className="text-sm font-bold text-primary">Note</h4>
+                                <h4 className="text-lg text-[#1F1E1E] font-semibold">Note</h4>
                             </div>
-                            <div className="p-5 bg-emerald-50/50 rounded-2xl border border-emerald-100/50">
-                                <p className="text-xs text-on-surface-variant leading-relaxed italic">
+                            <div className="p-5 bg-gray-100 rounded-lg border border-gray-200">
+                                <p className="text-xs text-gray-700 font-semibold">
                                     {note ? note : 'Not Defined'}
                                 </p>
                             </div>
                         </div>
                     </div>
                 )}
-            </motion.div>
+            </CardContent>
 
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-4">
 
                 {/* ✅ Reschedule button only if NOT rescheduled */}
                 {!isAlreadyRescheduled && (
-                    <button
-                        onClick={handleRescheduleClick}
-                        className="py-4 bg-[#0A2E1F] text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/10 hover:opacity-90 transition-all"
-                    >
+                    <Button onClick={handleRescheduleClick} className='py-3 h-auto font-semibold cursor-pointer'>
                         Reschedule
-                    </button>
+                    </Button>
                 )}
 
-                <button
+                <Button
                     onClick={onCancel}
-                    className={`py-4 bg-white text-primary border border-outline-variant/20 rounded-full font-bold text-sm hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm 
-            ${isAlreadyRescheduled ? 'col-span-2' : ''}
-        `}
+                    className={`${isAlreadyRescheduled ? 'col-span-2' : ''} py-3 h-auto font-semibold cursor-pointer`}
+                    variant="outline"
                 >
                     Cancel
-                </button>
+                </Button>
 
             </div>
 
@@ -244,9 +230,9 @@ export default function ReportsAndNotes({
                 appointmentId={appointmentId}
                 onConfirmReschedule={handleConfirmReschedule}
                 isLoading={rescheduleMutation.isPending}
-                // isAlreadyRescheduled={isAlreadyRescheduled}
                 isAlreadyRescheduled={isAlreadyRescheduled}
             />
-        </div>
+
+        </Card>
     );
 }

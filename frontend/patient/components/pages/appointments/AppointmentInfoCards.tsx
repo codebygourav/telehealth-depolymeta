@@ -97,25 +97,25 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
 
                     {/* Schedule Card */}
                     <Card className="rounded-lg p-5">
-                        <CardContent className="p-0 space-y-3 sm:space-y-4">
+                        <CardContent className="p-0 space-y-5">
                             <h3 className="text-lg text-[#1F1E1E] font-semibold flex items-center gap-2.5">
                                 <Calendar size={18} color='#055BD9' />
                                 Schedule Detail
                             </h3>
                             <div className="space-y-2.5 sm:space-y-3">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-[#4D4D4D]">Date</span>
                                     <span className="text-xs sm:text-sm font-medium text-[#4D4D4D]">
                                         {schedule?.date_formatted || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-[#4D4D4D]">Time</span>
                                     <span className="text-xs sm:text-sm font-medium text-[#4D4D4D]">
                                         {schedule?.time_formatted || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-[#4D4D4D]">Consultation Type</span>
                                     <span
                                         className={`text-[10px] sm:text-xs px-2 py-1 rounded-full w-fit ${getStatusColor(
@@ -126,7 +126,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                         {schedule?.consultation_type_label || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-[#4D4D4D]">Booking Type</span>
                                     <span className="text-xs sm:text-sm font-medium text-[#4D4D4D]">
                                         {schedule?.booking_type || "N/A"}
@@ -144,35 +144,35 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                 Patient Info
                             </h3>
                             <div className="space-y-2.5 sm:space-y-3">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-[#4D4D4D]">Name</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                         {patient?.name || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-[#4D4D4D]">Age</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                         {patient?.age_formatted || "N/A"}
                                     </span>
                                 </div>
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-[#4D4D4D]">Gender</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                                         {patient?.gender_formatted || "N/A"}
                                     </span>
                                 </div>
                                 {patient?.blood_group && (
-                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                    <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                         <span className="text-xs sm:text-sm text-[#4D4D4D]">Blood Group</span>
                                         <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{patient.blood_group}</span>
                                     </div>
                                 )}
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-[#4D4D4D]">Phone</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{patient?.phone || "N/A"}</span>
                                 </div>
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                                <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
                                     <span className="text-xs sm:text-sm text-[#4D4D4D]">Email</span>
                                     <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-all text-left sm:text-right">{patient?.email || "N/A"}</span>
                                 </div>

@@ -1,74 +1,121 @@
 "use client"
-import { motion } from 'motion/react';
+
+import { Card, CardContent } from "@/components/ui";
+import { Calendar, User } from "lucide-react";
+import { getStatusColor } from "@/src/utils/getStatusColor";
 
 interface AppointmentInfoProps {
     date?: string;
     time?: string;
     booking_type?: string;
+    consultation_type?: string;
     patient_name?: string;
     patient_age?: string;
     patient_gender?: string;
-    appointment_status?: string;
+    patient_phone?: string;
+    patient_email?: string;
+    patient_blood_group?: string;
 }
 
 export default function AppointmentInfo({
     date,
     time,
     booking_type,
+    consultation_type,
     patient_name,
     patient_age,
     patient_gender,
-    appointment_status
+    patient_phone,
+    patient_email,
+    patient_blood_group,
 }: AppointmentInfoProps) {
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-[40px] p-8 shadow-sm border border-outline-variant/10 space-y-8"
-        >
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
+
             {/* Appointment Details */}
-            <section>
-                <div className="flex md:items-center items-start justify-between mb-6">
-                    <h3 className="text-lg font-bold font-headline text-primary">Appointment Details</h3>
-                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-100">
-                        {appointment_status}
-                    </span>
-                </div>
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center py-3 border-b border-outline-variant/5">
-                        <span className="text-on-surface-variant font-medium text-sm">Date</span>
-                        <span className="font-bold text-primary text-sm">{date}</span>
+            <Card className="rounded-lg p-5">
+                <CardContent className="p-0 space-y-5">
+                    <h3 className="text-lg text-[#1F1E1E] font-semibold flex items-center gap-2.5">
+                        <Calendar size={18} color='#055BD9' />
+                        Appointment Details
+                    </h3>
+                    <div className="space-y-2.5 sm:space-y-3">
+                        <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-[#4D4D4D]">Date</span>
+                            <span className="text-xs sm:text-sm font-medium text-[#4D4D4D]">
+                                {date}
+                            </span>
+                        </div>
+                        <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-[#4D4D4D]">Time</span>
+                            <span className="text-xs sm:text-sm font-medium text-[#4D4D4D]">
+                                {time}
+                            </span>
+                        </div>
+                        <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-[#4D4D4D]">Consultation Type</span>
+                            <span
+                                className={`text-[10px] sm:text-xs px-2 py-1 rounded-full w-fit ${getStatusColor(
+                                    "session",
+                                    consultation_type
+                                )}`}
+                            >
+                                {consultation_type || "N/A"}
+                            </span>
+                        </div>
+                        <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-[#4D4D4D]">Booking Type</span>
+                            <span className="text-xs sm:text-sm font-medium text-[#4D4D4D]">
+                                {booking_type || "N/A"}
+                            </span>
+                        </div>
                     </div>
-                    <div className="flex justify-between items-center py-3 border-b border-outline-variant/5">
-                        <span className="text-on-surface-variant font-medium text-sm">Time</span>
-                        <span className="font-bold text-primary text-sm">{time}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-3">
-                        <span className="text-on-surface-variant font-medium text-sm">Booking Type</span>
-                        <span className="font-bold text-primary text-sm">{booking_type}</span>
-                    </div>
-                </div>
-            </section>
+                </CardContent>
+            </Card>
 
             {/* Patient Details */}
-            <section>
-                <h3 className="text-lg font-bold font-headline text-primary mb-6">Patient Details</h3>
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center py-3 border-b border-outline-variant/5">
-                        <span className="text-on-surface-variant font-medium text-sm">Name</span>
-                        <span className="font-bold text-primary text-sm">{patient_name}</span>
+            <Card className="rounded-lg p-5">
+                <CardContent className="p-0 space-y-5">
+                    <h3 className="text-lg text-[#1F1E1E] font-semibold flex items-center gap-2.5">
+                        <User size={18} color='#055BD9' />
+                        Patient Details
+                    </h3>
+                    <div className="space-y-2.5 sm:space-y-3">
+                        <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-[#4D4D4D]">Name</span>
+                            <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
+                                {patient_name}
+                            </span>
+                        </div>
+                        <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-[#4D4D4D]">Age</span>
+                            <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
+                                {patient_age}
+                            </span>
+                        </div>
+                        <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-[#4D4D4D]">Gender</span>
+                            <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
+                                {patient_gender}
+                            </span>
+                        </div>
+                        {patient_blood_group && (
+                            <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                                <span className="text-xs sm:text-sm text-[#4D4D4D]">Blood Group</span>
+                                <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{patient_blood_group}</span>
+                            </div>
+                        )}
+                        <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-[#4D4D4D]">Phone</span>
+                            <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">{patient_phone || "N/A"}</span>
+                        </div>
+                        <div className="flex flex-row justify-between items-center gap-1 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-[#4D4D4D]">Email</span>
+                            <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-all text-left sm:text-right">{patient_email || "N/A"}</span>
+                        </div>
                     </div>
-                    <div className="flex justify-between items-center py-3 border-b border-outline-variant/5">
-                        <span className="text-on-surface-variant font-medium text-sm">Age</span>
-                        <span className="font-bold text-primary text-sm">{patient_age}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-3">
-                        <span className="text-on-surface-variant font-medium text-sm">Gender</span>
-                        <span className="font-bold text-primary text-sm">{patient_gender}</span>
-                    </div>
-                </div>
-            </section>
-        </motion.div>
+                </CardContent>
+            </Card>
+        </div>
     );
 }

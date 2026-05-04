@@ -11,8 +11,8 @@ function InfoBadges({ schedule }: { schedule: AppointmentSchedule }) {
     <div className="p-6 pt-4">
       <div className="flex flex-col items-start justify-between gap-2 mb-3 md:flex-row ">
         <div className="flex items-center gap-2">
-        <Calendar className="w-5 h-5 text-primary" />
-        <span className="text-lg font-semibold text-on-surface">Schedule Detail</span>
+          <Calendar className="w-5 h-5 text-primary" />
+          <span className="text-lg font-semibold text-on-surface">Schedule Detail</span>
         </div>
         <StatusBadge status={schedule?.consultation_type as StatusBadgeStatus} label={schedule?.consultation_type_label || "N/A"} />
       </div>
@@ -28,7 +28,7 @@ function InfoBadges({ schedule }: { schedule: AppointmentSchedule }) {
         <div className="text-on-surface-variant">Booking Type</div>
         <div className="text-right capitalize">{schedule?.booking_type || "N/A"}</div>
       </div>
- 
+
     </div>
   );
 }
@@ -38,7 +38,7 @@ const ScheduleDetails = ({ schedule, status, statusLabel }: ScheduleDetailsProps
   return (
     <Card className="w-full p-0 g-border global-radius-10">
       <CardContent className="p-0">
-          <InfoBadges schedule={schedule} status={status} statusLabel={statusLabel} />
+        <InfoBadges schedule={schedule} status={status} statusLabel={statusLabel} />
       </CardContent>
     </Card>
   );

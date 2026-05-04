@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, use, useEffect } from 'react';
-import { ChevronLeft, X, Upload, ChevronDown } from 'lucide-react';
+import { X, Upload, ChevronDown } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { Report } from '@/types/medical-reports';
@@ -18,7 +18,6 @@ import AppointmentInfo from '@/components/pages/appointments/manage-appointment/
 import ReportsAndNotes from '@/components/pages/appointments/manage-appointment/ReportsAndNotes';
 import AddReportModal from '@/components/pages/appointments/manage-appointment/AddReportModal';
 import CancelConfirmationModal from '@/components/pages/appointments/manage-appointment/CancelConfirmationModal';
-import { DetailHeader } from '@/components/custom/DetailHeader';
 import HeroSection from '@/components/hero-section';
 
 interface PageProps {
@@ -189,8 +188,6 @@ export default function ManageAppointment({ params }: PageProps) {
         });
     };
 
-    // console.log("appointment status", appointment?.status);
-
     const handleModalSubmit = (newNote: string) => {
         updateInformation({
             appointmentId,
@@ -220,8 +217,6 @@ export default function ManageAppointment({ params }: PageProps) {
             <HeroSection
                 title="Manage Appointment"
                 description="Detailed information about your appointment."
-                onBack={() => router.back()}
-                showBackButton={true}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -230,15 +225,19 @@ export default function ManageAppointment({ params }: PageProps) {
                 <div className="lg:col-span-7 space-y-8">
                     <DoctorInfoCard
                         doctor={appointment?.doctor}
-                        appointmentStatus={appointment?.status_label || ''} />
+                        appointment_status={appointment?.status_label || ''}
+                    />
                     <AppointmentInfo
                         date={appointment?.schedule?.date_formatted}
                         time={appointment?.schedule?.time_formatted}
-                        booking_type={appointment?.schedule?.consultation_type_label}
+                        booking_type={appointment?.schedule?.booking_type}
+                        consultation_type={appointment?.schedule?.consultation_type_label}
                         patient_name={appointment?.patient?.name}
                         patient_age={appointment?.patient?.age_formatted}
                         patient_gender={appointment?.patient?.gender_formatted}
-                        appointment_status={appointment?.status_label}
+                        patient_phone={appointment?.patient?.phone ?? undefined}
+                        patient_email={appointment?.patient?.email ?? undefined}
+                        patient_blood_group={appointment?.patient?.blood_group ?? undefined}
                     />
                 </div>
 

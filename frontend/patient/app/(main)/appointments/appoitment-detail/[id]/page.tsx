@@ -1,7 +1,6 @@
 'use client';
 
 import { fetchAppointmentById } from '@/api/appointment-detail';
-import { DetailHeader } from '@/components/custom/DetailHeader';
 import AddReviewsDialouge from '@/components/pages/appointments/addReviewsDialouge';
 import { AppointmentInfoCards } from '@/components/pages/appointments/AppointmentInfoCards';
 import { MedicineCard } from '@/components/MedicineCard';
@@ -26,12 +25,12 @@ type AppointmentDetail = {
 };
 
 export default function AppointmentDetailPage() {
-    const { id } = useParams();
 
+    const { id } = useParams();
     const [data, setData] = useState<AppointmentDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedMedicineId, setSelectedMedicineId] = useState<string | null>(null);
-    console.log(data);
+
     useEffect(() => {
         const getData = async () => {
             try {
