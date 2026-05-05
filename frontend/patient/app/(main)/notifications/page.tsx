@@ -153,7 +153,7 @@ export default function Notifications() {
         <div className="container-max-width w-full mx-auto">
             <HeroSection
                 title="All Notification"
-                description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
+                description="See all your notification here"
             />
             <CustomTabs
                 variant="pill"

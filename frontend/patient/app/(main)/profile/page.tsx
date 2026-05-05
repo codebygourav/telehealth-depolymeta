@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/context/userContext";
 import PersonalInfoForm from "@/components/pages/profile/personal-info";
 import ManageAddressForm from "@/components/pages/profile/manage-address";
 import { User, MapPin, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import HeroSection from "@/components/hero-section";
 
 
 type TabKey = "personal_info" | "manage_address" | "notifications";
@@ -36,8 +37,15 @@ export default function ProfilePage() {
     ];
 
     return (
-        <div className=" sm:p-6 lg:p-8">
-            <div className="flex flex-col md:flex-row gap-8">
+        <div>
+
+            <HeroSection
+                title="Profile Settings"
+                description="Manage your personal information, address, and notification preferences."
+            />
+
+            <div className="flex flex-col md:flex-row gap-8 container-max-width w-full mx-auto">
+
                 {/* Sidebar */}
                 <aside className="w-full md:w-96 space-y-2">
                     <div className="bg-white dark:bg-slate-900 global-radius border border-slate-200 dark:border-slate-800 p-4 shadow-sm h-full">

@@ -49,6 +49,8 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
+          timeout: 10m
+          command_timeout: 20m
           script: |
             set -e
 
@@ -60,9 +62,12 @@ jobs:
             cd ${{ secrets.PROJECT_PATH }}/frontend/patient
             echo "NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }}" > .env
 
+            echo "🧹 Cleaning old containers..."
+            docker compose down --remove-orphans
+            docker rm -f tele-deploymeta-patient || true
+
             echo "🏗️  Rebuilding Patient container..."
-            docker compose down
-            docker compose build --no-cache
+            docker compose build
             docker compose up -d
             docker image prune -f
 

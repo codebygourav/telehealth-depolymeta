@@ -65,12 +65,13 @@ export default function AppointmentDetailPage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <div className="mx-auto max-w-8xl">
 
-                <HeroSection
-                    title="Appointments Detail"
-                    description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
-                />
+            <HeroSection
+                title="Appointments Detail"
+                description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
+            />
+
+            <div className="container-max-width mx-auto w-full">
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-12">
 
