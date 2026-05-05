@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: repo2-backend-app
+    container_name: tele-deploymeta-backend
     working_dir: /var/www/html
     volumes:
       - .:/var/www/html

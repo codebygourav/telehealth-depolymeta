@@ -1,12 +1,12 @@
 services:
-  nextjs-app:
+  tele-deploymeta-doctor:
     build:
       context: .
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
 
-    container_name: nextjs-app
+    container_name: tele-deploymeta-doctor
 
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}

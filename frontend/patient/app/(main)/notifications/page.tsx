@@ -150,7 +150,11 @@ export default function Notifications() {
     }
 
     return (
-        <div className="w-full mx-auto">
+        <div className="container-max-width w-full mx-auto">
+            <HeroSection
+                title="All Notification"
+                description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
+            />
             <CustomTabs
                 variant="pill"
                 activeTabBg="#013220"
