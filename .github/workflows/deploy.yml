@@ -55,20 +55,24 @@ jobs:
             set -e
 
             echo "🔄 Pulling latest code..."
-            cd ${{ secrets.PROJECT_PATH }}
+            cd ***
             git pull origin main
 
             echo "🔑 Writing .env..."
-            cd ${{ secrets.PROJECT_PATH }}/frontend/patient
-            echo "NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }}" > .env
+            cd ***/frontend/patient
+            echo "NEXT_PUBLIC_API_BASE_URL=" > .env
 
             echo "🧹 Cleaning old containers..."
             docker compose down --remove-orphans
             docker rm -f tele-deploymeta-patient || true
 
+            # free port 8001
+            fuser -k 8001/tcp || true
+
             echo "🏗️  Rebuilding Patient container..."
             docker compose build
             docker compose up -d
+
             docker image prune -f
 
             echo "✅ Patient deployed! Running on port 8001"
