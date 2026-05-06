@@ -1,4 +1,4 @@
-name: Smart Deploy - Telehealth Monorepo
+name: Smart Deploy
 
 on:
   push:
@@ -6,150 +6,117 @@ on:
       - main
 
 jobs:
-  # ─────────────────────────────────────────
-  # 1. Detect which service(s) changed
-  # ─────────────────────────────────────────
+
   detect-changes:
     runs-on: ubuntu-latest
+
     outputs:
       patient: ${{ steps.filter.outputs.patient }}
       doctor: ${{ steps.filter.outputs.doctor }}
       backend: ${{ steps.filter.outputs.backend }}
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
-      - name: Detect changed folders
-        uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
             patient:
               - 'frontend/patient/**'
+
             doctor:
               - 'frontend/doctor/**'
+
             backend:
               - 'backend/**'
 
-  # ─────────────────────────────────────────
-  # 2. Deploy Patient
-  #    Lives in: frontend/patient/
-  #    Has its own docker-compose.yml + Dockerfile
-  # ─────────────────────────────────────────
+  # ==========================================
+  # PATIENT
+  # ==========================================
   deploy-patient:
     needs: detect-changes
     if: needs.detect-changes.outputs.patient == 'true'
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: SSH → Rebuild Patient
+      - name: Deploy Patient
         uses: appleboy/ssh-action@v1.0.3
+
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
-          timeout: 10m
-          command_timeout: 20m
+
           script: |
             set -e
 
-            echo "🔄 Pulling latest code..."
-            cd ***
+            cd ${{ secrets.PROJECT_PATH }}
+
             git pull origin main
 
-            echo "🔑 Writing .env..."
-            cd ***/frontend/patient
-            echo "NEXT_PUBLIC_API_BASE_URL=" > .env
+            docker compose -f docker-compose.prod.yml up -d --build patient
 
-            echo "🧹 Cleaning old containers..."
-            docker compose down --remove-orphans
-            docker rm -f tele-deploymeta-patient || true
-
-            # free port 8001
-            fuser -k 8001/tcp || true
-
-            echo "🏗️  Rebuilding Patient container..."
-            docker compose build
-            docker compose up -d
-
-            docker image prune -f
-
-            echo "✅ Patient deployed! Running on port 8001"
-
-  # ─────────────────────────────────────────
-  # 3. Deploy Doctor
-  #    Lives in: frontend/doctor/
-  #    Has its own docker-compose.yml + Dockerfile
-  # ─────────────────────────────────────────
+  # ==========================================
+  # DOCTOR
+  # ==========================================
   deploy-doctor:
     needs: detect-changes
     if: needs.detect-changes.outputs.doctor == 'true'
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: SSH → Rebuild Doctor
+      - name: Deploy Doctor
         uses: appleboy/ssh-action@v1.0.3
+
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
+
           script: |
             set -e
 
-            echo "🔄 Pulling latest code..."
             cd ${{ secrets.PROJECT_PATH }}
+
             git pull origin main
 
-            echo "🔑 Writing .env..."
-            cd ${{ secrets.PROJECT_PATH }}/frontend/doctor
-            printf "NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }}\nNEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}\n" > .env
+            docker compose -f docker-compose.prod.yml up -d --build doctor
 
-            echo "🏗️  Rebuilding Doctor container..."
-            docker compose down
-            docker compose build --no-cache
-            docker compose up -d
-            docker image prune -f
-
-            echo "✅ Doctor deployed! Running on port 8000"
-
-  # ─────────────────────────────────────────
-  # 4. Deploy Backend (Laravel)
-  #    Lives in: backend/
-  #    Has its own docker-compose.yml + Dockerfile
-  #    DB container is never rebuilt to protect data
-  # ─────────────────────────────────────────
+  # ==========================================
+  # BACKEND
+  # ==========================================
   deploy-backend:
     needs: detect-changes
     if: needs.detect-changes.outputs.backend == 'true'
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: SSH → Rebuild Backend
+      - name: Deploy Backend
         uses: appleboy/ssh-action@v1.0.3
+
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
+
           script: |
             set -e
 
-            echo "🔄 Pulling latest code..."
             cd ${{ secrets.PROJECT_PATH }}
+
             git pull origin main
 
-            echo "🏗️  Rebuilding Backend (app + web only, db is preserved)..."
-            cd ${{ secrets.PROJECT_PATH }}/backend
-            docker compose stop app web
-            docker compose build --no-cache app web
-            docker compose up -d app web
+            docker compose -f docker-compose.prod.yml up -d --build app web
 
-            echo "⚙️  Running Laravel post-deploy tasks..."
-            sleep 5
-            docker compose exec -T app php artisan migrate --force
-            docker compose exec -T app php artisan config:cache
-            docker compose exec -T app php artisan route:cache
-            docker compose exec -T app php artisan view:cache
+            sleep 10
 
-            docker image prune -f
-            echo "✅ Backend deployed! Running on port 8100"
+            docker compose -f docker-compose.prod.yml exec -T app php artisan migrate --force

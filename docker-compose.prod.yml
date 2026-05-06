@@ -1,0 +1,101 @@
+services:
+
+  # ==============================
+  # PATIENT
+  # ==============================
+  patient:
+    build:
+      context: ./frontend/patient
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+
+    container_name: tele-patient
+
+    ports:
+      - "8001:3000"
+
+    restart: unless-stopped
+
+  # ==============================
+  # DOCTOR
+  # ==============================
+  doctor:
+    build:
+      context: ./frontend/doctor
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+
+    container_name: tele-doctor
+
+    ports:
+      - "8000:3000"
+
+    restart: unless-stopped
+
+  # ==============================
+  # BACKEND APP
+  # ==============================
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: tele-backend-app
+
+    working_dir: /var/www/html
+
+    volumes:
+      - ./backend:/var/www/html
+
+    depends_on:
+      - db
+
+    restart: unless-stopped
+
+  # ==============================
+  # NGINX
+  # ==============================
+  web:
+    image: nginx:alpine
+
+    container_name: tele-backend-web
+
+    ports:
+      - "8100:80"
+
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/nginx/default.conf:/etc/nginx/conf.d/default.conf
+
+    depends_on:
+      - app
+
+    restart: unless-stopped
+
+  # ==============================
+  # MYSQL
+  # ==============================
+  db:
+    image: mysql:8
+
+    container_name: tele-db
+
+    environment:
+      MYSQL_DATABASE: cmc_telehealth
+      MYSQL_USER: cmc_user
+      MYSQL_PASSWORD: cmc_pass
+      MYSQL_ROOT_PASSWORD: root
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - tele_db_data:/var/lib/mysql
+
+    restart: unless-stopped
+
+volumes:
+  tele_db_data:
