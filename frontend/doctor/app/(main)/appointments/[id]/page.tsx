@@ -10,15 +10,15 @@ import PrescriptionTab from "../detail-component/PrescriptionTab";
 import ReviewTab from "../detail-component/ReviewTab";
 import AppointmentHeader from "../detail-component/AppointmentHeader";
 import { Skeleton } from "@/components/ui/skeleton";
+import HeroSection from "@/components/ui/hero-section";
 
 export default function AppointmentDetail() {
+
     const params = useParams();
     const id = params?.id as string;
     const searchParams = useSearchParams();
     const initialTab = searchParams.get("tab") || "overview";
-
     const { data, isLoading, error } = useAppointmentById(id);
-
     const [activeTab, setActiveTab] = useState(initialTab);
 
     // Loading skeleton
@@ -81,22 +81,19 @@ export default function AppointmentDetail() {
     ];
 
     return (
-        <div className="space-y-3 sm:space-y-4 md:space-y-5 md:px-4">
+        <div className="container-max-width w-full mx-auto">
+
             {/* Page Title */}
-            <div>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary tracking-tight">
-                    Appointment Detail
-                </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    View and manage appointment details, reports, and prescriptions
-                </p>
-            </div>
+            <HeroSection
+                title="Appointment Detail"
+                description="View and manage appointment details, reports, and prescriptions"
+            />
 
             {/* Appointment Header */}
             <AppointmentHeader appointment={appointment} />
 
             {/* Custom Tabs with Horizontal Scroll on Mobile */}
-            <div className="w-full mt-5 md:mt-0">
+            <div className="w-full mt-5">
                 <CustomTabs
                     tabs={tabs}
                     activeTab={activeTab}

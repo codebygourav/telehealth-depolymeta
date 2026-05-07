@@ -12,6 +12,9 @@ interface StatsCardProps {
     badgeText?: string;
     icon?: React.ReactNode;
     subTitle?: string;
+    iconBgColor?: string;
+    progress?: string;
+    progressBgColor?: string;
 }
 
 export default function StatsCard({
@@ -20,24 +23,45 @@ export default function StatsCard({
     badgeText = "Patient base",
     icon,
     subTitle,
+    iconBgColor,
+    progress,
+    progressBgColor,
 }: StatsCardProps) {
     return (
-        <Card className="border-border overflow-hidden h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-[11px] sm:text-xs md:text-sm font-medium text-muted-foreground wrap-break-word leading-tight">
+        <div className="border-light-gray p-5 rounded-lg shadow-[0px_2px_4px_0px_#0000001A] overflow-hidden h-full">
+            <div className="flex flex-row items-center justify-between space-y-0">
+                <div className="text-[#373737] text-sm">
                     {title}
-                </CardTitle>
-                {icon && <div className="h-3 w-3 sm:h-4 sm:w-4 shrink-0 text-[#0f5132] ml-2">{icon}</div>}
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0">
-                <div className="text-lg sm:text-xl md:text-2xl font-bold">
-                    {value}
                 </div>
-                <p className="mt-1 flex items-start gap-1 text-[9px] sm:text-xs text-muted-foreground">
-                    {/* <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary shrink-0" /> */}
+                {icon &&
+                    <div className="h-10 w-10 rounded-md flex items-center justify-center"
+                        style={{ backgroundColor: iconBgColor || "" }}
+                    >
+                        {icon}
+                    </div>
+                }
+            </div>
+            <div className="text-[#1F1E1E] font-semibold text-lg mt-4">
+                {value}
+            </div>
+            <div className="text-[#4D4D4D] text-sm">
+                Next dose in 2 hours
+            </div>
+            <div className="mt-5">
+
+                {/* progress bar */}
+                <div className="w-full h-1 bg-[#E7E8EB]">
+
+                    <div className="h-[3px]"
+                        style={{ width: progress, backgroundColor: progressBgColor }}
+                    ></div>
+                </div>
+
+                <p className="mt-3 text-[#373737] text-xs">
                     <span>{subTitle}</span>
                 </p>
-            </CardContent>
-        </Card>
+            </div>
+
+        </div>
     );
 }

@@ -1,58 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useFeedbacks } from "@/queries/useFeedbacks";
 import { FeedbackCard } from "@/components/pages/feedback/FeedbackCard";
 import PaginationControls from "@/components/pagination/PaginationControls";
-import { MessageSquare, Star, AlertCircle } from "lucide-react";
+import { MessageSquare, AlertCircle } from "lucide-react";
 import { Button, Skeleton } from "@/components/ui";
+import HeroSection from "@/components/ui/hero-section";
 
 export default function FeedbacksPage() {
+
     const [page, setPage] = useState(1);
     const { data, isLoading, isError, refetch } = useFeedbacks(page);
-
     const reviews = data?.data || [];
     const pagination = data?.pagination;
-    const rawAverage = reviews.length > 0
-        ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length)
-        : 0;
-    const averageRating = rawAverage % 1 === 0 ? rawAverage : rawAverage.toFixed(1);
 
     return (
-        <div className="min-h-screen bg-slate-50/30 md:px-4">
-            {/* Header Section */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 md:mb-12">
-                <div className="space-y-2 sm:space-y-3 md:space-y-4">
-                    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-primary/10 text-primary border border-primary/10">
-                        <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Patient Testimonials</span>
-                    </div>
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
-                        Patient Feedbacks & Reviews
-                    </h1>
-                    <p className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                        See what your patients are saying about their experiences with you.
-                    </p>
-                </div>
+        <div className="min-h-screen bg-slate-50/30 md:px-4 container-max-width w-full mx-auto">
 
-                {/* Average Rating Card - Mobile Optimized */}
-                <div className="flex flex-row lg:flex-col items-center justify-between lg:items-end gap-3 sm:gap-4 bg-white/60 backdrop-blur-md p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-3xl border border-white shadow-premium-sm w-full lg:w-auto">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="flex">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <Star
-                                    key={i}
-                                    className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ${i < Math.floor(Number(averageRating)) ? "fill-yellow-400 text-yellow-400" : "fill-gray-100 text-gray-200"}`}
-                                />
-                            ))}
-                        </div>
-                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{averageRating}</span>
-                    </div>
-                    <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-widest italic">
-                        Average Rating
-                    </p>
-                </div>
-            </div>
+            {/* Header Section */}
+            <HeroSection
+                title="Patient Feedbacks & Reviews"
+                description="See what your patients are saying about their experiences with you."
+            />
 
             {/* Main Content */}
             <div className="relative pb-12 sm:pb-16 md:pb-20">

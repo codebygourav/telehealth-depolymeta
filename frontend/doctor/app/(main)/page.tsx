@@ -19,23 +19,21 @@ import {
     Bell,
     FileText,
     CalendarCheck,
-    Star as StarIcon
+    Star as StarIcon,
+    ChevronRight
 } from "lucide-react";
 import QuickActionsCard, { QuickActionItem } from "@/components/pages/home/quick-actions-card";
 import NotificationsCardContent from "@/components/ui/notifications-card-content";
-import { getUnreadCount } from "@/api/notification";
 
 const Home = () => {
 
-    const { user, token } = useAuth();
-    console.log("token : ", token)
+    const { user } = useAuth();
     const router = useRouter();
     const { data, isLoading, isError, error } = useDoctorHome();
-    console.log("data", data);
-    const { 
-        data: notificationsData, 
-        isLoading: notificationsLoading, 
-        error: notificationsError 
+    const {
+        data: notificationsData,
+        isLoading: notificationsLoading,
+        error: notificationsError
     } = useNotifications();
     const { mutate: markAsRead } = useReadNotification();
 
@@ -63,28 +61,40 @@ const Home = () => {
             title: "Today Appointments",
             value: summary?.todays_appointments ?? 0,
             badgeText: "Today",
-            icon: <Calendar className="h-4 w-4 text-[#0f5132]" />,
+            icon: <Calendar size={18} color="#18CE1E" />,
+            iconBgColor: "#F4FBF7",
+            progress: '80%',
+            progressBgColor: '#18CE1E',
             subTitle: "Scheduled consultations for today."
         },
         {
             title: "Upcoming Appointments",
             value: summary?.upcoming_appointments ?? 0,
             badgeText: "Scheduled",
-            icon: <Clock3 className="h-4 w-4 text-[#0f5132]" />,
+            icon: <Clock3 size={18} color="#FABD2E" />,
+            iconBgColor: "#FEF8EA",
+            progress: '70%',
+            progressBgColor: '#FABD2E',
             subTitle: "Your upcoming patient bookings."
         },
         {
             title: "Cancelled Appointments",
             value: summary?.cancelled_appointments ?? 0,
             badgeText: "Missed",
-            icon: <XCircle className="h-4 w-4 text-[#0f5132]" />,
+            icon: <XCircle size={18} color="#EF1E1E" />,
+            iconBgColor: "#FDE9ED",
+            progress: '40%',
+            progressBgColor: '#EF1E1E',
             subTitle: "Appointments cancelled by patients or system."
         },
         {
             title: "Average Ratings",
             value: summary?.average_review_score ?? 0,
             badgeText: "Avg",
-            icon: <Star className="h-4 w-4 text-[#0f5132]" />,
+            icon: <Star size={18} color="#48A3D7" />,
+            iconBgColor: "#EDF6FB",
+            progress: '20%',
+            progressBgColor: '#48A3D7',
             subTitle: "Your overall patient satisfaction score."
         }
     ];
@@ -122,16 +132,15 @@ const Home = () => {
         },
     ];
 
-    console.log("notificationsData", notificationsData);
-
     return (
-        <div className="flex flex-col gap-4 md:gap-6 md:px-4 w-full">
+        <div className="container-max-width w-full mx-auto">
+
             {/* Welcome Section */}
-            <section className="mb-2">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-3xl text-primary font-extrabold break-words">
+            <section className="border-light-gray p-5 rounded-lg shadow-[0px_2px_4px_0px_#0000001A] mb-5">
+                <h1 className="text-[#1F1E1E] font-bold text-2xl">
                     Welcome back, Dr. {user?.first_name || dashboard?.first_name || "Doctor"} {user?.last_name || dashboard?.last_name || ""}
                 </h1>
-                <p className="text-lg sm:text-base text-body mt-1">
+                <p className="text-[#4D4D4D] text-base mt-1">
                     Manage your consultations, review patient records, and deliver quality care seamlessly from your dashboard.
                 </p>
             </section>
@@ -157,7 +166,7 @@ const Home = () => {
             ) : (
                 <>
                     {/* Stats Cards Grid */}
-                    <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
                         {stats.map((card, index) => (
                             <StatsCard
                                 key={index}
@@ -166,44 +175,51 @@ const Home = () => {
                                 badgeText={card.badgeText}
                                 icon={card.icon}
                                 subTitle={card.subTitle}
+                                iconBgColor={card.iconBgColor}
+                                progress={card.progress}
+                                progressBgColor={card.progressBgColor}
                             />
                         ))}
                     </section>
 
                     {/* Today's Appointments & Notifications Section */}
                     <section className="flex flex-col lg:flex-row gap-4 md:gap-6">
+
                         {/* Appointments Section */}
-                        <div className="flex-1 rounded-xl sm:rounded-2xl border bg-white shadow-sm">
-                            <div className="flex flex-col p-3 sm:p-4 border-b">
-                                <h2 className="text-base sm:text-lg font-medium">Today's Appointments</h2>
-                                <span className="text-xs sm:text-sm text-muted-foreground">
-                                    You have {dashboard?.todays_appointments?.length ?? 0} appointments scheduled
-                                </span>
+                        <div className="flex-1 rounded-md shadow-[0px_2px_4px_0px_#0000001A] border-light-gray bg-white shadow-sm">
+
+                            <div className="flex items-center justify-between border-b border-[#E7E8EB] p-5">
+
+                                <div>
+                                    <h2 className="text-[#1F1E1E] text-base font-bold">Today's Appointments</h2>
+                                    <span className="text-xs sm:text-sm text-muted-foreground">
+                                        You have {dashboard?.todays_appointments?.length ?? 0} appointments scheduled
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <Link
+                                        href="/appointments"
+                                        className="text-[#1F1E1E] text-sm font-medium flex items-center gap-x-2"
+                                    >
+                                        View All
+                                        <ChevronRight size={15} color="#1F1E1E" strokeWidth={3} />
+                                    </Link>
+                                </div>
+
                             </div>
 
                             <div className="p-3 sm:p-4">
                                 {dashboard?.todays_appointments?.length ? (
-                                    <>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                                            {dashboard.todays_appointments.slice(0, 3).map((appointment) => (
-                                                <AppointmentCard
-                                                    key={appointment.id}
-                                                    appointment={appointment}
-                                                    variant="today"
-                                                />
-                                            ))}
-                                        </div>
-                                        {dashboard.todays_appointments.length > 3 && (
-                                            <div className="mt-4 text-center">
-                                                <Link
-                                                    href="/appointments"
-                                                    className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors w-full sm:w-auto"
-                                                >
-                                                    View All ({dashboard.todays_appointments.length})
-                                                </Link>
-                                            </div>
-                                        )}
-                                    </>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                                        {dashboard.todays_appointments.slice(0, 3).map((appointment) => (
+                                            <AppointmentCard
+                                                key={appointment.id}
+                                                appointment={appointment}
+                                                variant="today"
+                                            />
+                                        ))}
+                                    </div>
                                 ) : (
                                     <div className="text-center py-8 sm:py-12">
                                         <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
@@ -216,9 +232,9 @@ const Home = () => {
                         </div>
 
                         {/* Notifications Section */}
-                        <div className="w-full lg:w-[30%] min-w-[280px] rounded-xl sm:rounded-2xl border bg-white shadow-sm">
+                        <div className="w-full lg:w-[30%] min-w-[280px] rounded-lg border bg-white shadow-sm">
                             <div className="flex flex-col p-3 sm:p-4 border-b">
-                                <h2 className="text-base sm:text-lg font-medium">Notifications</h2>
+                                <h2 className="text-[#1E1E1E] font-bold text-lg">Notifications</h2>
                                 <span className="text-xs sm:text-sm text-muted-foreground">
                                     You have {notificationsData?.unread_count ?? 0} unread notifications
                                 </span>
@@ -235,6 +251,7 @@ const Home = () => {
                                 />
                             </div>
                         </div>
+
                     </section>
 
                     {/* Quick Actions Section */}

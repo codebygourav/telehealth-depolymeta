@@ -1,12 +1,13 @@
 
 export const STATUS_STYLES = {
+
   appointment: {
     confirmed:
       "bg-blue-100 text-blue-700 border border-blue-200",
     failed:
       "bg-red-100 text-red-700 border border-red-200",
     completed:
-      "bg-emerald-100 text-emerald-700 border border-emerald-200",
+      "bg-[#E1F9DF] text-[#18CE1E]",
     rescheduled:
       "bg-yellow-100 text-gray-700 border border-gray-200",
     pending:

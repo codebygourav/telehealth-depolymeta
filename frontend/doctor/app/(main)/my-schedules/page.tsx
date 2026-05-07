@@ -13,6 +13,7 @@ import { ScheduleDay, OPDSlot } from "@/types/schedule";
 import DoctorOpdSchedule from "@/components/pages/my-schedules/DoctorOpdSchedule";
 import BookAppointments from "@/components/pages/my-schedules/BookAppointments";
 import { Stethoscope } from "lucide-react";
+import HeroSection from "@/components/ui/hero-section";
 
 export const filterAppointmentsByDate = (
     appointments: any[],
@@ -144,16 +145,9 @@ const MySchedulesPage = () => {
     };
 
     return (
-        <div>
+        <div className="container-max-width w-full mx-auto">
 
-            <div className="space-y-1 sm:space-y-2">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-primary">
-                    Doctor's Schedule
-                </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                    Manage your OPD appointments and availability
-                </p>
-            </div>
+            <HeroSection title="My Schedules" description="Manage your OPD appointments and availability" />
 
             <Card className="border-border mt-5">
 
