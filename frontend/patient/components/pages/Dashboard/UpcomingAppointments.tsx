@@ -78,7 +78,7 @@ function AppointmentCard({
                         </Badge>
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-3 sm:gap-6 ">
+                    <div className="flex items-center justify-between">
                         <AppointmentMetaItem icon={Calendar} label="Date" value={appointment.date} />
                         <AppointmentMetaItem icon={Clock3} label="Time" value={appointment.time} />
                         <AppointmentMetaItem icon={Video} label="Type" value={appointment.typeLabel} />
@@ -112,11 +112,11 @@ export function UpcomingAppointments({
     onStartCall,
     onBookFirst,
 }: UpcomingAppointmentsProps) {
-   
+
     const button = <Button onClick={onBookFirst} className="btn-primary-cta global-radius px-5">Book Your First Appointment <ChevronRight className="size-4 m-0" /></Button>;
     if (!appointments || appointments.length === 0) {
         return (
-                <EmptyState
+            <EmptyState
                 title="No Upcoming Sessions"
                 description="You don't have any appointments scheduled at the moment."
                 button={button}
