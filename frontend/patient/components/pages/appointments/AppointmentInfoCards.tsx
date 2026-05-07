@@ -195,7 +195,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                     className="flex items-center justify-between p-3 sm:p-4 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-700"
                                 >
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center shrink-0">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#055bd929] rounded-lg flex items-center justify-center shrink-0">
                                             <Download size={20} color="#055BD9" />
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -213,7 +213,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                         rel="noopener noreferrer"
                                         className="text-emerald-600 hover:text-emerald-700 transition-colors shrink-0 ml-2"
                                     >
-                                        <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                                        <Eye size={18} color="#055BD9" />
                                     </a>
                                 </div>
                             ))}
@@ -229,7 +229,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                         <CardContent className="p-0 space-y-4 sm:space-y-5 md:space-y-6">
 
                             <h3 className="text-lg text-[#1F1E1E] font-semibold flex items-center gap-2.5">
-                                <span className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg text-emerald-600">
+                                <span className="p-1.5 bg-[#055bd929] rounded-md">
                                     <CreditCard size={18} color='#055BD9' />
                                 </span>
                                 Payment Detail

@@ -11,6 +11,7 @@ import { useCancelAppointment } from '@/mutations/useCancelAppointment';
 import { toast } from 'sonner';
 import { useMedicalReports } from '@/queries/useGetMedicalReports';
 import { useAuth } from '@/context/userContext';
+import { Button } from '@/components/ui';
 
 // Components
 import DoctorInfoCard from '@/components/pages/appointments/manage-appointment/DoctorInfoCard';
@@ -287,22 +288,14 @@ export default function ManageAppointment({ params }: PageProps) {
                 {/* Edit Report Modal */}
                 {showEditReport && (
                     <div key="edit-report-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                        <div
                             onClick={() => setShowEditReport(null)}
-                            className="absolute inset-0 bg-primary/40 backdrop-blur-sm"
+                            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                         />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl overflow-hidden"
-                        >
-                            <div className="p-8">
+                        <div className="relative w-full max-w-lg bg-white rounded-md overflow-hidden">
+                            <div className="p-5">
                                 <div className="flex items-center justify-between mb-8">
-                                    <h3 className="text-xl font-bold font-headline text-primary italic">Edit</h3>
+                                    <h3 className="text-[#1F1E1E] font-bold text-lg">Edit Report</h3>
                                     <button onClick={() => setShowEditReport(null)} className="p-2 hover:bg-surface-container rounded-full">
                                         <X className="w-6 h-6" />
                                     </button>
@@ -310,21 +303,21 @@ export default function ManageAppointment({ params }: PageProps) {
 
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 italic">Report Title</label>
+                                        <label className="text-[#4D4D4D] text-sm font-medium">Report Title</label>
                                         <input
                                             type="text"
                                             value={editTitle}
                                             onChange={(e) => setEditTitle(e.target.value)}
-                                            className="w-full p-4 bg-surface-container-low border border-outline-variant/10 rounded-2xl font-bold text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/20 italic"
+                                            className="w-full p-4 bg-white border-light-gray rounded-md outline-none mt-1.5"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 italic">Report Type</label>
+                                        <label className="text-[#4D4D4D] text-sm font-medium">Report Type</label>
                                         <div className="relative">
                                             <select
                                                 value={editType}
                                                 onChange={(e) => setEditType(e.target.value)}
-                                                className="w-full p-4 bg-surface-container-low border border-outline-variant/10 rounded-2xl font-bold text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/20 italic appearance-none"
+                                                className="w-full p-4 bg-white border-light-gray rounded-md outline-none mt-1.5 appearance-none"
                                             >
                                                 <option value="">Select an option</option>
                                                 {REPORT_TYPES.map(type => (
@@ -335,14 +328,14 @@ export default function ManageAppointment({ params }: PageProps) {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 italic">Replace File (optional)</label>
+                                        <label className="text-[#4D4D4D] text-sm font-medium">Replace File (optional)</label>
                                         <div className="relative group">
                                             <input
                                                 type="file"
                                                 onChange={(e) => setEditFile(e.target.files?.[0] || null)}
                                                 className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                             />
-                                            <div className="p-4 bg-surface-container-low border border-outline-variant/10 rounded-2xl flex items-center justify-between italic group-hover:bg-surface-container-low/80 transition-all">
+                                            <div className="w-full p-4 bg-white border-light-gray rounded-md outline-none mt-1.5 flex items-center justify-between">
                                                 <span className="text-xs text-on-surface-variant truncate max-w-[200px]">
                                                     {editFile ? editFile.name : (showEditReport.fileName || 'report.pdf')}
                                                 </span>
@@ -355,42 +348,36 @@ export default function ManageAppointment({ params }: PageProps) {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 mt-10">
-                                    <button
+                                <div className="flex items-center justify-end gap-4 pt-8">
+                                    <Button
+                                        variant="outline"
                                         onClick={() => setShowEditReport(null)}
-                                        className="py-4 bg-white text-primary border border-outline-variant/20 rounded-full font-bold text-sm italic hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all"
+                                        className="py-3 h-auto max-w-28 w-full font-semibold cursor-pointer"
                                     >
                                         Cancel
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
+                                        variant="default"
                                         onClick={handleSaveEditedReport}
-                                        className="py-4 bg-[#0A2E1F] text-white rounded-2xl font-bold text-sm italic hover:bg-emerald-950 transition-all flex items-center justify-center"
+                                        className="py-3 h-auto max-w-28 w-full font-semibold cursor-pointer"
                                     >
                                         Update
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
                     </div>
                 )}
 
                 {/* Edit Note Modal */}
                 {showEditNote && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                        <div
                             onClick={() => setShowEditNote(false)}
-                            className="absolute inset-0 bg-primary/40 backdrop-blur-sm"
+                            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                         />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl overflow-hidden"
-                        >
-                            <div className="p-8">
+                        <div className="relative w-full max-w-lg bg-white rounded-md shadow-2xl overflow-hidden">
+                            <div className="p-5">
                                 <div className="flex items-center justify-between mb-8">
                                     <h3 className="text-xl font-bold font-headline text-primary italic">Edit</h3>
                                     <button onClick={() => setShowEditNote(false)} className="p-2 hover:bg-surface-container rounded-full">
@@ -408,22 +395,24 @@ export default function ManageAppointment({ params }: PageProps) {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 mt-10">
-                                    <button
+                                <div className="flex items-center justify-end gap-4 pt-8">
+                                    <Button
+                                        variant="outline"
                                         onClick={() => setShowEditNote(false)}
-                                        className="py-4 bg-white text-primary border border-outline-variant/20 rounded-full font-bold text-sm italic hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all"
+                                        className="py-3 h-auto max-w-28 w-full font-semibold cursor-pointer"
                                     >
                                         Cancel
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
+                                        variant="default"
                                         onClick={() => setShowEditNote(false)}
-                                        className="py-4 bg-[#0A2E1F] text-white rounded-2xl font-bold text-sm italic"
+                                        className="py-3 h-auto max-w-28 w-full font-semibold cursor-pointer"
                                     >
                                         Update
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
                     </div>
                 )}
 

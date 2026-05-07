@@ -103,13 +103,14 @@ export default function ReportsAndNotes({
 
     return (
         <Card className="lg:col-span-5 space-y-8 rounded-lg p-5 justify-between">
+
             <CardContent className='px-0'>
 
                 <div className="flex items-center justify-between mb-8">
                     <h3 className="text-lg text-[#1F1E1E] font-semibold">Manage Reports & Notes</h3>
                     <button
                         onClick={onAddReport}
-                        className="p-2 bg-emerald-50 text-emerald-600 rounded-xl"
+                        className="p-2 bg-[#055bd929] text-emerald-600 rounded-xl"
                     >
                         <Plus size={18} strokeWidth={3} color='#055BD9' />
                     </button>
@@ -117,7 +118,7 @@ export default function ReportsAndNotes({
 
                 {reports.length === 0 ? (
                     <div className="text-center py-12 px-4">
-                        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 text-on-surface-variant/30">
+                        <div className="w-16 h-16 bg-[#055bd929] rounded-full flex items-center justify-center mx-auto mb-4 text-on-surface-variant/30">
                             <FileText size={32} color='#055BD9' />
                         </div>
                         <p className="text-sm text-[#4D4D4D] font-medium leading-relaxed">

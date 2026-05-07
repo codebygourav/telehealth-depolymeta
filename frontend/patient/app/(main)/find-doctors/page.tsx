@@ -205,9 +205,8 @@ const FindDoctorsContent = () => {
                             <h3 className='text-2xl font-semibold text-black'>Find a Doctor</h3>
                         </div>
 
-                        <div className='lg:basis-4/5 basis-full lg:w-auto w-full flex md:items-center items-start justify-end  gap-2 md:flex-row flex-col flex-wrap lg:mt-0 mt-2 !justify-between sm:justify-start'>
+                        <div className='lg:basis-4/5 basis-full lg:w-auto w-full flex md:items-center items-start justify-end gap-2 md:flex-row flex-col flex-wrap lg:mt-0 mt-2 !justify-end sm:justify-start'>
                             <SearchBar value={searchTerm} onChange={setSearchTerm} />
-
 
                             <div className='sm:max-w-[500px] w-full flex-col sm:flex-row md:flex-col lg:flex-row flex-1 flex !justify-between gap-2'>
                                 <SelectField
