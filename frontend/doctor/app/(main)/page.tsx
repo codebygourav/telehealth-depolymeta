@@ -20,7 +20,8 @@ import {
     FileText,
     CalendarCheck,
     Star as StarIcon,
-    ChevronRight
+    ChevronRight,
+    Leaf
 } from "lucide-react";
 import QuickActionsCard, { QuickActionItem } from "@/components/pages/home/quick-actions-card";
 import NotificationsCardContent from "@/components/ui/notifications-card-content";
@@ -126,9 +127,9 @@ const Home = () => {
         },
         {
             id: 5,
-            title: "All Reviews",
-            icon: <Star color="#1F1E1E" size={30} />,
-            href: "/feedbacks",
+            title: "My Leaves",
+            icon: <Leaf color="#1F1E1E" size={30} />,
+            href: "/my-leaves",
         },
     ];
 

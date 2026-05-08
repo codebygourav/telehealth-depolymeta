@@ -1,18 +1,18 @@
 import axiosInstance from "@/lib/axios";
-import type { GetMedicinesResponse } from "@/types/medicines";
+import type { GetLeavesResponse } from "@/types/leave";
 
-export interface GetMedicinesParams {
+export interface GetLeavesParams {
     page?: number;
     per_page?: number;
     search?: string;
 }
 
-export const getMedicines = async ({
+export const getLeaves = async ({
     page = 1,
     per_page = 5,
     search = "",
-}: GetMedicinesParams = {}): Promise<GetMedicinesResponse> => {
-    const response = await axiosInstance.get<GetMedicinesResponse>("/medicines", {
+}: GetLeavesParams = {}): Promise<GetLeavesResponse> => {
+    const response = await axiosInstance.get<GetLeavesResponse>("/leave/my", {
         params: {
             page,
             per_page,

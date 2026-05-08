@@ -1,21 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
-import { getMedicines } from "@/api/medicines";
+import { getLeaves } from "@/api/leave";
 
-interface UseMedicinesParams {
+interface UseLeavesParams {
     page: number;
     per_page: number;
     search: string;
 }
 
-export const useMedicines = ({
+export const useLeave = ({
     page,
     per_page,
     search,
-}: UseMedicinesParams) => {
+}: UseLeavesParams) => {
     return useQuery({
-        queryKey: ["medicines", page, per_page, search],
+        queryKey: ["leave", page, per_page, search],
         queryFn: () =>
-            getMedicines({
+            getLeaves({
                 page,
                 per_page,
                 search,

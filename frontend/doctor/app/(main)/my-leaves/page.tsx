@@ -2,19 +2,20 @@
 
 import * as React from "react";
 import { DataTable } from "@/components/ui/data-table";
-import { medicineColumns } from "@/app/(main)/medicine-inventory/column";
-import { useMedicines } from "@/queries/useMedicines";
+import { leaveColumns } from "@/app/(main)/my-leaves/column";
+import { useLeave } from "@/queries/useLeave";
 import HeroSection from "@/components/ui/hero-section";
 import { Button } from "@/components/ui";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ApplyLeaveModal } from "@/app/(main)/my-leaves/apply-leave-modal";
 
-export default function MedicinesPage() {
+export default function LeavesPage() {
 
+    const [isApplyModalOpen, setIsApplyModalOpen] = React.useState(false);
     const [page, setPage] = React.useState(1);
     const [searchInput, setSearchInput] = React.useState("");
     const [debouncedSearch, setDebouncedSearch] = React.useState("");
-
     const per_page = 5;
 
     React.useEffect(() => {
@@ -26,14 +27,14 @@ export default function MedicinesPage() {
         return () => clearTimeout(timer);
     }, [searchInput]);
 
-    const { data, isLoading, isFetching, error } = useMedicines({
+    const { data, isLoading, isFetching, error } = useLeave({
         page,
         per_page,
         search: debouncedSearch,
     });
 
     const router = useRouter();
-    const medicines = data?.data ?? [];
+    const leaves = data?.data ?? [];
     const pageCount = data?.pagination?.last_page ?? 1;
 
     return (
@@ -44,8 +45,7 @@ export default function MedicinesPage() {
                 description="Connect with world-class specialists curated for your health journey. Expert clinical care delivered with a human touch."
             />
 
-            {/* Back Button */}
-            <div className="mt-4">
+            <div className="flex items-center justify-between">
                 <Button
                     onClick={() => router.back()}
                     className="gap-2 h-9 sm:h-10 text-sm cursor-pointer"
@@ -53,7 +53,18 @@ export default function MedicinesPage() {
                 >
                     <ChevronLeft color="#fff" size={16} strokeWidth={4} />
                 </Button>
+                <Button
+                    onClick={() => setIsApplyModalOpen(true)}
+                    className="cursor-pointer py-2 h-auto px-4"
+                >
+                    Apply Leave
+                </Button>
             </div>
+
+            <ApplyLeaveModal 
+                open={isApplyModalOpen} 
+                onOpenChange={setIsApplyModalOpen} 
+            />
 
             {error ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
@@ -64,8 +75,8 @@ export default function MedicinesPage() {
             ) : null}
 
             <DataTable
-                columns={medicineColumns}
-                data={medicines}
+                columns={leaveColumns}
+                data={leaves}
                 loading={isLoading || isFetching}
                 pageCount={pageCount}
                 currentPage={page}
