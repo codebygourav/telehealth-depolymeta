@@ -30,6 +30,7 @@ const CustomTabs = ({
     tabsContentClassName,
     color = "primary",
 }: CustomTabsProps) => {
+
     const [internalActiveTab, setInternalActiveTab] = React.useState(
         defaultTab || tabs[0]?.key || ""
     );
@@ -44,7 +45,7 @@ const CustomTabs = ({
     };
     return (
         <Tabs value={activeTab} onValueChange={handleTabChange} className={cn("w-full", className)}>
-            {/* <TabsList className={cn("grid w-full grid-cols-4", tabsListClassName)}> */}
+
             <TabsList className={cn("flex justify-center items-center w-full gap-4", tabsListClassName)}>
                 {tabs.map((tab) => (
                     <TabsTrigger
@@ -66,6 +67,7 @@ const CustomTabs = ({
                     </TabsTrigger>
                 ))}
             </TabsList>
+
             {tabs.map((tab) => (
                 tab.content && (
                     <TabsContent
@@ -77,6 +79,7 @@ const CustomTabs = ({
                     </TabsContent>
                 )
             ))}
+
         </Tabs>
     );
 };

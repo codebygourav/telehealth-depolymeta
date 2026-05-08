@@ -7,13 +7,12 @@ import {
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, CheckCircle, Dot, Mail, Phone, Trash2, Video } from "lucide-react";
+import { Calendar, CheckCircle, Dot, Mail, Phone, Video } from "lucide-react";
 import { getStatusColor } from "@/src/utils/getStatusColor";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cancelAppointment } from "@/mutations/mange-appoitment";
 import CustomDialog from "@/components/custom/Dialogboxs";
-import { Separator } from "@/components/ui/separator";
 
 const getInitials = (name: string) => {
     if (!name) return "?";
@@ -60,16 +59,26 @@ export default function AppointmentHeader({ appointment }: { appointment: any })
     const callNow = appointment?.call_now || "";
 
     return (
-        <Card className="shadow-sm rounded-xl sm:rounded-2xl border overflow-hidden">
-            <CardContent>
+        <Card className="rounded-md !border-light-gray shadow-[0px_2px_4px_0px_#0000001A] p-3 lg:p-5">
+            <CardContent className="p-0">
                 <div className="flex flex-col w-full gap-3 sm:gap-4">
+
                     {/* Desktop Layout - Same as original */}
-                    <div className="hidden sm:flex sm:flex-col w-full gap-4">
-                        {/* Top Row - Date/Time, Badges, Cancel Button */}
-                        <div className="flex items-center justify-between flex-wrap gap-4">
-                            <div className="flex items-center text-base md:text-lg flex-wrap gap-2">
+                    <div className="hidden sm:flex sm:justify-between w-full gap-4">
+
+                        {/* Patient Info */}
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-24 w-24">
+                                <AvatarImage src={patient?.avatar} />
+                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                    {getInitials(patient?.name)}
+                                </AvatarFallback>
+                            </Avatar>
+
+                            <div className="flex flex-col gap-1">
+
                                 <div className="flex items-center gap-1">
-                                    <p className="mt-0.5 flex items-center font-bold">
+                                    <p className="mt-0.5 flex items-center font-bold text-[#055BD9] text-xs font-semibold">
                                         {schedule?.date_format || appointment?.appointment_date_format}
                                         <span className="opacity-50 px-1"> | </span>
                                         {schedule?.time_formatted || appointment?.appointment_time_formatted}
@@ -82,43 +91,8 @@ export default function AppointmentHeader({ appointment }: { appointment: any })
                                     </p>
                                 </div>
 
-                                <Badge className={`${getStatusColor("appointment", localStatus)} gap-1`}>
-                                    {appointment?.status_label || "Completed"}
-                                </Badge>
-
-                                <Badge variant="outline" className="gap-1">
-                                    <Video className="h-3 w-3" />
-                                    {schedule?.consultation_type_label || "Video Consultation"}
-                                </Badge>
-                            </div>
-
-                            <div>
-                                {callNow && joinUrl && (
-                                    <Button
-                                        variant="default"
-                                        onClick={() => window.open(`/start-consultation?room_url=${joinUrl}&appointment_id=${appointment.appointment_id}`, "_blank")}
-                                        disabled={!joinUrl}
-                                    >
-                                        Join Now
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-
-                        <Separator className="w-full opacity-50" />
-
-                        {/* Patient Info */}
-                        <div className="flex items-center gap-3">
-                            <Avatar className="h-14 w-14 border-2 border-primary/10">
-                                <AvatarImage src={patient?.avatar} />
-                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                                    {getInitials(patient?.name)}
-                                </AvatarFallback>
-                            </Avatar>
-
-                            <div className="flex flex-col gap-1">
-                                <div className="flex gap-1 flex-wrap">
-                                    <h2 className="text-base leading-none">
+                                <div className="flex items-center gap-1">
+                                    <h2 className="text-[#1F1E1E] text-2xl font-bold">
                                         {patient?.name || "Unknown Patient"}
                                     </h2>
                                     <span>
@@ -126,21 +100,49 @@ export default function AppointmentHeader({ appointment }: { appointment: any })
                                         {patient?.gender_formatted || "N/A"})
                                     </span>
                                 </div>
-                                <div className="flex items-center flex-wrap gap-1 text-sm text-muted-foreground">
-                                    <p className="text-sm font-medium flex items-center gap-1">
-                                        <Phone className="h-3 w-3" /> {patient?.phone || "Not provided"}
-                                    </p>
-                                    <span className="text-muted-foreground/50">|</span>
-                                    <p className="text-sm font-medium flex items-center gap-1">
+
+                                <div className="flex items-center flex-wrap gap-x-2.5 text-sm text-muted-foreground">
+                                    <p className="text-sm font-medium flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-[#F5F6F8]">
                                         <Mail className="h-3 w-3" /> {patient?.email || "Not provided"}
+                                    </p>
+                                    <p className="text-sm font-medium flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-[#F5F6F8]">
+                                        <Phone className="h-3 w-3" /> {patient?.phone || "Not provided"}
                                     </p>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Date/Time, Badges, Cancel Button */}
+                        <div className="flex flex-col items-end justify-between flex-wrap gap-2">
+
+                            <div className="flex flex-col items-end gap-y-2.5">
+                                <Badge className={`${getStatusColor("appointment", localStatus)} gap-1 py-1.5 px-3 !rounded-md h-auto`}>
+                                    {appointment?.status_label || "Completed"}
+                                </Badge>
+
+                                <Badge variant="outline" className="gap-1 border-[#E7E8EB] py-1.5 px-2 !rounded-md h-auto bg-[#F5F6F8]">
+                                    <Video className="h-3 w-3" />
+                                    {schedule?.consultation_type_label || "Video Consultation"}
+                                </Badge>
+                            </div>
+
+                            {callNow && joinUrl && (
+                                <Button
+                                    variant="default"
+                                    onClick={() => window.open(`/start-consultation?room_url=${joinUrl}&appointment_id=${appointment.appointment_id}`, "_blank")}
+                                    disabled={!joinUrl}
+                                    className="h-auto py-2 px-4"
+                                >
+                                    Join Now
+                                </Button>
+                            )}
+                        </div>
+
                     </div>
 
                     {/* Mobile Layout - Responsive Changes */}
                     <div className="flex flex-col gap-3 sm:hidden">
+
                         {/* Patient Profile - Top */}
                         <div className="flex items-center gap-3">
                             <Avatar className="h-12 w-12 border-2 border-primary/10 shrink-0">
@@ -171,8 +173,6 @@ export default function AppointmentHeader({ appointment }: { appointment: any })
                                 </div>
                             </div>
                         </div>
-
-                        <Separator className="w-full opacity-50" />
 
                         {/* Date & Time - Mobile */}
                         <div className="flex flex-wrap items-center gap-1">

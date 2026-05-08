@@ -4,8 +4,14 @@ import * as React from "react";
 import { DataTable } from "@/components/ui/data-table";
 import { patientsColumns } from "./column";
 import { usePatients } from "@/queries/usePatients";
+import HeroSection from "@/components/ui/hero-section";
+import { Button } from "@/components/ui";
+import { ChevronLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function PatientsPage() {
+
+    const router = useRouter();
 
     const [page, setPage] = React.useState(1);
     const [searchInput, setSearchInput] = React.useState("");
@@ -46,12 +52,19 @@ export default function PatientsPage() {
     const pageCount = data?.pagination?.last_page ?? 1;
 
     return (
-        <div className="space-y-6 md:px-4">
-            <div>
-                <h1 className="text-2xl font-semibold">All Patients</h1>
-                <p className="text-sm text-muted-foreground">
-                    Manage and view all patient appointments
-                </p>
+        <div className="space-y-6 md:px-4 container-max-width w-full mx-auto">
+
+            <HeroSection title="All Patients" description="Manage and view all patient appointments" />
+
+            <div className="mt-4">
+                {/* Back Button */}
+                <Button
+                    onClick={() => router.back()}
+                    className="gap-2 h-9 sm:h-10 text-sm cursor-pointer"
+                    size="sm"
+                >
+                    <ChevronLeft color="#fff" size={16} strokeWidth={4} />
+                </Button>
             </div>
 
             {error ? (

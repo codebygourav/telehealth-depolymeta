@@ -51,7 +51,7 @@ const CustomTabs = ({
     };
 
     return (
-        <Tabs value={activeTab} onValueChange={handleTabChange} className={cn("w-full", className)}>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className={cn("w-full gap-5", className)}>
 
 
             {/* <TabsList className={cn("grid w-full grid-cols-4", tabsListClassName)}> */}

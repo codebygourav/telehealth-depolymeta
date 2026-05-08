@@ -42,22 +42,12 @@ export default function Reports({ appointment }: { appointment: any }) {
                 >
                     {/* Desktop Layout - Hidden on mobile */}
                     <div className="hidden sm:block">
+
                         <CardHeader className="p-4 pb-2">
                             <div className="flex justify-between items-center gap-2">
                                 <CardTitle className="text-base flex items-center gap-2 flex-wrap">
-                                    {/* <span className="text-sm font-medium break-all line-clamp-2">{report.title}</span> */}
                                     <span className="text-sm font-medium break-words whitespace-normal">{report.title}</span>
-                                    {/* <Badge
-                                        variant="outline"
-                                        className={`${getStatusColor(
-                                            "report",
-                                            report.status
-                                        )} text-xs font-medium px-2 py-0.5`}
-                                    >
-                                        {report.status}
-                                    </Badge> */}
                                 </CardTitle>
-
                                 <Button
                                     size="sm"
                                     className="gap-2 cursor-pointer shrink-0"
@@ -80,7 +70,7 @@ export default function Reports({ appointment }: { appointment: any }) {
                                     {report.doctor_name}
                                 </span>
                             </p>
-                            <Badge variant="outline" className="text-xs mt-1 bg-blue-100 text-blue-700 border border-blue-200">
+                            <Badge variant="outline" className="text-xs mt-1 bg-blue-100 text-blue-700 border border-blue-200 py-1.5 px-3 !rounded-md h-auto">
                                 Uploaded by:{" "}
                                 <span className="">
                                     {report.report_uploaded_by === "Patient" ? appointment?.patient?.name : appointment?.doctor?.name}

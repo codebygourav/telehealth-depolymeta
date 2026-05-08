@@ -12,35 +12,30 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     Search,
     Download,
     ArrowLeft,
     Calendar,
     FileText,
-    FileCheck,
     Eye,
     Activity,
     Heart,
     X,
     Droplet,
-    User,
+    ChevronLeft,
 } from "lucide-react";
 
 import { usePatientReports } from "@/queries/usePatientReports";
-import type {
-    PatientReportItem,
-    PatientReportPatient,
-} from "@/types/patient-reports";
+import type { PatientReportItem, PatientReportPatient } from "@/types/patient-reports";
 import PaginationControls from "@/components/pagination/PaginationControls";
 import PatientReportCard from "@/components/pages/patient-report/PatientReportCard";
-// Import the new component
+import HeroSection from "@/components/ui/hero-section";
+
 
 export default function PatientReportsPage() {
-    const router = useRouter();
 
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedPatient, setSelectedPatient] =
         useState<PatientReportPatient | null>(null);
@@ -151,47 +146,49 @@ export default function PatientReportsPage() {
     };
 
     return (
-        <div className="space-y-4 sm:space-y-6 md:px-4">
-            {/* Back Button */}
-            <Button
-                onClick={() => router.back()}
-                className="gap-2 h-9 sm:h-10 text-sm"
-                size="sm"
-            >
-                <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Back
-            </Button>
+        <div className="container-max-width w-full mx-auto space-y-6">
 
-            {/* Header Section */}
-            <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-                <div className="flex-1 min-w-0">
-                    <h1 className="text-base xs:text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary tracking-tight truncate">
-                        Patient Reports
-                    </h1>
-                    <p className="text-[10px] xs:text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">
-                        View and manage patient medical reports
-                    </p>
+            <HeroSection title="Patient Reports" description="View and manage patient medical reports" />
+
+            <div className="flex md:items-center justify-between md:flex-row flex-col md:gap-0 gap-2">
+
+                <div>
+                    {/* Back Button */}
+                    <Button
+                        onClick={() => router.back()}
+                        className="gap-2 h-9 sm:h-10 text-sm cursor-pointer"
+                        size="sm"
+                    >
+                        <ChevronLeft color="#fff" size={16} strokeWidth={4} />
+                    </Button>
                 </div>
 
-                <Button
-                    variant="outline"
-                    className="gap-1.5 sm:gap-2 w-auto shrink-0 h-8 xs:h-9 sm:h-10 text-[11px] xs:text-xs sm:text-sm"
-                    disabled
-                >
-                    <Download className="h-3 w-3 xs:h-3.5 sm:h-4 xs:w-3.5 sm:w-4" />
-                    <span className="xs:hidden">Export All</span>
-                </Button>
-            </div>
+                <div className="flex md:items-center md:flex-row flex-col md:gap-0 gap-2">
 
-            {/* Search Bar */}
-            <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                    placeholder="Search by patient name, report name, or report type..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 sm:pl-9 h-9 sm:h-10 text-xs sm:text-sm"
-                />
+                    {/* Search Bar */}
+                    <div className="relative w-full md:min-w-[500px]">
+                        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by patient name, report name, or report type..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-8 sm:pl-9 text-xs sm:text-sm"
+                        />
+                    </div>
+
+                    {/* Header Section */}
+                    <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                        <Button
+                            variant="outline"
+                            className="gap-1.5 sm:gap-2 w-auto shrink-0 h-8 xs:h-9 sm:h-10 text-[11px] xs:text-xs sm:text-sm"
+                            disabled
+                        >
+                            <Download className="h-3 w-3 xs:h-3.5 sm:h-4 xs:w-3.5 sm:w-4" />
+                            <span className="xs:hidden">Export All</span>
+                        </Button>
+                    </div>
+                </div>
+
             </div>
 
             {/* Loading State */}
@@ -219,7 +216,7 @@ export default function PatientReportsPage() {
             {!isLoading && !isError && (
                 <>
                     {/* Patient Cards Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
                         {filteredPatients.map((patient) => (
                             <PatientReportCard
                                 key={patient.id}
@@ -258,7 +255,7 @@ export default function PatientReportsPage() {
             {/* Modal - Same as before */}
             {selectedPatient && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50">
-                    <Card className="w-full max-w-3xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto mx-2 sm:mx-0">
+                    <Card className="w-full max-w-3xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto mx-2 sm:mx-0 p-0">
                         <CardHeader className="sticky top-0 bg-background z-10 px-4 sm:px-6 py-3 sm:py-4">
                             <div className="flex justify-between items-start gap-3 sm:gap-4">
                                 <div className="min-w-0 flex-1">
@@ -293,7 +290,7 @@ export default function PatientReportsPage() {
                                     </div>
                                 ) : selectedPatientReports.length > 0 ? (
                                     selectedPatientReports.map((report) => (
-                                        <Card key={report.id} className="border-border">
+                                        <Card key={report.id} className="border-border p-0">
                                             <CardContent className="p-3 sm:p-4">
                                                 <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
                                                     <div className="flex gap-2 sm:gap-3 min-w-0 w-full sm:w-auto">

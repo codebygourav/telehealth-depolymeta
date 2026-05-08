@@ -13,6 +13,7 @@ import HeroSection from "@/components/hero-section";
 type TabKey = "personal_info" | "manage_address" | "notifications";
 
 export default function ProfilePage() {
+
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<TabKey>("personal_info");
 

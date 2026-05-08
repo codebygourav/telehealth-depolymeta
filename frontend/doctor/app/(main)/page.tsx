@@ -103,31 +103,31 @@ const Home = () => {
         {
             id: 1,
             title: "All Patients",
-            icon: <Users className="h-6 w-6 text-primary" />,
+            icon: <Users color="#1F1E1E" size={30} />,
             href: "/all-patients",
         },
         {
             id: 2,
             title: "Patient Reports",
-            icon: <FileText className="h-6 w-6 text-primary" />,
+            icon: <FileText color="#1F1E1E" size={30} />,
             href: "/patient-reports",
         },
         {
             id: 3,
             title: "Medicine Inventory",
-            icon: <MessageSquare className="h-6 w-6 text-primary" />,
+            icon: <MessageSquare color="#1F1E1E" size={30} />,
             href: "/medicine-inventory",
         },
         {
             id: 4,
             title: "Payment History",
-            icon: <CreditCard className="h-6 w-6 text-primary" />,
+            icon: <CreditCard color="#1F1E1E" size={30} />,
             href: "/payment-history",
         },
         {
             id: 5,
             title: "All Reviews",
-            icon: <Star className="h-6 w-6 text-primary" />,
+            icon: <Star color="#1F1E1E" size={30} />,
             href: "/feedbacks",
         },
     ];
@@ -255,7 +255,7 @@ const Home = () => {
                     </section>
 
                     {/* Quick Actions Section */}
-                    <section className="mt-2">
+                    <section className="mt-5">
                         <QuickActionsCard actions={quickActions} />
                     </section>
                 </>

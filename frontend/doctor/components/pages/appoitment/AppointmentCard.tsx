@@ -72,8 +72,8 @@ export default function AppointmentCard({
 
     return (
         <>
-            <Card className="group rounded-md !border-light-gray shadow-[0px_2px_4px_0px_#0000001A] h-full p-0">
-                <CardContent className="p-5">
+            <Card className="group rounded-md !border-light-gray shadow-[0px_2px_4px_0px_#0000001A] h-full lg:p-5 p-3">
+                <CardContent className="p-0">
 
                     {/* 🔹 Header */}
                     <div className="flex gap-2">
@@ -146,7 +146,7 @@ export default function AppointmentCard({
                     {/* Date & Time */}
                     <div className="bg-[#F5F6F8] rounded-lg p-5">
 
-                        <div className="flex items-center justify-between relative">
+                        <div className="flex lg:flex-row flex-col gap-5 lg:items-center items-start justify-between relative">
 
                             <div className="flex items-center gap-x-3.5">
                                 <div>
@@ -163,7 +163,7 @@ export default function AppointmentCard({
                                 </div>
                             </div>
 
-                            <div className='absolute left-1/2 top-0 w-px h-10 mx-auto bg-[#E7E8EB] md:block hidden'></div>
+                            <div className='absolute left-1/2 top-0 w-px h-10 mx-auto bg-[#E7E8EB] lg:block hidden'></div>
 
                             <div className="flex items-center gap-x-3.5">
                                 <div>

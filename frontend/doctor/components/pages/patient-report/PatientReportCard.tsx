@@ -26,11 +26,11 @@ interface PatientReportCardProps {
 
 
 interface Report {
-    id: string; 
+    id: string;
     report_type: string;
     report_name: string;
-    report_date_formatted?: string; 
-    uploaded_at?: string; 
+    report_date_formatted?: string;
+    uploaded_at?: string;
 }
 
 const getInitials = (name?: string | null) => {
@@ -78,11 +78,12 @@ export default function PatientReportCard({
     const reports = Array.isArray(patient.reports) ? patient.reports : [];
 
     return (
-        <Card className="border-border hover:shadow-lg transition-all flex flex-col h-full">
-            <CardHeader className="pb-2 px-4 sm:px-5 pt-4 sm:pt-5">
+        <Card className="flex flex-col h-full p-5 rounded-lg gap-0">
+
+            <CardHeader className="p-0">
                 <div className="flex justify-between items-start gap-2 sm:gap-3">
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                        <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-primary/20 shrink-0">
+                    <div className="flex items-center gap-x-4">
+                        <Avatar className="w-16 h-16">
                             <AvatarImage
                                 src={patient.avatar || ""}
                                 alt={patient.name || ""}
@@ -93,10 +94,10 @@ export default function PatientReportCard({
                         </Avatar>
 
                         <div className="min-w-0">
-                            <CardTitle className="text-sm sm:text-base md:text-lg truncate">
+                            <CardTitle className="text-[#1F1E1E] text-base font-semibold mb-1">
                                 {patient.name}
                             </CardTitle>
-                            <CardDescription className="text-xs sm:text-sm truncate">
+                            <CardDescription className="text-[#4D4D4D] text-sm font-medium">
                                 {patient.patient_id}
                             </CardDescription>
                         </div>
@@ -104,15 +105,11 @@ export default function PatientReportCard({
                 </div>
             </CardHeader>
 
-            <CardContent className="space-y-3 sm:space-y-4 flex-1 px-4 sm:px-5">
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                    <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span>Patient Reports Summary</span>
-                </div>
+            <CardContent className="space-y-3 sm:space-y-4 flex-1 p-0 mt-4">
 
-                <div className="pt-1 sm:pt-2">
-                    <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                <div>
+                    <div className="flex items-center justify-between mb-3">
+                        <p className="text-[#4D4D4D] text-sm font-medium">
                             Recent Reports
                         </p>
                         <Badge variant="outline" className="text-[10px] sm:text-xs">
@@ -124,17 +121,17 @@ export default function PatientReportCard({
                         {reports.slice(0, 2).map((report: Report) => (
                             <div
                                 key={report.id}
-                                className="flex items-center gap-1.5 sm:gap-2 text-xs bg-accent/30 p-1.5 sm:p-2 rounded"
+                                className="flex items-center justify-between bg-[#F5F6F8] rounded-md p-2"
                             >
-                                {getReportTypeIcon(report.report_type)}
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-[10px] sm:text-xs truncate">
+                                <div className="flex items-center gap-x-2">
+                                    {getReportTypeIcon(report.report_type)}
+                                    <p className="text-[#4D4D4D] text-xs font-normal">
                                         {report.report_name}
                                     </p>
-                                    <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate">
-                                        {report.report_date_formatted || report.uploaded_at}
-                                    </p>
                                 </div>
+                                <p className="text-[#4D4D4D] font-medium text-xs">
+                                    {report.report_date_formatted || report.uploaded_at}
+                                </p>
                             </div>
                         ))}
 
@@ -147,13 +144,12 @@ export default function PatientReportCard({
                 </div>
             </CardContent>
 
-            <div className="mt-auto px-4 sm:px-5 pb-4 sm:pb-5">
+            <div className="mt-4">
                 <Button
-                    className="w-full gap-2 h-9 sm:h-10 text-xs sm:text-sm"
+                    className="w-full font-semibold py-3 h-auto cursor-pointer"
                     onClick={() => onViewReports(patient)}
                 >
-                    <FileCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    Click to view reports
+                    Click to View Reports
                 </Button>
             </div>
         </Card>

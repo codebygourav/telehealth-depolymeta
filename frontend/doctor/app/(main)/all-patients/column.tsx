@@ -6,6 +6,7 @@ import type { PatientAppointmentRow } from "@/types/patients";
 import { useRouter } from "next/navigation";
 import { getStatusColor } from "@/src/utils/getStatusColor";
 import { Button } from "@/components/ui";
+import { ChevronRight } from 'lucide-react';
 
 const getStatusVariant = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -96,11 +97,12 @@ export const patientsColumns: ColumnDef<PatientAppointmentRow>[] = [
             const router = useRouter();
             return (
                 <Button
-                variant="link"
-                className="px-3.5 rounded-full"
+                    variant="default"
+                    className="px-3.5 rounded-md h-auto py-2 font-semibold"
                     onClick={() => router.push(`/appointments/${row.original.appointment_id}`)}
                 >
                     View Details
+                    <ChevronRight color="#fff" size={14} strokeWidth={3} />
                 </Button>
             );
         },

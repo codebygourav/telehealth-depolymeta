@@ -13,12 +13,10 @@ import { Button } from "@/components/ui";
 import { getStatusColor } from "@/src/utils/getStatusColor";
 
 export default function PreviousTab({ appointment }: { appointment: any }) {
-    const previous = appointment?.previous_appointments || [];
-    console.log("previous data", previous);
-    
-    
 
+    const previous = appointment?.previous_appointments || [];
     const router = useRouter();
+
     // ✅ EMPTY STATE
     if (!previous.length) {
         return (
@@ -38,18 +36,17 @@ export default function PreviousTab({ appointment }: { appointment: any }) {
         );
     }
 
-// ✅ DATA UI
     return (
-        <div className="grid md:grid-cols-3 grid-cols-1 gap-5">
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 grid-cols-1 gap-5">
             {previous.map((item: any) => (
                 <Card
                     key={item.id}
-                    className="rounded-2xl border shadow-sm hover:shadow-md transition"
+                    className="rounded-md transition"
                 >
                     <CardHeader className="pb-2 flex justify-between items-center">
+
                         <CardTitle className="text-base flex items-center gap-2">
                             <span>{item.notes}</span>
-
                             <Badge
                                 className={`${getStatusColor(
                                     "appointment",
@@ -60,19 +57,19 @@ export default function PreviousTab({ appointment }: { appointment: any }) {
                             </Badge>
                         </CardTitle>
 
-                      
-
                         <Button
                             size="sm"
                             className="gap-2 cursor-pointer"
                             onClick={() => router.push(`/appointments/${item.id}`)}
                         >
                             <ArrowUpRight className="h-4 w-4" />
-                           View
+                            View
                         </Button>
+
                     </CardHeader>
 
                     <CardContent className="space-y-3 text-sm">
+
                         {/* Date */}
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <Calendar className="h-4 w-4 text-primary" />
@@ -90,18 +87,11 @@ export default function PreviousTab({ appointment }: { appointment: any }) {
                             {item.consultation_type === "video" ? (
                                 <Video className="h-4 w-4 text-primary" />
                             ) : (
-                                    <MapPin className="h-4 w-4 text-primary" />
+                                <MapPin className="h-4 w-4 text-primary" />
                             )}
                             <span>{item.consultation_type_label}</span>
                         </div>
 
-                        {/* Notes */}
-                        {/* {item.notes && (
-                            <div className="pt-2 border-t">
-                                <p className="text-muted-foreground text-xs">Notes</p>
-                                <p className="font-medium">{item.notes}</p>
-                            </div>
-                        )} */}
                     </CardContent>
                 </Card>
             ))}
