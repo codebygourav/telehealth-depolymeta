@@ -14,4 +14,5 @@ Route::prefix('v2')->group(function () {
     Route::post('/test-verify-payment', [BookAppointmentController::class, 'verifyPayment'])
         ->middleware('throttle:verify-payment');
     require __DIR__ . '/api/auth.php';
+    require __DIR__ . '/api/wordpress.php';
 });

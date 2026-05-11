@@ -12,7 +12,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Define your scheduled tasks here.
+        $schedule->command('vaccinations:send-reminders --days=1')->dailyAt('08:00');
     }
 
     /**
