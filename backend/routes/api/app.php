@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\V2\Doctor\DoctorHomeController;
 use App\Http\Controllers\Api\V2\Doctor\MedicineController;
 use App\Http\Controllers\Api\V2\Doctor\PatientBrowserController;
 use App\Http\Controllers\Api\V2\Doctor\UsageAnalyticsController;
+use App\Http\Controllers\Api\V2\Doctor\DietTemplateController;
+use App\Http\Controllers\Api\V2\Doctor\PatientDietController;
 use App\Http\Controllers\Api\V2\Patient\DoctorBrowseController;
 use App\Http\Controllers\Api\V2\Patient\PatientHomeController;
 use App\Http\Controllers\Api\V2\Patient\PatientMedicalReportController;
@@ -23,6 +25,9 @@ use App\Http\Controllers\Api\V2\Wordpress\DepartmentController as WordpressDepar
 use App\Services\ApiResponseService;
 use App\Services\SettingService;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V2\Doctor\VaccinationController;
+use App\Http\Controllers\Api\V2\Doctor\VaccinationTemplateController;
+use App\Http\Controllers\Api\V2\Doctor\PatientVaccinationController;
 
 
 
@@ -35,16 +40,9 @@ Route::get('/app-profile-screens', function () {
     return ApiResponseService::success(responseKey: 'responses.success', data: SettingService::getProfileScreenContent());
 });
 // WordPress routes for website integration
-Route::prefix('wordpress')->group(function () {
-    Route::get('/departments', [WordpressDepartmentController::class, 'index']);
-    Route::get('/departments/{slug}', [WordpressDepartmentController::class, 'show']);
-});
+
 
 Route::middleware('auth:sanctum')->group(function () {
-
-
-
-
     // api used in patient screen (doctor profile, appointments, specialities and symptoms, all doctors, patient profile, doctor reviews etc)
     Route::prefix('patient')->group(function () {
         Route::get('/home', [PatientHomeController::class, 'index']);
@@ -60,6 +58,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{user_id}/medical-reports', [PatientMedicalReportController::class, 'store']);
         Route::delete('/medical-reports/{appointmentId}/{report}', [PatientMedicalReportController::class, 'medicalReportDeleteForAppointment']);
         Route::delete('/medical-reports/{report}', [PatientMedicalReportController::class, 'destroy']);
+
+        Route::get(
+            '/vaccinations',
+            [PatientVaccinationController::class, 'patientVaccinations']
+        );
+
+        Route::get(
+            '/vaccinations/{id}',
+            [PatientVaccinationController::class, 'patientShow']
+        );
+        Route::get('/diet-plan', [PatientDietController::class, 'patientPlan']);
+        Route::post('/diet/meal/{mealId}/complete', [PatientDietController::class, 'markMealCompleted']);
     });
     Route::prefix('prescriptions')->group(function () {
         Route::get('/{id}', [PrescriptionController::class, 'getPrescriptionByUser']);
@@ -78,6 +88,57 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/patient-detail/{appointment:id}', [PatientBrowserController::class, 'show']);
         Route::get('/medicines', [PrescriptionController::class, 'index']);
         Route::get('/departments', [DepartmentController::class, 'index']);
+
+        // vaccination master
+        Route::get('/vaccinations', [VaccinationController::class, 'index']);
+        Route::post('/vaccinations', [VaccinationController::class, 'store']);
+        Route::get('/vaccinations/{id}', [VaccinationController::class, 'show']);
+        Route::match(['put', 'post'], '/vaccinations/{id}', [VaccinationController::class, 'update']);
+        Route::delete('/vaccinations/{id}', [VaccinationController::class, 'destroy']);
+
+        // diet templates + plan assignment (simple flow)
+        Route::get('/diet/templates', [DietTemplateController::class, 'index']);
+        Route::post('/diet/templates', [DietTemplateController::class, 'store']);
+        Route::get('/diet/templates/{id}', [DietTemplateController::class, 'show']);
+        Route::match(['put', 'post'], '/diet/templates/{id}', [DietTemplateController::class, 'update']);
+        Route::delete('/diet/templates/{id}', [DietTemplateController::class, 'destroy']);
+        Route::post('/diet/assign', [PatientDietController::class, 'assign']);
+        Route::get('{patientId}/diet-plan', [PatientDietController::class, 'doctorPatientPlan']);
+        Route::match(['put', 'post'], '/diet/plans/{id}', [PatientDietController::class, 'updatePlan']);
+
+        // templates
+        Route::get('/vaccination-templates', [VaccinationTemplateController::class, 'index']);
+        Route::post('/vaccination-templates', [VaccinationTemplateController::class, 'store']);
+        Route::get('/vaccination-templates/{id}', [VaccinationTemplateController::class, 'show']);
+        Route::match(['put', 'post'], '/vaccination-templates/{id}', [VaccinationTemplateController::class, 'update']);
+        Route::delete('/vaccination-templates/{id}', [VaccinationTemplateController::class, 'destroy']);
+        Route::post('/vaccination-templates/{id}/clone', [VaccinationTemplateController::class, 'clone']);
+
+        // assign vaccination template
+        Route::post(
+            '/{patientId}/assign-template',
+            [PatientVaccinationController::class, 'assignTemplate']
+        );
+        Route::post(
+            '/patients/{patientId}/assign-custom-vaccination',
+            [PatientVaccinationController::class, 'assignCustomVaccination']
+        );
+        // patient vaccinations
+        Route::get(
+            '/{patientId}/vaccinations',
+            [PatientVaccinationController::class, 'index']
+        );
+        // mark vaccination completed
+        Route::post(
+            '/patient-vaccinations/{id}/complete',
+            [PatientVaccinationController::class, 'markCompleted']
+        );
+        // update vaccination
+        Route::match(['put', 'post'],
+            '/patient-vaccinations/{id}',
+            [PatientVaccinationController::class, 'update']
+        );
+
         Route::get('/{user_id}', [DoctorController::class, 'show']); // get doctor profile
         Route::post('/{user_id}', [DoctorController::class, 'update']); // update doctor profile
         Route::post('{appointmentId}/prescriptions', [PrescriptionController::class, 'store']);
@@ -113,7 +174,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/book-appointment', [BookAppointmentController::class, 'book']);
     Route::post('/verify-payment', [BookAppointmentController::class, 'verifyPayment'])
         ->middleware('throttle:verify-payment');
-
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
         Route::get('/unread-count', [NotificationController::class, 'unreadCount']);

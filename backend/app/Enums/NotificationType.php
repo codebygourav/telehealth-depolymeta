@@ -26,6 +26,7 @@ enum NotificationType: string
     case APPOINTMENT_REMINDER_45 = 'appointment_reminder_45';
     case APPOINTMENT_REMINDER_1_HOUR = 'appointment_reminder_1_hour';
     case APPOINTMENT_REMINDER_1_DAY = 'appointment_reminder_1_day';
+    case VACCINATION_REMINDER = 'vaccination_reminder';
 
     case PATIENT_KNOCKS_VIDEO_CALL = 'patient_knocks_video_call';
     case VIDEO_CALL_JOINED = 'video_call_joined';

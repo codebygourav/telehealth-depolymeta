@@ -220,6 +220,16 @@ class Patient extends Model
         return $this->hasMany(Appointment::class);
     }
 
+    public function vaccinations()
+    {
+        return $this->hasMany(PatientVaccination::class);
+    }
+
+    public function dietPlans()
+    {
+        return $this->hasMany(PatientDietPlan::class);
+    }
+
     public function previousAppointments()
     {
         return $this->hasMany(Appointment::class)
@@ -230,7 +240,6 @@ class Patient extends Model
             ->orderBy('appointment_date', 'desc')
             ->limit(5);
     }
-
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);
