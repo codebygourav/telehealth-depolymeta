@@ -4,13 +4,15 @@ import { useState } from "react";
 import { useAuth } from "@/context/userContext";
 import PersonalInfoForm from "@/components/pages/profile/personal-info";
 import ManageAddressForm from "@/components/pages/profile/manage-address";
-import { User, MapPin, Bell } from "lucide-react";
+import { User, MapPin, Bell, Syringe, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import HeroSection from "@/components/hero-section";
+import WeeklyMealChart from "@/components/pages/profile/weekly-meal-chart";
+import MyVaccination from "@/components/pages/profile/my-vaccination";
 
 
-type TabKey = "personal_info" | "manage_address" | "notifications";
+type TabKey = "personal_info" | "manage_address" | "notifications" | "my_diet" | "my_vaccinations";
 
 export default function ProfilePage() {
 
@@ -35,6 +37,16 @@ export default function ProfilePage() {
             label: "Notifications",
             icon: Bell,
         },
+        {
+            key: "my_diet" as TabKey,
+            label: "My Diet",
+            icon: Utensils,
+        },
+        {
+            key: "my_vaccinations" as TabKey,
+            label: "My Vaccinations",
+            icon: Syringe,
+        },
     ];
 
     return (
@@ -48,7 +60,7 @@ export default function ProfilePage() {
             <div className="flex flex-col md:flex-row gap-8 container-max-width w-full mx-auto">
 
                 {/* Sidebar */}
-                <aside className="w-full md:w-96 space-y-2">
+                <aside className="w-full md:w-64 space-y-2">
                     <div className="bg-white dark:bg-slate-900 global-radius border border-slate-200 dark:border-slate-800 p-4 shadow-sm h-full">
                         {sidebarItems.map((item) => {
                             const Icon = item.icon;
@@ -93,6 +105,16 @@ export default function ProfilePage() {
                             <div className="text-slate-500 dark:text-slate-400 py-10 text-center">
                                 Notification settings coming soon.
                             </div>
+                        </div>
+                    )}
+                    {activeTab === "my_diet" && (
+                        <div className="w-full">
+                            <WeeklyMealChart />
+                        </div>
+                    )}
+                    {activeTab === "my_vaccinations" && (
+                        <div className="w-full">
+                            <MyVaccination />
                         </div>
                     )}
                 </main>

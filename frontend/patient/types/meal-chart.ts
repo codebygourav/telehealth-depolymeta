@@ -1,0 +1,48 @@
+export interface Meal {
+  id: string;
+  meal_type: string;
+  meal_name: string;
+  instructions: string | null;
+  calories: number | null;
+  protein_grams: number | null;
+  carbs_grams: number | null;
+  fat_grams: number | null;
+  meal_time: string;
+  status: string;
+  patient_notes: string | null;
+  completed_at: string | null;
+  sort_order: number;
+}
+
+export interface DietPlanDay {
+  id: string;
+  day_number: number;
+  week_day: string;
+  date: string;
+  meals: Meal[];
+}
+
+export interface DietPlanData {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  template_id: string;
+  template_name: string;
+  template_description: string;
+  duration_days: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+  special_instructions: string | null;
+  days: DietPlanDay[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DietPlanResponse {
+  success: boolean;
+  message: string;
+  path: string;
+  timestamp: string;
+  data: DietPlanData;
+}

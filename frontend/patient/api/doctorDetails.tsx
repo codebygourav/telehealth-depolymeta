@@ -11,6 +11,5 @@ export const getDoctorDetail = async ({
   const response = await axiosInstance.get<DoctorDetailResponse>(
     `/patient/browse-doctor/${userId}`
   );
-
   return response.data;
 };

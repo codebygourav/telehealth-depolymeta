@@ -31,7 +31,7 @@ services:
     container_name: tele-doctor
 
     ports:
-      - "8000:3000"
+      - "8080:3000"
 
     restart: unless-stopped
 
@@ -54,6 +54,8 @@ services:
       - db
 
     restart: unless-stopped
+    ports:
+      - "8070:80"
 
   # ==============================
   # NGINX
@@ -64,7 +66,7 @@ services:
     container_name: tele-backend-web
 
     ports:
-      - "8100:80"
+      - "8200:80"
 
     volumes:
       - ./backend:/var/www/html
@@ -79,7 +81,9 @@ services:
   # MYSQL
   # ==============================
   db:
-    image: mysql:8
+    image: mysql:8.0
+    platform: linux/amd64
+    command: --default-authentication-plugin=mysql_native_password
 
     container_name: tele-db
 
@@ -94,6 +98,26 @@ services:
 
     volumes:
       - tele_db_data:/var/lib/mysql
+
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+
+    container_name: tele-phpmyadmin
+
+    platform: linux/amd64
+
+    depends_on:
+      - db
+
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+
+    ports:
+      - "8081:80"
 
     restart: unless-stopped
 

@@ -68,7 +68,7 @@ function AppointmentCard({
                                 <p className="mt-1.5 text-base sm:text-sm font-semibold text-white/85 ">
                                     Exp: {doctor?.experience || "14 years"}
                                     <span className="px-1.5">•</span>
-                                    {doctor?.languages?.join(", ") || "English, Hindi, Punjabi"}
+                                    {/* {doctor?.languages?.join(", ") || "English, Hindi, Punjabi"} */}
                                 </p>
                             </div>
                         </div>

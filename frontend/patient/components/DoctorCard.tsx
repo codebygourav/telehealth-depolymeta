@@ -66,7 +66,7 @@ const DoctorCard = ({ doctor, isLoading = false }: DoctorCardProps) => {
                                 </span>
                                 <span className="flex items-center gap-1.5 text-xs font-medium text-[#4D4D4D]">
                                     <Languages size={14} />
-                                    Lang: {doctor.languages_known?.join(', ') || 'N/A'}
+                                    {/* Lang: {doctor.languages_known?.join(', ') || 'N/A'} */}
                                 </span>
                             </div>
 

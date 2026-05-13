@@ -9,6 +9,8 @@ import { useLogin } from "@/mutations/useLogin"
 import { useAuth } from "@/context/userContext"
 import { User, UserRole } from "@/types/user-context"
 
+import Logo from "@/public/assets/icon/logo-light.png"
+
 interface LoginFormData {
     email: string
     password: string
@@ -62,7 +64,7 @@ const LoginPage = () => {
                     const payload = (responseData as any)?.data || responseData;
                     const user = (payload as any)?.user || payload;
                     const token = (responseData as any)?.token || (payload as any)?.token;
-                    
+
                     if (!user) {
                         console.error('User object is undefined in response:', responseData);
                         return;
@@ -119,7 +121,7 @@ const LoginPage = () => {
                 <div className="mb-4 flex justify-center">
                     {mounted && (
                         <Image
-                            src="/icons/logo-light.png"
+                            src={Logo}
                             alt="Company Logo"
                             width={120}
                             height={40}
@@ -140,10 +142,6 @@ const LoginPage = () => {
                         </div>
                     </div>
                 )}
-
-                <p className="text-sm text-muted-foreground">
-                    Sign in to your account to continue
-                </p>
 
                 {isError && (
                     <div className="mt-3 rounded-md bg-red-50 p-3">
