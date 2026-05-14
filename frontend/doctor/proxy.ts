@@ -4,8 +4,8 @@ import type { NextRequest } from 'next/server';
 const authRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password', '/login', '/register'];
 
 export function proxy(request: NextRequest) {
-    const token = request.cookies.get('token')?.value;
-    const role = request.cookies.get('role')?.value;
+    const token = request.cookies.get('doctor_token')?.value;
+    const role = request.cookies.get('doctor_role')?.value;
     const path = request.nextUrl.pathname;
 
     const isAuthRoute = authRoutes.some(route => path.startsWith(route));

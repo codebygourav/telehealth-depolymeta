@@ -11,6 +11,9 @@ import ReviewTab from "../detail-component/ReviewTab";
 import AppointmentHeader from "../detail-component/AppointmentHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import HeroSection from "@/components/ui/hero-section";
+import { DietPlanManagement } from "@/app/(main)/appointments/detail-component/DietPlanManagement";
+import { VaccinationManagement } from "@/app/(main)/appointments/detail-component/VaccinationManagement";
+
 
 export default function AppointmentDetail() {
 
@@ -67,6 +70,16 @@ export default function AppointmentDetail() {
             key: "previous",
             label: "Previous Appointments",
             content: <PreviousTab appointment={appointment} />,
+        },
+        {
+            key: "vaccination",
+            label: "Vaccination",
+            content: <VaccinationManagement />,
+        },
+        {
+            key: "diet",
+            label: "Diet Plan",
+            content: <DietPlanManagement />,
         },
         {
             key: "prescription",

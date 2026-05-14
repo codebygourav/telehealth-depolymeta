@@ -15,7 +15,7 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const USER_KEY = "@user";
+const USER_KEY = "@doctor_user";
 const TOKEN_KEY = "@token";
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -53,8 +53,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         try {
             localStorage.setItem(USER_KEY, JSON.stringify(userData));
             localStorage.setItem(TOKEN_KEY, authToken);
-            document.cookie = `token=${authToken}; path=/; max-age=604800; samesite=lax`;
-            document.cookie = `role=${userData.role}; path=/; max-age=604800; samesite=lax`;
+            document.cookie = `doctor_token=${authToken}; path=/; max-age=604800; samesite=lax`;
+            document.cookie = `doctor_role=${userData.role}; path=/; max-age=604800; samesite=lax`;
             console.log("UserContext: values saved to localStorage and cookies");
         } catch (e) {
             console.log("Error saving auth data", e);
@@ -66,10 +66,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setToken(null);
         setAuthToken(null);
         try {
-            localStorage.removeItem(USER_KEY);
-            localStorage.removeItem(TOKEN_KEY);
-            document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-            document.cookie = "role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            localStorage.removeItem("@doctor_user");
+            localStorage.removeItem("@doctor_token");
+
+            document.cookie =
+                "doctor_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+            document.cookie =
+                "doctor_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
         } catch (e) {
             console.log("Error clearing auth data", e);
         }

@@ -11,8 +11,8 @@ const authRoutes = [
 ];
 
 export function proxy(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
-  const role = request.cookies.get("role")?.value;
+  const token = request.cookies.get("patient_token")?.value;
+  const role = request.cookies.get("patient_role")?.value;
   const path = request.nextUrl.pathname;
 
   const isAuthRoute = authRoutes.some((route) => path.startsWith(route));
