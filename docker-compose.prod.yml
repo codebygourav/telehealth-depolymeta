@@ -97,5 +97,23 @@ services:
 
     restart: unless-stopped
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+
+    container_name: tele-phpmyadmin
+
+    platform: linux/amd64
+
+    depends_on:
+      - db
+
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+
+    ports:
+      - "8081:80"
+
 volumes:
   tele_db_data:
