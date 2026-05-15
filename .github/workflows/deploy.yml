@@ -57,6 +57,7 @@ jobs:
 
             cd ${{ secrets.PROJECT_PATH }}
 
+            git reset --hard
             git pull origin main
 
             docker compose -f docker-compose.prod.yml up -d --build patient
@@ -85,6 +86,7 @@ jobs:
 
             cd ${{ secrets.PROJECT_PATH }}
 
+            git reset --hard
             git pull origin main
 
             docker compose -f docker-compose.prod.yml up -d --build doctor
@@ -113,6 +115,7 @@ jobs:
 
             cd ${{ secrets.PROJECT_PATH }}
 
+            git reset --hard
             git pull origin main
 
             docker compose -f docker-compose.prod.yml up -d --build app web
