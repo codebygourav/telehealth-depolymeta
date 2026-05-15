@@ -122,42 +122,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/patients/{patientId}/profiles', [PatientVaccinationController::class, 'storePatientProfile']);
         Route::match(['put', 'post'], '/patients/{patientId}/profiles/{profileId}', [PatientVaccinationController::class, 'updatePatientProfile']);
         Route::delete('/patients/{patientId}/profiles/{profileId}', [PatientVaccinationController::class, 'destroyPatientProfile']);
-        Route::post(
-            '/{patientId}/assign-template',
-            [PatientVaccinationController::class, 'assignTemplate']
+        Route::post('/{patientId}/assign-template',[PatientVaccinationController::class, 'assignTemplate']
         );
-        Route::post(
-            '/patients/{patientId}/assign-custom-vaccination',
-            [PatientVaccinationController::class, 'assignCustomVaccination']
+        Route::post('/patients/{patientId}/assign-custom-vaccination',[PatientVaccinationController::class, 'assignCustomVaccination']
         );
         // patient vaccinations
-        Route::get(
-            '/{patientId}/vaccination-program-assignments',
-            [PatientVaccinationController::class, 'doctorPatientPrograms']
+        Route::get('/{patientId}/vaccination-program-assignments',[PatientVaccinationController::class, 'doctorPatientPrograms']
         );
-        Route::get(
-            '/{patientId}/vaccinations',
-            [PatientVaccinationController::class, 'index']
-        );
+        Route::get('/{patientId}/vaccinations',[PatientVaccinationController::class, 'index']);
         // mark vaccination completed
-        Route::post(
-            '/patient-vaccinations/{id}/complete',
-            [PatientVaccinationController::class, 'markCompleted']
-        );
-        Route::post(
-            '/patient-vaccinations/{id}/documents',
-            [PatientVaccinationController::class, 'addDocument']
-        );
-        Route::delete(
-            '/vaccination-documents/{documentId}',
-            [PatientVaccinationController::class, 'deleteDocument']
-        );
+        Route::post('/patient-vaccinations/{id}/complete',[PatientVaccinationController::class, 'markCompleted']);
+        Route::post('/patient-vaccinations/{id}/documents',[PatientVaccinationController::class, 'addDocument']);
+        Route::delete('/vaccination-documents/{documentId}',[PatientVaccinationController::class, 'deleteDocument']);
         // update vaccination
-        Route::match(
-            ['put', 'post'],
-            '/patient-vaccinations/{id}',
-            [PatientVaccinationController::class, 'update']
-        );
+        Route::match(['put', 'post'],'/patient-vaccinations/{id}',[PatientVaccinationController::class, 'update']);
 
         Route::get('/{user_id}', [DoctorController::class, 'show']); // get doctor profile
         Route::post('/{user_id}', [DoctorController::class, 'update']); // update doctor profile
