@@ -1,23 +1,23 @@
 "use client";
 
 import {
-    Avatar,
-    AvatarFallback,
-    AvatarImage,
-    Badge,
-    Button,
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-    Separator,
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Badge,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Separator,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from "@/components/ui";
 import { useAuth } from "@/context/userContext";
 import { useNotifications } from "@/queries/notifications";
@@ -25,13 +25,13 @@ import { cn } from "@/lib/utils";
 import icon from "@/public/assets/icon/logo-light.png";
 import type { NavItem } from "@/types/header";
 import {
-    Bell,
-    Calendar,
-    LayoutDashboard,
-    LogOut,
-    Menu,
-    MessageSquare,
-    User as UserIcon,
+  Bell,
+  Calendar,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageSquare,
+  User as UserIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -40,66 +40,66 @@ import { useEffect, useState } from "react";
 import { NotificationDropdown } from "./NotificationDropdown";
 
 export function Header() {
-    const [isScrolled, setIsScrolled] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    const router = useRouter();
+  const router = useRouter();
 
-    // Use actual media query for responsive check
-    const [isDesktop, setIsDesktop] = useState(true);
+  // Use actual media query for responsive check
+  const [isDesktop, setIsDesktop] = useState(true);
 
-    useEffect(() => {
-        const handleResize = () => {
-            setIsDesktop(window.innerWidth >= 1024); // lg breakpoint
-        };
-        handleResize();
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024); // lg breakpoint
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-    // Listen scroll for sticky effect (optional, or remove if unused)
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 8);
-        };
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+  // Listen scroll for sticky effect (optional, or remove if unused)
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 8);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-    const pathname = usePathname();
-    const { user, initializing, logout } = useAuth();
-    const { data: notificationsData } = useNotifications();
-    const unreadCount = notificationsData?.meta?.total_unread ?? 0;
+  const pathname = usePathname();
+  const { user, initializing, logout } = useAuth();
+  const { data: notificationsData } = useNotifications();
+  const unreadCount = notificationsData?.meta?.total_unread ?? 0;
 
-    // For notification label (Name fallback)
-    const name =
-        user && (user.first_name || user.last_name)
-            ? `${user.role === "doctor" ? "Dr. " : ""}${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
-            : "User";
+  // For notification label (Name fallback)
+  const name =
+    user && (user.first_name || user.last_name)
+      ? `${user.role === "doctor" ? "Dr. " : ""}${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
+      : "User";
 
 
-    const navItems: NavItem[] = [
-        {
-            title: "Dashboard",
-            href: "/",
-            icon: <LayoutDashboard className="h-4 w-4" />,
-        },
-        {
-            title: "My Schedules",
-            href: "/my-schedules",
-            icon: <Calendar className="h-4 w-4" />,
-        },
-        {
-            title: "Appointments",
-            href: "/appointments",
-            icon: <UserIcon className="h-4 w-4" />,
-        },
-        {
-            title: "Feedbacks",
-            href: "/feedbacks",
-            icon: <MessageSquare className="h-4 w-4" />,
-        },
-    ];
+  const navItems: NavItem[] = [
+    {
+      title: "Dashboard",
+      href: "/",
+      icon: <LayoutDashboard className="h-4 w-4" />,
+    },
+    {
+      title: "My Schedules",
+      href: "/my-schedules",
+      icon: <Calendar className="h-4 w-4" />,
+    },
+    {
+      title: "Appointments",
+      href: "/appointments",
+      icon: <UserIcon className="h-4 w-4" />,
+    },
+    {
+      title: "Feedbacks",
+      href: "/feedbacks",
+      icon: <MessageSquare className="h-4 w-4" />,
+    },
+  ];
 
 
   return (
