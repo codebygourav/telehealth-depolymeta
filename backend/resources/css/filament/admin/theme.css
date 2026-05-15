@@ -989,3 +989,76 @@ input[type="checkbox"]:checked::after {
         padding-inline: 0;
     }
 }
+
+/* =====================
+   VACCINATION SLIDEOVER ACCORDION
+===================== */
+.vaccination-accordion-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.vaccination-accordion-form .vaccination-accordion-section {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.75rem !important;
+    overflow: hidden;
+    background: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vaccination-accordion-form .vaccination-accordion-section .fi-section-header {
+    background: #f8fafc !important;
+    border-bottom: 1px solid transparent;
+    padding-block: 0.85rem !important;
+}
+
+.vaccination-accordion-form .vaccination-accordion-section .fi-section-header-heading {
+    font-weight: 700 !important;
+    color: #0f172a !important;
+}
+
+.vaccination-accordion-form .vaccination-accordion-section .fi-section-header-description {
+    color: #64748b !important;
+    font-size: 0.8125rem !important;
+}
+
+.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="true"] {
+    border-color: #059669 !important;
+    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.12);
+}
+
+.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="true"] .fi-section-header {
+    background: linear-gradient(90deg, #ecfdf5 0%, #ffffff 100%) !important;
+    border-bottom: 1px solid #bbf7d0 !important;
+}
+
+.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="true"] .fi-section-header-heading {
+    color: #047857 !important;
+}
+
+.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="false"] .fi-section-header {
+    background: #f1f5f9 !important;
+}
+
+.vaccination-accordion-form .vaccination-accordion-section .fi-section-content {
+    background: #ffffff !important;
+    padding-top: 1rem !important;
+}
+
+.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="false"] .fi-section-content {
+    display: none !important;
+}
+
+/* Vaccination documents grid (module-documents style) */
+.vaccination-documents-grid-table .fi-ta-content-grid .fi-checkbox-input {
+    position: absolute;
+    z-index: 10;
+    top: 7px;
+    right: 9px;
+}
+
+.vaccination-documents-grid-table .fi-ta-record-content-ctn {
+    row-gap: 0;
+}

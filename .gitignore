@@ -44,3 +44,4 @@ backend/storage/framework/views/*
 !backend/storage/framework/views/.gitignore
 backend/storage/logs/*
 !backend/storage/logs/.gitignore
+

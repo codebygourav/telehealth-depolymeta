@@ -14,6 +14,8 @@ class PatientVaccinationResource extends JsonResource
         return [
             'id' => $this->id,
             'patient_id' => $this->patient_id,
+            'patient_profile_id' => $this->patient_profile_id,
+            'patient_vaccination_program_id' => $this->patient_vaccination_program_id,
             'patient' => $this->whenLoaded('patient', fn () => [
                 'id' => $this->patient?->id,
                 'name' => trim((string) ($this->patient?->first_name . ' ' . $this->patient?->last_name)),
@@ -36,12 +38,19 @@ class PatientVaccinationResource extends JsonResource
             'completed_date' => optional($this->completed_date)?->format('Y-m-d'),
             'batch_number' => $this->batch_number,
             'manufacturer' => $this->manufacturer,
+            'route' => $this->route,
+            'site' => $this->site,
+            'dose_amount' => $this->dose_amount,
             'given_at' => $this->given_at,
             'given_by' => $this->given_by,
             'doctor_notes' => $this->doctor_notes,
             'side_effect_observed' => $this->side_effect_observed,
             'patient_reaction' => $this->patient_reaction,
             'reminder_sent' => $this->reminder_sent,
+            'last_reminder_sent_at' => optional($this->last_reminder_sent_at)?->toIso8601String(),
+            'reminder_count' => $this->reminder_count,
+            'next_reminder_at' => optional($this->next_reminder_at)?->toIso8601String(),
+            'patient_profile' => $this->whenLoaded('patientProfile', fn () => new PatientProfileResource($this->patientProfile)),
             'vaccination' => [
                 'id' => $this->vaccination?->id,
                 'name' => $this->vaccination?->name,
@@ -55,14 +64,21 @@ class PatientVaccinationResource extends JsonResource
                 'dosage_information' => $this->vaccination?->dosage_information,
                 'is_multi_dose' => $this->vaccination?->is_multi_dose,
                 'total_doses' => $this->vaccination?->total_doses,
+                'minimum_age_days' => $this->vaccination?->minimum_age_days,
+                'maximum_age_days' => $this->vaccination?->maximum_age_days,
+                'gender_restriction' => $this->vaccination?->gender_restriction instanceof \App\Enums\VaccinationGenderRestriction
+                    ? $this->vaccination?->gender_restriction->value
+                    : $this->vaccination?->gender_restriction,
             ],
             'template' => $this->whenLoaded('template', fn () => [
                 'id' => $this->template?->id,
                 'name' => $this->template?->name,
+                'vaccination_program_id' => $this->template?->vaccination_program_id,
             ]),
             'documents' => $this->whenLoaded('documents', fn () => $this->documents->map(fn ($document) => [
                 'id' => $document->id,
                 'document' => $document->document,
+                'document_type' => $document->document_type instanceof \App\Enums\VaccinationDocumentType ? $document->document_type->value : $document->document_type,
                 'certificate_number' => $document->certificate_number,
             ])),
             'created_at' => optional($this->created_at)?->toIso8601String(),

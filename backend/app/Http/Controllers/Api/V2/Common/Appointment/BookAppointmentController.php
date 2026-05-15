@@ -65,21 +65,55 @@ class BookAppointmentController extends Controller
             $user = $request->user();
             $useMockPayment = SettingService::isAppointmentMockPaymentEnabled();
 
-            if (!$user) {
-                return ApiResponseService::validationError([
-                    'user' => ['Unauthenticated.']
-                ]);
-            }
-            if (! $user->hasRole('super_admin')) {
-                $patient = Patient::where('user_id', $user->id)->first();
-                if (! $patient) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | WEBSITE FLOW
+            |--------------------------------------------------------------------------
+            */
+
+            if ($request->filled('patient_id')) {
+
+                $patient = Patient::find($request->patient_id);
+
+                if (!$patient) {
                     return ApiResponseService::validationError([
-                        'patient' => ['Patient record not found.']
+                        'patient' => ['Patient not found.']
                     ]);
                 }
+
+            /*
+            |--------------------------------------------------------------------------
+            | MOBILE APP FLOW
+            |--------------------------------------------------------------------------
+            */
+
             } else {
-                $patient = $request->patient_id ? Patient::find($request->patient_id) : null;
+
+                if (!$user) {
+                    return ApiResponseService::validationError([
+                        'user' => ['Unauthenticated.']
+                    ]);
+                }
+
+                if ($user->hasRole('super_admin')) {
+
+                    $patient = $request->patient_id
+                        ? Patient::find($request->patient_id)
+                        : null;
+
+                } else {
+
+                    $patient = Patient::where('user_id', $user->id)->first();
+
+                    if (!$patient) {
+                        return ApiResponseService::validationError([
+                            'patient' => ['Patient record not found.']
+                        ]);
+                    }
+                }
             }
+
 
 
             $doctor = Doctor::findOrFail($data['doctor_id']);
@@ -767,7 +801,20 @@ class BookAppointmentController extends Controller
                 'appointment' => $appointment,
             ])->render();
 
-            $filename = 'receipt_' . $payment->id . '.pdf';
+            $patientName = trim(
+                ($appointment->patient->first_name ?? '') . '_' .
+                ($appointment->patient->last_name ?? '')
+            );
+
+            $patientName = preg_replace(
+                '/[^A-Za-z0-9_]/',
+                '',
+                str_replace(' ', '_', $patientName)
+            );
+
+            $dateTime = $appointment->appointment_date->format('Y-m-d') . '_' . $appointment->appointment_time;
+
+            $filename = "CMCTele_{$patientName}_{$dateTime}.pdf";
             $path = 'receipts/' . $filename;
             $fullPath = storage_path('app/public/' . $path);
 

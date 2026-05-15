@@ -12,10 +12,12 @@ class VaccinationTemplateResource extends JsonResource
         return [
 
             'id' => $this->id,
+            'vaccination_program_id' => $this->vaccination_program_id,
             'doctor_id' => $this->doctor_id,
             'name' => $this->name,
             'description' => $this->description,
             'is_active' => $this->is_active,
+            'program' => $this->whenLoaded('program', fn () => new VaccinationProgramResource($this->program)),
             'items' => $this->whenLoaded('items', function () {
                 return $this->items->map(function ($item) {
 
@@ -26,6 +28,11 @@ class VaccinationTemplateResource extends JsonResource
                         'set_description' => $item->set_description,
                         'set_sort_order' => $item->set_sort_order,
                         'dose_no' => $item->dose_no,
+                        'depends_on_previous_dose' => $item->depends_on_previous_dose,
+                        'interval_days' => $item->interval_days,
+                        'interval_months' => $item->interval_months,
+                        'minimum_age_days' => $item->minimum_age_days,
+                        'maximum_age_days' => $item->maximum_age_days,
                         'recommended_age_label' => $item->recommended_age_label,
                         'due_after_days' => $item->due_after_days,
                         'due_after_months' => $item->due_after_months,

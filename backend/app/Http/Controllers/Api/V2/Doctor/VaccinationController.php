@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2\Doctor;
 
+use App\Enums\VaccinationGenderRestriction;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Vaccination\VaccinationResource;
 use App\Models\Vaccination;
@@ -28,7 +29,9 @@ class VaccinationController extends Controller
             ->latest()
             ->paginate($request->integer('per_page', 10));
 
-        return ApiResponseService::paginated($vaccinations->through(fn ($vaccination) => new VaccinationResource($vaccination)));
+        return ApiResponseService::paginated(
+            $vaccinations->through(fn ($vaccination) => new VaccinationResource($vaccination))
+        );
     }
 
     public function store(Request $request)
@@ -88,6 +91,9 @@ class VaccinationController extends Controller
             'dosage_information' => ['nullable', 'string'],
             'is_multi_dose' => ['sometimes', 'boolean'],
             'total_doses' => ['sometimes', 'integer', 'min:1', Rule::when($effectiveIsMultiDose, ['min:2'])],
+            'minimum_age_days' => ['nullable', 'integer', 'min:0'],
+            'maximum_age_days' => ['nullable', 'integer', 'min:0'],
+            'gender_restriction' => ['sometimes', Rule::in(VaccinationGenderRestriction::values())],
             'is_active' => ['sometimes', 'boolean'],
         ]);
     }

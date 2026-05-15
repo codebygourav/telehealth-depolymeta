@@ -107,6 +107,9 @@ class PatientDietController extends Controller
             ->where('doctor_id', $doctor->id)
             ->latest()
             ->firstOrFail();
+        if (empty($plan)) {
+            return ApiResponseService::notFound('Diet plan not found');
+        }
 
         return ApiResponseService::success(
             data: $this->planData($plan)
@@ -167,7 +170,7 @@ class PatientDietController extends Controller
         ]);
 
         $meal = PatientDietPlanMeal::query()
-            ->whereHas('planDay.plan', fn ($query) => $query->where('patient_id', $patient->id))
+            ->whereHas('planDay.plan', fn($query) => $query->where('patient_id', $patient->id))
             ->findOrFail($mealId);
 
         $status = $data['status'] ?? 'completed';

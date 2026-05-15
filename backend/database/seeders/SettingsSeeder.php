@@ -40,6 +40,7 @@ class SettingsSeeder extends Seeder
             ['group' => 'security', 'key' => 'max_login_attempts', 'value' => '5', 'type' => 'integer', 'is_public' => false],
             ['group' => 'security', 'key' => 'lockout_duration', 'value' => '30', 'type' => 'integer', 'is_public' => false],
 
+
             // Mobile
             ['group' => 'mobile', 'key' => 'force_update', 'value' => '0', 'type' => 'boolean', 'is_public' => true],
             ['group' => 'mobile', 'key' => 'min_android_version', 'value' => '1.0.0', 'type' => 'string', 'is_public' => true],
@@ -49,6 +50,14 @@ class SettingsSeeder extends Seeder
 
             // Advanced
             ['group' => 'advanced', 'key' => 'debug_mode', 'value' => '0', 'type' => 'boolean', 'is_public' => false],
+
+            ['group' => 'support', 'key' => 'video_consultation.phone', 'value' => '+91 1234567890', 'type' => 'string', 'is_public' => false],
+            ['group' => 'support', 'key' => 'video_consultation.support_email', 'value' => 'video-support@example.com', 'type' => 'string', 'is_public' => false],
+            ['group' => 'support', 'key' => 'video_consultation.address', 'value' => 'Video Consultation Support Address', 'type' => 'string', 'is_public' => false],
+
+            ['group' => 'support', 'key' => 'inperson_consultation.phone', 'value' => '+91 1234567890', 'type' => 'string', 'is_public' => false],
+            ['group' => 'support', 'key' => 'inperson_consultation.support_email', 'value' => 'inperson-support@example.com', 'type' => 'string', 'is_public' => false],
+            ['group' => 'support', 'key' => 'inperson_consultation.address', 'value' => 'In-Person Consultation Support Address', 'type' => 'string', 'is_public' => false],
 
             // Third Party
             ['group' => 'third_party', 'key' => 'razorpay_enabled', 'value' => env('RAZORPAY_KEY') ? '1' : '0', 'type' => 'boolean', 'is_public' => false],

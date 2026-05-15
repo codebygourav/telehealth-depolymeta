@@ -18,6 +18,7 @@ class VaccinationTemplate extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        'vaccination_program_id',
         'doctor_id',
         'name',
         'description',
@@ -49,8 +50,18 @@ class VaccinationTemplate extends Model
         return $this->belongsTo(Doctor::class);
     }
 
+    public function program(): BelongsTo
+    {
+        return $this->belongsTo(VaccinationProgram::class, 'vaccination_program_id');
+    }
+
     public function patientVaccinations(): HasMany
     {
         return $this->hasMany(PatientVaccination::class);
+    }
+
+    public function patientPrograms(): HasMany
+    {
+        return $this->hasMany(PatientVaccinationProgram::class);
     }
 }

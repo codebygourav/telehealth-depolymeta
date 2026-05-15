@@ -18,6 +18,27 @@
             top: 2rem;
         }
 
+        /* Support Tabs Styling */
+
+        .fi-tabs-item {
+            border-radius: 10px !important;
+            transition: all 0.2s ease;
+            padding: 10px 18px !important;
+            font-weight: 600;
+        }
+
+        /* Active Tab */
+        button.fi-tabs-item.fi-active {
+            background: #073827 !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(7, 56, 39, 0.18);
+        }
+
+        button.fi-tabs-item.fi-active .fi-tabs-item-label {
+            color: #fff !important;
+        }
+
+
         .nav-item {
             display: flex;
             align-items: center;
@@ -52,7 +73,7 @@
         }
 
         .nav-item.active .icon-wrapper {
-            background: var(--app-primary-hex)!important;
+            background: var(--app-primary-hex) !important;
             color: white;
         }
 
@@ -73,7 +94,7 @@
         }
 
         .nav-item.active .label {
-            color: var(--app-primary-hex)!important;
+            color: var(--app-primary-hex) !important;
         }
 
         .dark .nav-item .label {
@@ -126,9 +147,11 @@
             background: rgba(var(--gray-800), 0.5);
             border-color: rgb(var(--gray-800));
         }
+
         .nav-item svg {
             color: var(--app-primary-hex);
         }
+
         .nav-item.active svg {
             color: #fff;
         }
@@ -155,7 +178,8 @@
                         </div>
                         <div class="label-wrapper">
                             <span class="label">{{ $group['label'] }}</span>
-                            <span class="desc">{{ $group['description'] ?? 'Manage ' . strtolower($group['label']) }}</span>
+                            <span
+                                class="desc">{{ $group['description'] ?? 'Manage ' . strtolower($group['label']) }}</span>
                         </div>
                     </div>
                 @endforeach
@@ -188,8 +212,9 @@
             </form>
 
             {{-- Mobile Cache View (only if needed, but let's keep it clean) --}}
-            <div class="hidden mt-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                 {{-- Hidden on desktop as it's in the sidebar --}}
+            <div
+                class="hidden mt-8 p-6 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                {{-- Hidden on desktop as it's in the sidebar --}}
             </div>
         </main>
     </div>
@@ -204,24 +229,28 @@
                     </div>
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">Quick Actions</h3>
                 </div>
-                <p class="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">Perform essential system maintenance tasks</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">Perform essential system maintenance
+                    tasks</p>
             </div>
             <div class="form-content !py-6">
                 <div class="flex flex-wrap gap-4">
                     <button wire:click="clearCache" wire:loading.attr="disabled"
-                        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm" style="color: #073827">
+                        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm"
+                        style="color: #073827">
                         <x-heroicon-o-arrow-path class="w-5 h-5" wire:loading.class="animate-spin" />
                         Clear All System Cache
                     </button>
-                    
+
                     <button wire:click="clearConfigCache" wire:loading.attr="disabled"
-                        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm" style="color: #073827">
+                        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm"
+                        style="color: #073827">
                         <x-heroicon-o-cog-6-tooth class="w-5 h-5" />
                         Refresh Configurations
                     </button>
 
                     <button wire:click="clearViewCache" wire:loading.attr="disabled"
-                        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm" style="color: #073827">
+                        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm"
+                        style="color: #073827">
                         <x-heroicon-o-eye class="w-5 h-5" />
                         Clear Views
                     </button>
@@ -230,4 +259,3 @@
         </div>
     </div>
 </x-filament-panels::page>
-

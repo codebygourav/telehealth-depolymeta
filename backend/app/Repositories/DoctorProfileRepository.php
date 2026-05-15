@@ -8,6 +8,13 @@ use Illuminate\Support\Str;
 
 class DoctorProfileRepository
 {
+    protected array $repeatableJsonFields = [
+        'professional_experience_info',
+        'education_info',
+        'certifications_info',
+        'awards_info',
+        'fellowships_info',
+    ];
     public function updateDoctorProfile(Request $request, Doctor $doctor, array $groupConfig, string $group)
     {
         $allowedFields = $groupConfig['fields'];
@@ -56,9 +63,62 @@ class DoctorProfileRepository
             }
         }
 
-        // Update doctor main table
         $updateData = collect($data)->only($allowedFields)->toArray();
-        $updateData['updated_by'] = $request->user()->id;
+
+        // Update doctor main table
+        foreach ($this->repeatableJsonFields as $field) {
+
+            if (!isset($updateData[$field])) {
+                continue;
+            }
+
+            if (!is_array($updateData[$field])) {
+                continue;
+            }
+
+            $updateData[$field] = collect($updateData[$field])
+                ->map(function ($item) {
+
+                    if (!is_array($item)) {
+                        return $item;
+                    }
+
+                    // Generate ID only for new items
+                    if (empty($item['id'])) {
+                        $item['id'] = (string) random_int(1000, 9999);
+                    }
+
+                    return $item;
+                })
+                ->values()
+                ->toArray();
+        }
+        if (!empty($data['remove_item_id'])) {
+
+            foreach ($allowedFields as $field) {
+
+                $existing = $doctor->{$field};
+
+                if (!is_array($existing)) {
+                    continue;
+                }
+
+                $doctor->{$field} = array_values(array_filter(
+                    $existing,
+                    fn ($item) =>
+                        ($item['id'] ?? null) !== $data['remove_item_id']
+                ));
+            }
+
+            $doctor->updated_by = $request->user()->id;
+            $doctor->save();
+
+            return $this->getDoctorProfileByGroup(
+                $doctor,
+                $groupConfig,
+                $group
+            );
+        }
 
         $doctor->fill($updateData)->save();
 

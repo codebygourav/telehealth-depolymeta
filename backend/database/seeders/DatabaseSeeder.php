@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             AdvertisementSeeder::class,
             SettingsSeeder::class,
             MedicalReportSeeder::class,
+            VaccinationModuleSeeder::class,
         ]);
     }
 }

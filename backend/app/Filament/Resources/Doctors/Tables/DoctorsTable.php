@@ -66,7 +66,17 @@ class DoctorsTable
                     ->label('Photo')
                     ->circular()
                     ->disk('public')
-                    ->getStateUsing(fn($record) => $record->avatar ?? $record->user?->avatar),
+                    ->getStateUsing(function ($record) {
+                        // Always use the correct avatar path with storage URL helper; fallback to default image.
+                        $avatar = $record->avatar ?? $record->user?->avatar;
+                        if ($avatar) {
+                            // Use helper if present, else Storage facade (should match your codebase conventions)
+                            return function_exists('storage_url') ? storage_url($avatar) : \Illuminate\Support\Facades\Storage::disk('public')->url($avatar);
+                        }
+                        return asset('images/user-avatar.png');
+                    }),
+
+
 
                 TextColumn::make('doctor_code')
                     ->label('ID')
@@ -80,27 +90,13 @@ class DoctorsTable
                     ->sortable()
                     ->searchable(),
 
-                TextColumn::make('user.email')
-                    ->label('Email')
-                    ->searchable()
-                    ->copyable()
-                    ->toggleable(),
-
-                TextColumn::make('gender')
-                    ->label('Gender')
-                    ->getStateUsing(fn($record) => $record->gender instanceof GenderOption ? $record->gender->value : ($record->gender ?? 'Unknown'))
-                    ->sortable(),
 
                 TextColumn::make('user.phone')
                     ->label('Phone')
                     ->searchable()
                     ->toggleable(),
 
-                TextColumn::make('medical_license_number')
-                    ->label('License')
-                    ->searchable()
-                    ->getStateUsing(fn($record) => $record->medical_license_number ?: '—')
-                    ->sortable(),
+
 
                 TextColumn::make('replaced_by_doctor')
                     ->label('Replaced By')

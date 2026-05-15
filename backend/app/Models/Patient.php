@@ -42,6 +42,8 @@ class Patient extends Model
         'partner_relation_type',
         'spouse_name',
         'blood_group',
+        'weight',
+        'height',
         'allergies',
         'existing_conditions',
         'current_medications',
@@ -66,6 +68,8 @@ class Patient extends Model
         'create_user_account' => 'boolean',
         'treatment_consent_accepted' => 'boolean',
         'insurance_policy_expiry' => 'date',
+        'weight' => 'decimal:2',
+        'height' => 'decimal:2',
     ];
 
     protected $appends = ['avatar'];
@@ -223,6 +227,11 @@ class Patient extends Model
     public function vaccinations()
     {
         return $this->hasMany(PatientVaccination::class);
+    }
+
+    public function profiles()
+    {
+        return $this->hasMany(PatientProfile::class);
     }
 
     public function dietPlans()

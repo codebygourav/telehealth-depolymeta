@@ -27,11 +27,10 @@ class DoctorForm
                         ->directory('user_avatar')
                         ->image()
                         ->avatar()
-                        ->imageEditor()
-                        ->imageEditorAspectRatios([
-                            '1:1',
-                        ])
-                        ->columns(3),
+                        ->openable()
+                        ->columns(3), // Remove imageEditor to stop forcing crop on upload
+
+
                     FileUpload::make('signature')
                         ->label('Signature')
                         ->disk('public')
@@ -105,12 +104,39 @@ class DoctorForm
                         ),
 
                     DatePicker::make('dob')->label('Date of Birth'),
-
-                    TextInput::make('years_experience')
-                        ->label('Years of Experience')
+                    Select::make('career_start_year')
+                        ->label('Career Start Year After PG')
                         ->required()
-                        ->numeric(),
+                        ->options(
+                            function () {
+                                $currentYear = now()->year;
+                                $startYear = $currentYear;
+                                $endYear = max(1950, $currentYear - 50);
+                                $years = [];
+                                for ($year = $startYear; $year >= $endYear; $year--) {
+                                    $years[$year] = (string) $year;
+                                }
+                                return $years;
+                            }
+                        )
+                        ->searchable(true) // Filament sometimes requires explicit true or omitting param
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if ($state) {
+                                $set('years_experience', now()->year - (int) $state);
+                            }
+                        }),
 
+
+
+
+                        Placeholder::make('experience_display')
+                        ->label('Years Experience')
+                        ->content(function ($get) {
+                            return $get('years_experience')
+                                ? $get('years_experience') . ' Years'
+                                : '0 Years';
+                        }),
                     TextInput::make('medical_license_number')
                         ->label('Medical License Number')
                         ->placeholder('Enter license number'),
@@ -427,18 +453,18 @@ class DoctorForm
                     Repeater::make('professional_experience_info')
                         ->label('Professional Experience')
                         ->schema([
-                            TextInput::make('career_start')
-                                ->label('Career Start (Post-PG)')
-                                ->placeholder('e.g., 2004')
-                                ->helperText('Enter year')
-                                ->mask('9999')                  // allows ONLY 4 digits while typing
-                                ->numeric()
-                                ->rules(['digits:4'])
-                                ->minLength(4)
-                                ->maxLength(4),
+                            DatePicker::make('start_date')
+                                ->label('Start Date')
+                                ->placeholder('Select start date')
+                                ->helperText('Select the start date of the experience'),
+                            DatePicker::make('end_date')
+                                ->label('End Date')
+                                ->placeholder('Select end date')
+                                ->helperText('Select the end date of the experience'),
 
-                            TextInput::make('past_associations')
-                                ->label('Past Associations')
+
+                            TextInput::make('association')
+                                ->label('Associations')
                                 ->placeholder('e.g., AIIMS Bathinda, SR at GMCH Chandigarh, Fortis Hospital Mohali')
                                 ->helperText('List notable hospitals, institutions, residencies, or past experience'),
                         ])
@@ -1713,6 +1739,32 @@ class DoctorForm
                                                     $dbData['opd_type'] = null;
                                                 }
 
+                                                // Custom duplicate slot prevention, allowing different consultation types at same date/time
+                                                $dupQuery = \App\Models\DoctorAvailability::query()
+                                                    ->where('doctor_id', $dbData['doctor_id'])
+                                                    ->where('start_time', $dbData['start_time'])
+                                                    ->where('end_time', $dbData['end_time'])
+                                                    ->where('consultation_type', $dbData['consultation_type']);
+
+                                                if ($isRec) {
+                                                    $dupQuery->where('day_of_week', $dbData['day_of_week'])
+                                                        ->whereNotNull('recurring_start_date')
+                                                        ->whereNotNull('recurring_end_date');
+                                                } else {
+                                                    $dupQuery->where('date', $dbData['date']);
+                                                }
+
+                                                $duplicate = $dupQuery->first();
+
+                                                if ($duplicate) {
+                                                    Notification::make()
+                                                        ->title('Duplicate Schedule')
+                                                        ->body('This slot already exists for this consultation type. Please change the time, date, or consultation mode and try again.')
+                                                        ->danger()
+                                                        ->send();
+                                                    return;
+                                                }
+
                                                 $newRecord = \App\Models\DoctorAvailability::create($dbData);
                                                 $slotData['id'] = $newRecord->id;
 
@@ -1723,14 +1775,6 @@ class DoctorForm
                                                     ->body('The availability has been saved. Patients can now book appointments for this time slot.')
                                                     ->success()
                                                     ->send();
-                                            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
-                                                Notification::make()
-                                                    ->title('Duplicate Schedule')
-                                                    ->body('This slot already exists. Please change the time, date, or consultation mode and try again.')
-                                                    ->danger()
-                                                    ->send();
-
-                                                return;
                                             } catch (\Throwable $e) {
                                                 Notification::make()
                                                     ->title('Error')
@@ -1748,6 +1792,7 @@ class DoctorForm
                                                 ->success()
                                                 ->send();
                                         }
+
 
                                         // Update UI state
                                         $currentSlotsForDay = $get("slots_{$day}") ?? [];

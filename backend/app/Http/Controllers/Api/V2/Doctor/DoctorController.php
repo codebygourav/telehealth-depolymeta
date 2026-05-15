@@ -197,6 +197,12 @@ class DoctorController extends Controller
             ? array_merge($allowedFields, ['avatar_base64'])
             : $allowedFields;
 
+
+        // Allow special operation fields
+        $allowedForValidation = array_merge($allowedForValidation, [
+            'remove_item_id',
+        ]);
+
         $invalid = array_diff(array_keys($data), $allowedForValidation);
         // Log::info('update doctor $invalidprofile data', ['data' => $invalid]);
         if ($invalid) {

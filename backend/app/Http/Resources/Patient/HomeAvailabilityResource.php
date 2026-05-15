@@ -16,9 +16,9 @@ class HomeAvailabilityResource extends JsonResource
     {
         // Get consultation types from availabilities
         $types = $this->resource->availabilities->pluck('consultation_type')->filter()->unique()->values();
-        
+
         // Map types to proper labels and join with " / " if multiple exist
-        $typeLabels = $types->map(function($type) {
+        $typeLabels = $types->map(function ($type) {
             return $type === 'in-person' ? 'In Person' : ucfirst($type);
         })->sort();
 
@@ -38,7 +38,8 @@ class HomeAvailabilityResource extends JsonResource
             'rating' => $this->average_rating ? round($this->average_rating, 1) : 0,
             'years_experience' => $this->resource->years_experience,
             'total_reviews' => $this->total_reviews ?? 0,
-            'consultation_type' => $consultationType,
+            'consultation_type' => $types,
+            'consultation_type_label' => $consultationType,
             'languages_known' => $this->resource->languages_known,
             'consultation_fee' => $lowestFee ? round($lowestFee, 0) : 0,
             'avatar' => storage_url($this->avatar),

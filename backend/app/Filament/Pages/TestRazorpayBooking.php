@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Api\V2\Common\Appointment\BookAppointmentController;
 use Illuminate\Http\JsonResponse;
 use App\Services\SettingService;
-
+use App\Enums\DoctorStatus;
 use App\Traits\HasCustomSidebar;
 
 class TestRazorpayBooking extends Page implements HasForms
@@ -53,8 +53,7 @@ class TestRazorpayBooking extends Page implements HasForms
         return [
             'label' => 'Appointment Booking',
             'icon'  => 'heroicon-o-calendar-days',
-            'sort'  => 1000,
-            'group' => 'Appointment Management',
+            'sort'  => 41,
         ];
     }
 
@@ -109,13 +108,21 @@ class TestRazorpayBooking extends Page implements HasForms
 
                         Select::make('doctor_id')
                             ->label('Doctor')
-                            ->options(Doctor::with('user')->get()->mapWithKeys(function ($doctor) {
-                                $name = 'Dr. ' . $doctor->first_name . ' ' . ($doctor->last_name ?? '');
-                                if ($doctor->user) {
-                                    $name .= ' (' . $doctor->user->email . ')';
-                                }
-                                return [$doctor->id => $name];
-                            }))
+                            ->options(
+                                Doctor::with('user')
+                                    ->where('status', DoctorStatus::ACTIVE)
+                                    ->whereHas('availabilities', function ($query) {
+                                        $query->where('is_available', true);
+                                    })
+                                    ->get()
+                                    ->mapWithKeys(function ($doctor) {
+                                        $name = 'Dr. ' . $doctor->first_name . ' ' . ($doctor->last_name ?? '');
+                                        if ($doctor->user) {
+                                            $name .= ' (' . $doctor->user->email . ')';
+                                        }
+                                        return [$doctor->id => $name];
+                                    })
+                            )
                             ->searchable()
                             ->required()
                             ->live()
@@ -285,7 +292,6 @@ class TestRazorpayBooking extends Page implements HasForms
             ])
             ->statePath('data');
     }
-
 
 
 

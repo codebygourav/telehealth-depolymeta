@@ -136,21 +136,60 @@ class Settings extends Page
     {
         $schema = [];
 
+        /*
+        |--------------------------------------------------------------------------
+        | Special Support Tab UI
+        |--------------------------------------------------------------------------
+        */
+        if ($groupKey === 'support') {
+
+            $tabs = [];
+
+            foreach ($sections as $sectionKey => $section) {
+
+                $dbGroup = $section['db_group'] ?? $groupKey;
+
+                $tabs[] = Tab::make($section['label'])
+                    ->schema([
+                        Section::make()
+                            ->description($section['description'] ?? null)
+                            ->schema(
+                                $this->buildFieldsFromConfig(
+                                    $dbGroup,
+                                    $section['fields'] ?? [],
+                                    $groupKey
+                                )
+                            )
+                    ]);
+            }
+
+            $schema[] = Tabs::make('Support Tabs')
+                ->tabs($tabs)
+                ->columnSpanFull();
+
+            return $schema;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Default Sections
+        |--------------------------------------------------------------------------
+        */
         foreach ($sections as $sectionKey => $section) {
-            // Use db_group if specified, otherwise use the tab's groupKey
+
             $dbGroup = $section['db_group'] ?? $groupKey;
 
             $sectionSchema = Section::make($section['label'] ?? ucfirst($sectionKey))
                 ->description($section['description'] ?? null)
-                ->schema($this->buildFieldsFromConfig($dbGroup, $section['fields'] ?? [], $groupKey))
+                ->schema(
+                    $this->buildFieldsFromConfig(
+                        $dbGroup,
+                        $section['fields'] ?? [],
+                        $groupKey
+                    )
+                )
                 ->collapsible($section['collapsed'] ?? false)
                 ->collapsed($section['collapsed'] ?? false);
-
-            if (isset($section['visible_when'])) {
-                foreach ($section['visible_when'] as $field => $value) {
-                    $sectionSchema->visible(fn($get) => $get($field) === $value);
-                }
-            }
 
             $schema[] = $sectionSchema;
         }

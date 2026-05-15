@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\VaccinationGenderRestriction;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -28,6 +29,9 @@ class Vaccination extends Model
         'dosage_information',
         'is_multi_dose',
         'total_doses',
+        'minimum_age_days',
+        'maximum_age_days',
+        'gender_restriction',
         'is_active'
     ];
 
@@ -35,6 +39,9 @@ class Vaccination extends Model
         'is_multi_dose' => 'boolean',
         'is_active' => 'boolean',
         'total_doses' => 'integer',
+        'minimum_age_days' => 'integer',
+        'maximum_age_days' => 'integer',
+        'gender_restriction' => VaccinationGenderRestriction::class,
     ];
 
     protected static function booted(): void
@@ -54,5 +61,10 @@ class Vaccination extends Model
     public function templateItems(): HasMany
     {
         return $this->hasMany(VaccinationTemplateItem::class);
+    }
+
+    public function faqs(): HasMany
+    {
+        return $this->hasMany(VaccinationFaq::class)->orderBy('sort_order');
     }
 }

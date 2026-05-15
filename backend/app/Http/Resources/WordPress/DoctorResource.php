@@ -10,6 +10,25 @@ class DoctorResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        // Calculate ratings summary
+        $totalRatings = $this->whenLoaded('reviews')
+            ? $this->reviews->count()
+            : ($this->reviews_count ?? $this->reviews()->count());
+
+        $averageRating = $this->whenLoaded('reviews') && $this->reviews->count() > 0
+            ? round($this->reviews->avg('rating'), 2)
+            : ($this->reviews_avg_rating ?? (float) $this->reviews()->avg('rating'));
+
+        // Get the availability slot with the lowest consultation_fee
+        $lowestFeeAvailability = $this->resource->availabilities
+            ->filter(fn($slot) => $slot->consultation_fee !== null)
+            ->sortBy(fn($slot) => (float) $slot->consultation_fee)
+            ->first();
+
+        $lowestFee = $lowestFeeAvailability
+            ? (float) $lowestFeeAvailability->consultation_fee
+            : null;
+
         return [
             'id' => $this->id,
             'user' => new UserResource($this->whenLoaded('user')),
@@ -36,7 +55,10 @@ class DoctorResource extends JsonResource
             'expertise_info' => $this->expertise_info,
             'description' => $this->description,
             'status' => $this->status,
+            'consultation_fee' => $lowestFee,
             'avatar_url' => $this->user->avatar ?? null,
+            'average_rating' => $averageRating ? round($averageRating, 2) : null,
+            'total_rating' => $totalRatings,
             'departments' => $this->whenLoaded('departments', function () {
                 return $this->departments->map(function ($department) {
                     return [
@@ -50,10 +72,12 @@ class DoctorResource extends JsonResource
             'availabilities' => $this->whenLoaded('availabilities', function () {
                 return DoctorAvailabilityResource::collection(
                     $this->availabilities->filter(function ($slot) {
+                        // Only include slots with a valid start_time, are available,
+                        // and are for in-person consultation
                         return $slot->start_time
                             && $slot->is_available
                             && $slot->consultation_type === 'in-person';
-                    })
+                    })->values() // Re-index to avoid sparse arrays
                 );
             }),
         ];

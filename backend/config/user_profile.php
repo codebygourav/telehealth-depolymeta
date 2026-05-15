@@ -98,8 +98,9 @@ return [
             ],
             'validation' => [
                 'professional_experience_info' => 'sometimes|array',
-                'professional_experience_info.*.career_start' => 'sometimes|digits:4',
-                'professional_experience_info.*.past_associations' => 'sometimes|string',
+                'professional_experience_info.*.start_date' => 'sometimes|date',
+                'professional_experience_info.*.end_date' => 'sometimes|date',
+                'professional_experience_info.*.association' => 'sometimes|string',
             ],
             'field_types' => [
                 'professional_experience_info' => 'json',

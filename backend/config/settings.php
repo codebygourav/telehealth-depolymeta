@@ -13,7 +13,7 @@ return [
         'description' => 'General application settings',
         'sections' => [
             'basic' => [
-                'label' => 'Basic Information wer',
+                'label' => 'Basic Information',
                 'description' => 'Application identity',
                 'fields' => [
                     'name' => ['type' => 'text', 'label' => 'Application Name', 'placeholder' => 'CMC Telehealth', 'required' => true, 'is_public' => true],
@@ -76,6 +76,71 @@ return [
         ],
     ],
 
+    'support' => [
+        'label' => 'Support',
+        'icon' => 'heroicon-o-shield-check',
+        'description' => 'Support contact information for consultations',
+        'sections' => [
+            'video_consultation' => [
+                'db_group' => 'video_consultation',
+                'label' => 'Video Consultation',
+                'description' => 'Contact information for video consultations',
+                'fields' => [
+                    'phone' => [
+                        'type' => 'tel',
+                        'label' => 'Phone Number',
+                        'placeholder' => '+91 1234567890',
+                        'is_public' => true,
+                    ],
+                    'support_email' => [
+                        'type' => 'email',
+                        'label' => 'Support Email',
+                        'placeholder' => 'video-support@example.com',
+                        'is_public' => true,
+                    ],
+                    'address' => [
+                        'type' => 'textarea',
+                        'label' => 'Address',
+                        'rows' => 2,
+                        'is_public' => true,
+                    ],
+                ],
+                'toggle' => [
+                    'enabled' => true,
+                    'default_open' => false, // Video closed by default
+                ],
+            ],
+            'inperson_consultation' => [
+                'db_group' => 'inperson_consultation',
+                'label' => 'In Person Consultation',
+                'description' => 'Contact information for in-person consultations',
+                'fields' => [
+                    'phone' => [
+                        'type' => 'tel',
+                        'label' => 'Phone Number',
+                        'placeholder' => '+91 1234567890',
+                        'is_public' => true,
+                    ],
+                    'support_email' => [
+                        'type' => 'email',
+                        'label' => 'Support Email',
+                        'placeholder' => 'inperson-support@example.com',
+                        'is_public' => true,
+                    ],
+                    'address' => [
+                        'type' => 'textarea',
+                        'label' => 'Address',
+                        'rows' => 2,
+                        'is_public' => true,
+                    ],
+                ],
+                'toggle' => [
+                    'enabled' => true,
+                    'default_open' => true, // In-Person open by default
+                ],
+            ],
+        ],
+    ],
     /*
     |--------------------------------------------------------------------------
     | Payment Settings

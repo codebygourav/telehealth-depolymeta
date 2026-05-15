@@ -219,10 +219,12 @@ class ListDoctors extends ListRecords
                 return $this->getJsonField($doctor->certifications_info, 'expiry_date');
 
                 // Professional Experience (JSON Repeater)
-            case 'career_start':
-                return $this->getJsonField($doctor->professional_experience_info, 'career_start');
-            case 'past_associations':
-                return $this->getJsonField($doctor->professional_experience_info, 'past_associations');
+            case 'start_date':
+                return $this->getJsonField($doctor->professional_experience_info, 'start_date');
+            case 'end_date':
+                return $this->getJsonField($doctor->professional_experience_info, 'end_date');
+            case 'association':
+                return $this->getJsonField($doctor->professional_experience_info, 'association');
 
                 // Fellowships Info (JSON Repeater)
             case 'fellowship_title':
@@ -335,7 +337,8 @@ class ListDoctors extends ListRecords
             ['label' => 'Certification Expiry Date', 'key' => 'certification_expiry_date', 'sample' => '2025-01-15'],
 
             // ==================== PROFESSIONAL EXPERIENCE (JSON Repeater) ====================
-            ['label' => 'Career Start', 'key' => 'career_start', 'sample' => '2009'],
+            ['label' => 'Start date', 'key' => 'start_date', 'sample' => '2009'],
+            ['label' => 'End date', 'key' => 'end_date', 'sample' => '2015'],
             ['label' => 'Past Associations', 'key' => 'past_associations', 'sample' => 'Apollo Hospital, AIIMS Delhi'],
 
             // ==================== AREAS OF EXPERTISE ====================

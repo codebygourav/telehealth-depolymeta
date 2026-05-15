@@ -137,8 +137,24 @@ class DoctorAvailabilityValidationService
         return $errors;
     }
 
-    public function timeRangesOverlap(string $start1, string $end1, string $start2, string $end2): bool
-    {
+
+    public function timeRangesOverlap(
+        string $start1,
+        string $end1,
+        string $start2,
+        string $end2,
+        ?string $consultationType1 = null,
+        ?string $consultationType2 = null
+    ): bool {
+        // If consultation types are both set and different, treat as non-overlapping
+        if (
+            $consultationType1 !== null &&
+            $consultationType2 !== null &&
+            $consultationType1 !== $consultationType2
+        ) {
+            return false;
+        }
+
         $start1Norm = $this->normalizeTime($start1);
         $end1Norm = $this->normalizeTime($end1);
         $start2Norm = $this->normalizeTime($start2);
@@ -318,12 +334,18 @@ class DoctorAvailabilityValidationService
                 continue;
             }
 
-            if ($existingStart && $existingEnd && $this->timeRangesOverlap(
-                $normalizedStart,
-                $normalizedEnd,
-                $existingStart,
-                $existingEnd
-            )) {
+            // Allow "overlap" only if consultation types are the same; allow identical time for different types (e.g., in-person and video)
+            if (
+                $existingStart && $existingEnd &&
+                $this->timeRangesOverlap(
+                    $normalizedStart,
+                    $normalizedEnd,
+                    $existingStart,
+                    $existingEnd,
+                    $normalizedConsultationType,
+                    $existingConsultationType
+                )
+            ) {
                 $overlaps[] = [
                     'id' => $slot->id,
                     'start_time' => $existingStart,
@@ -331,6 +353,7 @@ class DoctorAvailabilityValidationService
                     'date' => $slot->date,
                 ];
             }
+
         }
 
         return $overlaps;
@@ -466,7 +489,7 @@ class DoctorAvailabilityValidationService
                     continue;
                 }
 
-                if ($this->timeRangesOverlap($normalizedStart, $normalizedEnd, $existingStart, $existingEnd)) {
+                if ($this->timeRangesOverlap($normalizedStart, $normalizedEnd, $existingStart, $existingEnd, $normalizedConsultationType, $existingConsultationType)) {
                     $dateStr = $normalizedDate
                         ? Carbon::parse($normalizedDate)->format('M d, Y')
                         : 'this recurring pattern';

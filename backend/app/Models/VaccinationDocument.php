@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\VaccinationDocumentType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +19,12 @@ class VaccinationDocument extends Model
     protected $fillable = [
         'patient_vaccination_id',
         'document',
+        'document_type',
         'certificate_number',
+    ];
+
+    protected $casts = [
+        'document_type' => VaccinationDocumentType::class,
     ];
 
     protected static function booted(): void

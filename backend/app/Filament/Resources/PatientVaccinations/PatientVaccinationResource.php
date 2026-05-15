@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PatientVaccinations;
 
 use App\Enums\VaccinationStatus;
+use App\Filament\Concerns\ConfiguresSlideOverSections;
 use App\Filament\Resources\PatientVaccinations\Pages\ListPatientVaccinations;
 use App\Models\PatientVaccination;
 use App\Traits\HasCustomSidebar;
@@ -26,6 +27,7 @@ use Illuminate\Support\Facades\Auth;
 
 class PatientVaccinationResource extends Resource
 {
+    use ConfiguresSlideOverSections;
     use HasCustomSidebar;
     use HasResourcePermissions;
 
@@ -38,6 +40,7 @@ class PatientVaccinationResource extends Resource
     public static function getSidebarOptions(): array
     {
         return [
+            'label' => 'Patient Vaccine Doses',
             'icon' => 'heroicon-o-clipboard-document-check',
             'sort' => 6,
             'group' => 'Clinical',
@@ -54,55 +57,94 @@ class PatientVaccinationResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components([
-            Placeholder::make('patient_name')
-                ->label('Patient')
-                ->content(fn (?PatientVaccination $record): string => trim(($record?->patient?->first_name ?? '').' '.($record?->patient?->last_name ?? '')) ?: '-'),
-            Placeholder::make('doctor_name')
-                ->label('Doctor')
-                ->content(fn (?PatientVaccination $record): string => trim(($record?->doctor?->first_name ?? '').' '.($record?->doctor?->last_name ?? '')) ?: '-'),
-            Placeholder::make('vaccination_name')
-                ->label('Vaccination')
-                ->content(fn (?PatientVaccination $record): string => (string) ($record?->vaccination?->name ?? '-')),
-            Placeholder::make('set_name_label')
-                ->label('Set name')
-                ->content(fn (?PatientVaccination $record): string => (string) ($record?->set_name ?: '-')),
-            Select::make('status')
-                ->options([
-                    VaccinationStatus::PENDING->value => VaccinationStatus::PENDING->label(),
-                    VaccinationStatus::SCHEDULED->value => VaccinationStatus::SCHEDULED->label(),
-                    VaccinationStatus::COMPLETED->value => VaccinationStatus::COMPLETED->label(),
-                    VaccinationStatus::MISSED->value => VaccinationStatus::MISSED->label(),
-                    VaccinationStatus::CANCELLED->value => VaccinationStatus::CANCELLED->label(),
-                ])
-                ->required(),
-            TextInput::make('dose_no')
-                ->numeric()
-                ->minValue(1),
-            DatePicker::make('first_dose_date'),
-            DatePicker::make('scheduled_date'),
-            DatePicker::make('completed_date'),
-            TextInput::make('due_after_months')
-                ->numeric()
-                ->minValue(0),
-            TextInput::make('due_after_days')
-                ->numeric()
-                ->minValue(0),
-            TextInput::make('batch_number')
-                ->maxLength(255),
-            TextInput::make('manufacturer')
-                ->maxLength(255),
-            TextInput::make('given_at')
-                ->maxLength(255),
-            TextInput::make('given_by')
-                ->maxLength(255),
-            Textarea::make('doctor_notes')
-                ->columnSpanFull(),
-            Textarea::make('side_effect_observed')
-                ->columnSpanFull(),
-            Textarea::make('patient_reaction')
-                ->columnSpanFull(),
-        ])->columns(2);
+        return $schema->components(static::wrapSlideOverForm([
+            static::slideOverSection('Dose Information', [
+                Placeholder::make('patient_name')
+                    ->label('Patient Account')
+                    ->content(fn (?PatientVaccination $record): string => trim(($record?->patient?->first_name ?? '').' '.($record?->patient?->last_name ?? '')) ?: '-'),
+                Placeholder::make('patient_profile_name')
+                    ->label('Vaccination Profile')
+                    ->content(function (?PatientVaccination $record): string {
+                        $name = $record?->patientProfile?->name ?? '-';
+                        $profileType = $record?->patientProfile?->profile_type ?? null;
+
+                        if ($profileType instanceof \App\Enums\PatientProfileType) {
+                            $typeLabel = $profileType->label();
+                        } else {
+                            $typeLabel = $profileType ? (is_object($profileType) && method_exists($profileType, 'label') ? $profileType->label() : (string) $profileType) : null;
+                        }
+
+                        return (string) $name . ($typeLabel ? ' (' . $typeLabel . ')' : '');
+                    }),
+
+                Placeholder::make('doctor_name')
+                    ->label('Doctor')
+                    ->content(fn (?PatientVaccination $record): string => trim(($record?->doctor?->first_name ?? '').' '.($record?->doctor?->last_name ?? '')) ?: '-'),
+                Placeholder::make('vaccination_name')
+                    ->label('Vaccine')
+                    ->content(fn (?PatientVaccination $record): string => (string) ($record?->vaccination?->name ?? '-')),
+                Placeholder::make('set_name_label')
+                    ->label('Schedule Set')
+                    ->content(fn (?PatientVaccination $record): string => (string) ($record?->set_name ?: '-')),
+                Select::make('status')
+                    ->helperText('Current status of this dose.')
+                    ->options(VaccinationStatus::options())
+                    ->required(),
+                TextInput::make('dose_no')
+                    ->label('Dose Number')
+                    ->helperText('Which dose this is in the schedule.')
+                    ->numeric()
+                    ->minValue(1),
+                DatePicker::make('first_dose_date')
+                    ->helperText('Original start date used for this schedule.'),
+                DatePicker::make('scheduled_date')
+                    ->helperText('Due date for this dose.'),
+                DatePicker::make('completed_date')
+                    ->helperText('Date when the dose was given.'),
+                TextInput::make('due_after_months')
+                    ->helperText('Months after start date saved from template.')
+                    ->numeric()
+                    ->minValue(0),
+                TextInput::make('due_after_days')
+                    ->helperText('Days after start date saved from template.')
+                    ->numeric()
+                    ->minValue(0),
+            ], 'Review the generated patient dose and update dates or status.'),
+            static::slideOverSection('Administration Details', [
+                TextInput::make('batch_number')
+                    ->helperText('Vaccine batch or lot number.')
+                    ->maxLength(255),
+                TextInput::make('manufacturer')
+                    ->helperText('Manufacturer used for this patient dose.')
+                    ->maxLength(255),
+                TextInput::make('route')
+                    ->helperText('How it was given, for example oral or injection.')
+                    ->maxLength(255),
+                TextInput::make('site')
+                    ->helperText('Body site, for example left thigh or upper arm.')
+                    ->maxLength(255),
+                TextInput::make('dose_amount')
+                    ->helperText('Dose amount, for example 0.5 ml.')
+                    ->maxLength(255),
+                TextInput::make('given_at')
+                    ->helperText('Clinic, hospital, or location where it was given.')
+                    ->maxLength(255),
+                TextInput::make('given_by')
+                    ->helperText('Name of person who administered it.')
+                    ->maxLength(255),
+            ], 'Fill these when the vaccine dose is given.'),
+            static::slideOverSection('Notes And Reaction', [
+                Textarea::make('doctor_notes')
+                    ->helperText('Doctor notes for this dose.')
+                    ->rows(3),
+                Textarea::make('side_effect_observed')
+                    ->helperText('Any side effects observed after dose.')
+                    ->rows(3),
+                Textarea::make('patient_reaction')
+                    ->helperText('Patient or parent reported reaction.')
+                    ->rows(3),
+            ], 'Optional clinical notes for follow-up.', icon: 'heroicon-o-chat-bubble-left-right'),
+        ]));
     }
 
     public static function table(Table $table): Table
@@ -124,6 +166,11 @@ class PatientVaccinationResource extends Resource
                 TextColumn::make('patient.mobile_no')
                     ->label('Patient Phone')
                     ->toggleable(),
+                TextColumn::make('patientProfile.name')
+                    ->label('Profile')
+                    ->placeholder('-')
+                    ->searchable()
+                    ->toggleable(),
                 TextColumn::make('doctor.first_name')
                     ->label('Doctor')
                     ->formatStateUsing(fn ($state, PatientVaccination $record): string => trim(($record->doctor?->first_name ?? '').' '.($record->doctor?->last_name ?? '')))
@@ -139,6 +186,10 @@ class PatientVaccinationResource extends Resource
                     ->searchable(),
                 TextColumn::make('template.name')
                     ->label('Template')
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('template.program.name')
+                    ->label('Program')
                     ->placeholder('-')
                     ->toggleable(),
                 TextColumn::make('set_name')
@@ -177,16 +228,14 @@ class PatientVaccinationResource extends Resource
                 IconColumn::make('reminder_sent')
                     ->boolean()
                     ->label('Reminder Sent'),
+                TextColumn::make('next_reminder_at')
+                    ->dateTime()
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('status')
-                    ->options([
-                        VaccinationStatus::PENDING->value => VaccinationStatus::PENDING->label(),
-                        VaccinationStatus::SCHEDULED->value => VaccinationStatus::SCHEDULED->label(),
-                        VaccinationStatus::COMPLETED->value => VaccinationStatus::COMPLETED->label(),
-                        VaccinationStatus::MISSED->value => VaccinationStatus::MISSED->label(),
-                        VaccinationStatus::CANCELLED->value => VaccinationStatus::CANCELLED->label(),
-                    ]),
+                    ->options(VaccinationStatus::options()),
                 TrashedFilter::make(),
             ])
             ->recordActions([
@@ -208,7 +257,7 @@ class PatientVaccinationResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['patient.user', 'doctor.user', 'vaccination', 'template'])
+            ->with(['patient.user', 'doctor.user', 'vaccination', 'template.program', 'patientProfile'])
             ->orderBy('set_sort_order')
             ->orderByRaw('scheduled_date IS NULL, scheduled_date ASC')
             ->withoutGlobalScopes();

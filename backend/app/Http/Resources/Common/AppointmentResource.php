@@ -70,7 +70,8 @@ class AppointmentResource extends JsonResource
         $result = [
             'appointment_id' => $this->id,
             'appointment_date' => $appointmentDateTime->format('Y-m-d'),
-            'appointment_date_formatted' => $appointmentDateTime->format('D, M d'),
+            'appointment_date_formatted' => $appointmentDateTime->format('j F, Y'),
+
 
             'appointment_time' => $appointmentDateTime->format('H:i:s'),
             'appointment_end_time' => $appointmentEndDateTime->format('H:i:s'),

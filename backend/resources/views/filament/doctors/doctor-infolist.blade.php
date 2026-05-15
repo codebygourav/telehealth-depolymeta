@@ -298,7 +298,7 @@
                                         <div
                                             class="p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 hover:border-primary/30 transition">
                                             <h4 class="font-bold text-gray-900 dark:text-white text-sm">
-                                                {{ !empty($exp['position']) ? $exp['position'] : (!empty($exp['past_associations']) ? $exp['past_associations'] : (!empty($exp['name']) ? $exp['name'] : '—')) }}
+                                                {{ !empty($exp['position']) ? $exp['position'] : (!empty($exp['association']) ? $exp['association'] : (!empty($exp['name']) ? $exp['name'] : '—')) }}
                                             </h4>
                                             @if (!empty($exp['hospital']) || !empty($exp['institution']) || !empty($exp['organization']))
                                                 <p class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-1">
@@ -308,8 +308,8 @@
                                             <div
                                                 class="flex items-center gap-1.5 mt-2 text-xs text-gray-500 bg-white dark:bg-gray-900 w-fit px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700">
                                                 <x-heroicon-o-calendar class="w-4 h-4" />
-                                                <span>{{ $exp['career_start'] ?? '' }}
-                                                    {{ isset($exp['career_end']) ? ' - ' . $exp['career_end'] : '' }}</span>
+                                                <span>{{ $exp['start_date'] ?? '' }}
+                                                    {{ isset($exp['end_date']) ? ' - ' . $exp['end_date'] : '' }}</span>
                                             </div>
                                         </div>
                                     @endforeach

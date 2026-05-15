@@ -25,7 +25,6 @@ return new class extends Migration
             $table->string('insurance_policy_number')->nullable()->after('insurance_provider');
             $table->date('insurance_policy_expiry')->nullable()->after('insurance_policy_number');
             $table->string('insurance_tpa_details')->nullable()->after('insurance_policy_expiry');
-
             $table->boolean('treatment_consent_accepted')->nullable()->after('insurance_tpa_details');
         });
     }

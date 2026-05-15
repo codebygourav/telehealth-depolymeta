@@ -147,7 +147,7 @@ class AppointmentDetailResource extends JsonResource
             'schedule' => [
                 'date' => $appointmentDate ? $appointmentDate->format('Y-m-d') : null,
                 'date_formatted' => $appointmentDate ? $appointmentDate->format('d M, y | l') : null,
-                'date_format' => $appointmentDate ? $appointmentDate->format('d M, y') : null,
+                'date_format' => $appointmentDate ? $appointmentDate->format('j F, Y') : null,
                 'day_format' => $appointmentDate ? $appointmentDate->format('l') : null,
                 'time' => $appointmentTime ? $appointmentTime->format('H:i:s') : null,
                 'time_formatted' => $appointmentTime ? $appointmentTime->format('h:i A') : null,

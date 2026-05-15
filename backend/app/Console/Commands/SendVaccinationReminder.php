@@ -24,7 +24,10 @@ class SendVaccinationReminder extends Command
         PatientVaccination::with(['patient.user', 'doctor.user', 'vaccination'])
             ->where('status', VaccinationStatus::SCHEDULED->value)
             ->whereDate('scheduled_date', $targetDate)
-            ->where('reminder_sent', false)
+            ->where(function ($query) use ($targetDate) {
+                $query->where('reminder_sent', false)
+                    ->orWhereDate('next_reminder_at', '<=', $targetDate);
+            })
             ->chunkById(100, function ($patientVaccinations) use (&$count, $days) {
                 foreach ($patientVaccinations as $patientVaccination) {
                     try {
@@ -54,7 +57,12 @@ class SendVaccinationReminder extends Command
                             ]
                         );
 
-                        $patientVaccination->update(['reminder_sent' => true]);
+                        $patientVaccination->update([
+                            'reminder_sent' => true,
+                            'last_reminder_sent_at' => now(),
+                            'reminder_count' => ((int) $patientVaccination->reminder_count) + 1,
+                            'next_reminder_at' => null,
+                        ]);
                         $count++;
                     } catch (\Throwable $e) {
                         Log::error("Failed to send vaccination reminder for ID {$patientVaccination->id}", [

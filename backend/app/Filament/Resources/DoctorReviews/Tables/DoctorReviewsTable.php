@@ -11,6 +11,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use function App\Helpers\getUserAuditColumn;
 use Filament\Actions\{ActionGroup, BulkActionGroup, DeleteBulkAction, ForceDeleteBulkAction, RestoreBulkAction, ViewAction, DeleteAction, EditAction};
+use Illuminate\Database\Eloquent\Builder;
+
 
 class DoctorReviewsTable
 {
@@ -42,9 +44,31 @@ class DoctorReviewsTable
 
                 TextColumn::make('patient_name')
                     ->label('Patient')
-                    ->searchable()
                     ->sortable()
-                    ->default('-'),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+
+                        return $query
+                            ->whereHas('patient.user', function ($q) use ($search) {
+                                $q->where('name', 'like', "%{$search}%");
+                            })
+                            ->orWhereHas('fakerPatient', function ($q) use ($search) {
+                                $q->where('name', 'like', "%{$search}%");
+                            });
+                    })
+                    ->getStateUsing(function ($record) {
+
+                        // Real Patient
+                        if ($record->patient?->user?->name) {
+                            return $record->patient->user->name;
+                        }
+
+                        // Fake Patient
+                        if ($record->fakerPatient?->name) {
+                            return $record->fakerPatient->name;
+                        }
+
+                        return '-';
+                    }),
 
                 TextColumn::make('doctor.user.name')
                     ->label('Doctor')
@@ -56,10 +80,13 @@ class DoctorReviewsTable
                     ->label('Appointment')
                     ->formatStateUsing(fn($state) => $state ? \Carbon\Carbon::parse($state)->format('M d, Y') : '-')
                     ->description(fn($record) => $record->appointment ? "Time: {$record->appointment->appointment_time}" : null)
-                    ->toggleable(),
+                    ->toggleable()
+                    ->searchable(),
 
                 TextColumn::make('rating')
                     ->label('Rating')
+                    ->searchable()
+                    ->sortable()
                     ->badge()
                     ->color(fn($state) => match ($state) {
                         5 => 'success',

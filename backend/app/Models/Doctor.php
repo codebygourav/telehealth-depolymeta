@@ -32,6 +32,7 @@ class Doctor extends Model
         'area',
         'qualification',
         'years_experience',
+        'career_start_year',
         'medical_license_number',
         'address_line1',
         'address_line2',
@@ -101,6 +102,7 @@ class Doctor extends Model
                 $doctor->{$doctor->getKeyName()} = (string) Str::uuid();
             }
 
+
             $maxNumber = (int) \Illuminate\Support\Facades\DB::table('doctors')
                 ->selectRaw('MAX(CAST(SUBSTRING(doctor_code, 3) AS UNSIGNED)) as max_code')
                 ->value('max_code');
@@ -133,6 +135,12 @@ class Doctor extends Model
             }
         });
 
+        static::saving(function ($doctor) {
+            if ($doctor->career_start_year) {
+                $doctor->years_experience =
+                    now()->year - (int) $doctor->career_start_year;
+            }
+        });
         static::updating(function ($doctor) {
             if ($doctor->isDirty(['first_name', 'last_name'])) {
                 $baseSlug = Str::slug(trim($doctor->first_name . ' ' . $doctor->last_name));
@@ -325,24 +333,7 @@ class Doctor extends Model
     {
         return $this->hasMany(DoctorReplacement::class, 'original_doctor_id');
     }
-    public function vaccinationTemplates()
-    {
-        return $this->hasMany(VaccinationTemplate::class);
-    }
 
-    public function patientVaccinations()
-    {
-        return $this->hasMany(PatientVaccination::class);
-    }
-    public function dietTemplates()
-    {
-        return $this->hasMany(DietTemplate::class);
-    }
-
-    public function patientDietPlans()
-    {
-        return $this->hasMany(PatientDietPlan::class);
-    }
     public static function canUserAccess(): bool
     {
         /** @var \App\Models\User $user */

@@ -16,7 +16,7 @@ class DoctorMinimalResource extends JsonResource
             'last_name'   => $this->last_name,
             'years_experience' => $this->years_experience,
             'avatar_url'  => storage_url($this->user->avatar),
-            'slug'    => $this->user->slug ?? null,
+            'slug'    => $this->slug,
             'education_info' => $this->education_info,
             'languages_known' => $this->languages_known,
             'departments' => $this->whenLoaded('departments', function () {

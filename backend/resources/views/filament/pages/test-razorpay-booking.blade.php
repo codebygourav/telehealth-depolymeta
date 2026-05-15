@@ -310,4 +310,206 @@
             </ul>
         </section>
     </div>
+@script
+<script>
+
+    console.log('Razorpay helper loaded');
+
+    const loadRazorpayScript = () => {
+
+        if (window.Razorpay) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+
+            const existing = document.querySelector(
+                'script[data-razorpay-checkout="1"]'
+            );
+
+            if (existing) {
+
+                existing.addEventListener(
+                    'load',
+                    () => resolve(),
+                    { once: true }
+                );
+
+                existing.addEventListener(
+                    'error',
+                    () => reject(
+                        new Error(
+                            'Failed to load Razorpay script'
+                        )
+                    ),
+                    { once: true }
+                );
+
+                return;
+            }
+
+            const script =
+                document.createElement('script');
+
+            script.src =
+                'https://checkout.razorpay.com/v1/checkout.js';
+
+            script.setAttribute(
+                'data-razorpay-checkout',
+                '1'
+            );
+
+            script.onload = () => resolve();
+
+            script.onerror = () =>
+                reject(
+                    new Error(
+                        'Failed to load Razorpay script'
+                    )
+                );
+
+            document.head.appendChild(script);
+        });
+    };
+
+    window.openRazorpayCheckout =
+        async function(payload) {
+
+        console.log(
+            'OPENING RAZORPAY =>',
+            payload
+        );
+
+        if (
+            !payload ||
+            !payload.payment ||
+            !payload.payment.order_id ||
+            !payload.payment.razorpay_key_id
+        ) {
+
+            console.warn(
+                'Invalid Razorpay payload',
+                payload
+            );
+
+            return;
+        }
+
+        try {
+
+            await loadRazorpayScript();
+
+        } catch (error) {
+
+            console.error(error);
+            return;
+        }
+
+        const options = {
+
+            key:
+                payload.payment.razorpay_key_id,
+
+            amount:
+                Number(
+                    payload.payment.amount_paise || 0
+                ),
+
+            currency: 'INR',
+
+            name: 'CMC Ludhiana Hospital',
+
+            description:
+                'Appointment Booking',
+
+            order_id:
+                payload.payment.order_id,
+
+            handler: function(response) {
+
+                fetch(
+                    payload.verify_url ||
+                    '/api/v2/test-verify-payment',
+                    {
+
+                        method: 'POST',
+
+                        headers: {
+                            'Content-Type':
+                                'application/json',
+
+                            'Accept':
+                                'application/json'
+                        },
+
+                        body: JSON.stringify({
+
+                            appointment_id:
+                                payload.appointment_id,
+
+                            razorpay_order_id:
+                                response.razorpay_order_id,
+
+                            razorpay_payment_id:
+                                response.razorpay_payment_id,
+
+                            razorpay_signature:
+                                response.razorpay_signature,
+                        }),
+                    }
+                )
+                .then(res => res.json())
+                .then(json => {
+
+                    console.log(
+                        'VERIFY RESPONSE =>',
+                        json
+                    );
+
+                    if (
+                        json.data &&
+                        json.data.payment_status === 'paid'
+                    ) {
+
+                        alert(
+                            'Payment Successful!'
+                        );
+
+                        location.reload();
+
+                    } else {
+
+                        alert(
+                            'Payment verification failed.'
+                        );
+                    }
+                })
+                .catch(err => {
+
+                    console.error(
+                        'VERIFY ERROR =>',
+                        err
+                    );
+                });
+            }
+        };
+
+        try {
+
+            const razorpay =
+                new Razorpay(options);
+
+            razorpay.open();
+
+        } catch (error) {
+
+            console.error(
+                'RAZORPAY OPEN ERROR =>',
+                error
+            );
+        }
+    };
+
+</script>
+@endscript
 </x-filament-panels::page>

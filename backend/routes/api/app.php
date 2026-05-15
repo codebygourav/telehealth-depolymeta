@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V2\Doctor\PatientDietController;
 use App\Http\Controllers\Api\V2\Patient\DoctorBrowseController;
 use App\Http\Controllers\Api\V2\Patient\PatientHomeController;
 use App\Http\Controllers\Api\V2\Patient\PatientMedicalReportController;
+use App\Http\Controllers\Api\V2\Patient\PatientProfileMemberController;
 use App\Http\Controllers\Api\V2\Patient\PatientProfileController;
 use App\Http\Controllers\Api\V2\Patient\TransactionsController;
 use App\Http\Controllers\Api\V2\Wordpress\DepartmentController as WordpressDepartmentController;
@@ -28,6 +29,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V2\Doctor\VaccinationController;
 use App\Http\Controllers\Api\V2\Doctor\VaccinationTemplateController;
 use App\Http\Controllers\Api\V2\Doctor\PatientVaccinationController;
+use App\Http\Controllers\Api\V2\Vaccination\VaccinationModuleContentController;
 
 
 
@@ -58,24 +60,31 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{user_id}/medical-reports', [PatientMedicalReportController::class, 'store']);
         Route::delete('/medical-reports/{appointmentId}/{report}', [PatientMedicalReportController::class, 'medicalReportDeleteForAppointment']);
         Route::delete('/medical-reports/{report}', [PatientMedicalReportController::class, 'destroy']);
-
-        Route::get(
-            '/vaccinations',
-            [PatientVaccinationController::class, 'patientVaccinations']
-        );
-
-        Route::get(
-            '/vaccinations/{id}',
-            [PatientVaccinationController::class, 'patientShow']
-        );
         Route::get('/diet-plan', [PatientDietController::class, 'patientPlan']);
         Route::post('/diet/meal/{mealId}/complete', [PatientDietController::class, 'markMealCompleted']);
+        Route::get('/profiles', [PatientProfileMemberController::class, 'index']);
+        Route::post('/profiles', [PatientProfileMemberController::class, 'store']);
+        Route::get('/profiles/{id}', [PatientProfileMemberController::class, 'show']);
+        Route::match(['put', 'post'], '/profiles/{id}', [PatientProfileMemberController::class, 'update']);
+        Route::delete('/profiles/{id}', [PatientProfileMemberController::class, 'destroy']);
     });
+
+    // Patient all vaccinations
+    Route::prefix('patient')->group(function () {
+        Route::get('/vaccinations', [PatientVaccinationController::class, 'patientVaccinations']);
+        Route::get('/vaccination-content', [VaccinationModuleContentController::class, 'index']);
+        Route::get('/vaccination-program-assignments', [PatientVaccinationController::class, 'patientPrograms']);
+        Route::get('/vaccinations/{id}', [PatientVaccinationController::class, 'patientShow']);
+    });
+
+
     Route::prefix('prescriptions')->group(function () {
         Route::get('/{id}', [PrescriptionController::class, 'getPrescriptionByUser']);
         Route::get('/detail/{appointmentid}', [PrescriptionController::class, 'show']);
         Route::get('/download/{appointmentid}', [PrescriptionController::class, 'download']);
     });
+
+
 
     Route::prefix('doctor')->group(function () {
         Route::get('/get-profile', [DoctorController::class, 'getProfile']);
@@ -89,12 +98,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/medicines', [PrescriptionController::class, 'index']);
         Route::get('/departments', [DepartmentController::class, 'index']);
 
-        // vaccination master
+        // vaccination master lookup only; master creation is admin-side
         Route::get('/vaccinations', [VaccinationController::class, 'index']);
-        Route::post('/vaccinations', [VaccinationController::class, 'store']);
         Route::get('/vaccinations/{id}', [VaccinationController::class, 'show']);
-        Route::match(['put', 'post'], '/vaccinations/{id}', [VaccinationController::class, 'update']);
-        Route::delete('/vaccinations/{id}', [VaccinationController::class, 'destroy']);
 
         // diet templates + plan assignment (simple flow)
         Route::get('/diet/templates', [DietTemplateController::class, 'index']);
@@ -103,18 +109,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::match(['put', 'post'], '/diet/templates/{id}', [DietTemplateController::class, 'update']);
         Route::delete('/diet/templates/{id}', [DietTemplateController::class, 'destroy']);
         Route::post('/diet/assign', [PatientDietController::class, 'assign']);
-        Route::get('{patientId}/diet-plan', [PatientDietController::class, 'doctorPatientPlan']);
+        Route::get('/{patientId}/diet-plan', [PatientDietController::class, 'doctorPatientPlan']);
         Route::match(['put', 'post'], '/diet/plans/{id}', [PatientDietController::class, 'updatePlan']);
 
-        // templates
+        // templates: doctors can view and update existing templates, admin/data-entry creates them
         Route::get('/vaccination-templates', [VaccinationTemplateController::class, 'index']);
-        Route::post('/vaccination-templates', [VaccinationTemplateController::class, 'store']);
         Route::get('/vaccination-templates/{id}', [VaccinationTemplateController::class, 'show']);
         Route::match(['put', 'post'], '/vaccination-templates/{id}', [VaccinationTemplateController::class, 'update']);
-        Route::delete('/vaccination-templates/{id}', [VaccinationTemplateController::class, 'destroy']);
-        Route::post('/vaccination-templates/{id}/clone', [VaccinationTemplateController::class, 'clone']);
 
         // assign vaccination template
+        Route::get('/patients/{patientId}/profiles', [PatientVaccinationController::class, 'patientProfiles']);
+        Route::post('/patients/{patientId}/profiles', [PatientVaccinationController::class, 'storePatientProfile']);
+        Route::match(['put', 'post'], '/patients/{patientId}/profiles/{profileId}', [PatientVaccinationController::class, 'updatePatientProfile']);
+        Route::delete('/patients/{patientId}/profiles/{profileId}', [PatientVaccinationController::class, 'destroyPatientProfile']);
         Route::post(
             '/{patientId}/assign-template',
             [PatientVaccinationController::class, 'assignTemplate']
@@ -125,6 +132,10 @@ Route::middleware('auth:sanctum')->group(function () {
         );
         // patient vaccinations
         Route::get(
+            '/{patientId}/vaccination-program-assignments',
+            [PatientVaccinationController::class, 'doctorPatientPrograms']
+        );
+        Route::get(
             '/{patientId}/vaccinations',
             [PatientVaccinationController::class, 'index']
         );
@@ -133,8 +144,17 @@ Route::middleware('auth:sanctum')->group(function () {
             '/patient-vaccinations/{id}/complete',
             [PatientVaccinationController::class, 'markCompleted']
         );
+        Route::post(
+            '/patient-vaccinations/{id}/documents',
+            [PatientVaccinationController::class, 'addDocument']
+        );
+        Route::delete(
+            '/vaccination-documents/{documentId}',
+            [PatientVaccinationController::class, 'deleteDocument']
+        );
         // update vaccination
-        Route::match(['put', 'post'],
+        Route::match(
+            ['put', 'post'],
             '/patient-vaccinations/{id}',
             [PatientVaccinationController::class, 'update']
         );

@@ -8,3 +8,10 @@
 .fi-main-content {
     padding: 2rem !important;
 }
+.fi-toggle-on {
+    background: green !important;
+}
+
+li.fi-sidebar-group.fi-active.fi-collapsible ul.fi-sidebar-group-items {
+    background: #cbe1d942;
+}

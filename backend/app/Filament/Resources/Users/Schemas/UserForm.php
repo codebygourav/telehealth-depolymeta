@@ -69,6 +69,10 @@ class UserForm
                         // ---- CHANGE PASSWORD TOGGLE ----
                         Toggle::make('change_password')
                             ->label('Change Password?')
+                            ->onColor('success')
+                            ->onIcon('heroicon-o-check')
+                            ->offColor('danger')
+                            ->offIcon('heroicon-o-x')
                             ->reactive()
                             ->default(false),
 
@@ -100,6 +104,10 @@ class UserForm
                             ->label('Email Verified')
                             ->helperText('Mark as verified to set the email as confirmed')
                             ->inline(false)
+                            ->onColor('success')
+                                ->onIcon('heroicon-o-check')
+                                ->offColor('danger')
+                                ->offIcon('heroicon-o-x')
                             ->afterStateHydrated(function ($component, $state) {
                                 $component->state(!empty($state));
                             })

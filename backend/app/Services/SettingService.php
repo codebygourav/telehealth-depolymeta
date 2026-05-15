@@ -81,6 +81,42 @@ class SettingService
         ];
     }
 
+    public static function getConsultationSupportInfo(
+        ?string $consultationType = 'video'
+    ): array {
+
+        $consultationType = strtolower(trim($consultationType));
+
+        $section = match ($consultationType) {
+
+            'in-person',
+            'inperson',
+            'offline' => 'inperson_consultation',
+
+            'video',
+            'online' => 'video_consultation',
+
+            default => 'video_consultation',
+        };
+
+        return [
+            'phone' => Setting::getValue(
+                'support',
+                "{$section}.phone"
+            ),
+
+            'support_email' => Setting::getValue(
+                'support',
+                "{$section}.support_email"
+            ),
+
+            'address' => Setting::getValue(
+                'support',
+                "{$section}.address"
+            ),
+        ];
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Payment Settings
@@ -294,4 +330,5 @@ class SettingService
             'privacy_policy' => self::getPrivacyAndPolicyContent(),
         ];
     }
+
 }

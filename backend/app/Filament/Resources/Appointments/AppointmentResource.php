@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Appointments;
 
-use App\Filament\Resources\Appointments\Pages\{ListAppointments,ViewAppointment};
+use App\Filament\Resources\Appointments\Pages\{ListAppointments, ViewAppointment};
 use App\Filament\Resources\Appointments\Schemas\{AppointmentForm, AppointmentInfolist};
 use App\Filament\Resources\Appointments\Tables\AppointmentsTable;
 use App\Models\Appointment;

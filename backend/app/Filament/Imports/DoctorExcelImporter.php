@@ -78,8 +78,9 @@ class DoctorExcelImporter
 
         // ==================== PROFESSIONAL EXPERIENCE (JSON Repeater) ====================
         // Fields: career_start, past_associations
-        'career start' => 'career_start',
-        'past associations' => 'past_associations',
+        'career start' => 'start_date',
+        'career end' => 'end_date',
+        'past associations' => 'association',
 
         // ==================== AREAS OF EXPERTISE ====================
         'specializations' => 'specializations_info',
@@ -361,12 +362,14 @@ class DoctorExcelImporter
 
             // ==================== PROFESSIONAL EXPERIENCE (JSON Repeater) ====================
             // Fields: career_start, past_associations
-            $careerStart = $this->clean($data['career_start'] ?? null);
-            $pastAssociations = $this->clean($data['past_associations'] ?? null);
-            if ($careerStart || $pastAssociations) {
+            $careerStart = $this->clean($data['start_date'] ?? null);
+            $careerEND = $this->clean($data['end_date'] ?? null);
+            $association = $this->clean($data['association'] ?? null);
+            if ($careerStart || $association || $careerEND) {
                 $doctor->professional_experience_info = [[
-                    'career_start' => $careerStart,
-                    'past_associations' => $pastAssociations,
+                    'start_date' => $careerStart,
+                    'end_date' => $careerEND,
+                    'association' => $association,
                 ]];
             }
 
@@ -458,7 +461,7 @@ class DoctorExcelImporter
                 ]);
             }
 
-        
+
 
             return $isExisting ? 'exists_updated' : 'success';
         });

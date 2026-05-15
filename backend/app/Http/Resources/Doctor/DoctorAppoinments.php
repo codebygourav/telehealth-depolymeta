@@ -59,10 +59,10 @@ class DoctorAppoinments extends JsonResource
         $result = [
             'appointment_id' => $this->id,
             'appointment_date' => $appointmentDateTime->format('Y-m-d'),
-            'appointment_date_formatted' => $appointmentDateTime->format('D, M d'),
+            'appointment_date_formatted' => $appointmentDateTime->format('d/m/y'),
             'appointment_time_formatted' => $appointmentDateTime->format('h:i A'),
             'appointment_end_time_formatted' => $appointmentEndDateTime->format('h:i A'),
-            
+
             'consultation_type' => $this->consultation_type,
             'consultation_type_label' => $this->consultation_type === 'video'
                 ? 'Video consultation'

@@ -9,11 +9,15 @@ class VaccinationResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $genderRestriction = $this->gender_restriction instanceof \App\Enums\VaccinationGenderRestriction
+            ? $this->gender_restriction->value
+            : $this->gender_restriction;
+
         return [
             'id' => $this->id,
-            'name' => $this->name,
             'short_name' => $this->short_name,
-            'manufacturer' => $this->manufacturer,
+            'created_at' => optional($this->created_at)?->format('d M Y, h:i A'),
+
             'disease_for' => $this->disease_for,
             'description' => $this->description,
             'side_effects' => $this->side_effects,
@@ -22,9 +26,19 @@ class VaccinationResource extends JsonResource
             'dosage_information' => $this->dosage_information,
             'is_multi_dose' => $this->is_multi_dose,
             'total_doses' => $this->total_doses,
+            'minimum_age_days' => $this->minimum_age_days,
+            'minimum_age_date' => $this->minimum_age_days !== null
+                ? now()->addDays($this->minimum_age_days)->toDateString()
+                : null,
+
+            'maximum_age_days' => $this->maximum_age_days,
+            'maximum_age_date' => $this->maximum_age_days !== null
+                ? now()->addDays($this->maximum_age_days)->toDateString()
+                : null,
+
             'is_active' => $this->is_active,
-            'created_at' => optional($this->created_at)?->toIso8601String(),
-            'updated_at' => optional($this->updated_at)?->toIso8601String(),
+            'faqs' => VaccinationFaqResource::collection($this->whenLoaded('faqs')),
+
         ];
     }
 }
