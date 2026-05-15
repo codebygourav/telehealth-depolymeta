@@ -13,27 +13,43 @@ import {
     Syringe,
     FileText
 } from 'lucide-react';
-import { VaccinationTemplate, Vaccine } from '@/types/types';
+import { Vaccine } from '@/types/types';
 import { cn } from '@/lib/utils';
-import { VACCINATION_TEMPLATES } from '@/src/utils/constants';
+
+import { useVaccinationTemplates } from "@/queries/useVaccinationTemplates";
+import { ApiVaccinationTemplate } from '@/types/vaccination-template';
 
 
 export function VaccinationManagement() {
     const [activeVaccines, setActiveVaccines] = useState<Vaccine[]>([]);
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-    const [previewTemplate, setPreviewTemplate] = useState<VaccinationTemplate | null>(null);
+    const [previewTemplate, setPreviewTemplate] =
+        useState<ApiVaccinationTemplate | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
 
-    const handleAssignTemplate = (template: VaccinationTemplate) => {
-        const vaccinesWithDates = template.vaccines.map(v => ({
-            ...v,
-            scheduledDate: new Date().toLocaleDateString(),
-            status: 'Pending' as const
+    const {
+        data: vaccinationTemplates,
+        isLoading,
+        error,
+    } = useVaccinationTemplates();
+
+    console.log("Vaccination Templates API:", vaccinationTemplates);
+
+    const handleAssignTemplate = (template: any) => {
+        const vaccinesWithDates = (template.items ?? []).map((item: any) => ({
+            id: item.id,
+            name: item.vaccination?.name || "N/A",
+            dosage: `Dose ${item.dose_no || "-"}`,
+            type: item.set_name || "N/A",
+            preventDisease: item.set_description || "Vaccination Protection",
+            scheduledDate: item.recommended_age_label || "N/A",
+            status: "Pending" as const,
         }));
-        setActiveVaccines([...activeVaccines, ...vaccinesWithDates]);
+
+        setActiveVaccines((prev) => [...prev, ...vaccinesWithDates]);
         setIsTemplateModalOpen(false);
-        // In real app, trigger success toast here
+        setPreviewTemplate(null);
     };
 
     const markAsDone = (id: string) => {
@@ -172,46 +188,50 @@ export function VaccinationManagement() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-outline-variant/10">
-                            {filteredVaccines.length > 0 ? filteredVaccines.map((v) => (
-                                <tr key={v.id} className="hover:bg-primary/5 transition-colors group">
-                                    <td className="px-6 py-5">
-                                        <p className="font-semibold text-sm text-[#1F1E1E]">{v.name}</p>
-                                        <p className="font-semibold text-sm text-[#1F1E1E]">{v.dosage}</p>
-                                    </td>
-                                    <td className="px-6 py-5 text-[10px] font-black  uppercase tracking-widest">{v.type}</td>
-                                    <td className="px-6 py-5 text-sm font-medium text-on-surface-variant">{v.preventDisease}</td>
-                                    <td className="px-6 py-5 text-sm font-bold text-on-surface">{v.scheduledDate}</td>
-                                    <td className="px-6 py-5">
-                                        <span
-                                            className={cn(
-                                                "px-3 py-1 rounded-md text-xs font-semibold",
-                                                v.status === "Completed"
-                                                    ? "bg-green-100 text-green-600"
-                                                    : v.status === "Overdue"
-                                                        ? "bg-red-100 text-red-600"
-                                                        : "bg-primary/10 text-primary"
-                                            )}
+                            {(vaccinationTemplates?.data?.length ?? 0) > 0 ? (
+                                vaccinationTemplates?.data?.flatMap((template: any) =>
+                                    (template.items ?? []).map((v: any) => (
+                                        <tr
+                                            key={v.id}
+                                            className="hover:bg-primary/5 transition-colors group"
                                         >
-                                            {v.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-5 text-right">
-                                        {v.status !== 'Completed' ? (
-                                            <button
-                                                onClick={() => markAsDone(v.id)}
-                                                className="p-2 text-primary hover:bg-primary/10 rounded-md transition-all"
-                                            >
-                                                <CheckCircle2 className="w-6 h-6" />
-                                            </button>
-                                        ) : (
-                                            <div className="flex items-center justify-end gap-2 text-green-600">
-                                                <CheckCircle2 className="w-5 h-5 fill-current" />
-                                                <span className="text-[10px] font-black uppercase">{v.completedDate}</span>
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            )) : (
+                                            <td className="px-6 py-5">
+                                                <p className="font-semibold text-sm text-[#1F1E1E]">
+                                                    {v.vaccination?.name || "N/A"}
+                                                </p>
+
+                                                <p className="text-xs text-[#4D4D4D] mt-1">
+                                                    Dose {v.dose_no ?? "-"}
+                                                </p>
+                                            </td>
+
+                                            <td className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">
+                                                {v.set_name || "N/A"}
+                                            </td>
+
+                                            <td className="px-6 py-5 text-sm font-medium text-on-surface-variant">
+                                                {v.set_description || "Vaccination Protection"}
+                                            </td>
+
+                                            <td className="px-6 py-5 text-sm font-bold text-on-surface">
+                                                {v.recommended_age_label || "N/A"} Month
+                                            </td>
+
+                                            <td className="px-6 py-5">
+                                                <span className="px-3 py-1 rounded-md text-xs font-semibold bg-primary/10 text-primary">
+                                                    Pending
+                                                </span>
+                                            </td>
+
+                                            <td className="px-6 py-5 text-right">
+                                                <button className="p-2 text-primary hover:bg-primary/10 rounded-md transition-all">
+                                                    <CheckCircle2 className="w-6 h-6" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )
+                            ) : (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3 opacity-50">
@@ -348,12 +368,30 @@ export function VaccinationManagement() {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-outline-variant/20">
-                                                        {previewTemplate.vaccines.map(v => (
-                                                            <tr key={v.id} className="text-sm text-[#4D4D4D]">
-                                                                <td className="px-4 py-3">{v.name}</td>
-                                                                <td className="px-4 py-3">{v.type}</td>
-                                                                <td className="px-4 py-3">{v.recommendedAge}</td>
-                                                                <td className="px-4 py-3">{v.dosage}</td>
+                                                        {previewTemplate.items?.map((item: any) => (
+                                                            <tr
+                                                                key={item.id}
+                                                                className="text-sm text-[#4D4D4D]"
+                                                            >
+                                                                {/* Vaccine */}
+                                                                <td className="px-4 py-3">
+                                                                    {item.vaccination?.name}
+                                                                </td>
+
+                                                                {/* Type */}
+                                                                <td className="px-4 py-3">
+                                                                    {item.set_name}
+                                                                </td>
+
+                                                                {/* Month */}
+                                                                <td className="px-4 py-3">
+                                                                    {item.recommended_age_label}
+                                                                </td>
+
+                                                                {/* Dosage */}
+                                                                <td className="px-4 py-3">
+                                                                    Dose {item.dose_no}
+                                                                </td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
@@ -369,28 +407,47 @@ export function VaccinationManagement() {
                                         </div>
                                     </div>
                                 ) : (
-                                    VACCINATION_TEMPLATES.map(template => (
-                                        <div key={template.id} className="rounded-lg border bg-white p-4 sm:p-5 md:p-6 shadow-sm flex flex-col justify-between">
+                                    vaccinationTemplates?.data?.map((template: any) => (
+                                        <div
+                                            key={template.id}
+                                            className="rounded-lg border bg-white p-4 sm:p-5 md:p-6 shadow-sm flex flex-col justify-between"
+                                        >
                                             <div>
                                                 <div className="flex justify-between items-start mb-4">
+
                                                     <span className="bg-primary/10 text-primary px-3 py-1 rounded-md text-xs font-semibold">
-                                                        {template.ageGroup}
+                                                        Vaccination Plan
                                                     </span>
-                                                    <span className="text-[10px] font-bold ">{template.lastUpdated}</span>
+
+                                                    <span className="text-[10px] font-bold">
+                                                        {template.created_at}
+                                                    </span>
                                                 </div>
-                                                <h4 className="text-lg font-semibold text-[#1F1E1E] mb-1">{template.name}</h4>
-                                                <p className="text-xs font-medium ">Total Vaccines: <span className="font-bold text-on-surface">{template.totalVaccines}</span></p>
+
+                                                <h4 className="text-lg font-semibold text-[#1F1E1E]">
+                                                    {template.name}
+                                                </h4>
+
+                                                <p className="text-xs font-medium text-[#4D4D4D] line-clamp-1">
+                                                    {template.description}
+                                                </p>
+
+                                                <p className="text-xs font-medium mt-2">Total Vaccines: <span className="font-bold text-on-surface">56</span></p>
                                             </div>
 
                                             <div className="flex items-center gap-3 mt-8">
                                                 <button
                                                     onClick={() => setPreviewTemplate(template)}
-                                                    className="flex-1 py-3 px-4 border rounded-md bg-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"                                                >
-                                                    <Eye className="w-4 h-4" /> Preview
+                                                    className="flex-1 py-3 px-4 border rounded-md bg-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                    Preview
                                                 </button>
+
                                                 <button
                                                     onClick={() => handleAssignTemplate(template)}
-                                                    className="flex-1 py-3 px-4 bg-primary text-white rounded-md text-sm font-semibold flex items-center justify-center gap-2 shadow-sm hover:opacity-90 transition-all"                                                >
+                                                    className="flex-1 py-3 px-4 bg-primary text-white rounded-md text-sm font-semibold flex items-center justify-center gap-2 shadow-sm hover:opacity-90 transition-all"
+                                                >
                                                     Assign
                                                 </button>
                                             </div>
