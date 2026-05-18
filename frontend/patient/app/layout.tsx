@@ -14,7 +14,7 @@ const fontMono = Geist_Mono({
 
 export const metadata: Metadata = {
     title: "Deploymeta Telehealth - Patient",
-    description: "A Progressive Web App for Telehealth",
+    description: "A Progressive Web App for Patients in Deploymeta Telehealth",
     manifest: "/manifest.webmanifest",
 };
 
