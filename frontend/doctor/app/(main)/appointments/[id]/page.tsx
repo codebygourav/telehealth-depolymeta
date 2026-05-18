@@ -55,6 +55,8 @@ export default function AppointmentDetail() {
 
     const appointment = data?.data;
 
+    const patient = appointment?.patient;
+
     const tabs: TabItem[] = [
         {
             key: "overview",
@@ -79,7 +81,7 @@ export default function AppointmentDetail() {
         {
             key: "diet",
             label: "Diet Plan",
-            content: <DietPlanManagement />,
+            content: <DietPlanManagement patientId={patient?.id} />,
         },
         {
             key: "prescription",
