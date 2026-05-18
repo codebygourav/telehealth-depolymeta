@@ -225,7 +225,10 @@ class VaccinationTemplateResource extends Resource
             ->columns([
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('program.name')->label('Program')->searchable(),
-                TextColumn::make('doctor.name')->label('Doctor')->searchable(),
+                TextColumn::make('doctor_id')
+                    ->label('Doctor')
+                    ->formatStateUsing(fn ($state, VaccinationTemplate $record): string => static::doctorDisplayName($record->doctor))
+                    ->placeholder('-'),
                 TextColumn::make('items_count')->counts('items')->label('Vaccines')->sortable(),
                 IconColumn::make('is_active')->boolean(),
                 TextColumn::make('created_at')->dateTime()->sortable(),
@@ -259,14 +262,28 @@ class VaccinationTemplateResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
-            ->with(['doctor', 'program'])
+            ->with(['doctor.user', 'program'])
             ->withoutGlobalScopes();
 
         $user = Auth::user();
-        if ((is_object($user) && method_exists($user, 'hasRole') && $user->hasRole('doctor')) && ! (is_object($user) && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'doctor_manager', 'receptionist']))) {
+        $isPrivileged = is_object($user)
+            && method_exists($user, 'hasAnyRole')
+            && $user->hasAnyRole(['super_admin', 'admin', 'doctor_manager', 'receptionist']);
+
+        if (! $isPrivileged && $user?->doctor?->id) {
             return $query->where('doctor_id', $user->doctor?->id);
         }
 
         return $query;
+    }
+
+    private static function doctorDisplayName(?Doctor $doctor): string
+    {
+        if (! $doctor) {
+            return '-';
+        }
+
+        return trim("{$doctor->first_name} {$doctor->last_name}")
+            ?: (string) ($doctor->name ?: $doctor->user?->name ?: '-');
     }
 }

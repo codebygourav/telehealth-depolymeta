@@ -1,5 +1,4 @@
 services:
-
   # ==============================
   # PATIENT
   # ==============================
@@ -49,6 +48,7 @@ services:
 
     volumes:
       - ./backend:/var/www/html
+      - vendor_data:/var/www/html/vendor
 
     depends_on:
       - db
@@ -89,9 +89,6 @@ services:
       MYSQL_PASSWORD: cmc_pass
       MYSQL_ROOT_PASSWORD: root
 
-    ports:
-      - "3307:3306"
-
     volumes:
       - tele_db_data:/var/lib/mysql
 
@@ -117,3 +114,4 @@ services:
 
 volumes:
   tele_db_data:
+  vendor_data:

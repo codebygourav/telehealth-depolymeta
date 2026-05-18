@@ -5,11 +5,11 @@ import { DashboardSection } from "@/components/pages/Dashboard/DashboardSection"
 import DoctorCard from "@/components/DoctorCard";
 
 import { SectionHeader } from "@/components/custom/SectionHeader";
-import type { DashboardAvailableDoctor } from "@/types/dashboard-doctors";
+import type { AvailableDoctor } from "@/types/home";
 
 
 interface AvailableDoctorsProps {
-    doctors: DashboardAvailableDoctor[];
+    doctors: AvailableDoctor[];
     onShowAll: () => void;
 }
 

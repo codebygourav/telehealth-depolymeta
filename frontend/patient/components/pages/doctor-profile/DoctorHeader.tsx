@@ -1,5 +1,4 @@
-import { Star, Verified, Languages as LanguagesIcon, Stethoscope } from 'lucide-react';
-import DoctorTags from './DoctorTags';
+import { Star, Languages as LanguagesIcon, Stethoscope } from 'lucide-react';
 import type { DoctorDetailData } from '@/types/doctor-details';
 
 
@@ -8,6 +7,7 @@ interface DoctorHeaderProps {
 }
 
 const DoctorHeader = ({ doctor }: DoctorHeaderProps) => {
+
     return (
         <section className="rounded-lg p-5 shadow-[0px_2px_4px_0px_#0000001A] border border-[#E7E8EB]">
             <div className="flex flex-col items-center md:flex-row md:items-start gap-6 md:gap-8">
@@ -53,7 +53,9 @@ const DoctorHeader = ({ doctor }: DoctorHeaderProps) => {
                         <div className="flex items-center gap-x-1.5 bg-light-gray rounded-xl py-2 px-2.5 h-fit">
                             <LanguagesIcon className="w-4 h-4 shrink-0" />
                             <span className="text-xs text-[#4D4D4D]">
-                                {doctor.languages?.join(', ') || 'English'}
+                                {Array.isArray(doctor.languages)
+                                    ? doctor.languages.join(', ')
+                                    : doctor.languages || 'English'}
                             </span>
                         </div>
 

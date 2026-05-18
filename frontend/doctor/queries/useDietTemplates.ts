@@ -1,4 +1,5 @@
-import { getDietTemplates, getPatientDietPlan } from "@/api/diet-template";
+
+import { getDietTemplates, getPatientDietPlan,} from "@/api/diet-template";
 import { useQuery } from "@tanstack/react-query";
 
 

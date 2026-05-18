@@ -14,15 +14,13 @@ import HeroSection from "@/components/ui/hero-section";
 import { DietPlanManagement } from "@/app/(main)/appointments/detail-component/DietPlanManagement";
 import { VaccinationManagement } from "@/app/(main)/appointments/detail-component/VaccinationManagement";
 
-
 export default function AppointmentDetail() {
-
-    const params = useParams();
-    const id = params?.id as string;
-    const searchParams = useSearchParams();
-    const initialTab = searchParams.get("tab") || "overview";
-    const { data, isLoading, error } = useAppointmentById(id);
-    const [activeTab, setActiveTab] = useState(initialTab);
+  const params = useParams();
+  const id = params?.id as string;
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "overview";
+  const { data, isLoading, error } = useAppointmentById(id);
+  const [activeTab, setActiveTab] = useState(initialTab);
 
     // Loading skeleton
     if (isLoading) {
@@ -95,27 +93,44 @@ export default function AppointmentDetail() {
         },
     ];
 
+
+  // Loading skeleton
+  if (isLoading) {
+
     return (
-        <div className="container-max-width w-full mx-auto">
-
-            {/* Page Title */}
-            <HeroSection
-                title="Appointment Detail"
-                description="View and manage appointment details, reports, and prescriptions"
-            />
-
-            {/* Appointment Header */}
-            <AppointmentHeader appointment={appointment} />
-
-            {/* Custom Tabs with Horizontal Scroll on Mobile */}
-            <div className="w-full mt-5">
-                <CustomTabs
-                    tabs={tabs}
-                    activeTab={activeTab}
-                    onTabChange={setActiveTab}
-                    tabsListClassName="w-full overflow-x-auto overflow-y-hidden  flex-nowrap justify-start sm:justify-start md:justify-start lg:justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                />
-            </div>
+      <div className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-8 w-48 sm:h-9 sm:w-56" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-64 w-full rounded-xl" />
         </div>
+      </div>
     );
+  }
+
+ 
+
+  return (
+    <div className="container-max-width w-full mx-auto">
+      {/* Page Title */}
+      <HeroSection
+        title="Appointment Detail"
+        description="View and manage appointment details, reports, and prescriptions"
+      />
+
+      {/* Appointment Header */}
+      <AppointmentHeader appointment={appointment} />
+
+      {/* Custom Tabs with Horizontal Scroll on Mobile */}
+      <div className="w-full mt-5">
+        <CustomTabs
+          tabs={tabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          tabsListClassName="w-full overflow-x-auto overflow-y-hidden  flex-nowrap justify-start sm:justify-start md:justify-start lg:justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        />
+      </div>
+    </div>
+  );
 }

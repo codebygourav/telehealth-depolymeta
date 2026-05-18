@@ -160,7 +160,9 @@ class PatientDietController extends Controller
     public function markMealCompleted(Request $request, string $mealId)
     {
         $patient = $request->user()?->patient;
-        if (! $patient) {
+        $doctor = $this->doctor($request);
+
+        if (! $patient && ! $doctor) {
             return ApiResponseService::unauthorized();
         }
 
@@ -169,16 +171,33 @@ class PatientDietController extends Controller
             'patient_notes' => ['nullable', 'string'],
         ]);
 
-        $meal = PatientDietPlanMeal::query()
-            ->whereHas('planDay.plan', fn($query) => $query->where('patient_id', $patient->id))
-            ->findOrFail($mealId);
+
+        $meal = PatientDietPlanMeal::where('id', $mealId)
+            ->whereHas('planDay.plan', function ($query) use ($patient, $doctor) {
+                if ($patient && $doctor) {
+                    $query->where('patient_id', $patient->id)
+                        ->orWhere('doctor_id', $doctor->id);
+                } elseif ($patient) {
+                    $query->where('patient_id', $patient->id);
+                } elseif ($doctor) {
+                    $query->where('doctor_id', $doctor->id);
+                }
+            })
+            ->firstOrFail();
+
+
 
         $status = $data['status'] ?? 'completed';
-        $meal->update([
+        $updates = [
             'status' => $status,
-            'patient_notes' => $data['patient_notes'] ?? null,
             'completed_at' => $status === 'completed' ? now() : null,
-        ]);
+        ];
+
+        if ($request->has('patient_notes')) {
+            $updates['patient_notes'] = $data['patient_notes'];
+        }
+
+        $meal->update($updates);
 
         return ApiResponseService::success(
             data: [

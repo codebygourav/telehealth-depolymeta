@@ -34,3 +34,5 @@ storage
 /opencode.json
 /boost.json
 boost.json
+docker-compose.yml
+docker-compose.prod.yml

@@ -7,6 +7,7 @@ use Filament\Enums\DatabaseNotificationsPosition;
 use App\Filament\Pages\{Dashboard, DoctorReport, OPDCalendar, RolePermissionMatrix, Settings, TestRazorpayBooking};
 use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\{Appointments\AppointmentResource, DoctorDepartments\DoctorDepartmentResource, DoctorReplacements\DoctorReplacementResource, DoctorReviews\DoctorReviewResource, Doctors\DoctorResource, ContactUs\ContactUsResource, Leaves\LeaveResource, MedicalReports\MedicalReportResource, Medicines\MedicineResource, ModuleDocuments\ModuleDocumentResource, Patients\PatientResource, Payments\PaymentResource, Symptoms\SymptomResource, Users\UserResource, Vendors\VendorResource};
+use App\Filament\Resources\DietTemplates\DietTemplateResource;
 use App\Filament\Resources\Vaccinations\VaccinationResource;
 use App\Filament\Resources\VaccinationTemplates\VaccinationTemplateResource;
 use App\Filament\Resources\PatientVaccinations\PatientVaccinationResource;
@@ -80,6 +81,7 @@ class AdminPanelProvider extends PanelProvider
                 ModuleDocumentResource::class,
                 VaccinationResource::class,
                 VaccinationTemplateResource::class,
+                DietTemplateResource::class,
                 PatientProfileResource::class,
                 PatientVaccinationProgramResource::class,
                 PatientVaccinationResource::class,

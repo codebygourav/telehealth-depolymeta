@@ -45,3 +45,6 @@ backend/storage/framework/views/*
 backend/storage/logs/*
 !backend/storage/logs/.gitignore
 
+docker-compose.yml
+
+

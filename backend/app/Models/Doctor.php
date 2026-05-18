@@ -306,7 +306,7 @@ class Doctor extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     public function departments()
@@ -333,6 +333,10 @@ class Doctor extends Model
     {
         return $this->hasMany(DoctorReplacement::class, 'original_doctor_id');
     }
+
+
+
+
 
     public static function canUserAccess(): bool
     {

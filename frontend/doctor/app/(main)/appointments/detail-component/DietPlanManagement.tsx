@@ -1,41 +1,177 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
+
     Plus,
     Utensils,
-
     Eye,
     ArrowRight,
     TrendingUp,
-    History
+    History,
+    XCircle,
+    ChevronDown,
+    Info
 } from 'lucide-react';
-import { DietMeal, DietTemplate } from '@/types/types';
+
 import { cn } from '@/lib/utils';
-import { DIET_TEMPLATES } from '@/src/utils/constants';
 
+import { useDietTemplates, usePatientDietPlan } from '@/queries/useDietTemplates';
+import { useAssignDietTemplate } from '@/mutations/assign-diet-Template';
+import CustomDialog from '@/components/custom/Dialogboxs';
 
-export function DietPlanManagement() {
-    const [assignedMeals, setAssignedMeals] = useState<DietMeal[]>([]);
+interface DietPlanManagementProps {
+    patientId?: string;
+}
+
+export function DietPlanManagement({
+    patientId,
+}: DietPlanManagementProps) {
+
+    console.log("patient id", patientId);
+
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-    const [previewTemplate, setPreviewTemplate] = useState<DietTemplate | null>(null);
+    const [previewTemplate, setPreviewTemplate] = useState<any | null>(null);
+    const [openDay, setOpenDay] = useState<string | null>(null);
+    const [openMealDay, setOpenMealDay] = useState<string | null>(null);
+    const [assignedDietPlan, setAssignedDietPlan] = useState<any | null>(null);
+    const [assignSuccessOpen, setAssignSuccessOpen] = useState(false);
+    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
 
-    const handleAssignTemplate = (template: DietTemplate) => {
-        const initializedMeals = template.meals.map(m => ({
-            ...m,
-            status: 'Pending' as const
-        }));
-        setAssignedMeals(initializedMeals);
-        setIsTemplateModalOpen(false);
+    const [startDate, setStartDate] = useState("2026-05-18");
+    const [durationDays, setDurationDays] = useState(7);
+    const [specialInstructions, setSpecialInstructions] = useState(
+        "Avoid sugar and fried snacks. Keep dinner before 8 PM."
+    );
+
+    const { data, isLoading, error } = useDietTemplates();
+    const dietTemplates = data?.data || [];
+
+    const {
+        data: patientDietData,
+        refetch: refetchPatientDietPlan,
+    } = usePatientDietPlan();
+
+    const dietPlan = assignedDietPlan || patientDietData?.data;
+
+    const assignDietMutation = useAssignDietTemplate();
+
+    const getTotalCalories = (template: any) => {
+        return template.days?.reduce(
+            (total: number, day: any) =>
+                total +
+                day.meals?.reduce(
+                    (sum: number, meal: any) => sum + (meal.calories || 0),
+                    0
+                ),
+            0
+        ) || 0;
+    };
+    console.log("Diet Templates:", data);
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="h-14 w-14 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+
+                <p className="text-sm font-semibold text-[#4D4D4D]">
+                    Loading templates...
+                </p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+                    <XCircle className="w-7 h-7 text-red-600" />
+                </div>
+
+                <div>
+                    <h3 className="text-base font-bold text-[#1F1E1E]">
+                        Failed to load templates
+                    </h3>
+
+                    <p className="mt-1 text-sm text-[#4D4D4D]">
+                        Something went wrong while fetching diet templates.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    const handleAssignTemplate = async () => {
+        if (!selectedTemplate) return;
+
+        try {
+            const response = await assignDietMutation.mutateAsync({
+                patient_id: patientId || "",
+                template_id: selectedTemplate.id,
+                start_date: startDate,
+                duration_days: durationDays,
+                special_instructions: specialInstructions,
+            });
+
+            console.log("Assign API Response:", response);
+
+            setAssignedDietPlan(response?.data);
+
+            await refetchPatientDietPlan();
+
+            setAssignDialogOpen(false);
+            setIsTemplateModalOpen(false);
+            setPreviewTemplate(null);
+            setAssignSuccessOpen(true);
+        } catch (error) {
+            console.log("Assign diet failed:", error);
+        }
     };
 
-    const markFollowed = (id: string) => {
-        setAssignedMeals(prev => prev.map(m =>
-            m.id === id ? { ...m, status: 'Followed', completedAt: new Date().toLocaleTimeString() } : m
-        ));
+    const markFollowed = async (id: string) => {
+        console.log("Mark followed:", id);
     };
 
-    const completionPercentage = assignedMeals.length > 0
-        ? Math.round((assignedMeals.filter(m => m.status === 'Followed').length / assignedMeals.length) * 100)
-        : 0;
+    const apiAssignedMeals =
+        dietPlan?.days?.flatMap((day: any) =>
+            day.meals.map((meal: any) => ({
+                id: meal.id,
+                weekDay: day.week_day,
+                dayNumber: day.day_number,
+                date: day.date,
+                time: meal.meal_time,
+                type: meal.meal_type,
+                items: meal.meal_name,
+                instructions: meal.instructions,
+                calories: meal.calories,
+                status: meal.status || "pending",
+                completedAt: meal.completed_at,
+            }))
+        ) || [];
+
+    const assignedMeals = apiAssignedMeals;
+
+    const completionPercentage =
+        assignedMeals.length > 0
+            ? Math.round(
+                (assignedMeals.filter((m: any) => m.status === "followed").length /
+                    assignedMeals.length) *
+                100
+            )
+            : 0;
+    const groupedMeals = assignedMeals.reduce(
+        (acc: Record<string, any[]>, meal: any) => {
+            const weekDay = meal.weekDay || "DAY";
+
+            if (!acc[weekDay]) {
+                acc[weekDay] = [];
+            }
+
+            acc[weekDay].push(meal);
+
+            return acc;
+        },
+        {}
+    );
 
     return (
         <div className="space-y-8 animate-stagger-fade">
@@ -88,13 +224,18 @@ export function DietPlanManagement() {
                             <div className="px-5 py-3  rounded-lg shadow-sm border border-outline-variant/20">
                                 <p className="text-[10px] font-black uppercase tracking-widest mb-1">Calories Met</p>
                                 <p className="text-lg font-bold text-primary">
-                                    {assignedMeals.filter(m => m.status === 'Followed').reduce((acc, curr) => acc + curr.calories, 0)} kcal
+                                    {assignedMeals
+                                        .filter((m: any) => m.status === "followed")
+                                        .reduce(
+                                            (acc: number, curr: any) => acc + curr.calories,
+                                            0
+                                        )} kcal
                                 </p>
                             </div>
                             <div className="px-4 py-3 rounded-lg border bg-white shadow-sm">
                                 <p className="text-[10px] font-black uppercase tracking-widest mb-1">Meals Followed</p>
                                 <p className="text-lg font-bold text-on-surface">
-                                    {assignedMeals.filter(m => m.status === 'Followed').length} / {assignedMeals.length}
+                                    {assignedMeals.filter((m: any) => m.status === "followed").length} / {assignedMeals.length}
                                 </p>
                             </div>
                         </div>
@@ -138,100 +279,166 @@ export function DietPlanManagement() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-[#F8F8F8]">
-                            <tr>
-                                <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Meal Time</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Meal Type</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Food Items</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Calories</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Status</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-outline-variant/10">
-                            {assignedMeals.length > 0 ? assignedMeals.map((meal) => (
-                                <tr key={meal.id} className="hover:bg-primary/5 transition-colors group">
+                <div className="space-y-3">
+                    {Object.keys(groupedMeals).length > 0 ? (
+                        Object.entries(groupedMeals).map(([day, meals]: any) => (
+                            <div
+                                key={day}
+                                className="rounded-lg border overflow-hidden bg-white"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setOpenMealDay(
+                                            openMealDay === day ? null : String(day)
+                                        )
+                                    }
+                                    className="w-full px-4 py-3 bg-[#F8F8F8] flex items-center justify-between text-left"
+                                >
+                                    <div>
+                                        <p className="text-base font-bold text-[#1F1E1E] uppercase">
+                                            {day}
+                                        </p>
 
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-center whitespace-nowrap">
-                                            <span className="text-sm font-semibold text-[#1F1E1E]">
-                                                {meal.time}
-                                            </span>
-                                        </div>
-                                    </td>
+                                        <p className="text-sm text-[#4D4D4D]">
+                                            Day {meals[0]?.dayNumber}
+                                        </p>
+                                    </div>
 
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-center whitespace-nowrap">
-                                            <span className="text-sm font-medium text-[#4D4D4D]">
-                                                {meal.type}
-                                            </span>
-                                        </div>
-                                    </td>
+                                    <div className="flex items-center gap-2 text-primary shrink-0">
+                                        <span className="text-sm font-semibold whitespace-nowrap">
+                                            {meals.length} Meals
+                                        </span>
 
-                                    <td className="px-6 py-6 min-w-[260px]">
-                                        <div className="flex items-center">
-                                            <span className="text-sm font-medium text-[#4D4D4D]">
-                                                {meal.items}
-                                            </span>
-                                        </div>
-                                    </td>
-
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-center whitespace-nowrap">
-                                            <span className="text-sm font-semibold text-primary">
-                                                {meal.calories} kcal
-                                            </span>
-                                        </div>
-                                    </td>
-
-                                    <td className="px-6 py-6">
-                                        <div className="flex items-center whitespace-nowrap">
-                                            <span
-                                                className={cn(
-                                                    "px-3 py-1 rounded-md text-xs font-semibold",
-                                                    meal.status === "Followed"
-                                                        ? "bg-green-50 text-green-600"
-                                                        : meal.status === "Missed"
-                                                            ? "bg-error/10 text-error"
-                                                            : "bg-primary/10 text-primary"
-                                                )}
-                                            >
-                                                {meal.status}
-                                            </span>
-                                        </div>
-                                    </td>
-
-                                    <td className="px-6 py-6">
-                                        <div className="flex justify-end whitespace-nowrap">
-                                            {meal.status === "Pending" ? (
-                                                <button
-                                                    onClick={() => markFollowed(meal.id)}
-                                                    className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:opacity-90 transition-all"
-                                                >
-                                                    Mark Followed
-                                                </button>
-                                            ) : (
-                                                <div className="text-[10px] font-black uppercase opacity-60">
-                                                    {meal.completedAt}
-                                                </div>
+                                        <ChevronDown
+                                            className={cn(
+                                                "w-5 h-5 transition-transform duration-300",
+                                                openMealDay === day && "rotate-180"
                                             )}
+                                        />
+                                    </div>
+                                </button>
+
+                                <div
+                                    className={cn(
+                                        "grid transition-all duration-300 ease-in-out",
+                                        openMealDay === day
+                                            ? "grid-rows-[1fr]"
+                                            : "grid-rows-[0fr]"
+                                    )}
+                                >
+                                    <div className="overflow-hidden">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left">
+                                                <thead className="bg-white">
+                                                    <tr>
+                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                            Meal Time
+                                                        </th>
+
+                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                            Meal Type
+                                                        </th>
+
+                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                            Food Items
+                                                        </th>
+
+                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                            Calories
+                                                        </th>
+
+                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                            Status
+                                                        </th>
+
+                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                            Action
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody className="divide-y divide-outline-variant/10">
+                                                    {meals.map((meal: any) => (
+
+                                                        <tr
+                                                            key={meal.id}
+                                                            className="hover:bg-primary/5 transition-colors"
+                                                        >
+                                                            <td className="px-6 py-6">
+                                                                {meal.time}
+                                                            </td>
+
+                                                            <td className="px-6 py-6">
+                                                                {meal.type}
+                                                            </td>
+
+                                                            <td className="px-6 py-6 min-w-65">
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-sm font-semibold text-[#1F1E1E]">
+                                                                        {meal.items}
+                                                                    </span>
+                                                                    <span className="text-xs text-[#4D4D4D] mt-1">
+                                                                        {meal.instructions}
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+
+                                                            <td className="px-6 py-6 text-primary font-semibold">
+                                                                {meal.calories} kcal
+                                                            </td>
+
+                                                            <td className="px-6 py-6">
+                                                                <span
+                                                                    className={cn(
+                                                                        "px-3 py-1 rounded-md text-xs font-semibold",
+                                                                        meal.status === "followed"
+                                                                            ? "bg-green-50 text-green-600"
+                                                                            : meal.status === "missed"
+                                                                                ? "bg-error/10 text-error"
+                                                                                : "bg-primary/10 text-primary"
+                                                                    )}
+                                                                >
+                                                                    {meal.status}
+                                                                </span>
+                                                            </td>
+
+                                                            <td className="px-6 py-6">
+                                                                {meal.status === "pending" ? (
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            markFollowed(meal.id)
+                                                                        }
+                                                                        className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium"
+                                                                    >
+                                                                        Mark Followed
+                                                                    </button>
+                                                                ) : (
+                                                                    <div className="text-[10px] font-black uppercase opacity-60">
+                                                                        {meal.completedAt}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
-                                    </td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-20 text-center">
-                                            <div className="flex flex-col items-center gap-3 opacity-50">
-                                            <History className="w-16 h-16" />
-                                            <p className="text-sm font-bold">No active diet plan. Assign one to start tracking.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="px-6 py-20 text-center">
+                            <div className="flex flex-col items-center gap-3 opacity-50">
+                                <History className="w-16 h-16" />
+
+                                <p className="text-sm font-bold">
+                                    No active diet plan. Assign one to start tracking.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </section>
 
@@ -274,18 +481,18 @@ export function DietPlanManagement() {
                                         <div className="rounded-lg border bg-white p-4 sm:p-5 md:p-6 shadow-sm">
                                             <div className="flex items-start justify-between gap-3 sm:gap-4 mb-6">
                                                 <div className="min-w-0 flex-1">
-                                                    <h4 className="text-base sm:text-xl md:text-2xl font-bold text-[#1F1E1E] leading-snug break-words">
+                                                    <h4 className="text-base sm:text-xl md:text-2xl font-bold text-[#1F1E1E] leading-snug wrap-break-word">
                                                         {previewTemplate.name}
                                                     </h4>
 
                                                     <span className="inline-block mt-2 bg-primary/10 text-primary px-2.5 sm:px-3 py-1 rounded-md text-[10px] sm:text-xs font-semibold">
-                                                        {previewTemplate.duration}
+                                                        {previewTemplate.duration_days} Days
                                                     </span>
                                                 </div>
 
                                                 <div className="shrink-0 text-right">
                                                     <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#1F1E1E] leading-none">
-                                                        {previewTemplate.calories.split(" ")[0]}
+                                                        {getTotalCalories(previewTemplate)}
                                                     </p>
 
                                                     <p className="text-[10px] sm:text-xs font-semibold text-[#4D4D4D] mt-1 whitespace-nowrap">
@@ -294,36 +501,117 @@ export function DietPlanManagement() {
                                                 </div>
                                             </div>
 
-                                            <div className="overflow-x-auto rounded-lg border mb-6">
-                                                <table className="w-full min-w-[520px] text-left bg-white">
-                                                    <thead className="bg-[#F8F8F8]">
-                                                        <tr>
-                                                            <th className="px-4 py-3 text-xs font-semibold text-[#4D4D4D]">Time</th>
-                                                            <th className="px-4 py-3 text-xs font-semibold text-[#4D4D4D]">Meal</th>
-                                                            <th className="px-4 py-3 text-xs font-semibold text-[#4D4D4D]">Calories</th>
-                                                        </tr>
-                                                    </thead>
+                                            <div className="space-y-3 mb-6">
+                                                {previewTemplate.days?.map((day: any) => (
+                                                    <div
+                                                        key={day.id}
+                                                        className="rounded-lg border bg-white overflow-hidden"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setOpenDay(openDay === day.id ? null : day.id)
+                                                            }
+                                                            className="w-full cursor-pointer px-4 py-3 bg-[#F8F8F8] flex items-center justify-between gap-3 text-left"
+                                                        >
+                                                            <div>
+                                                                <p className="text-sm font-bold text-[#1F1E1E]">
+                                                                    {day.week_day}
+                                                                </p>
+                                                                <p className="text-xs text-[#4D4D4D]">
+                                                                    Day {day.day_number}
+                                                                </p>
+                                                            </div>
 
-                                                    <tbody className="divide-y">
-                                                        {previewTemplate.meals.map((m) => (
-                                                            <tr key={m.id}>
-                                                                <td className="px-4 py-3 text-sm text-[#4D4D4D] whitespace-nowrap">
-                                                                    {m.time}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-sm text-[#4D4D4D] min-w-[240px]">
-                                                                    {m.type} - {m.items}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-sm font-semibold text-primary whitespace-nowrap">
-                                                                    {m.calories}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                            <div className="flex items-center gap-2 text-primary shrink-0">
+                                                                <span className="text-xs font-semibold whitespace-nowrap">
+                                                                    {day.meals?.length || 0} Meals
+                                                                </span>
+
+                                                                <ChevronDown
+                                                                    className={cn(
+                                                                        "w-5 h-5 transition-transform duration-300",
+                                                                        openDay === day.id && "rotate-180"
+                                                                    )}
+                                                                />
+                                                            </div>
+                                                        </button>
+
+                                                        <div
+                                                            className={cn(
+                                                                "grid transition-all duration-300 ease-in-out",
+                                                                openDay === day.id
+                                                                    ? "grid-rows-[1fr]"
+                                                                    : "grid-rows-[0fr]"
+                                                            )}
+                                                        >
+                                                            <div className="overflow-hidden">
+                                                                <div className="overflow-x-auto">
+                                                                    <table className="w-full min-w-130 text-left bg-white">
+                                                                        <thead className="bg-white">
+                                                                            <tr>
+                                                                                <th className="px-4 py-3 text-xs font-semibold text-[#4D4D4D]">
+                                                                                    Time
+                                                                                </th>
+                                                                                <th className="px-4 py-3 text-xs font-semibold text-[#4D4D4D]">
+                                                                                    Meal
+                                                                                </th>
+                                                                                <th className="px-4 py-3 text-xs font-semibold text-[#4D4D4D]">
+                                                                                    Calories
+                                                                                </th>
+                                                                            </tr>
+                                                                        </thead>
+
+                                                                        <tbody className="divide-y">
+                                                                            {day.meals?.map((m: any) => (
+                                                                                <tr key={m.id}>
+                                                                                    <td className="px-4 py-3 text-sm text-[#4D4D4D] whitespace-nowrap">
+                                                                                        {m.start_time}
+                                                                                    </td>
+
+                                                                                    <td className="px-4 py-3 min-w-60">
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className="text-sm font-semibold text-[#1F1E1E]">
+                                                                                                {m.meal_type} - {m.meal_name}
+                                                                                            </span>
+
+                                                                                            <div className="flex items-center gap-1">
+                                                                                                <Info className="w-3 h-3 text-primary shrink-0 " />
+
+                                                                                                <span className="text-xs text-[#4D4D4D] leading-relaxed">
+                                                                                                    {m.instructions}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </td>
+
+                                                                                    <td className="px-4 py-3 text-sm font-semibold text-primary whitespace-nowrap">
+                                                                                        {m.calories} kcal
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
 
                                             <button
-                                                onClick={() => handleAssignTemplate(previewTemplate)}
+                                                onClick={() => {
+                                                    if (!previewTemplate) return;
+
+                                                    setSelectedTemplate(previewTemplate);
+                                                    setStartDate("2026-05-18");
+                                                    setDurationDays(previewTemplate?.duration_days || 7);
+                                                    setSpecialInstructions(
+                                                        "Avoid sugar and fried snacks. Keep dinner before 8 PM."
+                                                    );
+
+                                                    setAssignDialogOpen(true);
+                                                }}
                                                 className="w-full bg-primary text-white py-3 rounded-md text-sm font-semibold shadow-sm hover:opacity-90 transition-all"
                                             >
                                                 Assign This Diet Plan
@@ -331,7 +619,7 @@ export function DietPlanManagement() {
                                         </div>
                                     </div>
                                 ) : (
-                                    DIET_TEMPLATES.map((template) => (
+                                    dietTemplates.map((template: any) => (
                                         <div
                                             key={template.id}
                                             className="rounded-lg border bg-white p-4 sm:p-5 md:p-6 shadow-sm flex flex-col justify-between"
@@ -343,7 +631,7 @@ export function DietPlanManagement() {
                                                     </div>
 
                                                     <span className="text-2xl sm:text-3xl font-bold text-[#1F1E1E]/10">
-                                                        {template.calories.split(" ")[0]}
+                                                        {getTotalCalories(template)}
                                                     </span>
                                                 </div>
 
@@ -355,14 +643,14 @@ export function DietPlanManagement() {
                                                     <p className="text-xs text-[#4D4D4D] flex items-center justify-between gap-3">
                                                         Meal Count:
                                                         <span className="font-semibold text-[#1F1E1E]">
-                                                            {template.mealCount}
+                                                            {template.days?.reduce((total: number, day: any) => total + (day.meals?.length || 0), 0)}
                                                         </span>
                                                     </p>
 
                                                     <p className="text-xs text-[#4D4D4D] flex items-center justify-between gap-3">
                                                         Duration:
                                                         <span className="font-semibold text-primary">
-                                                            {template.duration}
+                                                            {template.duration_days} Days
                                                         </span>
                                                     </p>
                                                 </div>
@@ -378,10 +666,17 @@ export function DietPlanManagement() {
                                                 </button>
 
                                                 <button
-                                                    onClick={() => handleAssignTemplate(template)}
+                                                    onClick={() => {
+                                                        setSelectedTemplate(template);
+                                                        setStartDate("2026-05-18");
+                                                        setDurationDays(template.duration_days || 7);
+                                                        setSpecialInstructions("Avoid sugar and fried snacks. Keep dinner before 8 PM.");
+                                                        setAssignDialogOpen(true);
+                                                    }}
+                                                    disabled={assignDietMutation.isPending}
                                                     className="flex-1 py-3 px-4 bg-primary text-white rounded-md text-sm font-semibold flex items-center justify-center gap-2 shadow-sm hover:opacity-90 transition-all"
                                                 >
-                                                    Assign
+                                                    {assignDietMutation.isPending ? "Assigning..." : "Assign"}
                                                 </button>
                                             </div>
                                         </div>
@@ -392,6 +687,112 @@ export function DietPlanManagement() {
                     </div>
                 )}
             </section>
+            <CustomDialog
+                open={assignDialogOpen}
+                onClose={() => setAssignDialogOpen(false)}
+                title="Assign Diet Plan"
+                description="Fill diet plan details before assigning."
+                confirmText="Assign Diet Plan"
+                loading={assignDietMutation.isPending}
+                type="success"
+                onConfirm={handleAssignTemplate}
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-xs font-semibold text-[#4D4D4D]">
+                            Start Date
+                        </label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="mt-1 w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-primary"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-semibold text-[#4D4D4D]">
+                            Duration Days
+                        </label>
+                        <input
+                            type="number"
+                            value={durationDays}
+                            onChange={(e) => setDurationDays(Number(e.target.value))}
+                            className="mt-1 w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-primary"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-semibold text-[#4D4D4D]">
+                            Special Instructions
+                        </label>
+                        <textarea
+                            value={specialInstructions}
+                            onChange={(e) => setSpecialInstructions(e.target.value)}
+                            rows={4}
+                            className="mt-1 w-full resize-none rounded-md border px-3 py-2 text-sm outline-none focus:border-primary"
+                        />
+                    </div>
+                </div>
+            </CustomDialog>
         </div>
     );
-}
+  };
+
+
+
+// function mapApiMealToAssignedMeal(
+//   meal: ApiDietTemplateMeal,
+//   dayNumber: number,
+// ): AssignedDietMeal {
+//   return {
+//     id: meal.id,
+//     time: formatMealTime(meal.meal_time ?? meal.start_time),
+//     type: formatMealType(meal.meal_type),
+//     items: meal.meal_name,
+//     calories: meal.calories ?? 0,
+//     notes: `Day ${dayNumber}`,
+//     status:
+//       meal.status === "completed"
+//         ? "Followed"
+//         : meal.status === "missed"
+//           ? "Missed"
+//           : "Pending",
+//     completedAt: meal.completed_at
+//       ? new Date(meal.completed_at).toLocaleTimeString()
+//       : undefined,
+//   };
+// }
+
+// function mealCount(template: ApiDietTemplate): number {
+//   return template.days.reduce((count, day) => count + day.meals.length, 0);
+// }
+
+// function totalCalories(template: ApiDietTemplate): number {
+//   return template.days.reduce(
+//     (total, day) =>
+//       total +
+//       day.meals.reduce((dayTotal, meal) => dayTotal + (meal.calories ?? 0), 0),
+//     0,
+//   );
+// }
+
+// function formatMealType(mealType?: string | null): string {
+//   if (!mealType) {
+//     return "Meal";
+//   }
+
+//   return mealType
+//     .split("_")
+//     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+//     .join(" ");
+// }
+
+// function formatMealTime(time?: string | null): string {
+//   if (!time) {
+//     return "-";
+//   }
+
+//   return time.slice(0, 5);
+// }
+        
