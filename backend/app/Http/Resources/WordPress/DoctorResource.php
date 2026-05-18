@@ -5,6 +5,7 @@ namespace App\Http\Resources\WordPress;
 use App\Http\Resources\Common\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use  App\Http\Resources\WordPress\DoctorAvailabilityResource;
 
 class DoctorResource extends JsonResource
 {

@@ -65,6 +65,7 @@ class DoctorAvailabilityResource extends JsonResource
             'recurring_end_date' => $this->is_recurring && $this->recurring_end_date
                 ? Carbon::parse($this->recurring_end_date)->format('d-m-Y')
                 : null,
+            'is_recurring' => $this->is_recurring,
         ];
     }
 

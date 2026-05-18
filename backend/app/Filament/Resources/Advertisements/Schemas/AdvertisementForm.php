@@ -25,9 +25,20 @@ class AdvertisementForm
                     ->label('Advertisement Image')
                     ->disk('public')
                     ->directory('advertisements')
-                    ->image()
-                    ->maxSize(5120)
+                    ->acceptedFileTypes([
+                        'image/jpeg',
+                        'image/png',
+                        'image/gif',
+                        'image/webp',
+                        'image/bmp',
+                        'image/svg+xml',
+                        'image/tiff',
+                        'image/x-icon',
+                        'image/heic',
+                        'image/heif',
+                    ])
                     ->columnSpanFull(),
+
 
                 Toggle::make('is_active')
                     ->onColor('success')

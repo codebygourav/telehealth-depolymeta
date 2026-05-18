@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             SettingsSeeder::class,
             MedicalReportSeeder::class,
             VaccinationModuleSeeder::class,
+            DietTemplateSeeder::class,
         ]);
     }
 }
