@@ -333,7 +333,10 @@ class Doctor extends Model
     {
         return $this->hasMany(DoctorReplacement::class, 'original_doctor_id');
     }
-    
+
+
+
+
 
     public static function canUserAccess(): bool
     {

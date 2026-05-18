@@ -46,6 +46,5 @@ backend/storage/logs/*
 !backend/storage/logs/.gitignore
 
 docker-compose.yml
-docker-compose.prod.yml
-.docker-compose.prod.yml
+
 
