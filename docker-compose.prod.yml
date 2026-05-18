@@ -89,9 +89,6 @@ services:
       MYSQL_PASSWORD: cmc_pass
       MYSQL_ROOT_PASSWORD: root
 
-    ports:
-      - "3307:3306"
-
     volumes:
       - tele_db_data:/var/lib/mysql
 

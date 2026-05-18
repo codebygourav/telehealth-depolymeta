@@ -1,21 +1,20 @@
-import { Star, Clock, Languages, MapPin, ChevronRight, Video, Hospital } from 'lucide-react';
+import { Star, Clock, Languages, ChevronRight, Video, Hospital } from 'lucide-react';
 import type { Doctor } from '@/types/browse-doctors';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
-import { CustomAvatar } from '@/components/custom/custom-avatar';
-import { constructNow } from 'date-fns';
-
 interface DoctorCardProps {
     doctor: Doctor;
     isLoading?: boolean;
+    onBook?: () => void;
 }
 
-const DoctorCard = ({ doctor, isLoading = false }: DoctorCardProps) => {
+const DoctorCard = ({ doctor, isLoading = false, onBook }: DoctorCardProps) => {
 
     const router = useRouter();
 
     const handleBookNow = () => {
+        if (onBook) onBook();
         router.push(`/find-doctors/${doctor.id}`);
     };
     return (
@@ -66,7 +65,9 @@ const DoctorCard = ({ doctor, isLoading = false }: DoctorCardProps) => {
                                 </span>
                                 <span className="flex items-center gap-1.5 text-xs font-medium text-[#4D4D4D]">
                                     <Languages size={14} />
-                                    {/* Lang: {doctor.languages_known?.join(', ') || 'N/A'} */}
+                                    {Array.isArray(doctor.languages_known)
+                                        ? doctor.languages_known.join(', ')
+                                        : doctor.languages_known || 'English'}
                                 </span>
                             </div>
 
@@ -87,29 +88,41 @@ const DoctorCard = ({ doctor, isLoading = false }: DoctorCardProps) => {
                                         ? (
                                             <>
                                                 {doctor.consultation_type.includes('video') && (
-                                                    <Video size={18} color='#18CE1E' fill="#18CE1E" />
+                                                    <Video size={18} color='#055bd9' fill="#055bd9" />
                                                 )}
                                                 {doctor.consultation_type.includes('in-person') && (
-                                                    <Hospital size={18} color='#18CE1E' />
+                                                    <Hospital size={18} color='#055bd9' />
                                                 )}
                                                 {!doctor.consultation_type.includes('video') && !doctor.consultation_type.includes('in-person') || doctor.consultation_type === 'both' && null}
                                             </>
                                         )
                                         : doctor.consultation_type === 'video' ? (
-
-                                            <Video size={18} color='#18CE1E' fill="#18CE1E" />
-                                        ) : doctor.consultation_type === 'in-person' || doctor.consultation_type === 'In Person' ? (
-                                            <Hospital size={18} color='#18CE1E' />
-                                        ) : doctor.consultation_type === 'both' ? (
                                             <>
-                                                <Video size={18} color='#18CE1E' fill="#18CE1E" />
-                                                <Hospital size={18} color='#18CE1E' />
+                                                <Video size={18} color='#055bd9' fill="#055bd9" />
+                                                <p className="text-xs font-bold capitalize break-words">
+                                                    {doctor.consultation_type_label}
+                                                </p>
                                             </>
+                                        ) : doctor.consultation_type === 'in-person' || doctor.consultation_type === 'In Person' ? (
+                                            <>
+                                                <Hospital size={18} color='#055bd9' />
+                                                <p className="text-xs font-bold capitalize break-words">
+                                                    {doctor.consultation_type_label}
+                                                </p>
+                                            </>
+                                        ) : doctor.consultation_type === 'both' ? (
+                                            <div className="flex flex-wrap items-center md:justify-center justify-end gap-2 text-xs font-bold capitalize break-words">
+                                                <div className="flex items-center gap-1">
+                                                    <Video size={18} color='#055bd9' fill="#055bd9" />
+                                                    Video
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Hospital size={18} color='#055bd9' />
+                                                    In-Person
+                                                </div>
+                                            </div>
                                         ) : null
                                     }
-                                    <p className="text-xs font-bold capitalize break-words">
-                                        {doctor.consultation_type_label}
-                                    </p>
                                 </div>
                             </div>
 
@@ -130,7 +143,7 @@ const DoctorCard = ({ doctor, isLoading = false }: DoctorCardProps) => {
                             onClick={handleBookNow}
                             disabled={isLoading}
                             variant="default"
-                            className="w-full  h-auto text-sm font-semibold btn-primary-cta"
+                            className="w-full h-auto text-sm font-semibold btn-primary-cta"
                         >
                             Book Your Appointment
                             <ChevronRight size={22} strokeWidth={3.5} className="m-0" />

@@ -144,7 +144,7 @@ export default function AppointmentCard({
                     </div>
 
                     {/* Date & Time */}
-                    <div className="bg-[#F5F6F8] rounded-lg p-5">
+                    <div className="bg-[#F5F6F8] rounded-lg p-5 mt-5">
 
                         <div className="flex lg:flex-row flex-col gap-5 lg:items-center items-start justify-between relative">
 
@@ -171,7 +171,7 @@ export default function AppointmentCard({
                                 </div>
                                 <div>
                                     <p className="text-[#4D4D4D] text-xs font-medium">
-                                        Date
+                                        Time
                                     </p>
                                     <p className="text-[#4D4D4D] font-semibold text-sm">
                                         {appointment.appointment_time_formatted ||

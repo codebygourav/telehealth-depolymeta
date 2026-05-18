@@ -246,7 +246,6 @@ const FindDoctorsContent = () => {
                 </div>
 
                 {/* Main Content */}
-
                 <div className="container-max-width w-full mx-auto flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-10">
 
                     <div className="flex-grow">

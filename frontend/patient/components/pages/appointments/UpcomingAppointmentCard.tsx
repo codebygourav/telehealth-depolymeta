@@ -87,22 +87,38 @@ const UpcomingAppointmentCard = ({
                             <div className="flex items-center gap-1.5 md:mt-1.5">
                                 {
                                     appointment.type === 'video' ? (
-                                        <Video size={18} color='#18CE1E' fill="#18CE1E" />
-                                    ) : appointment.type === 'in-person' ? (
-                                        <Hospital size={18} color='#18CE1E' />
-                                    ) : (
                                         <>
-                                            <Video size={18} color='#18CE1E' fill="#18CE1E" />
-                                            <Hospital size={18} color='#18CE1E' />
+                                            <Video size={18} color='#055bd9' fill="#055bd9" />
+                                            <p className="text-xs font-bold capitalize break-words hidden md:block">
+                                                {consultationType}
+                                            </p>
+                                            <p className="text-xs font-bold capitalize break-words md:hidden">
+                                                {consultationType === "Video consultation" ? "Video" : "In Person"}
+                                            </p>
                                         </>
+                                    ) : appointment.type === 'in-person' ? (
+                                        <>
+                                            <Hospital size={18} color='#055bd9' />
+                                            <p className="text-xs font-bold capitalize break-words hidden md:block">
+                                                {consultationType}
+                                            </p>
+                                            <p className="text-xs font-bold capitalize break-words md:hidden">
+                                                {consultationType === "Video consultation" ? "Video" : "In Person"}
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <div className="flex flex-wrap items-center gap-2 text-xs font-bold capitalize break-words">
+                                            <div className="flex items-center gap-1">
+                                                <Video size={18} color='#055bd9' fill="#055bd9" />
+                                                Video
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Hospital size={18} color='#055bd9' />
+                                                In-Person
+                                            </div>
+                                        </div>
                                     )
                                 }
-                                <p className="text-xs font-bold capitalize break-words hidden md:block">
-                                    {consultationType}
-                                </p>
-                                <p className="text-xs font-bold capitalize break-words md:hidden">
-                                    {consultationType === "Video consultation" ? "Video" : "In Person"}
-                                </p>
                             </div>
                         </div>
 

@@ -17,6 +17,7 @@ export interface AvailableDoctor {
   languages_known: string[];
   total_reviews: number;
   consultation_type: string;
+  consultation_type_label?: string;
   consultation_fee: number;
   avatar: string;
 }
