@@ -29,9 +29,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        if (request()->header('x-forwarded-proto') === 'https') {
-            URL::forceScheme('https');
-        }
+        URL::forceScheme('https');
         Blade::component('ui.page-header', 'ui-page-header');
         Blade::component('ui.page-body', 'ui-page-body');
         RateLimiter::for('verify-payment', function (Request $request) {
@@ -42,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Event::subscribe(LogPushNotificationStatus::class);
-        
+
         Relation::morphMap([
             'Doctor' => Doctor::class,
             'Patient' => Patient::class,
