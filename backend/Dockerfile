@@ -14,6 +14,16 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy Laravel app
 COPY . .
 
+# Create Laravel required directories
+RUN mkdir -p storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache
+
+# Set permissions
+RUN chmod -R 775 storage bootstrap/cache
+
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
