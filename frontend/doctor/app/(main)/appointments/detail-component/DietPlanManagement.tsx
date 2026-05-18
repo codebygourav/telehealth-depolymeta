@@ -604,7 +604,7 @@ export function DietPlanManagement({
                                                     if (!previewTemplate) return;
 
                                                     setSelectedTemplate(previewTemplate);
-                                                    setStartDate("2026-05-18");
+                                                    setStartDate(new Date().toISOString().split("T")[0]);
                                                     setDurationDays(previewTemplate?.duration_days || 7);
                                                     setSpecialInstructions(
                                                         "Avoid sugar and fried snacks. Keep dinner before 8 PM."
@@ -689,7 +689,10 @@ export function DietPlanManagement({
             </section>
             <CustomDialog
                 open={assignDialogOpen}
-                onClose={() => setAssignDialogOpen(false)}
+                onClose={() => {
+                    setAssignDialogOpen(false);
+                    setSelectedTemplate(null);
+                }}
                 title="Assign Diet Plan"
                 description="Fill diet plan details before assigning."
                 confirmText="Assign Diet Plan"
@@ -735,6 +738,16 @@ export function DietPlanManagement({
                     </div>
                 </div>
             </CustomDialog>
+
+            <CustomDialog
+                open={assignSuccessOpen}
+                onClose={() => setAssignSuccessOpen(false)}
+                title="Diet Plan Assigned"
+                description="Diet plan assigned successfully to patient."
+                confirmText="Done"
+                type="success"
+                onConfirm={() => setAssignSuccessOpen(false)}
+            />
         </div>
     );
   };
