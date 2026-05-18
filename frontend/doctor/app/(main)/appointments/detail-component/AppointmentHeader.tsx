@@ -26,6 +26,9 @@ const getInitials = (name: string) => {
 
 export default function AppointmentHeader({ appointment }: { appointment: any }) {
 
+    console.log("all data " ,appointment);
+    
+
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [localStatus, setLocalStatus] = useState(appointment?.status);

@@ -14,6 +14,7 @@ interface CustomDialogProps {
     onConfirm?: () => void;
     loading?: boolean;
     type?: "danger" | "success";
+    children?: ReactNode;
 }
 
 export default function CustomDialog({
@@ -27,6 +28,7 @@ export default function CustomDialog({
     onConfirm,
     loading,
     type = "danger",
+    children,
 }: CustomDialogProps) {
 
 
@@ -66,6 +68,12 @@ export default function CustomDialog({
                 {/* Description */}
                 {description && (
                     <p className="text-sm text-gray-500 mt-1">{description}</p>
+                )}
+
+                {children && (
+                    <div className="mt-4 text-left">
+                        {children}
+                    </div>
                 )}
 
                 {/* Buttons */}

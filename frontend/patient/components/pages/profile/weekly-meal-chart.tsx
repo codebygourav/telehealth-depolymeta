@@ -10,6 +10,9 @@ const WeeklyMealChart = () => {
     const [openMealRow, setOpenMealRow] = useState<string | null>("MORNING");
     const [mobileBaseDate, setMobileBaseDate] = useState(new Date());
 
+    console.log("patient deit plan" , data);
+    
+
     const mobileDays = useMemo(() => {
         return Array.from({ length: 1 }).map((_, index) => {
             const date = new Date(mobileBaseDate);
@@ -58,10 +61,6 @@ const WeeklyMealChart = () => {
         })
     }, [weekStart])
 
-
-
-
-
     const formatMealTime = (timeString: string) => {
         if (!timeString) return '';
         const [hours, minutes] = timeString.split(':');
@@ -105,15 +104,26 @@ const WeeklyMealChart = () => {
         });
     }, [data, days]);
 
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="h-14 w-14 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+
+                <p className="text-sm font-semibold text-[#4D4D4D]">
+                    Loading templates...
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen">
-
             <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center justify-between gap-3">
                     <h1 className="text-xl sm:text-2xl font-semibold text-black">
                         Weekly Meal Chart
                     </h1>
-
                     <div className="hidden items-center gap-2 md:hidden">
                         <button
                             onClick={() => setCurrentWeek(addWeeks(currentWeek, -1))}
@@ -207,11 +217,8 @@ const WeeklyMealChart = () => {
                             const isOpen = openMealRow === row.label;
 
                             return (
-                                <>
-
-
+                                <section key={row.label}>
                                     <div
-                                        key={row.label}
                                         className="hidden md:grid grid-cols-[140px_repeat(7,1fr)] gap-5"
                                     >
                                         <div className="h-auto flex flex-col items-center justify-center glass-card rounded-2xl text-center p-4">
@@ -366,12 +373,10 @@ const WeeklyMealChart = () => {
                                         </div>
 
                                     </div>
-                                </>
+                                </section>
                             );
                         })}
                     </div>
-
-
                 </div>
             </div>
 

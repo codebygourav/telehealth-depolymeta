@@ -1,9 +1,11 @@
 import { Card, CardContent, Skeleton } from '@/components/ui';
 import { usePatientVaccinations } from '@/queries/usePatientVaccinations';
+import { useAuth } from "@/context/userContext";
 
 const BabyProfileCard = () => {
 
     const { data, isLoading, error } = usePatientVaccinations();
+    const { user } = useAuth();
 
     const profile = data?.data?.profile;
 
@@ -52,10 +54,10 @@ const BabyProfileCard = () => {
                     <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 flex-1 min-w-0">
                         <img
                             src={
-                                profile?.photo ||
+                                user?.avatar ||
                                 "https://lh3.googleusercontent.com/aida-public/AB6AXuB-6uK4pbaY5lBjR0S0IXH0H8DAOh05YLegvt4moAn6gdnJPtPtAJNuMnNNjNX0ktStjkmDAxE4gptZcft5Mi0wkH4OOHqyOYXotuej6DTj3t9HxDrJE1ls_yzx-7Uo3iiCgmV20lRkamwvpzJ664yNwGlrTzBi0XmZkRC9iaWPQmozgKqBtH3zYeXiYOwaHs7PoWCUqi3N83qJ0ptdRf9Wv1HlsAvFn122qH5f5xhnqh22tUoSHFdL5cTWh94GhAj0oS9Enh8ES8wr"
                             }
-                            alt="Baby Profile"
+                            alt={profile?.name || "Profile"}
                             className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover mx-auto sm:mx-0 shrink-0"
                         />
 
