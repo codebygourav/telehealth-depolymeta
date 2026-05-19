@@ -169,7 +169,8 @@ class SettingService
 
     public static function getMaxLoginAttempts(): int
     {
-        return (int) Setting::getValue('security', 'max_login_attempts', 5);
+        // Unlimited login attempts
+        return PHP_INT_MAX;
     }
 
     public static function getLockoutDuration(): int
@@ -330,5 +331,4 @@ class SettingService
             'privacy_policy' => self::getPrivacyAndPolicyContent(),
         ];
     }
-
 }
