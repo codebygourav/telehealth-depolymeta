@@ -52,6 +52,15 @@ class VaccinationTemplateItem extends Model
             if (! $item->getKey()) {
                 $item->{$item->getKeyName()} = (string) Str::uuid();
             }
+
+            $item->set_sort_order ??= 0;
+            $item->dose_no ??= 1;
+            $item->depends_on_previous_dose ??= false;
+            $item->interval_days ??= 0;
+            $item->interval_months ??= 0;
+            $item->due_after_days ??= 0;
+            $item->due_after_months ??= 0;
+            $item->sort_order ??= 0;
         });
     }
 

@@ -207,6 +207,7 @@ class VaccinationTemplateResource extends Resource
                                 ->label('Dose Sort Order')
                                 ->integer()
                                 ->minValue(0)
+                                ->default(0)
                                 ->helperText('Controls order of doses inside the set.'),
                         ]))
                         ->columns(1)
