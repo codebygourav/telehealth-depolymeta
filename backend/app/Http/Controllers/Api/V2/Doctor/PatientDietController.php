@@ -139,15 +139,36 @@ class PatientDietController extends Controller
         );
     }
 
-    public function patientPlan(Request $request)
+    /**
+     * Get a patient's diet plan.
+     * Allows "me" or {patient_id} for multi-profile/patient support.
+     * Works for both patient (self) and doctor (by patient id).
+     *
+     * Example GET /api/v2/patient/diet-plan (for patient:me)
+     * Example GET /api/v2/doctor/{patientId}/diet-plan (for doctor)
+     */
+    public function patientPlan(Request $request, string $patientId = null)
     {
-        $patient = $request->user()?->patient;
-        if (! $patient) {
-            return ApiResponseService::unauthorized();
+        // If patientId is not provided (default route), treat as "me" (authenticated patient)
+        $user = $request->user();
+        $doctor = $this->doctor($request);
+
+        // If accessing as authenticated patient
+        if (!$patientId || $patientId === "me") {
+            $patient = $user?->patient;
+            if (! $patient) {
+                return ApiResponseService::unauthorized();
+            }
+            $patientId = $patient->id;
+        } else {
+            if (!$doctor) {
+                return ApiResponseService::unauthorized();
+            }
+            $this->patientOrFail($patientId); // Throws if not a valid patient
         }
 
         $plan = PatientDietPlan::with(['days.meals'])
-            ->where('patient_id', $patient->id)
+            ->where('patient_id', $patientId)
             ->whereIn('status', ['active', 'paused'])
             ->latest()
             ->firstOrFail();
