@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        URL::forceScheme('https');
+        // URL::forceScheme('https');
         Blade::component('ui.page-header', 'ui-page-header');
         Blade::component('ui.page-body', 'ui-page-body');
         RateLimiter::for('verify-payment', function (Request $request) {

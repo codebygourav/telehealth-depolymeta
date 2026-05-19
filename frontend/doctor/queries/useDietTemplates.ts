@@ -1,6 +1,6 @@
 
-import { getDietTemplates, getPatientDietPlan,} from "@/api/diet-template";
-import { useQuery } from "@tanstack/react-query";
+import { completeDietMeal, getDietTemplates, getPatientDietPlan,} from "@/api/diet-template";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 
 export const useDietTemplates = () => {
@@ -11,9 +11,19 @@ export const useDietTemplates = () => {
 };
 
 
-export const usePatientDietPlan = () => {
+export const usePatientDietPlan = (patientId?: string) => {
     return useQuery({
-        queryKey: ["patient-diet-plan"],
-        queryFn: getPatientDietPlan,
+        queryKey: ["patient-diet-plan", patientId],
+        queryFn: () => getPatientDietPlan(patientId!),
+        enabled: !!patientId,
+    });
+};
+
+
+
+
+export const useCompleteDietMeal = () => {
+    return useMutation({
+        mutationFn: completeDietMeal,
     });
 };

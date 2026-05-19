@@ -27,9 +27,30 @@ export const assignDietTemplate = async (payload: {
 };
 
 
-export const getPatientDietPlan = async () => {
-    const response = await axiosInstance.get("/patient/diet-plan");
+export const getPatientDietPlan = async (patientId: string) => {
+    const response = await axiosInstance.get(
+        `/doctor/${patientId}/diet-plan`
+    );
 
     return response.data;
+};
 
+
+// Assigned Diet Chart table follow button
+
+export const completeDietMeal = async ({
+    mealId,
+    notes,
+}: {
+        mealId: string;
+        notes?: string | null;
+}) => {
+    const response = await axiosInstance.post(
+        `/doctor/diet/meal/${mealId}/complete`,
+        {
+            notes: notes || null,
+        }
+    );
+
+    return response.data;
 };

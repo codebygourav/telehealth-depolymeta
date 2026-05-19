@@ -14,7 +14,7 @@ import {
 
 import { cn } from '@/lib/utils';
 
-import { useDietTemplates, usePatientDietPlan } from '@/queries/useDietTemplates';
+import { useCompleteDietMeal, useDietTemplates, usePatientDietPlan } from '@/queries/useDietTemplates';
 import { useAssignDietTemplate } from '@/mutations/assign-diet-Template';
 import CustomDialog from '@/components/custom/Dialogboxs';
 
@@ -26,7 +26,7 @@ export function DietPlanManagement({
     patientId,
 }: DietPlanManagementProps) {
 
-    console.log("patient id", patientId);
+    // console.log("patient id", patientId);
 
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const [previewTemplate, setPreviewTemplate] = useState<any | null>(null);
@@ -34,6 +34,9 @@ export function DietPlanManagement({
     const [openMealDay, setOpenMealDay] = useState<string | null>(null);
     const [assignedDietPlan, setAssignedDietPlan] = useState<any | null>(null);
     const [assignSuccessOpen, setAssignSuccessOpen] = useState(false);
+    const [apiDialogType, setApiDialogType] = useState<"success" | "danger">("success");
+    const [apiDialogTitle, setApiDialogTitle] = useState("");
+    const [apiDialogMessage, setApiDialogMessage] = useState("");
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
 
@@ -43,15 +46,22 @@ export function DietPlanManagement({
         "Avoid sugar and fried snacks. Keep dinner before 8 PM."
     );
 
+    const completeMealMutation = useCompleteDietMeal();
+    const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+    const [selectedMealId, setSelectedMealId] = useState<string | null>(null);
+    const [patientNotes, setPatientNotes] = useState("");
+
     const { data, isLoading, error } = useDietTemplates();
     const dietTemplates = data?.data || [];
 
     const {
         data: patientDietData,
         refetch: refetchPatientDietPlan,
-    } = usePatientDietPlan();
+    } = usePatientDietPlan(patientId);
 
     const dietPlan = assignedDietPlan || patientDietData?.data;
+
+
 
     const assignDietMutation = useAssignDietTemplate();
 
@@ -112,23 +122,41 @@ export function DietPlanManagement({
                 special_instructions: specialInstructions,
             });
 
-            console.log("Assign API Response:", response);
-
             setAssignedDietPlan(response?.data);
-
-            await refetchPatientDietPlan();
 
             setAssignDialogOpen(false);
             setIsTemplateModalOpen(false);
             setPreviewTemplate(null);
+
+            setApiDialogType("success");
+            setApiDialogTitle("Success");
+            setApiDialogMessage(
+                response?.message || "Diet plan assigned successfully."
+            );
+
             setAssignSuccessOpen(true);
-        } catch (error) {
+
+        } catch (error: any) {
             console.log("Assign diet failed:", error);
+
+            const errorMessage =
+                error?.response?.data?.message ||
+                error?.response?.data?.errors?.message ||
+                "Something went wrong.";
+
+            setApiDialogType("danger");
+            setApiDialogTitle("Error");
+            setApiDialogMessage(errorMessage);
+
+            setAssignSuccessOpen(true);
         }
     };
 
-    const markFollowed = async (id: string) => {
-        console.log("Mark followed:", id);
+
+    const markFollowed = (id: string) => {
+        setSelectedMealId(id);
+        setPatientNotes("");
+        setCompleteDialogOpen(true);
     };
 
     const apiAssignedMeals =
@@ -142,6 +170,7 @@ export function DietPlanManagement({
                 type: meal.meal_type,
                 items: meal.meal_name,
                 instructions: meal.instructions,
+                patientNotes: meal.notes || meal.patient_notes,
                 calories: meal.calories,
                 status: meal.status || "pending",
                 completedAt: meal.completed_at,
@@ -153,7 +182,7 @@ export function DietPlanManagement({
     const completionPercentage =
         assignedMeals.length > 0
             ? Math.round(
-                (assignedMeals.filter((m: any) => m.status === "followed").length /
+                (assignedMeals.filter((m: any) => m.status === "completed").length /
                     assignedMeals.length) *
                 100
             )
@@ -172,6 +201,57 @@ export function DietPlanManagement({
         },
         {}
     );
+
+
+    const handleCompleteMeal = async () => {
+        if (!selectedMealId) return;
+
+        try {
+            const response = await completeMealMutation.mutateAsync({
+                mealId: selectedMealId,
+                notes: patientNotes,
+            });
+
+            console.log("Submitted Notes:", patientNotes);
+            console.log("API Notes:", response?.data?.notes || response?.data?.patient_notes);
+            console.log("Meal Complete Response:", response);
+            console.log("Patient Notes:", response?.data?.notes);
+
+            setAssignedDietPlan((prev: any) => {
+                const basePlan = prev || patientDietData?.data;
+
+                if (!basePlan) return basePlan;
+
+                return {
+                    ...basePlan,
+                    days: basePlan.days.map((day: any) => ({
+                        ...day,
+                        meals: day.meals.map((meal: any) =>
+                            meal.id === response?.data?.id
+                                ? {
+                                    ...meal,
+                                    status: response?.data?.status || "completed",
+                                    completed_at: response?.data?.completed_at,
+                                    notes: response?.data?.notes || response?.data?.patient_notes || patientNotes,
+                                    patient_notes: response?.data?.patient_notes || response?.data?.notes || patientNotes,
+                                }
+                                : meal
+                        ),
+                    })),
+                };
+            });
+
+            setCompleteDialogOpen(false);
+            setSelectedMealId(null);
+            setPatientNotes("");
+
+            await refetchPatientDietPlan();
+        } catch (error) {
+            console.log("Complete meal failed:", error);
+        }
+    };
+
+
 
     return (
         <div className="space-y-8 animate-stagger-fade">
@@ -225,7 +305,7 @@ export function DietPlanManagement({
                                 <p className="text-[10px] font-black uppercase tracking-widest mb-1">Calories Met</p>
                                 <p className="text-lg font-bold text-primary">
                                     {assignedMeals
-                                        .filter((m: any) => m.status === "followed")
+                                        .filter((m: any) => m.status === "completed")
                                         .reduce(
                                             (acc: number, curr: any) => acc + curr.calories,
                                             0
@@ -235,7 +315,7 @@ export function DietPlanManagement({
                             <div className="px-4 py-3 rounded-lg border bg-white shadow-sm">
                                 <p className="text-[10px] font-black uppercase tracking-widest mb-1">Meals Followed</p>
                                 <p className="text-lg font-bold text-on-surface">
-                                    {assignedMeals.filter((m: any) => m.status === "followed").length} / {assignedMeals.length}
+                                    {assignedMeals.filter((m: any) => m.status === "completed").length} / {assignedMeals.length}
                                 </p>
                             </div>
                         </div>
@@ -332,27 +412,27 @@ export function DietPlanManagement({
                                             <table className="w-full text-left">
                                                 <thead className="bg-white">
                                                     <tr>
-                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                        <th className="px-6 py-4 text-xs font-extrabold text-[#4D4D4D]">
                                                             Meal Time
                                                         </th>
 
-                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                        <th className="px-6 py-4 text-xs font-extrabold text-[#4D4D4D]">
                                                             Meal Type
                                                         </th>
 
-                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                        <th className="px-6 py-4 text-xs font-extrabold text-[#4D4D4D]">
                                                             Food Items
                                                         </th>
 
-                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                        <th className="px-6 py-4 text-xs font-extrabold text-[#4D4D4D]">
                                                             Calories
                                                         </th>
 
-                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                        <th className="px-6 py-4 text-xs font-extrabold text-[#4D4D4D]">
                                                             Status
                                                         </th>
 
-                                                        <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">
+                                                        <th className="px-6 py-4 text-xs font-extrabold text-[#4D4D4D]">
                                                             Action
                                                         </th>
                                                     </tr>
@@ -378,9 +458,12 @@ export function DietPlanManagement({
                                                                     <span className="text-sm font-semibold text-[#1F1E1E]">
                                                                         {meal.items}
                                                                     </span>
-                                                                    <span className="text-xs text-[#4D4D4D] mt-1">
-                                                                        {meal.instructions}
-                                                                    </span>
+                                                                    <div className="flex flex-col gap-1 mt-1">
+                                                                        <span className="text-xs text-[#4D4D4D] leading-relaxed">
+                                                                            {meal.instructions}
+                                                                        </span>
+
+                                                                    </div>
                                                                 </div>
                                                             </td>
 
@@ -392,7 +475,7 @@ export function DietPlanManagement({
                                                                 <span
                                                                     className={cn(
                                                                         "px-3 py-1 rounded-md text-xs font-semibold",
-                                                                        meal.status === "followed"
+                                                                        meal.status === "completed"
                                                                             ? "bg-green-50 text-green-600"
                                                                             : meal.status === "missed"
                                                                                 ? "bg-error/10 text-error"
@@ -414,8 +497,19 @@ export function DietPlanManagement({
                                                                         Mark Followed
                                                                     </button>
                                                                 ) : (
-                                                                    <div className="text-[10px] font-black uppercase opacity-60">
+                                                                    <div className="text-xs ">
                                                                         {meal.completedAt}
+                                                                        {meal.patientNotes && (
+                                                                                <div className="flex items-center gap-2 py-1">
+                                                                                    <span className="uppercase tracking-wide text-green-700 whitespace-nowrap">
+                                                                                        Note:
+                                                                                    </span>
+
+                                                                                    <p className="leading-relaxed break-words">
+                                                                                        {meal.patientNotes}
+                                                                                    </p>
+                                                                                </div>
+                                                                        )}
                                                                     </div>
                                                                 )}
                                                             </td>
@@ -668,7 +762,7 @@ export function DietPlanManagement({
                                                 <button
                                                     onClick={() => {
                                                         setSelectedTemplate(template);
-                                                        setStartDate("2026-05-18");
+                                                        setStartDate(new Date().toISOString().split("T")[0]);
                                                         setDurationDays(template.duration_days || 7);
                                                         setSpecialInstructions("Avoid sugar and fried snacks. Keep dinner before 8 PM.");
                                                         setAssignDialogOpen(true);
@@ -740,17 +834,41 @@ export function DietPlanManagement({
             </CustomDialog>
 
             <CustomDialog
+                open={completeDialogOpen}
+                onClose={() => setCompleteDialogOpen(false)}
+                title="Complete Meal"
+                description="Add notes before marking this meal as completed."
+                confirmText="Mark Completed"
+                loading={completeMealMutation.isPending}
+                type="success"
+                onConfirm={handleCompleteMeal}
+            >
+                <div>
+                    <label className="text-xs font-semibold text-[#4D4D4D]">
+                        Notes
+                    </label>
+
+                    <textarea
+                        value={patientNotes}
+                        onChange={(e) => setPatientNotes(e.target.value)}
+                        rows={4}
+                        placeholder="Enter notes..."
+                        className="mt-1 w-full resize-none rounded-md border px-3 py-2 text-sm outline-none focus:border-primary"
+                    />
+                </div>
+            </CustomDialog>
+            <CustomDialog
                 open={assignSuccessOpen}
                 onClose={() => setAssignSuccessOpen(false)}
-                title="Diet Plan Assigned"
-                description="Diet plan assigned successfully to patient."
-                confirmText="Done"
-                type="success"
+                title={apiDialogTitle}
+                description={apiDialogMessage}
+                confirmText="OK"
+                type={apiDialogType}
                 onConfirm={() => setAssignSuccessOpen(false)}
             />
         </div>
     );
-  };
+};
 
 
 
@@ -808,4 +926,4 @@ export function DietPlanManagement({
 
 //   return time.slice(0, 5);
 // }
-        
+

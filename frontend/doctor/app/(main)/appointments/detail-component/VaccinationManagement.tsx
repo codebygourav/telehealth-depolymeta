@@ -188,7 +188,19 @@ export function VaccinationManagement() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-outline-variant/10">
-                            {(vaccinationTemplates?.data?.length ?? 0) > 0 ? (
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <div className="h-10 w-10 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+
+                                            <p className="text-sm font-semibold text-[#4D4D4D]">
+                                                Loading vaccinations...
+                                            </p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (vaccinationTemplates?.data?.length ?? 0) > 0 ? (
                                 vaccinationTemplates?.data?.flatMap((template: any) =>
                                     (template.items ?? []).map((v: any) => (
                                         <tr
