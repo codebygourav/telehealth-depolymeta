@@ -13,6 +13,7 @@ jobs:
       patient: ${{ steps.filter.outputs.patient }}
       doctor: ${{ steps.filter.outputs.doctor }}
       backend: ${{ steps.filter.outputs.backend }}
+      backend_composer: ${{ steps.filter.outputs.backend_composer }}
 
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +32,10 @@ jobs:
 
             backend:
               - 'backend/**'
+
+            backend_composer:
+              - 'backend/composer.json'
+              - 'backend/composer.lock'
 
   # ==========================================
   # PATIENT
@@ -118,7 +123,16 @@ jobs:
             git reset --hard
             git pull origin main
 
-            docker compose -f docker-compose.prod.yml up -d --build app web
+            if [ "${{ needs.detect-changes.outputs.backend_composer }}" = "true" ]; then
+              echo "Composer files changed → rebuilding app"
+
+              docker compose -f docker-compose.prod.yml up -d --build app web
+
+            else
+              echo "Only backend code changed → restarting containers"
+
+              docker compose -f docker-compose.prod.yml restart app web
+            fi
 
             sleep 10
 
