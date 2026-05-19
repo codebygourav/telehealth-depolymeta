@@ -28,9 +28,10 @@ class DatabaseSeeder extends Seeder
             DoctorReviewSeeder::class,
             AdvertisementSeeder::class,
             SettingsSeeder::class,
-            MedicalReportSeeder::class,
             VaccinationModuleSeeder::class,
             DietTemplateSeeder::class,
+            MedicalReportSeeder::class,
+
         ]);
     }
 }
