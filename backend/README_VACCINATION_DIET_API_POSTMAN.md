@@ -66,64 +66,64 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Diabetes Friendly Diet - 7 Days",
-  "description": "Low glycemic meal chart with balanced protein and fiber.",
-  "duration_days": 7,
-  "restrictions": "Avoid sugar, sweet drinks, refined flour, and deep fried food.",
-  "notes": "Monitor glucose and adjust carbs as clinically needed.",
-  "is_active": true,
-  "days": [
-    {
-      "day_number": 1,
-      "week_day": "MONDAY",
-      "meals": [
+    "name": "Diabetes Friendly Diet - 7 Days",
+    "description": "Low glycemic meal chart with balanced protein and fiber.",
+    "duration_days": 7,
+    "restrictions": "Avoid sugar, sweet drinks, refined flour, and deep fried food.",
+    "notes": "Monitor glucose and adjust carbs as clinically needed.",
+    "is_active": true,
+    "days": [
         {
-          "meal_type": "MORNING",
-          "meal_name": "Methi water and walnuts",
-          "instructions": "Unsweetened methi water with 2 walnuts.",
-          "calories": 110,
-          "protein_grams": 3,
-          "carbs_grams": 5,
-          "fat_grams": 9,
-          "start_time": "07:00",
-          "sort_order": 1
-        },
-        {
-          "meal_type": "BREAKFAST",
-          "meal_name": "Besan chilla with mint curd",
-          "instructions": "Prepare with minimal oil.",
-          "calories": 300,
-          "protein_grams": 18,
-          "carbs_grams": 34,
-          "fat_grams": 10,
-          "start_time": "08:30",
-          "sort_order": 2
-        },
-        {
-          "meal_type": "LUNCH",
-          "meal_name": "Multigrain roti, dal, paneer, and salad",
-          "instructions": "Keep half plate salad or vegetables.",
-          "calories": 520,
-          "protein_grams": 28,
-          "carbs_grams": 58,
-          "fat_grams": 18,
-          "start_time": "13:00",
-          "sort_order": 3
-        },
-        {
-          "meal_type": "DINNER",
-          "meal_name": "Vegetable soup with grilled paneer",
-          "instructions": "Prefer early dinner.",
-          "calories": 390,
-          "protein_grams": 25,
-          "carbs_grams": 28,
-          "fat_grams": 20,
-          "start_time": "19:30",
-          "sort_order": 4
+            "day_number": 1,
+            "week_day": "MONDAY",
+            "meals": [
+                {
+                    "meal_type": "MORNING",
+                    "meal_name": "Methi water and walnuts",
+                    "instructions": "Unsweetened methi water with 2 walnuts.",
+                    "calories": 110,
+                    "protein_grams": 3,
+                    "carbs_grams": 5,
+                    "fat_grams": 9,
+                    "start_time": "07:00",
+                    "sort_order": 1
+                },
+                {
+                    "meal_type": "BREAKFAST",
+                    "meal_name": "Besan chilla with mint curd",
+                    "instructions": "Prepare with minimal oil.",
+                    "calories": 300,
+                    "protein_grams": 18,
+                    "carbs_grams": 34,
+                    "fat_grams": 10,
+                    "start_time": "08:30",
+                    "sort_order": 2
+                },
+                {
+                    "meal_type": "LUNCH",
+                    "meal_name": "Multigrain roti, dal, paneer, and salad",
+                    "instructions": "Keep half plate salad or vegetables.",
+                    "calories": 520,
+                    "protein_grams": 28,
+                    "carbs_grams": 58,
+                    "fat_grams": 18,
+                    "start_time": "13:00",
+                    "sort_order": 3
+                },
+                {
+                    "meal_type": "DINNER",
+                    "meal_name": "Vegetable soup with grilled paneer",
+                    "instructions": "Prefer early dinner.",
+                    "calories": 390,
+                    "protein_grams": 25,
+                    "carbs_grams": 28,
+                    "fat_grams": 20,
+                    "start_time": "19:30",
+                    "sort_order": 4
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ]
 }
 ```
 
@@ -158,10 +158,10 @@ You can update only template fields, or include `days` to replace all existing t
 
 ```json
 {
-  "name": "Updated Diabetes Friendly Diet",
-  "duration_days": 7,
-  "is_active": true,
-  "notes": "Updated notes for testing."
+    "name": "Updated Diabetes Friendly Diet",
+    "duration_days": 7,
+    "is_active": true,
+    "notes": "Updated notes for testing."
 }
 ```
 
@@ -184,11 +184,11 @@ Content-Type: application/json
 
 ```json
 {
-  "patient_id": "{{patient_id}}",
-  "template_id": "{{diet_template_id}}",
-  "start_date": "2026-05-18",
-  "duration_days": 7,
-  "special_instructions": "Avoid sugar and fried snacks. Keep dinner before 8 PM."
+    "patient_id": "{{patient_id}}",
+    "template_id": "{{diet_template_id}}",
+    "start_date": "2026-05-18",
+    "duration_days": 7,
+    "special_instructions": "Avoid sugar and fried snacks. Keep dinner before 8 PM."
 }
 ```
 
@@ -217,8 +217,8 @@ Content-Type: application/json
 
 ```json
 {
-  "status": "paused",
-  "special_instructions": "Pause temporarily due to patient travel."
+    "status": "paused",
+    "special_instructions": "Pause temporarily due to patient travel."
 }
 ```
 
@@ -251,8 +251,8 @@ Content-Type: application/json
 
 ```json
 {
-  "status": "completed",
-  "patient_notes": "Meal completed as instructed."
+    "status": "completed",
+    "notes": "Meal completed as instructed."
 }
 ```
 
@@ -315,23 +315,23 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Updated Baby Immunization Template",
-  "description": "Updated test template from Postman.",
-  "is_active": true,
-  "items": [
-    {
-      "vaccination_id": "{{vaccination_id}}",
-      "set_name": "At Birth",
-      "set_description": "Birth dose",
-      "set_sort_order": 1,
-      "dose_no": 1,
-      "depends_on_previous_dose": false,
-      "recommended_age_label": "At Birth",
-      "due_after_days": 0,
-      "due_after_months": 0,
-      "sort_order": 1
-    }
-  ]
+    "name": "Updated Baby Immunization Template",
+    "description": "Updated test template from Postman.",
+    "is_active": true,
+    "items": [
+        {
+            "vaccination_id": "{{vaccination_id}}",
+            "set_name": "At Birth",
+            "set_description": "Birth dose",
+            "set_sort_order": 1,
+            "dose_no": 1,
+            "depends_on_previous_dose": false,
+            "recommended_age_label": "At Birth",
+            "due_after_days": 0,
+            "due_after_months": 0,
+            "sort_order": 1
+        }
+    ]
 }
 ```
 
@@ -354,11 +354,11 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Baby Kumar",
-  "profile_type": "baby",
-  "date_of_birth": "2026-01-10",
-  "gender": "male",
-  "blood_group": "O+"
+    "name": "Baby Kumar",
+    "profile_type": "baby",
+    "date_of_birth": "2026-01-10",
+    "gender": "male",
+    "blood_group": "O+"
 }
 ```
 
@@ -378,11 +378,11 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Baby Kumar Updated",
-  "profile_type": "baby",
-  "date_of_birth": "2026-01-10",
-  "gender": "male",
-  "blood_group": "O+"
+    "name": "Baby Kumar Updated",
+    "profile_type": "baby",
+    "date_of_birth": "2026-01-10",
+    "gender": "male",
+    "blood_group": "O+"
 }
 ```
 
@@ -403,9 +403,9 @@ Content-Type: application/json
 
 ```json
 {
-  "template_id": "{{vaccination_template_id}}",
-  "patient_profile_id": "{{patient_profile_id}}",
-  "first_dose_date": "2026-05-18"
+    "template_id": "{{vaccination_template_id}}",
+    "patient_profile_id": "{{patient_profile_id}}",
+    "first_dose_date": "2026-05-18"
 }
 ```
 
@@ -426,15 +426,15 @@ Content-Type: application/json
 
 ```json
 {
-  "patient_profile_id": "{{patient_profile_id}}",
-  "vaccination_id": "{{vaccination_id}}",
-  "dose_no": 1,
-  "scheduled_date": "2026-05-25",
-  "status": "scheduled",
-  "manufacturer": "Demo Pharma",
-  "given_at": "Clinic A",
-  "given_by": "Dr. Amit Sharma",
-  "doctor_notes": "Custom scheduled vaccine."
+    "patient_profile_id": "{{patient_profile_id}}",
+    "vaccination_id": "{{vaccination_id}}",
+    "dose_no": 1,
+    "scheduled_date": "2026-05-25",
+    "status": "scheduled",
+    "manufacturer": "Demo Pharma",
+    "given_at": "Clinic A",
+    "given_by": "Dr. Amit Sharma",
+    "doctor_notes": "Custom scheduled vaccine."
 }
 ```
 
@@ -489,10 +489,10 @@ Content-Type: application/json
 
 ```json
 {
-  "dose_no": 1,
-  "scheduled_date": "2026-05-25",
-  "status": "scheduled",
-  "doctor_notes": "Rescheduled from Postman."
+    "dose_no": 1,
+    "scheduled_date": "2026-05-25",
+    "status": "scheduled",
+    "doctor_notes": "Rescheduled from Postman."
 }
 ```
 
@@ -506,17 +506,17 @@ Content-Type: application/json
 
 ```json
 {
-  "completed_date": "2026-05-18",
-  "batch_number": "BATCH-001",
-  "manufacturer": "Demo Pharma",
-  "route": "IM",
-  "site": "Left arm",
-  "dose_amount": "0.5 ml",
-  "given_at": "Clinic A",
-  "given_by": "Dr. Amit Sharma",
-  "doctor_notes": "Completed without complication.",
-  "side_effect_observed": "None",
-  "patient_reaction": "Stable"
+    "completed_date": "2026-05-18",
+    "batch_number": "BATCH-001",
+    "manufacturer": "Demo Pharma",
+    "route": "IM",
+    "site": "Left arm",
+    "dose_amount": "0.5 ml",
+    "given_at": "Clinic A",
+    "given_by": "Dr. Amit Sharma",
+    "doctor_notes": "Completed without complication.",
+    "side_effect_observed": "None",
+    "patient_reaction": "Stable"
 }
 ```
 
@@ -532,9 +532,9 @@ Content-Type: application/json
 
 ```json
 {
-  "document": "vaccination-certificates/certificate-001.pdf",
-  "document_type": "certificate",
-  "certificate_number": "CERT-001"
+    "document": "vaccination-certificates/certificate-001.pdf",
+    "document_type": "certificate",
+    "certificate_number": "CERT-001"
 }
 ```
 
@@ -578,17 +578,17 @@ Authorization: Bearer {{patient_token}}
 1. Login as doctor and set `{{doctor_token}}`.
 2. Get a patient id from your patient list API and set `{{patient_id}}`.
 3. Diet flow:
-   - `GET /doctor/diet/templates?active_only=true`
-   - Set `{{diet_template_id}}`
-   - `POST /doctor/diet/assign`
-   - `GET /doctor/{{patient_id}}/diet-plan`
+    - `GET /doctor/diet/templates?active_only=true`
+    - Set `{{diet_template_id}}`
+    - `POST /doctor/diet/assign`
+    - `GET /doctor/{{patient_id}}/diet-plan`
 4. Vaccination flow:
-   - `GET /doctor/vaccination-templates?active_only=true`
-   - Set `{{vaccination_template_id}}`
-   - Optional: create/list patient profile and set `{{patient_profile_id}}`
-   - `POST /doctor/{{patient_id}}/assign-template`
-   - `GET /doctor/{{patient_id}}/vaccinations`
-   - Mark one vaccination completed.
+    - `GET /doctor/vaccination-templates?active_only=true`
+    - Set `{{vaccination_template_id}}`
+    - Optional: create/list patient profile and set `{{patient_profile_id}}`
+    - `POST /doctor/{{patient_id}}/assign-template`
+    - `GET /doctor/{{patient_id}}/vaccinations`
+    - Mark one vaccination completed.
 
 ## Seeder Note
 

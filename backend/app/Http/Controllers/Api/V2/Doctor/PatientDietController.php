@@ -206,8 +206,6 @@ class PatientDietController extends Controller
             })
             ->firstOrFail();
 
-
-
         $status = $data['status'] ?? 'completed';
         $updates = [
             'status' => $status,
@@ -224,7 +222,7 @@ class PatientDietController extends Controller
             data: [
                 'id' => $meal->id,
                 'status' => $meal->status,
-                'patient_notes' => $meal->notes,
+                'notes' => $meal->notes,
                 'completed_at' => optional($meal->completed_at)?->toIso8601String(),
             ]
         );
@@ -272,7 +270,7 @@ class PatientDietController extends Controller
                             'fat_grams' => $meal->fat_grams,
                             'meal_time' => $meal->meal_time,
                             'status' => $meal->status,
-                            'patient_notes' => $meal->patient_notes,
+                            'notes' => $meal->notes,
                             'completed_at' => optional($meal->completed_at)?->toIso8601String(),
                             'sort_order' => $meal->sort_order,
                         ];

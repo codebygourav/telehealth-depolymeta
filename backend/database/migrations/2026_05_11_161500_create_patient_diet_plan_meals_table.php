@@ -20,7 +20,7 @@ return new class extends Migration
             $table->unsignedInteger('fat_grams')->nullable();
             $table->time('meal_time')->nullable();
             $table->enum('status', ['pending', 'completed', 'missed', 'skipped'])->default('pending');
-            $table->text('patient_notes')->nullable();
+            $table->text('patient_notes')->nullable(); //Using a anotehr migratiion this field update patient_notes to notes only
             $table->dateTime('completed_at')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
             $table->timestamps();

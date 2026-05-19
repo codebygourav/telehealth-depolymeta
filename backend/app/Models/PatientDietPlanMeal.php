@@ -26,7 +26,7 @@ class PatientDietPlanMeal extends Model
         'fat_grams',
         'meal_time',
         'status',
-        'patient_notes',
+        'notes',
         'completed_at',
         'sort_order',
     ];
