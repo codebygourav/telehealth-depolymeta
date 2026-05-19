@@ -189,7 +189,7 @@ class PatientDietController extends Controller
 
         $data = $request->validate([
             'status' => ['nullable', Rule::in(['completed', 'missed', 'skipped'])],
-            'patient_notes' => ['nullable', 'string'],
+            'notes' => ['nullable', 'string'],
         ]);
 
 
@@ -214,8 +214,8 @@ class PatientDietController extends Controller
             'completed_at' => $status === 'completed' ? now() : null,
         ];
 
-        if ($request->has('patient_notes')) {
-            $updates['patient_notes'] = $data['patient_notes'];
+        if ($request->has('notes')) {
+            $updates['notes'] = $data['notes'];
         }
 
         $meal->update($updates);
@@ -224,7 +224,7 @@ class PatientDietController extends Controller
             data: [
                 'id' => $meal->id,
                 'status' => $meal->status,
-                'patient_notes' => $meal->patient_notes,
+                'patient_notes' => $meal->notes,
                 'completed_at' => optional($meal->completed_at)?->toIso8601String(),
             ]
         );
