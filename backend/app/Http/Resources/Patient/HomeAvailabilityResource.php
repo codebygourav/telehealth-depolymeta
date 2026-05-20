@@ -16,7 +16,7 @@ class HomeAvailabilityResource extends JsonResource
     {
         // Get consultation types from availabilities as a comma-separated string
         $types = $this->resource->availabilities->pluck('consultation_type')->filter()->unique()->values();
-        $types = $types->isNotEmpty() ? $types->implode(', ') : '';
+        $typesstring = $types->isNotEmpty() ? $types->implode(', ') : '';
 
 
         // Map types to proper labels and join with " / " if multiple exist
@@ -40,7 +40,7 @@ class HomeAvailabilityResource extends JsonResource
             'rating' => $this->average_rating ? round($this->average_rating, 1) : 0,
             'years_experience' => $this->resource->years_experience,
             'total_reviews' => $this->total_reviews ?? 0,
-            'consultation_type' => $types,
+            'consultation_type' => $typesstring,
             'consultation_type_label' => $consultationType,
             'languages_known' => $this->resource->languages_known,
             'consultation_fee' => $lowestFee ? round($lowestFee, 0) : 0,
