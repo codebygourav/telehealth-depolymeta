@@ -14,16 +14,9 @@ class HomeAvailabilityResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // Get consultation types from availabilities
-        $typesCollection = $this->resource->availabilities->pluck('consultation_type')->filter()->unique()->values();
-
-        if ($typesCollection->count() > 1) {
-            $types = 'both';
-        } elseif ($typesCollection->count() === 1) {
-            $types = $typesCollection->first();
-        } else {
-            $types = null;
-        }
+        // Get consultation types from availabilities as a comma-separated string
+        $types = $this->resource->availabilities->pluck('consultation_type')->filter()->unique()->values();
+        $types = $types->isNotEmpty() ? $types->implode(', ') : '';
 
 
         // Map types to proper labels and join with " / " if multiple exist
