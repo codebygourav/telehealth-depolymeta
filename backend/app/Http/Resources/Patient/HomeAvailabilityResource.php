@@ -16,7 +16,13 @@ class HomeAvailabilityResource extends JsonResource
     {
         // Get consultation types from availabilities as a comma-separated string
         $types = $this->resource->availabilities->pluck('consultation_type')->filter()->unique()->values();
-        $typesstring = $types->isNotEmpty() ? $types->implode(', ') : '';
+        // If the doctor has both 'video' and 'in-person', set as 'both'
+        if ($types->contains('video') && $types->contains('in-person') && $types->count() === 2) {
+            $typesstring = 'both';
+        } else {
+            $typesstring = $types->isNotEmpty() ? $types->implode(', ') : '';
+        }
+
 
 
         // Map types to proper labels and join with " / " if multiple exist
