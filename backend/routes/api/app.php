@@ -107,7 +107,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/diet/templates', [DietTemplateController::class, 'index']);
         Route::post('/diet/templates', [DietTemplateController::class, 'store']);
         Route::get('/diet/templates/{id}', [DietTemplateController::class, 'show']);
-        Route::get('/{patientId}/diet-plan', [PatientDietController::class, 'patientPlan']);
         Route::post('/diet/meal/{mealId}/complete', [PatientDietController::class, 'markMealCompleted']);
         Route::match(['put', 'post'], '/diet/templates/{id}', [DietTemplateController::class, 'update']);
         Route::delete('/diet/templates/{id}', [DietTemplateController::class, 'destroy']);
