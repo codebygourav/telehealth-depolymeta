@@ -6,9 +6,9 @@ use App\Enums\AppointmentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Doctor\{DoctorAppoinments, DoctorAvailabilityResource, DoctorProfileResource, DoctorScheduleResource, PatientReportResource, PatientWithReportsResource, GetProfileResource};
 use App\Http\Resources\Reviews\DoctorReviewResource;
-use App\Models\{Appointment, Doctor, DoctorAvailability, Patient, MedicalReport};
+use App\Models\{Appointment, Doctor, DoctorAvailability, ExternalBooking, Patient, MedicalReport};
 use App\Repositories\DoctorProfileRepository;
-use App\Services\{ApiResponseService, WherebyService};
+use App\Services\{ApiResponseService, SlotCapacityService, WherebyService};
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -88,6 +88,8 @@ class DoctorController extends Controller
         }
 
         $service = app(\App\Services\DoctorAvailabilityService::class);
+
+        $doctor->loadMissing('availabilities.overrides');
 
         $slots = $service->expandSlots(
             $doctor->availabilities,
@@ -328,6 +330,7 @@ class DoctorController extends Controller
         // 1. Recurring: ONLY check recurring start/end dates. Day is from recurring_start_date.
         $recurring = DoctorAvailability::where('doctor_id', $doctorId)
             ->where('is_recurring', true)
+            ->with('overrides')
             ->where(function ($q) use ($dateStr) {
                 $q->whereNull('recurring_start_date')
                     ->orWhere('recurring_start_date', '<=', $dateStr);
@@ -338,13 +341,15 @@ class DoctorController extends Controller
             })
             ->get()
             ->filter(function ($slot) use ($date) {
-                // If is_recurring is true, we ignore the day_of_week and date columns
-                return $slot->recurring_start_date && strtolower($slot->recurring_start_date->format('l')) === strtolower($date->format('l'));
+                $targetDay = app(\App\Services\DoctorAvailabilityService::class)->recurringDayOfWeek($slot, $date);
+
+                return $targetDay && strtolower($targetDay) === strtolower($date->format('l'));
             });
 
         // 2. Non-recurring: based on date and day_of_week
         $nonRecurring = DoctorAvailability::where('doctor_id', $doctorId)
             ->where('is_recurring', false)
+            ->with('overrides')
             ->where(function ($q) use ($dateStr, $dayName) {
                 $q->whereDate('date', $dateStr)
                     ->orWhere('day_of_week', $dayName);
@@ -352,11 +357,12 @@ class DoctorController extends Controller
             ->get();
 
         // 3. Combine and add effective_date
-        return $recurring->concat($nonRecurring)->map(function ($slot) use ($dateStr) {
-            $slot->effective_date = $dateStr;
+        $service = app(\App\Services\DoctorAvailabilityService::class);
 
-            return $slot;
-        })->sortBy(function ($slot) {
+        return $recurring->concat($nonRecurring)
+            ->map(fn ($slot) => $service->applyEffectiveValuesForDate($slot, $dateStr))
+            ->filter()
+            ->sortBy(function ($slot) {
             return $slot->start_time;
         });
     }
@@ -372,6 +378,7 @@ class DoctorController extends Controller
         // Recurring slots
         $recurring = DoctorAvailability::where('doctor_id', $doctorId)
             ->where('is_recurring', true)
+            ->with('overrides')
             ->where(function ($q) use ($startOfWeek) {
                 $q->whereNull('recurring_end_date')
                     ->orWhere('recurring_end_date', '>=', $startOfWeek->format('Y-m-d'));
@@ -385,6 +392,7 @@ class DoctorController extends Controller
         // Non-recurring slots (date OR day_of_week)
         $nonRecurring = DoctorAvailability::where('doctor_id', $doctorId)
             ->where('is_recurring', false)
+            ->with('overrides')
             ->where(function ($q) use ($startOfWeek, $endOfWeek) {
                 $q->whereBetween('date', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')])
                     ->orWhereNotNull('day_of_week');
@@ -392,25 +400,23 @@ class DoctorController extends Controller
             ->get();
 
         $expanded = collect();
+        $service = app(\App\Services\DoctorAvailabilityService::class);
 
         // Process Recurring
         foreach ($recurring as $slot) {
-            if (! $slot->recurring_start_date) {
-                continue;
-            }
-            $targetDayName = strtolower($slot->recurring_start_date->format('l'));
+            $targetDayName = $service->recurringDayOfWeek($slot, $startOfWeek);
 
             $current = $startOfWeek->copy();
             while ($current->lte($endOfWeek)) {
                 if (strtolower($current->format('l')) === $targetDayName) {
-                    $slotStart = $slot->recurring_start_date->startOfDay();
+                    $slotStart = $slot->recurring_start_date ? $slot->recurring_start_date->startOfDay() : $startOfWeek->copy();
                     $slotEnd = $slot->recurring_end_date ? $slot->recurring_end_date->endOfDay() : null;
 
                     if ($current->gte($slotStart) && (! $slotEnd || $current->lte($slotEnd))) {
-                        $slotCopy = $slot->replicate();
-                        $slotCopy->id = $slot->id;
-                        $slotCopy->setAttribute('effective_date', $current->format('Y-m-d'));
-                        $expanded->push($slotCopy);
+                        $slotCopy = $service->applyEffectiveValuesForDate($slot, $current);
+                        if ($slotCopy) {
+                            $expanded->push($slotCopy);
+                        }
                     }
                 }
                 $current->addDay();
@@ -422,18 +428,20 @@ class DoctorController extends Controller
             if ($slot->date) {
                 $slotDate = Carbon::parse($slot->date);
                 if ($slotDate->between($startOfWeek, $endOfWeek)) {
-                    $slot->effective_date = $slotDate->format('Y-m-d');
-                    $expanded->push($slot);
+                    $slotCopy = $service->applyEffectiveValuesForDate($slot, $slotDate);
+                    if ($slotCopy) {
+                        $expanded->push($slotCopy);
+                    }
                 }
             } elseif ($slot->day_of_week) {
                 $targetDay = strtolower($slot->day_of_week);
                 $current = $startOfWeek->copy();
                 while ($current->lte($endOfWeek)) {
                     if (strtolower($current->format('l')) === $targetDay) {
-                        $slotCopy = $slot->replicate();
-                        $slotCopy->id = $slot->id;
-                        $slotCopy->setAttribute('effective_date', $current->format('Y-m-d'));
-                        $expanded->push($slotCopy);
+                        $slotCopy = $service->applyEffectiveValuesForDate($slot, $current);
+                        if ($slotCopy) {
+                            $expanded->push($slotCopy);
+                        }
                     }
                     $current->addDay();
                 }
@@ -453,6 +461,7 @@ class DoctorController extends Controller
         // Recurring slots
         $recurring = DoctorAvailability::where('doctor_id', $doctorId)
             ->where('is_recurring', true)
+            ->with('overrides')
             ->where(function ($q) use ($startOfMonth) {
                 $q->whereNull('recurring_end_date')
                     ->orWhere('recurring_end_date', '>=', $startOfMonth->format('Y-m-d'));
@@ -466,6 +475,7 @@ class DoctorController extends Controller
         // Non-recurring slots
         $nonRecurring = DoctorAvailability::where('doctor_id', $doctorId)
             ->where('is_recurring', false)
+            ->with('overrides')
             ->where(function ($q) use ($startOfMonth, $endOfMonth) {
                 $q->whereBetween('date', [$startOfMonth->format('Y-m-d'), $endOfMonth->format('Y-m-d')])
                     ->orWhereNotNull('day_of_week');
@@ -473,25 +483,23 @@ class DoctorController extends Controller
             ->get();
 
         $expanded = collect();
+        $service = app(\App\Services\DoctorAvailabilityService::class);
 
         // Expand Recurring
         foreach ($recurring as $slot) {
-            if (! $slot->recurring_start_date) {
-                continue;
-            }
-            $targetDayName = strtolower($slot->recurring_start_date->format('l'));
+            $targetDayName = $service->recurringDayOfWeek($slot, $startOfMonth);
 
             $current = $startOfMonth->copy();
             while ($current->lte($endOfMonth)) {
                 if (strtolower($current->format('l')) === $targetDayName) {
-                    $slotStart = $slot->recurring_start_date->startOfDay();
+                    $slotStart = $slot->recurring_start_date ? $slot->recurring_start_date->startOfDay() : $startOfMonth->copy();
                     $slotEnd = $slot->recurring_end_date ? $slot->recurring_end_date->endOfDay() : null;
 
                     if ($current->gte($slotStart) && (! $slotEnd || $current->lte($slotEnd))) {
-                        $slotCopy = $slot->replicate();
-                        $slotCopy->id = $slot->id;
-                        $slotCopy->setAttribute('effective_date', $current->format('Y-m-d'));
-                        $expanded->push($slotCopy);
+                        $slotCopy = $service->applyEffectiveValuesForDate($slot, $current);
+                        if ($slotCopy) {
+                            $expanded->push($slotCopy);
+                        }
                     }
                 }
                 $current->addDay();
@@ -503,18 +511,20 @@ class DoctorController extends Controller
             if ($slot->date) {
                 $slotDate = Carbon::parse($slot->date);
                 if ($slotDate->between($startOfMonth, $endOfMonth)) {
-                    $slot->effective_date = $slotDate->format('Y-m-d');
-                    $expanded->push($slot);
+                    $slotCopy = $service->applyEffectiveValuesForDate($slot, $slotDate);
+                    if ($slotCopy) {
+                        $expanded->push($slotCopy);
+                    }
                 }
             } elseif ($slot->day_of_week) {
                 $targetDay = strtolower($slot->day_of_week);
                 $current = $startOfMonth->copy();
                 while ($current->lte($endOfMonth)) {
                     if (strtolower($current->format('l')) === $targetDay) {
-                        $slotCopy = $slot->replicate();
-                        $slotCopy->id = $slot->id;
-                        $slotCopy->setAttribute('effective_date', $current->format('Y-m-d'));
-                        $expanded->push($slotCopy);
+                        $slotCopy = $service->applyEffectiveValuesForDate($slot, $current);
+                        if ($slotCopy) {
+                            $expanded->push($slotCopy);
+                        }
                     }
                     $current->addDay();
                 }
@@ -555,14 +565,37 @@ class DoctorController extends Controller
             ])
             ->get();
 
+        $externalBookingsInPeriod = ExternalBooking::query()
+            ->where('doctor_id', $doctorId)
+            ->where('consultation_type', 'in-person')
+            ->where('opd_type', 'private')
+            ->whereBetween('appointment_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->get();
+
         // 3. Map availabilities to slots and link appointments
-        $slots = $availabilities->map(function ($availability) use ($appointmentsInPeriod) {
+        $slots = $availabilities->map(function ($availability) use ($appointmentsInPeriod, $externalBookingsInPeriod) {
             $effectiveDate = $availability->effective_date ?? $availability->date;
 
             // Filter appointments for this specific slot and date
             $slotAppointments = $appointmentsInPeriod->filter(function ($app) use ($availability, $effectiveDate) {
                 return $app->availability_id === $availability->id && $app->appointment_date->format('Y-m-d') == $effectiveDate;
             });
+
+            $slotStart = Carbon::parse($availability->start_time)->format('H:i:s');
+            $slotExternalBookings = $externalBookingsInPeriod->filter(function ($booking) use ($availability, $effectiveDate, $slotStart) {
+                return $booking->appointment_date->format('Y-m-d') === $effectiveDate
+                    && Carbon::parse($booking->start_time)->format('H:i:s') === $slotStart
+                    && ($booking->availability_id === null || $booking->availability_id === $availability->id);
+            });
+
+            $capacitySummary = app(SlotCapacityService::class)->summary(
+                doctorId: $availability->doctor_id,
+                date: $effectiveDate,
+                startTime: $availability->start_time,
+                capacity: (int) ($availability->capacity ?? 1),
+                availabilityId: $availability->id,
+                consultationType: $availability->consultation_type,
+            );
 
             // Format time
             $startTime = Carbon::parse($availability->start_time)->format('g:i A');
@@ -579,8 +612,9 @@ class DoctorController extends Controller
                 'consultation_type_label' => $availability->consultation_type === 'video' ? 'Video Consultation' : 'In-Person Consultation',
                 'capacity' => $availability->capacity ?? 1,
                 'slot_capacity' => $availability->capacity ?? 1,
-                'booked_count' => $slotAppointments->count(),
-                'available_slots' => max(0, ($availability->capacity ?? 1) - $slotAppointments->count()),
+                'booked_count' => $capacitySummary['booked_count'],
+                'available_slots' => $capacitySummary['available_slots'],
+                'is_full' => $capacitySummary['is_full'],
                 'is_recurring' => (bool) $availability->is_recurring,
                 'doctor_room' => $availability->doctor_room,
                 'is_available' => (bool) $availability->is_available,
@@ -594,6 +628,17 @@ class DoctorController extends Controller
                         'consultation_type' => $app->consultation_type,
                         'start_time' => Carbon::parse($app->appointment_time)->format('g:i A'),
                         'end_time' => Carbon::parse($app->appointment_end_time)->format('g:i A'),
+                    ];
+                }),
+                'external_bookings' => $slotExternalBookings->values()->map(function ($booking) {
+                    return [
+                        'id' => $booking->id,
+                        'patient_name' => $booking->patient_name,
+                        'patient_unit_number' => $booking->patient_unit_number,
+                        'mobile' => $booking->mobile,
+                        'source' => $booking->source,
+                        'start_time' => Carbon::parse($booking->start_time)->format('g:i A'),
+                        'end_time' => $booking->end_time ? Carbon::parse($booking->end_time)->format('g:i A') : null,
                     ];
                 }),
             ];

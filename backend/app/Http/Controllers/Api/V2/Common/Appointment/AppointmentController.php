@@ -32,7 +32,7 @@ class AppointmentController extends Controller
             return ApiResponseService::notFound();
         }
 
-        $query = Appointment::query();
+        $query = Appointment::query()->withoutTestDoctors();
 
         if ($isPatient) {
             $query->where('appointments.patient_id', $user->patient->id);
@@ -151,6 +151,10 @@ class AppointmentController extends Controller
             'doctorReviews',
         ])->where('id', $id)->firstOrFail();
 
+        if ((bool) $appointment->doctor?->is_test_doctor) {
+            return ApiResponseService::notFound(resource: 'Appointment', module: 'appointment');
+        }
+
 
         $isPatientOwner = $this->isPatientOwner($user, $appointment);
         $isDoctorOwner = $this->isDoctorOwner($user, $appointment);
@@ -213,11 +217,15 @@ class AppointmentController extends Controller
             );
         }
 
-        $appointment->status = AppointmentStatus::COMPLETED;
-        $appointment->save();
+        $appointment->update([
+            'status' => AppointmentStatus::COMPLETED->value,
+        ]);
 
-        $appointment->videoConsultation->status = AppointmentStatus::COMPLETED->value;
-        $appointment->videoConsultation->save();
+        if ($appointment->videoConsultation) {
+            $appointment->videoConsultation->update([
+                'status' => AppointmentStatus::COMPLETED->value,
+            ]);
+        }
 
         NotificationService::notifyAppointmentCompleted($appointment);
 

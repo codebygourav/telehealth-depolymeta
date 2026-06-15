@@ -4,7 +4,7 @@ namespace App\Filament\Resources\Symptoms\Pages;
 
 use App\Filament\Resources\Symptoms\SymptomResource;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Auth;
 
 use Filament\Actions\ExportAction;

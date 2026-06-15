@@ -11,6 +11,10 @@ use App\Http\Controllers\PatientNotificationController;
 Route::view('/test-upload', 'test-upload');
 Route::view('/test-patient-registration', 'test-patient-registration');
 
+Route::get('/test-mail', function () {
+    Mail::to('webclouddeveloper@gmail.com')->send(new DoctorCredentialsMail('Test Doctor', 'webclouddeveloper@gmail.com', '123456'));
+    return 'Mail sent';
+});
 Route::get('/', function () {
     return redirect('/admin');
 });

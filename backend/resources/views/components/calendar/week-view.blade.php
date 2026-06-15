@@ -9,7 +9,7 @@
                 now()->startOfWeek()->format('M d') . ' - ' . now()->endOfWeek()->format('M d, Y')" />
 
         {{-- Week Grid (Scrollable) --}}
-        <div class="flex-1 overflow-y-auto space-y-3">
+        <div class="flex-1 overflow-y-auto space-y-3 no-scrollbar">
 
             {{-- Days Grid (Reverse Chronological Order) --}}
             <div class="space-y-3">
@@ -177,11 +177,22 @@
     </div>
 
     {{-- RIGHT — SELECTED DAY SLOTS --}}
-    <x-calendar.selected-day-slots :selectedDateLabel="$selectedDateLabel" :selectedDateSlots="$selectedDateSlots" />
+    <x-calendar.selected-day-slots 
+        :selectedDateLabel="$selectedDateLabel" 
+        :selectedDateSlots="$this->getFilteredDateSlots()" 
+        :allSlots="$selectedDateSlots"
+        :selectedTimeSlot="$selectedTimeSlot" 
+    />
 
     {{-- Week Navigation --}}
     <div class="col-span-4">
-        <x-appointments.appointments-card-view :appointments="$appointments" title="Patient Appointments" :selectedDateLabel="$selectedDateLabel" />
-
+        <x-appointments.appointments-card-view 
+            :appointments="$this->getFilteredAppointments()" 
+            title="Patient Appointments" 
+            :selectedDateLabel="$selectedDateLabel" 
+            :selectedTimeSlot="$selectedTimeSlot"
+            :typeCounts="$this->getAppointmentTypeCounts()"
+            :currentFilter="$appointmentFilter"
+        />
     </div>
 </div>

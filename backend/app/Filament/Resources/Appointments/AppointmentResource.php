@@ -24,7 +24,7 @@ class AppointmentResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
     protected static string|\BackedEnum|null $activeNavigationIcon = 'heroicon-s-rectangle-stack';
     protected static string|\UnitEnum|null $navigationGroup = 'Appointments & Finance';
-    protected static ?int $navigationSort = 40;
+    protected static ?int $navigationSort = 10;
     protected static ?string $recordTitleAttribute = 'Appointment';
 
     public static function shouldRegisterNavigation(): bool
@@ -74,14 +74,44 @@ class AppointmentResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
+        $patientColumns = [
+            'id',
+            'user_id',
+            'first_name',
+            'last_name',
+            'email',
+            'mobile_no',
+            'alternate_no',
+            'date_of_birth',
+            'existing_patient_id',
+            'address',
+            'pincode',
+            'area',
+            'city',
+            'landmark',
+            'state',
+            'nationality',
+            'marital_status',
+            'father_name',
+            'husband_name',
+            'wife_name',
+            'gender',
+            'age',
+            'blood_group',
+        ];
+
         $query = parent::getEloquentQuery()
             ->with([
                 'creator:id,name',
                 'updater:id,name',
                 'deleter:id,name',
-                'patient:id,user_id,first_name,last_name',
-                'doctor:id,user_id,first_name,last_name',
-                'doctor.user:id,name,email',
+                'patient' => fn($query) => $query->select($patientColumns),
+                'doctor:id,user_id,first_name,last_name,years_experience',
+                'doctor.user:id,name,email,phone',
+                'availability:id,opd_type',
+                'payment:id,appointment_id,amount,payment_method,status,transaction_id,razorpay_payment_id,razorpay_order_id,invoice_id,contact,email,captured,created_at',
+                'paymentWaiver:id,name',
+                'videoConsultation:id,appointment_id,room_url,host_url,participate_url,room_id,status,started_at,ended_at',
             ]);
 
         // Apply permission-based filtering

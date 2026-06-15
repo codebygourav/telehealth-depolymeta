@@ -12,7 +12,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('vaccinations:send-reminders --days=1')->dailyAt('08:00');
+        // Process the queue automatically every minute in shared hosting environments
+        $schedule->command('queue:work --stop-when-empty')
+            ->everyMinute()
+            ->withoutOverlapping();
+            
     }
 
     /**

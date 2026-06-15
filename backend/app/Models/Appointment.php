@@ -20,6 +20,7 @@ class Appointment extends Model
         'doctor_id',
         'replaced_by_id',
         'availability_id',
+        'availability_override_id',
         'appointment_date',
         'appointment_time',
         'appointment_end_time',
@@ -31,6 +32,10 @@ class Appointment extends Model
         'stamp_preference',
         'slug',
         'fee_amount',
+        'booking_source',
+        'admin_payment_type',
+        'payment_waived_by',
+        'payment_waived_at',
         'created_by',
         'updated_by',
         'deleted_by',
@@ -46,6 +51,7 @@ class Appointment extends Model
         'consultation_type' => 'string',
         'instructions_by_doctor' => 'array',
         'next_visit_date' => 'date',
+        'payment_waived_at' => 'datetime',
         'visit_reason' => 'array',
         'status' => AppointmentStatus::class,
     ];
@@ -78,8 +84,13 @@ class Appointment extends Model
             if ($model->availability_id) {
                 $availability = \App\Models\DoctorAvailability::find($model->availability_id);
                 if ($availability) {
+                    $override = $model->availability_override_id
+                        ? \App\Models\DoctorAvailabilityOverride::find($model->availability_override_id)
+                        : null;
+
                     $model->appointment_date = $availability->date ?? $model->appointment_date;
-                    $model->appointment_time = $availability->start_time ?? $model->appointment_time;
+                    $model->appointment_time = $override?->start_time ?? $model->appointment_time ?? $availability->start_time;
+                    $model->appointment_end_time = $override?->end_time ?? $model->appointment_end_time ?? $availability->end_time;
                 }
             }
 
@@ -146,6 +157,11 @@ class Appointment extends Model
         return $this->belongsTo(\App\Models\DoctorAvailability::class, 'availability_id');
     }
 
+    public function availabilityOverride()
+    {
+        return $this->belongsTo(\App\Models\DoctorAvailabilityOverride::class, 'availability_override_id');
+    }
+
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);
@@ -159,6 +175,11 @@ class Appointment extends Model
     public function payment()
     {
         return $this->hasOne(Payment::class);
+    }
+
+    public function paymentWaiver()
+    {
+        return $this->belongsTo(User::class, 'payment_waived_by');
     }
 
     public function videoConsultation()
@@ -303,6 +324,13 @@ class Appointment extends Model
         return $query->whereRaw('1 = 0');
     }
 
+    public function scopeWithoutTestDoctors($query)
+    {
+        return $query->whereHas('doctor', function ($query) {
+            $query->withoutTestDoctors();
+        });
+    }
+
     public function getRouteKeyName(): string
     {
         return 'slug';
@@ -321,5 +349,21 @@ class Appointment extends Model
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by', 'id');
+    }
+
+    /**
+     * Get the Whereby room URL associated with this appointment.
+     */
+    public function getWherebyRoomUrlAttribute(): ?string
+    {
+        return $this->videoConsultation?->room_url;
+    }
+
+    /**
+     * Get the Whereby room ID associated with this appointment.
+     */
+    public function getWherebyRoomIdAttribute(): ?string
+    {
+        return $this->videoConsultation?->room_id;
     }
 }

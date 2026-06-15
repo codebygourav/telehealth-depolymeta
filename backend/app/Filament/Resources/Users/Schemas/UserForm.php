@@ -66,31 +66,29 @@ class UserForm
                             ->searchable()
                             ->visible(fn() => check_permission('users.assign_role')),
 
-                        // ---- CHANGE PASSWORD TOGGLE ----
+                        // ---- CHANGE PASSWORD TOGGLE (EDIT USER ONLY) ----
                         Toggle::make('change_password')
                             ->label('Change Password?')
-                            ->onColor('success')
-                            ->onIcon('heroicon-o-check')
-                            ->offColor('danger')
-                            ->offIcon('heroicon-o-x')
                             ->reactive()
-                            ->default(false),
+                            ->default(false)
+                            ->visible(fn(string $operation) => $operation === 'edit'),
 
-                        // ---- CURRENT PASSWORD (FAKE MASKED FIELD) ----
+                        // ---- CURRENT PASSWORD (FAKE MASKED FIELD - EDIT USER, TOGGLE OFF) ----
                         TextInput::make('password_display')
                             ->label('Current Password')
                             ->disabled()
-                            ->visible(fn($get) => !$get('change_password'))
+                            ->visible(fn($get, string $operation) => $operation === 'edit' && !$get('change_password'))
                             ->afterStateHydrated(fn($component) => $component->state('********')),
 
-                        // ---- NEW PASSWORD FIELD ----
+                        // ---- PASSWORD FIELD (CREATE NEW USER OR EDIT WITH TOGGLE ON) ----
                         TextInput::make('password')
-                            ->label('New Password')
+                            ->label(fn(string $operation) => $operation === 'create' ? 'Password' : 'New Password')
                             ->password()
                             ->revealable()
                             ->minLength(6)
                             ->maxLength(255)
-                            ->visible(fn($get) => $get('change_password'))
+                            ->required(fn(string $operation) => $operation === 'create')
+                            ->visible(fn($get, string $operation) => $operation === 'create' || ($operation === 'edit' && $get('change_password')))
                             ->dehydrated(fn($state) => filled($state))
                             ->dehydrateStateUsing(fn($state) => filled($state) ? Hash::make($state) : null),
 
@@ -105,9 +103,8 @@ class UserForm
                             ->helperText('Mark as verified to set the email as confirmed')
                             ->inline(false)
                             ->onColor('success')
-                                ->onIcon('heroicon-o-check')
-                                ->offColor('danger')
-                                ->offIcon('heroicon-o-x')
+                            ->offColor('danger')
+                            ->visible(fn(string $operation) => $operation === 'edit')
                             ->afterStateHydrated(function ($component, $state) {
                                 $component->state(!empty($state));
                             })

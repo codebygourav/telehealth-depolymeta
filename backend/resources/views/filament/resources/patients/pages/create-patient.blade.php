@@ -13,11 +13,8 @@
                             Razorpay checkout opens automatically. If blocked, use the button.
                         </p>
                     </div>
-                    <x-filament::button
-                        color="success"
-                        icon="heroicon-o-credit-card"
-                        x-on:click='window.openRazorpayCheckout(@js($checkoutPayload))'
-                    >
+                    <x-filament::button color="success" icon="heroicon-o-credit-card"
+                        x-on:click='window.openRazorpayCheckout(@js($checkoutPayload))'>
                         Open Payment Checkout
                     </x-filament::button>
                 </div>
@@ -47,8 +44,13 @@
                 return new Promise((resolve, reject) => {
                     const existing = document.querySelector('script[data-razorpay-checkout="1"]');
                     if (existing) {
-                        existing.addEventListener('load', () => resolve(), { once: true });
-                        existing.addEventListener('error', () => reject(new Error('Failed to load Razorpay script')), { once: true });
+                        existing.addEventListener('load', () => resolve(), {
+                            once: true
+                        });
+                        existing.addEventListener('error', () => reject(new Error(
+                            'Failed to load Razorpay script')), {
+                            once: true
+                        });
                         return;
                     }
 
@@ -77,7 +79,7 @@
                 }
 
                 const appointmentId = payload.appointment_id || '';
-                const verifyUrl = payload.verify_url || '/api/v2/test-verify-payment';
+                const verifyUrl = payload.verify_url || '/api/v2/verify-payment';
                 const redirectUrl = payload.redirect_url || '';
                 const amountPaise = Number(payload.payment.amount_paise || 0);
 
@@ -97,7 +99,8 @@
                             headers: {
                                 'Accept': 'application/json',
                                 'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                    ?.content || '',
                             },
                             body: JSON.stringify({
                                 appointment_id: appointmentId,
@@ -115,7 +118,8 @@
                                 if (redirectUrl) {
                                     window.location.href = redirectUrl;
                                 } else {
-                                    console.warn('Payment verified but redirect_url missing from payload');
+                                    console.warn(
+                                        'Payment verified but redirect_url missing from payload');
                                 }
                             }
                         }).catch(() => {});

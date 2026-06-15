@@ -4,7 +4,7 @@ namespace App\Filament\Resources\DoctorReplacements\Pages;
 
 use App\Filament\Resources\DoctorReplacements\DoctorReplacementResource;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 
 class ListDoctorReplacements extends ListRecords
 {

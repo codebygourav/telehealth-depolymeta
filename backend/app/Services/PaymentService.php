@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Enums\{PaymentStatus, AppointmentStatus};
+use App\Jobs\{CreateVideoRoomJob, GenerateReceiptJob, SendBookingEmailJob};
 
 class PaymentService
 {
@@ -313,14 +314,25 @@ class PaymentService
             $paymentJson
         );
 
-        if ($payment->status === PaymentStatus::PAID) {
-            Appointment::where('id', $validated['appointment_id'])
-                ->update(['status' => AppointmentStatus::CONFIRMED->value]);
+        $statusValue = $payment->status instanceof PaymentStatus
+            ? $payment->status->value
+            : (is_object($payment->status) ? ($payment->status->value ?? '') : (string)$payment->status);
+
+        $isPaid = strtolower($statusValue) === 'paid';
+        $isFailed = strtolower($statusValue) === 'failed';
+
+        if ($isPaid) {
+            $appointment = Appointment::find($validated['appointment_id']);
+            if ($appointment) {
+                $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
+            }
         }
 
-        if ($payment->status === PaymentStatus::FAILED) {
-            Appointment::where('id', $validated['appointment_id'])
-                ->update(['status' => AppointmentStatus::FAILED->value]);
+        if ($isFailed) {
+            $appointment = Appointment::find($validated['appointment_id']);
+            if ($appointment) {
+                $appointment->update(['status' => AppointmentStatus::FAILED->value]);
+            }
         }
 
         return $payment;
@@ -358,33 +370,63 @@ class PaymentService
         $appointmentId = Payment::where('razorpay_order_id', $razorpayOrderId)
             ->value('appointment_id');
 
+        if (! $appointmentId) {
+            Log::warning('Razorpay webhook could not find appointment for order', [
+                'event' => $event,
+                'razorpay_payment_id' => $razorpayPaymentId,
+                'razorpay_order_id' => $razorpayOrderId,
+            ]);
+
+            return null;
+        }
+
         // Save or update payment in DB
         $payment = $this->saveOrUpdatePayment($fresh, $appointmentId, $data);
 
-        // ---- UPDATE APPOINTMENT STATUS HERE ----
         if ($appointmentId) {
-            // Log::info('$eventwqw3r5e', ['event' => $event]);
-            // ✅ Payment successful → Mark appointment confirmed
-            if ($event === 'payment.captured' || $payment->status === PaymentStatus::PAID) {
-                $appointment = Appointment::with(['doctor.user', 'patient.user'])->find($appointmentId);
-                if ($appointment && $appointment->status !== AppointmentStatus::CONFIRMED) {
-                    $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
+            $isPaid = $payment->status === PaymentStatus::PAID
+                || $payment->status === 'paid'
+                || (is_object($payment->status) && isset($payment->status->value) && $payment->status->value === 'paid');
 
-                    // Send notifications as backup for webhook flow
-                    NotificationService::notifyAppointmentConfirmed($appointment);
+            $appointment = Appointment::with(['doctor.user', 'patient.user'])->find($appointmentId);
+
+            if ($appointment) {
+                if ($event === 'payment.captured' || $isPaid) {
+                    if (! AppointmentStatus::equals($appointment->status, AppointmentStatus::CONFIRMED)) {
+                        $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
+
+                        // Send notifications as backup for webhook flow
+                        NotificationService::notifyAppointmentConfirmed($appointment);
+                    }
+
+                    GenerateReceiptJob::dispatch($payment->id);
+                    CreateVideoRoomJob::dispatch($appointment->id);
+                    SendBookingEmailJob::dispatch($appointment->id, $payment->id)->delay(now()->addSeconds(10));
                 }
-            }
 
-            // Payment failed → Mark appointment failed
-            if ($event === 'payment.failed') {
-                Appointment::where('id', $appointmentId)
-                    ->update(['status' => AppointmentStatus::FAILED->value]);
-            }
+                // Payment failed → Mark appointment failed
+                if ($event === 'payment.failed') {
+                    // Do not downgrade if already confirmed, rescheduled, or completed
+                    if (!in_array($appointment->status->value ?? $appointment->status, [
+                        AppointmentStatus::CONFIRMED->value,
+                        AppointmentStatus::RESCHEDULED->value,
+                        AppointmentStatus::COMPLETED->value
+                    ])) {
+                        $appointment->update(['status' => AppointmentStatus::FAILED->value]);
+                    }
+                }
 
-            // Optional: authorized but not captured yet
-            if ($event === 'payment.authorized') {
-                Appointment::where('id', $appointmentId)
-                    ->update(['status' => AppointmentStatus::PENDING->value]);
+                // Optional: authorized but not captured yet
+                if ($event === 'payment.authorized') {
+                    // Do not downgrade if already confirmed, rescheduled, or completed
+                    if (!in_array($appointment->status->value ?? $appointment->status, [
+                        AppointmentStatus::CONFIRMED->value,
+                        AppointmentStatus::RESCHEDULED->value,
+                        AppointmentStatus::COMPLETED->value
+                    ])) {
+                        $appointment->update(['status' => AppointmentStatus::PENDING->value]);
+                    }
+                }
             }
         }
 

@@ -67,7 +67,8 @@ class PatientSeeder extends Seeder
                 'age' => $age,
 
                 'father_name' => 'Father ' . $firstName,
-                'mother_name' => 'Mother ' . $firstName,
+                'wife_name' => $gender === 'male' ? 'Wife ' . $firstName : null,
+                'husband_name' => $gender === 'female' ? 'Husband ' . $firstName : null,
 
                 'mobile_no' => '99999' . rand(10000, 99999),
                 'alternate_no' => null,

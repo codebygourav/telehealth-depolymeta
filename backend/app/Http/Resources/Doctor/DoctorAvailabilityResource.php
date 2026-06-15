@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Doctor;
 
-use App\Models\Appointment;
+use App\Services\SlotCapacityService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -25,13 +25,23 @@ class DoctorAvailabilityResource extends JsonResource
         // Check if slot is in the past
         $isAvailable = $slotStartTime->isFuture() || $slotStartTime->isToday();
 
-        // Count booked appointments for this slot
-        $bookedCount = Appointment::where('availability_id', $this->id)
-            ->whereNotIn('status', ['cancelled', 'pending']) // exclude cancelled and pending
-            ->count();
-
         // For recurring slots, we use the date set during expansion to determine the day name
         $dateValue = $this->date ? (is_string($this->date) ? $this->date : $this->date->toDateString()) : null;
+
+        $capacitySummary = $dateValue
+            ? app(SlotCapacityService::class)->summary(
+                doctorId: $this->doctor_id,
+                date: $dateValue,
+                startTime: $this->start_time,
+                capacity: (int) ($this->capacity ?? 1),
+                availabilityId: $this->id,
+                consultationType: $this->consultation_type,
+            )
+            : [
+                'booked_count' => 0,
+                'available_slots' => (int) ($this->capacity ?? 1),
+                'is_full' => false,
+            ];
 
         $dayName = null;
         if ($dateValue) {
@@ -44,6 +54,7 @@ class DoctorAvailabilityResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'availability_override_id' => $this->override_id ?? null,
             'date' => $dateValue,
             'day_of_week' => $dayName,
             'booking_start_time' => $this->start_time ? Carbon::parse($this->start_time)->format('H:i:s') : null,
@@ -54,11 +65,14 @@ class DoctorAvailabilityResource extends JsonResource
                 ? 'Video'
                 : 'Clinic Visit',
             'capacity' => $this->capacity,
-            'booked_count' => $bookedCount,
-            ...($isAvailable ? ['available' => true] : []),
+            'booked_count' => $capacitySummary['booked_count'],
+            'source' => $this->source ?? (($this->override_id ?? null) ? 'override' : ((bool) $this->is_recurring ? 'recurring' : 'availability')),
+            ...($isAvailable && ! $capacitySummary['is_full'] ? ['available' => true] : []),
             ...($this->consultation_type === 'in-person' && $this->opd_type ? ['opd_type' => $this->opd_type] : []),
             'consultation_fee' => isset($this->consultation_fee) ? (int) round($this->consultation_fee) : null,
             'doctor_room' => $this->doctor_room,
+            'available_slots' => $capacitySummary['available_slots'],
+            'is_full' => $capacitySummary['is_full'],
             'recurring_start_date' => $this->is_recurring && $this->recurring_start_date
                 ? Carbon::parse($this->recurring_start_date)->format('d-m-Y')
                 : null,

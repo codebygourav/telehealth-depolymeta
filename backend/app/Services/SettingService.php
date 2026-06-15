@@ -30,7 +30,7 @@ class SettingService
 
     public static function getSecondaryColor(): string
     {
-        return Setting::getValue('app', 'secondary_color', '#22c55e');
+        return Setting::getValue('app', 'secondary_color', '#073827');
     }
 
     /**
@@ -161,6 +161,17 @@ class SettingService
         );
     }
 
+    public static function getChildAgeLimit(): int
+    {
+        $age = (int) Setting::getValue(
+            'booking',
+            'child_age',
+            config('settings.booking.sections.rules.fields.child_age.default', 12)
+        );
+
+        return max(1, $age);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Security Settings
@@ -169,8 +180,7 @@ class SettingService
 
     public static function getMaxLoginAttempts(): int
     {
-        // Unlimited login attempts
-        return PHP_INT_MAX;
+        return (int) Setting::getValue('security', 'max_login_attempts', 12000);
     }
 
     public static function getLockoutDuration(): int

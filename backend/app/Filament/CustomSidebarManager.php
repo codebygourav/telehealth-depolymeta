@@ -2,8 +2,8 @@
 
 namespace App\Filament;
 
-use App\Traits\HasCustomSidebar;
 use Filament\Facades\Filament;
+use Illuminate\Support\Str;
 
 class CustomSidebarManager
 {
@@ -29,10 +29,79 @@ class CustomSidebarManager
         foreach ($classes as $class) {
             if (method_exists($class, 'getCustomSidebarItem')) {
                 $rawItems[] = $class::getCustomSidebarItem();
+                continue;
+            }
+
+            $rawItems[] = self::makeSidebarItemFromClass($class);
+        }
+
+        return self::processNavigation(array_filter($rawItems));
+    }
+
+    protected static function makeSidebarItemFromClass(string $class): ?array
+    {
+        if (! class_exists($class)) {
+            return null;
+        }
+
+        $vars = get_class_vars($class);
+        $label = null;
+
+        if (method_exists($class, 'getNavigationLabel')) {
+            $label = $class::getNavigationLabel();
+        }
+
+        if (! $label && method_exists($class, 'getTitle')) {
+            $label = $class::getTitle();
+        }
+
+        $label ??= Str::of(class_basename($class))
+            ->replace(['Resource', 'Page'], '')
+            ->headline()
+            ->toString();
+
+        $url = '#';
+        if (method_exists($class, 'getUrl')) {
+            try {
+                $url = $class::getUrl();
+            } catch (\Throwable $exception) {
+                $url = '#';
             }
         }
 
-        return self::processNavigation($rawItems);
+        $isActive = false;
+        if (method_exists($class, 'getRouteBaseName')) {
+            try {
+                $base = $class::getRouteBaseName();
+                $isActive = $base ? request()->routeIs($base . '.*') : false;
+            } catch (\Throwable $exception) {
+                $isActive = false;
+            }
+        }
+
+        if (! $isActive) {
+            $slug = method_exists($class, 'getSlug')
+                ? $class::getSlug()
+                : ($vars['slug'] ?? Str::of(class_basename($class))->kebab()->toString());
+
+            $isActive = request()->is('admin/' . $slug . '*');
+        }
+
+        return [
+            'class' => $class,
+            'type' => 'item',
+            'label' => (string) $label,
+            'icon' => method_exists($class, 'getNavigationIcon') ? $class::getNavigationIcon() : ($vars['navigationIcon'] ?? null),
+            'activeIcon' => $vars['activeNavigationIcon'] ?? null,
+            'url' => $url,
+            'isActive' => $isActive,
+            'visible' => true,
+            'sort' => method_exists($class, 'getNavigationSort') && is_numeric($class::getNavigationSort())
+                ? (int) $class::getNavigationSort()
+                : (int) ($vars['navigationSort'] ?? 99),
+            'group' => method_exists($class, 'getNavigationGroup') ? $class::getNavigationGroup() : ($vars['navigationGroup'] ?? null),
+            'isCollapsible' => true,
+        ];
     }
 
     /**
@@ -46,7 +115,7 @@ class CustomSidebarManager
         $groups = [];
 
         foreach ($items as $item) {
-            if (!$item['visible']) {
+            if (!self::isItemVisible($item)) {
                 continue;
             }
 
@@ -57,7 +126,7 @@ class CustomSidebarManager
                     $groups[$groupName] = [
                         'type' => 'group',
                         'label' => $groupName,
-                        'icon' => null,
+                        'icon' => self::getGroupIcon($groupName),
                         'isCollapsible' => $item['isCollapsible'] ?? true,
                         // Group sort is the min sort of its items
                         'sort' => $item['sort'] ?? 99, 
@@ -99,6 +168,52 @@ class CustomSidebarManager
         return $navigation;
     }
 
+    protected static function getGroupIcon(string $groupName): string
+    {
+        return match ($groupName) {
+            'Appointments & Finance' => 'heroicon-o-calendar-days',
+            'Doctor Management' => 'heroicon-o-user-group',
+            'User Management' => 'heroicon-o-users',
+            'Media' => 'heroicon-o-photo',
+            'Reports' => 'heroicon-o-chart-bar',
+            'System & Settings' => 'heroicon-o-cog-6-tooth',
+            default => 'heroicon-o-folder',
+        };
+    }
+
+    /**
+     * Central sidebar visibility gate.
+     *
+     * This keeps future menu additions permission-aware even if a resource/page
+     * accidentally sets a custom visible flag.
+     */
+    protected static function isItemVisible(array $item): bool
+    {
+        if (empty($item['visible'])) {
+            return false;
+        }
+
+        $class = $item['class'] ?? null;
+
+        if (!is_string($class) || !class_exists($class)) {
+            return (bool) $item['visible'];
+        }
+
+        if (method_exists($class, 'canViewAny') && ! $class::canViewAny()) {
+            return false;
+        }
+
+        if (method_exists($class, 'shouldRegisterNavigation') && ! $class::shouldRegisterNavigation()) {
+            return false;
+        }
+
+        if (method_exists($class, 'canAccess') && ! $class::canAccess()) {
+            return false;
+        }
+
+        return true;
+    }
+
     /**
      * Build standard Filament navigation using our custom rules.
      */
@@ -130,6 +245,7 @@ class CustomSidebarManager
                 }
 
                 $navigationGroups[] = \Filament\Navigation\NavigationGroup::make($nav['label'])
+                    ->icon($nav['icon'] ?? null)
                     ->items($groupItems)
                     ->collapsible($nav['isCollapsible'] ?? true);
             }

@@ -58,7 +58,11 @@ class DepartmentController extends Controller
 
         $department = Department::where('slug', $slug)
             ->where('status', 'active')
-            ->with(['doctors.user'])
+            ->with(['doctors' => function ($query) {
+                $query->withoutTestDoctors()
+                    ->visibleInWordPressApi()
+                    ->with('user');
+            }])
             ->first();
 
         if (!$department) {

@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Doctors\Pages;
 
 use App\Filament\Resources\Doctors\DoctorResource;
-use App\Filament\Resources\Doctors\Traits\HasDoctorAvailabilitySlideOver;
 use App\Models\DepartmentDoctor;
 use App\Services\DoctorCredentialsService;
 use Filament\Actions\Action;
@@ -20,8 +19,6 @@ use Spatie\Permission\Models\Role;
 
 class EditDoctor extends EditRecord
 {
-    use HasDoctorAvailabilitySlideOver;
-
     protected static string $resource = DoctorResource::class;
 
     protected ?string $updatedPassword = null;
@@ -191,17 +188,6 @@ class EditDoctor extends EditRecord
 
         $credentialsService = app(DoctorCredentialsService::class);
 
-        // Check if doctor has active availability
-        if (! $credentialsService->hasActiveAvailability($this->record)) {
-            Notification::make()
-                ->warning()
-                ->title('No Active Availability')
-                ->body('Please add availability slots before sending credentials.')
-                ->send();
-
-            return;
-        }
-
         // Generate new password and update user
         $newPassword = Str::random(12);
         $this->record->user->password = Hash::make($newPassword);
@@ -240,24 +226,23 @@ class EditDoctor extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        $credentialsService = app(DoctorCredentialsService::class);
-        $hasActiveAvailability = $credentialsService->hasActiveAvailability($this->record);
         $hasUser = $this->record->user !== null;
 
         return [
-            $this->availabilitySlideOverAction(),
+            Action::make('manageAvailability')
+                ->label('Manage Availability')
+                ->icon('heroicon-o-calendar-days')
+                ->url(fn () => DoctorResource::getUrl('availability', ['record' => $this->record])),
 
             Action::make('sendCredentials')
                 ->label('Send Credentials')
                 ->icon('heroicon-o-envelope')
                 ->requiresConfirmation()
                 ->modalHeading('Send Login Credentials')
-                ->modalDescription(fn () => $hasActiveAvailability
-                    ? "Generate a new password and send login credentials to {$this->record->user?->email}?"
-                    : 'Please add availability slots before sending credentials.')
+                ->modalDescription(fn () => "Generate a new password and send login credentials to {$this->record->user?->email}?")
                 ->modalSubmitActionLabel('Send Email')
                 ->action(fn () => $this->sendCredentialsWithNewPassword())
-                ->visible(fn () => $hasUser && $hasActiveAvailability),
+                ->visible(fn () => $hasUser),
 
             // ==== Assign Role Action ====
             // Action::make('assignRole')

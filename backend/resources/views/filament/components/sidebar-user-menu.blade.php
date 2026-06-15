@@ -28,6 +28,12 @@
                 </x-slot>
 
                 <x-filament::dropdown.list class="w-auto pb-4">
+                    @if (filament()->getProfileUrl())
+                        <x-filament::dropdown.list.item :href="filament()->getProfileUrl()" tag="a" icon="heroicon-m-user-circle">
+                            Profile
+                        </x-filament::dropdown.list.item>
+                    @endif
+
                     <x-filament::dropdown.list.item :href="filament()->getUrl() . '/settings'" tag="a" icon="heroicon-m-cog-6-tooth">
                         Settings
                     </x-filament::dropdown.list.item>
@@ -55,6 +61,12 @@
                 </x-slot>
 
                 <x-filament::dropdown.list class="w-auto pb-4">
+                    @if (filament()->getProfileUrl())
+                        <x-filament::dropdown.list.item :href="filament()->getProfileUrl()" tag="a" icon="heroicon-m-user-circle">
+                            Profile
+                        </x-filament::dropdown.list.item>
+                    @endif
+
                     <x-filament::dropdown.list.item :href="filament()->getUrl() . '/settings'" tag="a" icon="heroicon-m-cog-6-tooth">
                         Settings
                     </x-filament::dropdown.list.item>

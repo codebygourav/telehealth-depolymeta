@@ -36,7 +36,7 @@ class DoctorRepository
             ->withAvailability($today->toDateString(), $fifteenDaysLater->toDateString())
             ->with([
                 'departments:id,name,slug,symptom_ids',
-                'availabilities' => fn($q) => $q->availableInRange($today->toDateString(), $fifteenDaysLater->toDateString()),
+                'availabilities' => fn($q) => $q->availableInRange($today->toDateString(), $fifteenDaysLater->toDateString())->with('overrides'),
                 'user:id,name,email,phone',
             ])
             ->withCount([
@@ -49,10 +49,11 @@ class DoctorRepository
         // Earliest Availability Subquery
         $earliestAvailabilitySubquery = \App\Models\DoctorAvailability::query()
             ->selectRaw('MIN(CASE
-                WHEN is_recurring = 0 THEN date
+                WHEN is_recurring = 0 AND date IS NOT NULL THEN date
+                WHEN is_recurring = 0 AND date IS NULL AND day_of_week IS NOT NULL THEN ?
                 WHEN is_recurring = 1 AND recurring_start_date > ? THEN recurring_start_date
                 ELSE ?
-            END)', [$today->toDateString(), $today->toDateString()])
+            END)', [$today->toDateString(), $today->toDateString(), $today->toDateString()])
             ->whereColumn('doctor_id', 'doctors.id')
             ->availableInRange($today->toDateString(), $fifteenDaysLater->toDateString());
 
@@ -90,7 +91,7 @@ class DoctorRepository
             ->withAvg(['reviews as average_rating' => fn($q) => $q->where('is_active', true)], 'rating')
             ->with([
                 'departments:id,name',
-                'availabilities' => fn($q) => $q->where('is_available', true)->orderBy('consultation_fee'),
+                'availabilities' => fn($q) => $q->where('is_available', true)->with('overrides')->orderBy('consultation_fee'),
             ])
             ->selectRaw('
                 (COALESCE((SELECT AVG(rating) FROM doctor_reviews WHERE doctor_id = doctors.id AND is_active = 1), 0) * 2) +
@@ -100,8 +101,9 @@ class DoctorRepository
                     AND is_available = 1
                     AND (
                         (date IS NOT NULL AND date <= ?) OR
+                        (date IS NULL AND day_of_week IS NOT NULL) OR
                         (is_recurring = 1 AND (
-                            recurring_start_date <= ? AND
+                            (recurring_start_date IS NULL OR recurring_start_date <= ?) AND
                             (recurring_end_date IS NULL OR recurring_end_date >= ?)
                         ))
                     )
@@ -167,7 +169,8 @@ class DoctorRepository
                         ->limit(3);
                 },
                 'availabilities' => function ($q) use ($todayDate, $endDate) {
-                    $q->select('id', 'doctor_id', 'date', 'is_available', 'is_recurring', 'recurring_start_date', 'recurring_end_date', 'start_time', 'end_time', 'consultation_type', 'day_of_week', 'capacity', 'consultation_fee', 'opd_type', 'doctor_room')
+                    $q->select('id', 'doctor_id', 'date', 'is_available', 'is_recurring', 'recurring_start_date', 'recurring_end_date', 'start_time', 'end_time', 'consultation_type', 'day_of_week', 'capacity', 'consultation_fee', 'opd_type', 'doctor_room', 'blocked_dates')
+                        ->with('overrides')
                         ->availableInRange($todayDate, $endDate)
                         ->orderBy('start_time');
                 },

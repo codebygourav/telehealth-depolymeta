@@ -28,29 +28,30 @@
                     @endphp
 
                     <button type="button" wire:click="showDaySlots('{{ $dayDate }}')"
-                        class="relative h-17 rounded-lg border transition-all duration-200
-                        @if ($day['is_today']) bg-primary-50 dark:bg-primary-900/20 border-primary ring-2 ring-primary
-                        @elseif ($isActive)
-                            bg-gray-100 dark:bg-red-900/20 border-gray-500 ring-2 ring-gray-500
+                        class="relative h-17 rounded-lg border transition-all duration-200 cursor-pointer
+                        @if ($isActive)
+                            bg-primary border-primary text-white shadow-sm scale-[1.02]
+                        @elseif ($day['is_today'])
+                            bg-primary-50/30 dark:bg-primary-950/20 border-2 border-primary text-primary
                         @else
-                            bg-gray-50 border-gray-200
-                            hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 @endif
+                            bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300
+                            hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:border-gray-300 dark:hover:border-gray-600
+                        @endif
                         @if (!$day['is_current_month']) opacity-40 @endif">
 
                         {{-- Day Number --}}
                         <div
                             class="absolute top-1 left-2 text-sm font-semibold
-                        @if ($day['is_today']) text-primary-900 dark:text-primary-400
-                        @elseif ($isActive) text-gray-600
-                        @else
-                            text-gray-700 dark:text-gray-300 @endif">
+                            @if ($isActive) text-white
+                            @elseif ($day['is_today']) text-primary
+                            @else text-gray-700 dark:text-gray-300 @endif">
                             {{ $day['date']->format('j') }}
                         </div>
 
                         {{-- Event Indicator --}}
                         @if (!empty($day['events']))
                             <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                                <span class="w-1.5 h-1.5 rounded-xl bg-primary"></span>
+                                <span class="w-1.5 h-1.5 rounded-xl @if ($isActive) bg-white @else bg-primary @endif"></span>
                             </div>
                         @endif
                     </button>
@@ -61,9 +62,21 @@
     </div>
 
     {{-- RIGHT: Sidebar (60%) --}}
-    <x-calendar.selected-day-slots :selectedDateLabel="$selectedDateLabel" :selectedDateSlots="$selectedDateSlots" />
+    <x-calendar.selected-day-slots 
+        :selectedDateLabel="$selectedDateLabel" 
+        :selectedDateSlots="$this->getFilteredDateSlots()" 
+        :allSlots="$selectedDateSlots"
+        :selectedTimeSlot="$selectedTimeSlot"
+    />
 
     <div class="col-span-4">
-        <x-appointments.appointments-card-view :appointments="$appointments" title="Patient Appointments" :selectedDateLabel="$selectedDateLabel" />
+        <x-appointments.appointments-card-view 
+            :appointments="$this->getFilteredAppointments()" 
+            title="Patient Appointments" 
+            :selectedDateLabel="$selectedDateLabel" 
+            :selectedTimeSlot="$selectedTimeSlot"
+            :typeCounts="$this->getAppointmentTypeCounts()"
+            :currentFilter="$appointmentFilter"
+        />
     </div>
 </div>

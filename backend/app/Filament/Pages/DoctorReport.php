@@ -144,7 +144,9 @@ $module = static::$slug ?? strtolower(class_basename(static::class));
                     ->options(function () {
                         /** @var \App\Models\User|null $user */
                         $user = Auth::user();
-                        $query = Doctor::query()->select('id', 'first_name', 'last_name')->orderBy('first_name');
+                        $query = Doctor::query()
+                            ->select('id', 'first_name', 'last_name')
+                            ->orderBy('first_name');
 
                         $options = [];
                         if ($user && (! method_exists($user, 'hasRole') || ! $user->hasRole('doctor'))) {

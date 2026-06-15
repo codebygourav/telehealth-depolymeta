@@ -7,7 +7,6 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Filament\Actions\{EditAction, DeleteAction, ViewAction, DeleteBulkAction, ForceDeleteBulkAction, RestoreBulkAction};
 use Illuminate\Support\Facades\Auth;
@@ -126,7 +125,6 @@ class LeavesTable
                 getUserAuditColumn('deleter', 'Deleted By'),
             ])
             ->filters([
-                TrashedFilter::make(),
             ])
             ->recordActions([
                 // Approve permission: manager/admin only (can update others)

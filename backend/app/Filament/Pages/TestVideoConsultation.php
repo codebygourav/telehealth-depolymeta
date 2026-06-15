@@ -25,10 +25,11 @@ class TestVideoConsultation extends Page implements HasForms
     protected static ?string $title = 'Test Video Consultation';
     protected static ?int $navigationSort = 2;
 
-    // public static function canAccess(): bool
-    // {
-    //     return app()->isLocal();
-    // }
+    public static function canAccess(): bool
+    {
+        $module = static::$slug ?? strtolower(class_basename(static::class));
+        return check_permission(["{$module}.view", "{$module}.view_any", "{$module}.manage_own"]);
+    }
 
     public static function getSidebarOptions(): array
     {

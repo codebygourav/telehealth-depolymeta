@@ -9,7 +9,7 @@ use App\Models\Doctor;
 use App\Models\DoctorAvailability;
 use App\Models\Patient;
 use App\Models\Payment;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Jobs\{CreateVideoRoomJob, GenerateReceiptJob, SendBookingEmailJob};
 use Carbon\Carbon;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
@@ -26,7 +26,6 @@ class RegistrationBookingService
 {
     public function __construct(
         protected PaymentService $paymentService,
-        protected WherebyService $wherebyService,
     ) {}
 
     /**
@@ -53,6 +52,10 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
 
         if (! $availability->is_available) {
             $this->failValidation($patient, $data, $useMockPayment, 'availability_is_active', 'availability_id', 'This time slot is not available for booking.');
+        }
+
+        if ($availability->isBlockedOnDate($data['appointment_date'])) {
+            $this->failValidation($patient, $data, $useMockPayment, 'availability_is_active', 'availability_id', 'This time slot is blocked for the selected date.');
         }
 
         $this->logCondition('consultation_type_matches', $availability->consultation_type === $data['consultation_type'], $patient, $data, $useMockPayment, [
@@ -86,7 +89,10 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
 
         $requestedDate = Carbon::parse($data['appointment_date'])->startOfDay();
 
-        if ($availability->is_recurring) {
+        $availabilityService = app(DoctorAvailabilityService::class);
+        $isRecurringTemplate = $availabilityService->isRecurringTemplate($availability);
+
+        if ($isRecurringTemplate) {
             $recurringStart = $availability->recurring_start_date ? Carbon::parse($availability->recurring_start_date)->startOfDay() : null;
             $recurringEnd = $availability->recurring_end_date ? Carbon::parse($availability->recurring_end_date)->startOfDay() : null;
 
@@ -108,13 +114,13 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
                 $this->failValidation($patient, $data, $useMockPayment, 'recurring_date_before_end', 'appointment_date', 'Appointment date is after the recurring availability end date (' . $recurringEnd->format('Y-m-d') . ').');
             }
 
-            $targetDayOfWeek = $availability->day_of_week ?: $recurringStart?->format('l');
-            $matchesDayOfWeek = ! $targetDayOfWeek || $requestedDate->format('l') === ucfirst($targetDayOfWeek);
+            $targetDayOfWeek = $availabilityService->recurringDayOfWeek($availability, $recurringStart ?: $requestedDate);
+            $matchesDayOfWeek = ! $targetDayOfWeek || strtolower($requestedDate->format('l')) === strtolower($targetDayOfWeek);
             $this->logCondition('recurring_day_of_week_matches', $matchesDayOfWeek, $patient, $data, $useMockPayment, [
                 'target_day_of_week' => $targetDayOfWeek,
                 'requested_day_of_week' => $requestedDate->format('l'),
             ]);
-            if ($targetDayOfWeek && $requestedDate->format('l') !== ucfirst($targetDayOfWeek)) {
+            if (! $matchesDayOfWeek) {
                 $this->failValidation($patient, $data, $useMockPayment, 'recurring_day_of_week_matches', 'appointment_date', "This slot is only available on {$targetDayOfWeek}s. The selected date is a " . $requestedDate->format('l') . '.');
             }
 
@@ -131,9 +137,18 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
             }
         }
 
+        $effectiveSlot = $availabilityService->effectiveValuesForDate($availability, $requestedDate);
+
+        if (in_array($effectiveSlot['status'], ['blocked', 'cancelled'], true)) {
+            $this->failValidation($patient, $data, $useMockPayment, 'availability_is_active', 'availability_id', 'This time slot is blocked for the selected date.');
+        }
+
         $appointmentTime = Carbon::parse($data['appointment_time'])->format('H:i:s');
-        $startTime = $availability->start_time ? Carbon::parse($availability->start_time)->format('H:i:s') : null;
-        $endTime = $availability->end_time ? Carbon::parse($availability->end_time)->format('H:i:s') : null;
+        $startTime = $effectiveSlot['start_time'] ? Carbon::parse($effectiveSlot['start_time'])->format('H:i:s') : null;
+        $endTime = $effectiveSlot['end_time'] ? Carbon::parse($effectiveSlot['end_time'])->format('H:i:s') : null;
+        $effectiveCapacity = (int) ($effectiveSlot['capacity'] ?? 1);
+        $effectiveFee = (float) ($effectiveSlot['consultation_fee'] ?? 0);
+        $override = $effectiveSlot['override'];
 
         $isTimeWithinSlot = ! ($startTime && $endTime && ($appointmentTime < $startTime || $appointmentTime > $endTime));
         $this->logCondition('appointment_time_within_slot', $isTimeWithinSlot, $patient, $data, $useMockPayment, [
@@ -162,30 +177,28 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
             ));
             $lock->block(10);
 
-            return DB::transaction(function () use ($requestedDate, $availability, $data, $patient, $doctor, $useMockPayment, $notes) {
+            return DB::transaction(function () use ($requestedDate, $availability, $data, $patient, $doctor, $useMockPayment, $notes, $effectiveCapacity, $effectiveFee, $override, $startTime, $endTime) {
                 $paymentOrderResult = null;
-                $existingCount = Appointment::where('doctor_id', $doctor->id)
-                    ->where('availability_id', $availability->id)
-                    ->whereDate('appointment_date', $requestedDate)
-                    ->where('consultation_type', $data['consultation_type'])
-                    ->whereNotIn('status', [
-                        AppointmentStatus::CANCELLED->value,
-                        AppointmentStatus::FAILED->value,
-                    ])
-                    ->count();
+                $existingCount = app(SlotCapacityService::class)->bookedCount(
+                    doctorId: $doctor->id,
+                    date: $requestedDate,
+                    startTime: $startTime,
+                    availabilityId: $availability->id,
+                    consultationType: $data['consultation_type'],
+                );
 
                 Log::info('Registration booking slot capacity evaluated', array_merge(
                     $this->buildContext($patient, $data, $useMockPayment),
                     [
                         'existing_count' => $existingCount,
-                        'capacity' => $availability->capacity ?? 1,
+                        'capacity' => $effectiveCapacity,
                     ]
                 ));
 
-                if ($existingCount >= ($availability->capacity ?? 1)) {
+                if ($existingCount >= $effectiveCapacity) {
                     $this->failValidation($patient, $data, $useMockPayment, 'slot_capacity_available', 'availability_id', 'This time slot is fully booked. Please select another slot.', [
                         'existing_count' => $existingCount,
-                        'capacity' => $availability->capacity ?? 1,
+                        'capacity' => $effectiveCapacity,
                     ]);
                 }
 
@@ -270,22 +283,23 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
                     ];
                 }
 
-                $consultationFee = (float) ($availability->consultation_fee ?? 0);
+                $consultationFee = $effectiveFee;
                 Log::info('Registration booking creating new appointment', array_merge(
                     $this->buildContext($patient, $data, $useMockPayment),
                     [
                         'consultation_fee' => $consultationFee,
-                        'slot_start_time' => $availability->start_time,
-                        'slot_end_time' => $availability->end_time,
+                        'slot_start_time' => $startTime,
+                        'slot_end_time' => $endTime,
                     ]
                 ));
                 $appointment = Appointment::create([
                     'patient_id' => $patient->id,
                     'doctor_id' => $doctor->id,
                     'availability_id' => $availability->id,
+                    'availability_override_id' => $override?->id,
                     'appointment_date' => $requestedDate->toDateString(),
-                    'appointment_time' => $availability->start_time,
-                    'appointment_end_time' => $availability->end_time,
+                    'appointment_time' => $startTime,
+                    'appointment_end_time' => $endTime,
                     'status' => AppointmentStatus::PENDING->value,
                     'consultation_type' => $data['consultation_type'],
                     'visit_reason' => $notes,
@@ -302,6 +316,10 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
                     ));
                     $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
                     NotificationService::notifyAppointmentConfirmed($appointment);
+
+                    if ($appointment->consultation_type === 'video') {
+                        CreateVideoRoomJob::dispatch($appointment->id);
+                    }
                 } elseif ($useMockPayment) {
                     Log::info('Registration booking using mock payment for new appointment', array_merge(
                         $this->buildContext($patient, $data, $useMockPayment),
@@ -424,41 +442,9 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
             NotificationService::notifyAppointmentConfirmed($appointment);
         }
 
-        if (! $payment->receipt_pdf) {
-            $pdfHtml = view('ReceiptTemplate.receipt', [
-                'payment' => $payment,
-                'appointment' => $appointment,
-            ])->render();
-
-            $filename = 'receipt_' . $payment->id . '.pdf';
-            $path = 'receipts/' . $filename;
-            $fullPath = storage_path('app/public/' . $path);
-
-            if (! file_exists(dirname($fullPath))) {
-                mkdir(dirname($fullPath), 0775, true);
-            }
-
-            Pdf::loadHTML($pdfHtml)->save($fullPath);
-
-            $payment->receipt_pdf = $path;
-            $payment->save();
-        }
-
-        if (
-            $appointment->consultation_type === 'video' &&
-            ! $appointment->whereby_room_url
-        ) {
-            $room = $this->wherebyService->createVideoConsultation($appointment);
-
-            if ($room) {
-                $appointment->update([
-                    'whereby_room_url' => $room['roomUrl'] ?? null,
-                    'whereby_room_id' => $room['roomId'] ?? null,
-                ]);
-            } else {
-                Log::warning('Video room creation failed for appointment: ' . $appointment->id);
-            }
-        }
+        GenerateReceiptJob::dispatch($payment->id);
+        CreateVideoRoomJob::dispatch($appointment->id);
+        SendBookingEmailJob::dispatch($appointment->id, $payment->id)->delay(now()->addSeconds(10));
     }
 
     protected function logCondition(

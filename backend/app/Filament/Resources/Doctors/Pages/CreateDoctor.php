@@ -3,14 +3,10 @@
 namespace App\Filament\Resources\Doctors\Pages;
 
 use App\Filament\Resources\Doctors\DoctorResource;
-use App\Filament\Resources\Doctors\Schemas\DoctorForm;
-use App\Filament\Resources\Doctors\Traits\HasDoctorAvailabilitySlideOver;
 use App\Models\DepartmentDoctor;
 use App\Models\User;
 use App\Services\DoctorCredentialsService;
 use Filament\Resources\Pages\CreateRecord;
-use Filament\Schemas\Components\Group;
-use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -18,10 +14,6 @@ use Spatie\Permission\Models\Role;
 
 class CreateDoctor extends CreateRecord
 {
-    use HasDoctorAvailabilitySlideOver;
-
-    protected ?array $pendingAvailabilityData = null;
-
     protected ?string $plainPassword = null;
 
     protected static string $resource = DoctorResource::class;
@@ -29,25 +21,6 @@ class CreateDoctor extends CreateRecord
     public function getFormActionsAlignment(): Alignment|string
     {
         return Alignment::End;
-    }
-
-    public function form(Schema $schema): Schema
-    {
-        $schema = parent::form($schema);
-
-        return $schema->components([
-            ...$schema->getComponents(),
-            Group::make()
-                ->schema(DoctorForm::availabilityTabsForSlideOver())
-                ->extraAttributes(['class' => 'hidden']),
-        ]);
-    }
-
-    protected function getHeaderActions(): array
-    {
-        return [
-            $this->availabilitySlideOverAction(),
-        ];
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array
@@ -89,13 +62,6 @@ class CreateDoctor extends CreateRecord
             $data['user_id'] = $user->id;
             unset($data['password'], $data['update_password']);
 
-            try {
-                $raw = $this->form->getRawState();
-                $this->pendingAvailabilityData = $this->mergeArraysDeep($data, $raw ?? []);
-            } catch (\Throwable $e) {
-                $this->pendingAvailabilityData = $data;
-            }
-
             // Create the Doctor record
             return $this->getModel()::create($data);
         });
@@ -103,8 +69,7 @@ class CreateDoctor extends CreateRecord
 
     protected function afterCreate(): void
     {
-        $data = $this->pendingAvailabilityData ?? $this->form->getRawState() ?? [];
-        $this->pendingAvailabilityData = null;
+        $data = $this->form->getRawState() ?? [];
         $doctor = $this->record;
 
         // Handle department associations
@@ -121,11 +86,6 @@ class CreateDoctor extends CreateRecord
                     $savedPivotIds[] = $newPivot->id;
                 }
             }
-        }
-
-        // Persist availability slots
-        if (! empty($data)) {
-            $this->persistAvailabilitySlots($doctor, $data, true);
         }
 
         // Refresh and check for active availability

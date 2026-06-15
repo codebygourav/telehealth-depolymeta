@@ -62,7 +62,7 @@ class PatientResource extends Resource
                 'creator:id,name',
                 'updater:id,name',
                 'deleter:id,name',
-                'user:id,name,email,phone', // Eager load user for table columns (avatar is accessed via InteractsWithModuleDocuments trait)
+                'user:id,name,email,phone,email_verified_at,status', // Eager load user for table columns (avatar is accessed via InteractsWithModuleDocuments trait)
             ]);
 
         // Apply permission-based filtering

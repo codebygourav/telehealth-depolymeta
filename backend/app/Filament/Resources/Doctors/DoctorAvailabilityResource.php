@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources\DoctorAvailabilities;
+namespace App\Filament\Resources\Doctors;
 
-use App\Filament\Resources\DoctorAvailabilities\Pages\ListDoctorAvailabilities;
+use App\Filament\Resources\Doctors\Pages\ManageDoctorAvailabilities;
 use App\Models\DoctorAvailability;
 use App\Traits\HasCustomSidebar;
 use App\Traits\HasResourcePermissions;
@@ -21,10 +21,12 @@ class DoctorAvailabilityResource extends Resource
 
     protected static ?string $model = DoctorAvailability::class;
 
-    protected static ?string $navigationLabel = 'Doctor Slots';
-    
-    protected static ?string $pluralLabel = 'Doctor Slots';
-    
+    protected static ?string $navigationLabel = 'Doctor Availabilities';
+
+    protected static ?string $slug = 'doctors-availbiltties';
+
+    protected static ?string $pluralLabel = 'Doctor Availabilities';
+
     protected static ?string $modelLabel = 'Doctor Slot';
 
     public static function getSidebarOptions(): array
@@ -56,7 +58,7 @@ class DoctorAvailabilityResource extends Resource
                     ->sortable(),
                 TextColumn::make('day_of_week')
                     ->label('Day')
-                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
+                    ->formatStateUsing(fn(string $state): string => ucfirst($state))
                     ->sortable(),
                 TextColumn::make('date')
                     ->label('Date')
@@ -73,7 +75,7 @@ class DoctorAvailabilityResource extends Resource
                 TextColumn::make('consultation_type')
                     ->label('Type')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'in-person' => 'success',
                         'video' => 'primary',
                         default => 'gray',
@@ -101,7 +103,7 @@ class DoctorAvailabilityResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListDoctorAvailabilities::route('/'),
+            'index' => ManageDoctorAvailabilities::route('/'),
         ];
     }
 }

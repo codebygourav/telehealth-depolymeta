@@ -75,6 +75,7 @@ class PatientHomeController extends Controller
 
         if ($patient) {
             $upcomingAppointments = Appointment::with(['doctor.departments', 'availability', 'videoConsultation'])
+                ->withoutTestDoctors()
                 ->where('patient_id', $patient->id)
                 ->whereIn('status', [
                     AppointmentStatus::CONFIRMED->value,

@@ -115,6 +115,13 @@ if (!function_exists('mobile_app_settings')) {
     }
 }
 
+if (!function_exists('play_store_url')) {
+    function play_store_url(): string
+    {
+        return setting('mobile.play_store_url') ?: 'https://play.google.com/store/apps/details?id=com.cmctelehealth.app&hl=en';
+    }
+}
+
 if (!function_exists('public_settings')) {
     /**
      * Get all public settings for API response

@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => env('MAIL_MAILER', 'failover'),
 
     /*
     |--------------------------------------------------------------------------
@@ -45,7 +45,7 @@ return [
             'port' => env('MAIL_PORT', 2525),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            'timeout' => 15,
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
@@ -79,6 +79,11 @@ return [
             'transport' => 'array',
         ],
 
+        /*
+         * Tries SMTP first; if SMTP fails (e.g. Gmail daily limit, auth error,
+         * connection timeout) it falls back to the 'log' driver so that email
+         * content is never silently lost — it gets written to laravel.log instead.
+         */
         'failover' => [
             'transport' => 'failover',
             'mailers' => [
@@ -114,5 +119,11 @@ return [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
+
+    'admin_notification_email' => env('ADMIN_NOTIFICATION_EMAIL', 'privateopd@cmcludhiana.in'),
+    'transaction_notification_email' => env('TRANSACTION_NOTIFICATION_EMAIL', 'telemedicine@cmcludhiana.in'),
+    'bcc_email' => env('MAIL_BCC_EMAIL', 'webclouddeveloper@gmail.com'),
+
+    'bcc_enabled' => filter_var(env('MAIL_BCC_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
 
 ];

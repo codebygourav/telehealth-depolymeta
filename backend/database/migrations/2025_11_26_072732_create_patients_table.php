@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('slug')->nullable();
             $table->string('first_name');
             $table->string('last_name')->nullable();
-            $table->enum('gender', array_map(fn ($case) => $case->value, GenderOption::cases()))->nullable();
+            $table->enum('gender', array_map(fn($case) => $case->value, GenderOption::cases()))->nullable();
             $table->date('date_of_birth')->nullable();
             $table->integer('age')->nullable();
             $table->text('bio')->nullable();
@@ -46,7 +46,7 @@ return new class extends Migration
             $table->string('landmark')->nullable();
             $table->string('nationality')->nullable();
             // Other info
-            $table->enum('marital_status', array_map(fn ($case) => $case->value, MaritalStatus::cases()))->nullable();
+            $table->enum('marital_status', array_map(fn($case) => $case->value, MaritalStatus::cases()))->nullable();
 
             $table->enum('blood_group', array_column(BloodGroupOption::cases(), 'value'))->nullable();
             // Existing / Manual Patient
@@ -55,7 +55,7 @@ return new class extends Migration
             $table->boolean('create_user_account')->default(false);
 
             // Source tracking (important for mobile/web)
-            $table->enum('source', ['app', 'website'])->default('website');
+            $table->enum('source', ['app', 'website', 'internal'])->default('website');
 
             $table->uuid('created_by')->nullable()->index();
             $table->uuid('updated_by')->nullable()->index();

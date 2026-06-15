@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DoctorAvailability;
+use App\Models\DoctorAvailabilityOverride;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Filament\Notifications\Notification;
@@ -10,19 +11,68 @@ use App\Enums\{DayOfWeek};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\UniqueConstraintViolationException;
+use App\Http\Resources\WordPress\DoctorAvailabilityResource;
 
 class DoctorAvailabilityService
 {
     /**
+     * Check if current user is super admin
+     */
+    public static function isSuperAdmin(): bool
+    {
+        $user = \Filament\Facades\Filament::auth()->user();
+        return $user && ($user->hasRole('super_admin') || $user->hasRole('super-admin'));
+    }
+
+    /**
+     * Get booked appointment dates for a given availability slot ID
+     */
+    public static function getBookedAppointmentDates(?string $slotId): array
+    {
+        if (!$slotId) {
+            return [];
+        }
+
+        $slot = DoctorAvailability::find($slotId);
+        if (!$slot) {
+            return [];
+        }
+
+        return $slot->appointments()
+            ->whereNotIn('status', [
+                \App\Enums\AppointmentStatus::CANCELLED->value,
+                \App\Enums\AppointmentStatus::FAILED->value,
+            ])
+            ->pluck('appointment_date')
+            ->map(fn($date) => \Carbon\Carbon::parse($date)->format('d M Y'))
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
+    /**
      * Expand recurring availabilities into discrete slots for a given window.
      */
-    public function expandSlots(iterable $availabilities, Carbon $startDate, Carbon $endDate): Collection
-    {
+    public function expandSlots(
+        iterable $availabilities,
+        Carbon $startDate,
+        Carbon $endDate,
+        bool $includePast = false,
+        bool $skipBlocked = true,
+    ): Collection {
         $allSlots = collect();
         $now = Carbon::now();
 
         foreach ($availabilities as $slot) {
-            if ($slot->is_recurring) {
+            if ($this->isRecurringTemplate($slot)) {
+                $overrides = $slot->relationLoaded('overrides')
+                    ? $slot->overrides->keyBy(fn($override) => $override->override_date->format('Y-m-d'))
+                    : DoctorAvailabilityOverride::query()
+                    ->where('doctor_availability_id', $slot->id)
+                    ->whereBetween('override_date', [$startDate->toDateString(), $endDate->toDateString()])
+                    ->get()
+                    ->keyBy(fn($override) => $override->override_date->format('Y-m-d'));
+
                 $recurringStart = $slot->recurring_start_date
                     ? Carbon::parse($slot->recurring_start_date)->startOfDay()
                     : $startDate->copy();
@@ -33,8 +83,16 @@ class DoctorAvailabilityService
                 $rangeStart = $startDate->greaterThan($recurringStart) ? $startDate->copy() : $recurringStart;
                 $rangeEnd = $recurringEnd->lessThan($endDate) ? $recurringEnd : $endDate;
 
-                // Use the weekday of the recurring start date as the source of truth
-                $dow = $recurringStart->dayOfWeek;
+                $dayNumbers = [
+                    'sunday' => Carbon::SUNDAY,
+                    'monday' => Carbon::MONDAY,
+                    'tuesday' => Carbon::TUESDAY,
+                    'wednesday' => Carbon::WEDNESDAY,
+                    'thursday' => Carbon::THURSDAY,
+                    'friday' => Carbon::FRIDAY,
+                    'saturday' => Carbon::SATURDAY,
+                ];
+                $dow = $dayNumbers[$this->recurringDayOfWeek($slot, $recurringStart)] ?? $recurringStart->dayOfWeek;
 
                 $current = $rangeStart->copy();
 
@@ -44,26 +102,40 @@ class DoctorAvailabilityService
                 }
 
                 while ($current->lte($rangeEnd)) {
-                    $slotCopy = clone $slot;
-                    $slotCopy->date = $current->toDateString();
-                    $allSlots->push($slotCopy);
+                    $dateStr = $current->toDateString();
+                    $override = $overrides->get($dateStr);
+                    $slotCopy = $this->applyEffectiveValuesForDate($slot, $dateStr, $override, $skipBlocked);
+
+                    if ($slotCopy) {
+                        $allSlots->push($slotCopy);
+                    }
+
                     $current->addWeek();
                 }
             } else {
                 $dateObj = $slot->date ? Carbon::parse($slot->date) : null;
-                if ($dateObj && $dateObj->between($startDate, $endDate)) {
+                if ($dateObj && $dateObj->betweenIncluded($startDate, $endDate)) {
+                    if ($skipBlocked && $this->isDateBlocked($slot, $dateObj->toDateString())) {
+                        continue;
+                    }
+
                     $slot->date = $dateObj->toDateString();
                     $allSlots->push($slot);
                 }
             }
         }
 
-        return $allSlots->filter(function ($slot) use ($now) {
+        return $allSlots->filter(function ($slot) use ($now, $includePast) {
+            if ($includePast) {
+                return true;
+            }
+
             $timeString = $slot->start_time instanceof Carbon
                 ? $slot->start_time->format('H:i:s')
                 : $slot->start_time;
 
             $slotDateTime = Carbon::parse($slot->date . ' ' . $timeString);
+
             return $slotDateTime->greaterThan($now);
         })
             ->unique(function ($slot) {
@@ -77,6 +149,226 @@ class DoctorAvailabilityService
             ]);
     }
 
+    public function expandSlotsForApi(
+        iterable $availabilities,
+        ?Carbon $startDate = null,
+        ?Carbon $endDate = null,
+        bool $includePast = false,
+        bool $skipBlocked = true,
+    ): Collection {
+        $startDate ??= Carbon::today();
+        $endDate ??= $this->resolveApiEndDate($availabilities, $startDate);
+
+        return $this->expandSlots($availabilities, $startDate, $endDate, $includePast, $skipBlocked);
+    }
+
+    /**
+     * WordPress / public doctor profile: next N months, future slots only, includes blocked dates.
+     */
+    public function expandSlotsForWordPressApi(iterable $availabilities): Collection
+    {
+        $months = app(SlotBookingCutoffService::class)->wordpressAvailabilityMonths();
+        $startDate = Carbon::today();
+        $endDate = $startDate->copy()->addMonths($months)->endOfDay();
+
+        return $this->expandSlots($availabilities, $startDate, $endDate, includePast: false, skipBlocked: false);
+    }
+
+    /**
+     * @param  iterable<int, DoctorAvailability>  $availabilities
+     */
+    private function resolveApiEndDate(iterable $availabilities, Carbon $startDate): Carbon
+    {
+        $end = $startDate->copy()->addMonths(6);
+
+        foreach ($availabilities as $slot) {
+            if ($slot->recurring_end_date) {
+                $recurringEnd = Carbon::parse($slot->recurring_end_date)->endOfDay();
+                if ($recurringEnd->greaterThan($end)) {
+                    $end = $recurringEnd;
+                }
+            }
+
+            if ($slot->date) {
+                $dateEnd = Carbon::parse($slot->date)->endOfDay();
+                if ($dateEnd->greaterThan($end)) {
+                    $end = $dateEnd;
+                }
+            }
+        }
+
+        return $end;
+    }
+
+    public function applyEffectiveValuesForDate(
+        DoctorAvailability $availability,
+        Carbon|string $date,
+        ?DoctorAvailabilityOverride $override = null,
+        bool $skipBlocked = true
+    ): ?DoctorAvailability {
+        $dateString = $date instanceof Carbon ? $date->toDateString() : Carbon::parse($date)->toDateString();
+        $override ??= $this->overrideForDate($availability, $dateString);
+
+        if ($skipBlocked && $this->isDateBlocked($availability, $dateString, $override)) {
+            return null;
+        }
+
+        $slot = clone $availability;
+        $slot->date = $dateString;
+        $slot->effective_date = $dateString;
+        $slot->override_id = $override?->id;
+        $slot->override_status = $override?->status;
+        $slot->is_recurring = $this->isRecurringTemplate($availability);
+        $slot->source = $override ? 'override' : ($this->isRecurringTemplate($availability) ? 'recurring' : 'availability');
+
+        if ($override) {
+            $this->applyOverrideToExpandedSlot($slot, $override);
+        }
+
+        return $slot;
+    }
+
+    public function effectiveValuesForDate(DoctorAvailability $availability, Carbon|string $date): array
+    {
+        $dateString = $date instanceof Carbon ? $date->toDateString() : Carbon::parse($date)->toDateString();
+        $override = $this->overrideForDate($availability, $dateString);
+
+        return [
+            'override' => $override,
+            'status' => $override?->status ?? ($availability->is_available ? 'active' : 'blocked'),
+            'start_time' => $override?->start_time ?? $availability->start_time,
+            'end_time' => $override?->end_time ?? $availability->end_time,
+            'capacity' => $override?->capacity ?? $availability->capacity ?? 1,
+            'consultation_fee' => $override?->consultation_fee ?? $availability->consultation_fee ?? 0,
+            'doctor_room' => $override?->doctor_room ?? $availability->doctor_room,
+            'booking_cutoff_rules' => app(SlotBookingCutoffService::class)->resolveRulesForDate($availability, $override),
+            'booking_cutoff_rules_source' => app(SlotBookingCutoffService::class)->rulesSourceForDate($availability, $override),
+            'source' => $override ? 'override' : ($this->isRecurringTemplate($availability) ? 'recurring' : 'availability'),
+        ];
+    }
+
+    public function overrideForDate(DoctorAvailability $availability, Carbon|string $date): ?DoctorAvailabilityOverride
+    {
+        if (! $this->isRecurringTemplate($availability) || ! $availability->exists || ! $availability->id) {
+            return null;
+        }
+
+        $dateString = $date instanceof Carbon ? $date->toDateString() : Carbon::parse($date)->toDateString();
+
+        if ($availability->relationLoaded('overrides')) {
+            return $availability->overrides->first(
+                fn(DoctorAvailabilityOverride $override) => $override->override_date->format('Y-m-d') === $dateString
+            );
+        }
+
+        return $availability->overrides()->whereDate('override_date', $dateString)->first();
+    }
+
+    public function isDateBlocked(DoctorAvailability $availability, Carbon|string $date, ?DoctorAvailabilityOverride $override = null): bool
+    {
+        if (! $availability->is_available) {
+            return true;
+        }
+
+        $dateString = $date instanceof Carbon ? $date->toDateString() : Carbon::parse($date)->toDateString();
+        $override ??= $this->overrideForDate($availability, $dateString);
+
+        if ($override && in_array($override->status, ['blocked', 'cancelled'], true)) {
+            return true;
+        }
+
+        if (! $this->isRecurringTemplate($availability) || empty($availability->blocked_dates) || ! is_array($availability->blocked_dates)) {
+            return false;
+        }
+
+        foreach ($availability->blocked_dates as $blockedDate) {
+            if (is_array($blockedDate)) {
+                $value = isset($blockedDate['date']) ? Carbon::parse($blockedDate['date'])->format('Y-m-d') : null;
+                $blockedStart = isset($blockedDate['start_time']) ? Carbon::parse($blockedDate['start_time'])->format('H:i') : null;
+                $blockedEnd = isset($blockedDate['end_time']) ? Carbon::parse($blockedDate['end_time'])->format('H:i') : null;
+            } else {
+                $value = Carbon::parse($blockedDate)->format('Y-m-d');
+                $blockedStart = null;
+                $blockedEnd = null;
+            }
+
+            if ($value === $dateString) {
+                // If the blocked entry specifies a start_time and end_time, and the slot also specifies times,
+                // check if the times match exactly to support slot-level blocking.
+                if ($blockedStart && $blockedEnd && $availability->start_time && $availability->end_time) {
+                    $slotStart = $availability->start_time instanceof Carbon ? $availability->start_time->format('H:i') : date('H:i', strtotime($availability->start_time));
+                    $slotEnd = $availability->end_time instanceof Carbon ? $availability->end_time->format('H:i') : date('H:i', strtotime($availability->end_time));
+                    if ($slotStart === $blockedStart && $slotEnd === $blockedEnd) {
+                        return true;
+                    }
+                } else {
+                    // Otherwise, the entire date is blocked for all slots.
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public function isRecurringTemplate(DoctorAvailability $availability): bool
+    {
+        return (bool) $availability->is_recurring || (empty($availability->date) && filled($availability->day_of_week));
+    }
+
+    public function recurringDayOfWeek(DoctorAvailability $availability, ?Carbon $fallbackDate = null): string
+    {
+        if ($availability->day_of_week) {
+            return strtolower($availability->day_of_week);
+        }
+
+        if ($availability->recurring_start_date) {
+            return strtolower(Carbon::parse($availability->recurring_start_date)->format('l'));
+        }
+
+        return strtolower(($fallbackDate ?: Carbon::today())->format('l'));
+    }
+
+    private function applyOverrideToExpandedSlot(DoctorAvailability $slot, ?DoctorAvailabilityOverride $override): void
+    {
+        if (! $override) {
+            $slot->override_id = null;
+            $slot->override_status = null;
+            $slot->source = 'recurring';
+
+            return;
+        }
+
+        $slot->override_id = $override->id;
+        $slot->override_status = $override->status;
+        $slot->source = 'override';
+
+        if ($override->start_time) {
+            $slot->start_time = $override->start_time;
+        }
+
+        if ($override->end_time) {
+            $slot->end_time = $override->end_time;
+        }
+
+        if ($override->capacity !== null) {
+            $slot->capacity = $override->capacity;
+        }
+
+        if ($override->consultation_fee !== null) {
+            $slot->consultation_fee = $override->consultation_fee;
+        }
+
+        if ($override->doctor_room !== null) {
+            $slot->doctor_room = $override->doctor_room;
+        }
+
+        if ($override->booking_cutoff_rules !== null) {
+            $slot->booking_cutoff_rules = $override->booking_cutoff_rules;
+            $slot->booking_cutoff_rules_source = 'override';
+        }
+    }
+
     /**
      * Group slots by date for API response.
      */
@@ -86,6 +378,19 @@ class DoctorAvailabilityService
             'date' => $date,
             'slots' => $groupSlots->values(),
         ])->values();
+    }
+
+    /**
+     * Group and format slots for the WordPress API.
+     */
+    public function formatSlotsForWordPressApi(Collection $slots): array
+    {
+        return $slots->groupBy('date')->map(function ($groupSlots, $date) {
+            return [
+                'date' => $date,
+                'slots' => DoctorAvailabilityResource::collection($groupSlots),
+            ];
+        })->values()->all();
     }
     public function persistAvailabilitySlots($doctor, array $data, bool $isNewDoctor = false, bool $notify = true): array
     {
@@ -224,6 +529,38 @@ class DoctorAvailabilityService
                         $endTimeFormatted = \Carbon\Carbon::parse($end)->format('H:i:00');
 
                         $normalizedOpdType = $this->normalizeOpdType($slot['opd_type'] ?? null, $consultationType);
+                        $isChildOnly = $consultationType === 'in-person'
+                            && (bool) ($slot['is_child_only'] ?? $slot['child'] ?? false);
+
+                        // Normalize blocked_dates
+                        $blockedDates = [];
+                        if ($isRecurring && !empty($slot['blocked_dates']) && is_array($slot['blocked_dates'])) {
+                            foreach ($slot['blocked_dates'] as $bd) {
+                                if (is_array($bd) && !empty($bd['date'])) {
+                                    $blockedDates[] = [
+                                        'date' => \Carbon\Carbon::parse($bd['date'])->format('Y-m-d'),
+                                        'start_time' => $bd['start_time'] ?? $startTimeFormatted,
+                                        'end_time' => $bd['end_time'] ?? $endTimeFormatted,
+                                    ];
+                                } elseif (is_string($bd)) {
+                                    $blockedDates[] = [
+                                        'date' => \Carbon\Carbon::parse($bd)->format('Y-m-d'),
+                                        'start_time' => $startTimeFormatted,
+                                        'end_time' => $endTimeFormatted,
+                                    ];
+                                }
+                            }
+                        }
+                        if (!empty($blockedDates)) {
+                            $uniqueBlocked = [];
+                            foreach ($blockedDates as $entry) {
+                                $key = $entry['date'] . '_' . ($entry['start_time'] ?? '') . '_' . ($entry['end_time'] ?? '');
+                                $uniqueBlocked[$key] = $entry;
+                            }
+                            $blockedDates = array_values($uniqueBlocked);
+                        } else {
+                            $blockedDates = null;
+                        }
 
                         // Only save required fields for availability
                         $availabilityData = [
@@ -236,9 +573,11 @@ class DoctorAvailabilityService
                             'consultation_type' => $consultationType,
                             'opd_type' => $normalizedOpdType,
                             'consultation_fee' => (float) ($slot['consultation_fee'] ?? 0),
+                            'is_child_only' => $isChildOnly,
                             'doctor_room' => $slot['doctor_room'] ?? null,
                             'is_recurring' => $isRecurring,
                             'is_available' => (bool) ($slot['is_available'] ?? true),
+                            'blocked_dates' => $blockedDates,
                         ];
 
                         if ($isRecurring) {
@@ -306,6 +645,7 @@ class DoctorAvailabilityService
                                 $feeChanged = (float) ($existingSlot->consultation_fee ?? 0) !== (float) ($slot['consultation_fee'] ?? 0);
                                 $typeChanged = ($existingSlot->consultation_type ?? 'in-person') !== $consultationType;
                                 $opdChanged = ($existingSlot->opd_type ?? null) !== $normalizedOpdType;
+                                $childChanged = (bool) ($existingSlot->is_child_only ?? false) !== $isChildOnly;
                                 $availableChanged = (bool) ($existingSlot->is_available ?? true) !== (bool) ($slot['is_available'] ?? true);
                                 $recurringChanged = (bool) ($existingSlot->is_recurring ?? false) !== $isRecurring;
 
@@ -315,7 +655,7 @@ class DoctorAvailabilityService
 
                                 // Only update if something actually changed
                                 $hasChanges = $dateChanged || $startChanged || $endChanged || $capacityChanged ||
-                                    $feeChanged || $typeChanged || $opdChanged || $availableChanged || $recurringChanged || $roomChanged;
+                                    $feeChanged || $typeChanged || $opdChanged || $childChanged || $availableChanged || $recurringChanged || $roomChanged;
 
                                 if (! $hasChanges) {
                                     // No changes, skip this slot
@@ -324,6 +664,23 @@ class DoctorAvailabilityService
                                     }
 
                                     continue;
+                                }
+
+                                if ($existingSlot->hasBookedAppointments()) {
+                                    if (!self::isSuperAdmin()) {
+                                        $errors[] = "You can't edit this slot for the doctor because it already has appointments.";
+                                        $hasErrors = true;
+                                        $totalSkipped++;
+
+                                        if ($slotId) {
+                                            $processedSlotIds[$slotId] = true;
+                                        }
+
+                                        continue;
+                                    } else {
+                                        $bookedDates = self::getBookedAppointmentDates($slotId);
+                                        $errors[] = "⚠️ WARNING: Slot updated. It has booked appointments on: " . implode(', ', $bookedDates);
+                                    }
                                 }
 
                                 // Only check for duplicates if the unique fields have changed
@@ -417,6 +774,8 @@ class DoctorAvailabilityService
                         $tempEndFormatted = \Carbon\Carbon::parse($tempEnd)->format('H:i:00');
 
                         $tempOpdType = $this->normalizeOpdType($data['temp_opd'] ?? null, $tempConsultationType);
+                        $tempIsChildOnly = $tempConsultationType === 'in-person'
+                            && (bool) ($data['temp_is_child_only'] ?? $data['temp_child'] ?? false);
 
                         // Only save required fields
                         $pendingData = [
@@ -428,6 +787,7 @@ class DoctorAvailabilityService
                             'consultation_type' => $tempConsultationType,
                             'opd_type' => $tempOpdType,
                             'consultation_fee' => (float) ($data['temp_fee'] ?? 0),
+                            'is_child_only' => $tempIsChildOnly,
                             'doctor_room' => $data['temp_room'] ?? null,
                             'is_recurring' => $isRec,
                             'is_available' => (bool) ($data['temp_active'] ?? true),
@@ -468,6 +828,7 @@ class DoctorAvailabilityService
                                 'consultation_type' => $tempConsultationType,
                                 'opd_type' => $tempOpdType,
                                 'consultation_fee' => (float) ($data['temp_fee'] ?? 0),
+                                'is_child_only' => $tempIsChildOnly,
                                 'doctor_room' => $data['temp_room'] ?? null,
                                 'is_recurring' => $isRec,
                                 'is_available' => (bool) ($data['temp_active'] ?? true),
@@ -680,7 +1041,7 @@ class DoctorAvailabilityService
             // Fallback to today if day is invalid
             return $now->format('Y-m-d');
         }
-        
+
         $todayDow = $now->dayOfWeek;
 
         $startTimeFormatted = $this->normalizeTime($startTime) ?: '00:00';
