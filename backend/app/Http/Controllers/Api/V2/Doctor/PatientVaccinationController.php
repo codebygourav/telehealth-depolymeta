@@ -27,7 +27,7 @@ class PatientVaccinationController extends Controller
 {
     public function index(Request $request, string $patientId)
     {
-        $doctor = $this->doctor($request);
+        $doctor = $request->user()?->doctor;
         if (! $doctor) {
             return ApiResponseService::unauthorized();
         }
@@ -41,19 +41,19 @@ class PatientVaccinationController extends Controller
         $vaccinations = PatientVaccination::with(['vaccination', 'documents', 'template.program', 'patient.user', 'patientProfile'])
             ->where('patient_id', $patientId)
             ->where('doctor_id', $doctor->id)
-            ->when($request->filled('patient_profile_id'), fn ($query) => $query->where('patient_profile_id', $request->string('patient_profile_id')->toString()))
-            ->when(! empty($validated['status']), fn ($query) => $query->where('status', $validated['status']))
+            ->when($request->filled('patient_profile_id'), fn($query) => $query->where('patient_profile_id', $request->string('patient_profile_id')->toString()))
+            ->when(! empty($validated['status']), fn($query) => $query->where('status', $validated['status']))
             ->orderBy('set_sort_order')
             ->orderByRaw('scheduled_date IS NULL, scheduled_date ASC')
             ->latest()
             ->paginate($request->integer('per_page', 10));
 
-        return ApiResponseService::paginated($vaccinations->through(fn ($vaccination) => new PatientVaccinationResource($vaccination)));
+        return ApiResponseService::paginated($vaccinations->through(fn($vaccination) => new PatientVaccinationResource($vaccination)));
     }
 
     public function assignTemplate(Request $request, string $patientId)
     {
-        $doctor = $this->doctor($request);
+        $doctor = $request->user()?->doctor;
         if (! $doctor) {
             return ApiResponseService::unauthorized();
         }
@@ -251,7 +251,7 @@ class PatientVaccinationController extends Controller
             return ApiResponseService::unauthorized();
         }
 
-        $document = VaccinationDocument::whereHas('patientVaccination', fn ($query) => $query->where('doctor_id', $doctor->id))
+        $document = VaccinationDocument::whereHas('patientVaccination', fn($query) => $query->where('doctor_id', $doctor->id))
             ->findOrFail($documentId);
 
         $document->delete();
@@ -271,7 +271,7 @@ class PatientVaccinationController extends Controller
             ->latest()
             ->paginate($request->integer('per_page', 10));
 
-        return ApiResponseService::paginated($profiles->through(fn ($profile) => new PatientProfileResource($profile)));
+        return ApiResponseService::paginated($profiles->through(fn($profile) => new PatientProfileResource($profile)));
     }
 
     public function storePatientProfile(Request $request, string $patientId)
@@ -337,12 +337,12 @@ class PatientVaccinationController extends Controller
         }
 
         $programs = PatientVaccinationProgram::with(['patientProfile', 'vaccinationProgram', 'vaccinationTemplate'])
-            ->whereHas('patientProfile', fn ($query) => $query->where('patient_id', $patient->id))
-            ->when($request->filled('patient_profile_id'), fn ($query) => $query->where('patient_profile_id', $request->string('patient_profile_id')->toString()))
+            ->whereHas('patientProfile', fn($query) => $query->where('patient_id', $patient->id))
+            ->when($request->filled('patient_profile_id'), fn($query) => $query->where('patient_profile_id', $request->string('patient_profile_id')->toString()))
             ->latest()
             ->paginate($request->integer('per_page', 10));
 
-        return ApiResponseService::paginated($programs->through(fn ($program) => new PatientVaccinationProgramResource($program)));
+        return ApiResponseService::paginated($programs->through(fn($program) => new PatientVaccinationProgramResource($program)));
     }
 
     public function doctorPatientPrograms(Request $request, string $patientId)
@@ -356,12 +356,12 @@ class PatientVaccinationController extends Controller
 
         $programs = PatientVaccinationProgram::with(['patientProfile', 'vaccinationProgram', 'vaccinationTemplate'])
             ->where('doctor_id', $doctor->id)
-            ->whereHas('patientProfile', fn ($query) => $query->where('patient_id', $patientId))
-            ->when($request->filled('patient_profile_id'), fn ($query) => $query->where('patient_profile_id', $request->string('patient_profile_id')->toString()))
+            ->whereHas('patientProfile', fn($query) => $query->where('patient_id', $patientId))
+            ->when($request->filled('patient_profile_id'), fn($query) => $query->where('patient_profile_id', $request->string('patient_profile_id')->toString()))
             ->latest()
             ->paginate($request->integer('per_page', 10));
 
-        return ApiResponseService::paginated($programs->through(fn ($program) => new PatientVaccinationProgramResource($program)));
+        return ApiResponseService::paginated($programs->through(fn($program) => new PatientVaccinationProgramResource($program)));
     }
 
     public function patientShow(Request $request, string $id)
@@ -405,15 +405,15 @@ class PatientVaccinationController extends Controller
 
         $vaccinations = PatientVaccination::with(['vaccination', 'documents', 'template.program', 'patient.user', 'patientProfile'])
             ->where('patient_id', $patient->id)
-            ->when(! empty($validated['patient_profile_id']), fn ($query) => $query->where('patient_profile_id', $validated['patient_profile_id']))
-            ->when($statuses, fn ($query) => $query->whereIn('status', $statuses))
-            ->when($futureOnly, fn ($query) => $query->whereDate('scheduled_date', '>=', now()->toDateString()))
+            ->when(! empty($validated['patient_profile_id']), fn($query) => $query->where('patient_profile_id', $validated['patient_profile_id']))
+            ->when($statuses, fn($query) => $query->whereIn('status', $statuses))
+            ->when($futureOnly, fn($query) => $query->whereDate('scheduled_date', '>=', now()->toDateString()))
             ->orderBy('set_sort_order')
             ->orderByRaw('scheduled_date IS NULL, scheduled_date ASC')
             ->latest()
             ->paginate($request->integer('per_page', 10));
 
-        return ApiResponseService::paginated($vaccinations->through(fn ($vaccination) => new PatientVaccinationResource($vaccination)));
+        return ApiResponseService::paginated($vaccinations->through(fn($vaccination) => new PatientVaccinationResource($vaccination)));
     }
 
     private function ownedPatientVaccination(Request $request, string $id): ?PatientVaccination

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Facades\Log;
+
 use App\Enums\VaccinationGenderRestriction;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,28 +22,17 @@ class Vaccination extends Model
     protected $fillable = [
         'name',
         'short_name',
-        'manufacturer',
         'disease_for',
         'description',
         'side_effects',
         'contraindications',
         'precautions',
         'dosage_information',
-        'is_multi_dose',
-        'total_doses',
-        'minimum_age_days',
-        'maximum_age_days',
-        'gender_restriction',
         'is_active'
     ];
 
     protected $casts = [
-        'is_multi_dose' => 'boolean',
         'is_active' => 'boolean',
-        'total_doses' => 'integer',
-        'minimum_age_days' => 'integer',
-        'maximum_age_days' => 'integer',
-        'gender_restriction' => VaccinationGenderRestriction::class,
     ];
 
     protected static function booted(): void
@@ -68,3 +59,4 @@ class Vaccination extends Model
         return $this->hasMany(VaccinationFaq::class)->orderBy('sort_order');
     }
 }
+Log::info('This is an informational message.');

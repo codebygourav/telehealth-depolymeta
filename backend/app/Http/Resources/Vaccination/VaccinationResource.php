@@ -37,7 +37,9 @@ class VaccinationResource extends JsonResource
                 : null,
 
             'is_active' => $this->is_active,
-            'faqs' => VaccinationFaqResource::collection($this->whenLoaded('faqs')),
+            'faqs' => $this->whenLoaded('faqs', function () {
+                return VaccinationFaqResource::collection($this->faqs ?? collect());
+            }),
 
         ];
     }

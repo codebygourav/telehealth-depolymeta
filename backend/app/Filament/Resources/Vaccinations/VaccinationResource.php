@@ -2,13 +2,12 @@
 
 namespace App\Filament\Resources\Vaccinations;
 
-use App\Enums\VaccinationGenderRestriction;
-use App\Filament\Concerns\ConfiguresSlideOverSections;
-use App\Filament\Resources\Vaccinations\Pages\ListVaccinations;
+use App\Filament\Resources\Vaccinations\Pages;
 use App\Models\Vaccination;
 use App\Traits\HasCustomSidebar;
 use App\Traits\HasResourcePermissions;
 use Filament\Actions\ActionGroup;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -16,21 +15,23 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Filament\Infolists\Components\ViewEntry;
 use Illuminate\Database\Eloquent\Builder;
 
 class VaccinationResource extends Resource
 {
-    use ConfiguresSlideOverSections;
     use HasCustomSidebar;
     use HasResourcePermissions;
 
@@ -46,7 +47,7 @@ class VaccinationResource extends Resource
             'label' => 'Vaccine Master',
             'icon' => 'heroicon-o-shield-check',
             'sort' => 4,
-            'group' => 'Clinical',
+            'group' => 'Vaccination',
         ];
     }
 
@@ -60,92 +61,65 @@ class VaccinationResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components(static::wrapSlideOverForm([
-            static::slideOverSection('Vaccine Details', [
-                TextInput::make('name')
-                    ->helperText('Full vaccine name, for example Hepatitis B.')
-                    ->required()
-                    ->maxLength(255),
-                TextInput::make('short_name')
-                    ->helperText('Short display name, for example HepB.')
-                    ->maxLength(50),
-                TextInput::make('manufacturer')
-                    ->helperText('Company or manufacturer name, if known.')
-                    ->maxLength(255),
-                TextInput::make('disease_for')
-                    ->helperText('Disease this vaccine protects against.')
-                    ->maxLength(255),
-                Toggle::make('is_active')
-                    ->onColor('success')
-                    ->onIcon('heroicon-o-check')
-                    ->offColor('danger')
-                    ->helperText('Turn off to hide this vaccine from new templates.')
-                    ->default(true),
-            ], 'Add the vaccine master record used inside templates and patient schedules.'),
-            static::slideOverSection('Dose And Eligibility Rules', [
-                Toggle::make('is_multi_dose')
-                    ->onColor('success')
-                    ->offColor('danger')
-                    ->helperText('Turn on when this vaccine normally has more than one dose.')
-                    ->default(false),
-                TextInput::make('total_doses')
-                    ->helperText('Total doses normally needed for this vaccine.')
-                    ->integer()
-                    ->minValue(1)
-                    ->default(1),
-                TextInput::make('minimum_age_days')
-                    ->helperText('Minimum patient age in days. Leave blank if no minimum.')
-                    ->integer()
-                    ->minValue(0),
-                TextInput::make('maximum_age_days')
-                    ->helperText('Maximum patient age in days. Leave blank if no maximum.')
-                    ->integer()
-                    ->minValue(0),
-                Select::make('gender_restriction')
-                    ->helperText('Choose if this vaccine is for all patients or only one gender.')
-                    ->options(VaccinationGenderRestriction::options())
-                    ->default(VaccinationGenderRestriction::ALL->value)
-                    ->required(),
-            ], 'Set basic dose count and patient eligibility rules.'),
-            static::slideOverSection('Medical Notes', [
-                Textarea::make('description')
-                    ->helperText('Simple explanation of the vaccine.')
-                    ->rows(3),
-                Textarea::make('side_effects')
-                    ->helperText('Common side effects, one per line if possible.')
-                    ->rows(3),
-                Textarea::make('contraindications')
-                    ->helperText('When this vaccine should not be given.')
-                    ->rows(3),
-                Textarea::make('precautions')
-                    ->helperText('Important warnings before giving the vaccine.')
-                    ->rows(3),
-                Textarea::make('dosage_information')
-                    ->helperText('Dose amount or dosage notes.')
-                    ->rows(3),
-            ], 'Optional information shown to doctors and patients.'),
-            static::slideOverSection('Vaccination FAQs', [
-                Repeater::make('faqs')
-                    ->relationship('faqs')
-                    ->schema(static::slideOverFields([
-                        TextInput::make('question')
-                            ->placeholder('Enter the question...')
-                            ->required()
-                            ->maxLength(255),
-                        Textarea::make('answer')
-                            ->placeholder('Enter the answer...')
-                            ->rows(3)
-                            ->required(),
-                    ]))
-                    ->columns(1)
-                    ->collapsible()
-                    ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
-                    ->reorderable()
-                    ->orderColumn('sort_order')
-                    ->addActionLabel('Add FAQ')
-                    ->defaultItems(0),
-            ], 'Questions and answers shown with this vaccine in the patient app.', icon: 'heroicon-o-question-mark-circle'),
-        ]));
+        return $schema->components([
+            Section::make('Vaccine Overview')
+                ->schema([
+                    TextInput::make('name')
+                        ->label('Vaccine Name')
+                        ->required()
+                        ->maxLength(255),
+                    TextInput::make('short_name')
+                        ->label('Short Name')
+                        ->maxLength(50)
+                        ->helperText('Optional short identifier for quick lookup.'),
+                    TextInput::make('disease_for')
+                        ->label('Protects Against')
+                        ->maxLength(255)
+                        ->helperText('Describe the disease or condition this vaccine is used for.'),
+                    Toggle::make('is_active')
+                        ->label('Active')
+                        ->onColor('success')
+                        ->offColor('danger')
+                        ->default(true)
+                        ->helperText('When active, this vaccine can be assigned to schedules.'),
+                ])
+                ->columns(1),
+
+            Section::make('Clinical Details')
+                ->schema([
+                    Textarea::make('description')
+                        ->label('Clinical Description')
+                        ->rows(4)
+                        ->helperText('A concise medical description of the vaccine and its indication.'),
+                    Textarea::make('dosage_information')
+                        ->label('Dosage Information')
+                        ->rows(4)
+                        ->helperText('Provide the standard dose, administration route, and any key instructions.'),
+                    Textarea::make('side_effects')
+                        ->label('Common Side Effects')
+                        ->rows(4)
+                        ->helperText('List expected side effects or post-vaccination reactions.'),
+                    Textarea::make('contraindications')
+                        ->label('Contraindications')
+                        ->rows(4)
+                        ->helperText('List medical conditions or patient histories that contraindicate this vaccine.'),
+                    Textarea::make('precautions')
+                        ->label('Precautions')
+                        ->rows(4)
+                        ->helperText('List any special precautions to verify before administration.'),
+                ])
+                ->columns(1),
+        ]);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema->components([
+            ViewEntry::make('vaccination_details')
+                ->view('filament.vaccinations.vaccination-view')
+                ->state(fn($record) => $record)
+                ->columnSpanFull(),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -154,12 +128,7 @@ class VaccinationResource extends Resource
             ->columns([
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('short_name')->searchable(),
-                TextColumn::make('manufacturer')->searchable(),
                 TextColumn::make('disease_for')->searchable(),
-                TextColumn::make('total_doses')->sortable(),
-                TextColumn::make('gender_restriction')
-                    ->badge()
-                    ->formatStateUsing(fn ($state): string => $state instanceof VaccinationGenderRestriction ? $state->label() : (VaccinationGenderRestriction::tryFrom((string) $state)?->label() ?? ucfirst((string) $state))),
                 IconColumn::make('is_active')->boolean(),
                 TextColumn::make('created_at')->dateTime()->sortable(),
             ])
@@ -168,7 +137,12 @@ class VaccinationResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
-                    EditAction::make()->slideOver(),
+                    \Filament\Actions\ViewAction::make(),
+                    EditAction::make(),
+                    Action::make('assign')
+                        ->label('Assign to Patient')
+                        ->icon('heroicon-o-user-plus')
+                        ->url(fn($record) => \App\Filament\Resources\PatientVaccinations\PatientVaccinationResource::getUrl('create', ['vaccination_id' => $record->id])),
                     DeleteAction::make(),
                 ]),
             ])
@@ -185,7 +159,10 @@ class VaccinationResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListVaccinations::route('/'),
+            'index' => Pages\ListVaccinations::route('/'),
+            'create' => Pages\CreateVaccination::route('/create'),
+            'view' => Pages\ViewVaccination::route('/{record}'),
+            'edit' => Pages\EditVaccination::route('/{record}/edit'),
         ];
     }
 

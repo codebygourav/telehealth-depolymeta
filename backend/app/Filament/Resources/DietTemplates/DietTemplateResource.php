@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\DietTemplates;
 
-use App\Filament\Concerns\ConfiguresSlideOverSections;
+use App\Filament\Resources\DietTemplates\Pages\CreateDietTemplate;
+use App\Filament\Resources\DietTemplates\Pages\EditDietTemplate;
 use App\Filament\Resources\DietTemplates\Pages\ListDietTemplates;
+use App\Filament\Resources\DietTemplates\Pages\ViewDietTemplate;
 use App\Models\DietTemplate;
 use App\Models\Doctor;
 use App\Traits\HasCustomSidebar;
@@ -27,12 +29,12 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Filament\Infolists\Components\ViewEntry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 class DietTemplateResource extends Resource
 {
-    use ConfiguresSlideOverSections;
     use HasCustomSidebar;
     use HasResourcePermissions;
 
@@ -48,7 +50,7 @@ class DietTemplateResource extends Resource
             'label' => 'Diet Templates',
             'icon' => 'heroicon-o-clipboard-document-list',
             'sort' => 6,
-            'group' => 'Clinical',
+            'group' => 'Diet',
         ];
     }
 
@@ -87,136 +89,158 @@ class DietTemplateResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components(static::wrapSlideOverForm([
-            static::slideOverSection('Template Details', [
-                Select::make('doctor_id')
-                    ->label('Doctor')
-                    ->helperText('Doctor who owns and can assign this diet template.')
-                    ->options(fn() => Doctor::query()
-                        ->orderBy('first_name')
-                        ->orderBy('last_name')
-                        ->get()
-                        ->mapWithKeys(function (Doctor $doctor) {
-                            // Try common combinations for full name, fallbacks if empty splits
-                            $name = trim($doctor->first_name . ' ' . $doctor->last_name);
-                            if (!$name || $name === '') {
-                                $name = $doctor->name ?? '';
-                            }
-                            // Fallback to just user_id if still empty
-                            if (!$name) {
-                                $name = 'Doctor #' . $doctor->id;
-                            }
-                            return [$doctor->id => $name];
-                        }))
-                    ->searchable()
-                    ->required()
-                    ->default(fn() => Auth::user()?->doctor?->id)
-                    ->disabled(function () {
-                        $role = Auth::user()?->role;
-                        $isDoctor = $role === 'doctor';
-                        $isPrivileged = in_array($role, ['super_admin', 'doctor_manager', 'receptionist'], true);
+        return $schema->components([
+            Section::make('Template Details')
+                ->description('Create a clear diet plan template and assign it to a doctor.')
+                ->schema([
+                    Grid::make(2)
+                        ->schema([
+                            Select::make('doctor_id')
+                                ->label('Doctor')
+                                ->options(fn() => Doctor::query()
+                                    ->orderBy('first_name')
+                                    ->orderBy('last_name')
+                                    ->get()
+                                    ->mapWithKeys(function (Doctor $doctor) {
+                                        $name = trim($doctor->first_name . ' ' . $doctor->last_name);
+                                        if (!$name || $name === '') {
+                                            $name = $doctor->name ?? '';
+                                        }
+                                        if (!$name) {
+                                            $name = 'Doctor #' . $doctor->id;
+                                        }
 
-                        return $isDoctor && ! $isPrivileged;
-                    })
-                    ->dehydrated(),
+                                        return [$doctor->id => $name];
+                                    }))
+                                ->searchable()
+                                ->required()
+                                ->default(fn() => Auth::user()?->doctor?->id)
+                                ->disabled(function () {
+                                    $role = Auth::user()?->role;
+                                    $isDoctor = $role === 'doctor';
+                                    $isPrivileged = in_array($role, ['super_admin', 'doctor_manager', 'receptionist'], true);
 
-                TextInput::make('name')
-                    ->label('Template Name')
-                    ->placeholder('Pregnancy Balanced Diet / Diabetes Diet Plan')
-                    ->required()
-                    ->maxLength(255),
-                TextInput::make('duration_days')
-                    ->label('Duration Days')
-                    ->integer()
-                    ->minValue(1)
-                    ->maxValue(180)
-                    ->default(7)
-                    ->required(),
-                Toggle::make('is_active')
-                    ->onColor('success')
-                    ->offColor('danger')
-                    ->helperText('Turn off to stop assigning this template.')
-                    ->default(true),
-                Textarea::make('description')
-                    ->helperText('Short explanation shown to doctor while assigning.')
-                    ->rows(3),
-                Textarea::make('restrictions')
-                    ->helperText('Foods or ingredients to avoid.')
-                    ->rows(3),
-                Textarea::make('notes')
-                    ->helperText('Additional clinical notes for the plan.')
-                    ->rows(3),
-            ], 'Create the diet template for a doctor. Doctor and assistant users can assign active templates to patients.'),
-            static::slideOverSection('Weekly Meal Chart', [
-                Repeater::make('days')
-                    ->relationship('days')
-                    ->schema(static::slideOverFields([
-                        TextInput::make('day_number')
-                            ->label('Day Number')
-                            ->integer()
-                            ->minValue(1)
-                            ->maxValue(31)
-                            ->required(),
-                        Select::make('week_day')
-                            ->label('Week Day')
-                            ->options(static::weekDayOptions())
-                            ->required(),
-                        Repeater::make('meals')
-                            ->relationship('meals')
-                            ->schema(static::slideOverFields([
-                                Select::make('meal_type')
-                                    ->label('Meal Type')
-                                    ->options(static::mealTypeOptions())
-                                    ->required(),
-                                TextInput::make('meal_name')
-                                    ->label('Meal Name / Food Items')
-                                    ->placeholder('Oats with fruit and milk')
-                                    ->required()
-                                    ->maxLength(255),
-                                TimePicker::make('start_time')
-                                    ->label('Meal Time')
-                                    ->seconds(false),
-                                Textarea::make('instructions')
-                                    ->helperText('Preparation notes, serving guidance, or substitutions.')
-                                    ->rows(2),
-                                TextInput::make('calories')
-                                    ->integer()
-                                    ->minValue(0),
-                                TextInput::make('protein_grams')
-                                    ->label('Protein (g)')
-                                    ->integer()
-                                    ->minValue(0),
-                                TextInput::make('carbs_grams')
-                                    ->label('Carbs (g)')
-                                    ->integer()
-                                    ->minValue(0),
-                                TextInput::make('fat_grams')
-                                    ->label('Fat (g)')
-                                    ->integer()
-                                    ->minValue(0),
-                                TextInput::make('sort_order')
-                                    ->label('Sort Order')
-                                    ->integer()
-                                    ->minValue(0)
-                                    ->default(0),
-                            ]))
-                            ->columns(1)
-                            ->collapsible()
-                            ->collapsed()
-                            ->minItems(1)
-                            ->reorderable()
-                            ->itemLabel(fn(array $state): ?string => $state['meal_name'] ?? $state['meal_type'] ?? null)
-                            ->addActionLabel('Add Meal'),
-                    ]))
-                    ->columns(1)
-                    ->collapsible()
-                    ->collapsed()
-                    ->minItems(1)
-                    ->reorderable()
-                    ->itemLabel(fn(array $state): ?string => isset($state['day_number'], $state['week_day']) ? 'Day ' . $state['day_number'] . ' - ' . $state['week_day'] : null)
-                    ->addActionLabel('Add Day'),
-            ], 'Add meals for each day. These meals are copied into the patient diet plan when the template is assigned.', icon: 'heroicon-o-calendar-days'),
-        ]));
+                                    return $isDoctor && ! $isPrivileged;
+                                })
+                                ->dehydrated(),
+                            TextInput::make('name')
+                                ->label('Template Name')
+                                ->placeholder('Pregnancy Balanced Diet / Diabetes Diet Plan')
+                                ->required()
+                                ->maxLength(255),
+                            TextInput::make('duration_days')
+                                ->label('Duration Days')
+                                ->integer()
+                                ->minValue(1)
+                                ->maxValue(180)
+                                ->default(7)
+                                ->required(),
+                            Toggle::make('is_active')
+                                ->label('Active')
+                                ->onColor('success')
+                                ->offColor('danger')
+                                ->default(true),
+                        ]),
+                    Textarea::make('description')
+                        ->label('Short Description')
+                        ->rows(3)
+                        ->helperText('Optional details to describe the diet plan.'),
+                    Textarea::make('restrictions')
+                        ->label('Diet Restrictions')
+                        ->rows(3)
+                        ->helperText('Optional restrictions or food avoidances for this plan.'),
+                    Textarea::make('notes')
+                        ->label('Notes')
+                        ->rows(3)
+                        ->helperText('Optional doctor notes for the patient.'),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('Weekly Meal Chart')
+                ->description('Add days and meals in a simple, full-width schedule.')
+                ->schema([
+                    Repeater::make('days')
+                        ->label('Days')
+                        ->minItems(1)
+                        ->defaultItems(1)
+                        ->reorderable()
+                        ->itemLabel(fn(array $state): ?string => isset($state['day_number'], $state['week_day']) ? 'Day ' . $state['day_number'] . ' - ' . ucfirst(strtolower($state['week_day'])) : null)
+                        ->schema([
+                            Grid::make(3)
+                                ->schema([
+                                    TextInput::make('day_number')
+                                        ->label('Day Number')
+                                        ->integer()
+                                        ->minValue(1)
+                                        ->maxValue(31)
+                                        ->required(),
+                                    Select::make('week_day')
+                                        ->label('Week Day')
+                                        ->options(self::weekDayOptions())
+                                        ->required(),
+                                ]),
+                            Repeater::make('meals')
+                                ->label('Meals')
+                                ->minItems(1)
+                                ->reorderable()
+                                ->itemLabel(fn(array $state): ?string => $state['meal_name'] ?? $state['meal_type'] ?? null)
+                                ->schema([
+                                    Grid::make(2)
+                                        ->schema([
+                                            Select::make('meal_type')
+                                                ->label('Meal Type')
+                                                ->options(self::mealTypeOptions())
+                                                ->required(),
+                                            TextInput::make('meal_name')
+                                                ->label('Meal Name / Food Items')
+                                                ->placeholder('Oats with fruit and milk')
+                                                ->required()
+                                                ->maxLength(255),
+                                        ]),
+                                    Textarea::make('instructions')
+                                        ->label('Instructions')
+                                        ->rows(2)
+                                        ->helperText('Optional meal preparation or portion guidance.'),
+                                    Grid::make(3)
+                                        ->schema([
+                                            TextInput::make('calories')
+                                                ->label('Calories')
+                                                ->numeric()
+                                                ->minValue(0),
+                                            TextInput::make('protein_grams')
+                                                ->label('Protein (g)')
+                                                ->numeric()
+                                                ->minValue(0),
+                                            TextInput::make('carbs_grams')
+                                                ->label('Carbs (g)')
+                                                ->numeric()
+                                                ->minValue(0),
+                                        ]),
+                                    Grid::make(2)
+                                        ->schema([
+                                            TextInput::make('fat_grams')
+                                                ->label('Fat (g)')
+                                                ->numeric()
+                                                ->minValue(0),
+                                            TextInput::make('start_time')
+                                                ->label('Start Time')
+                                                ->time(),
+                                        ]),
+                                ]),
+                        ]),
+                ])
+                ->columnSpanFull(),
+        ]);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema->components([
+            ViewEntry::make('template_details')
+                ->view('filament.diet-templates.template-view')
+                ->state(fn($record) => $record)
+                ->columnSpanFull(),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -226,7 +250,7 @@ class DietTemplateResource extends Resource
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('doctor_id')
                     ->label('Doctor')
-                    ->formatStateUsing(fn ($state, DietTemplate $record): string => static::doctorDisplayName($record->doctor))
+                    ->formatStateUsing(fn($state, DietTemplate $record): string => static::doctorDisplayName($record->doctor))
                     ->placeholder('-'),
                 TextColumn::make('duration_days')->label('Days')->sortable(),
                 TextColumn::make('days_count')->counts('days')->label('Chart Days')->sortable(),
@@ -238,7 +262,8 @@ class DietTemplateResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
-                    EditAction::make()->slideOver(),
+                    \Filament\Actions\ViewAction::make(),
+                    EditAction::make(),
                     DeleteAction::make(),
                 ]),
             ])
@@ -256,6 +281,9 @@ class DietTemplateResource extends Resource
     {
         return [
             'index' => ListDietTemplates::route('/'),
+            'create' => CreateDietTemplate::route('/create'),
+            'view' => ViewDietTemplate::route('/{record}'),
+            'edit' => EditDietTemplate::route('/{record}/edit'),
         ];
     }
 

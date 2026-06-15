@@ -242,6 +242,11 @@ class Patient extends Model
         return $this->hasMany(MedicalReport::class);
     }
 
+    public function profiles()
+    {
+        return $this->hasMany(PatientProfile::class);
+    }
+
     /**
      * Calculate age from date of birth
      */

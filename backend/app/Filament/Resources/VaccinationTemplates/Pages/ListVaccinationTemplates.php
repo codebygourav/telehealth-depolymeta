@@ -4,6 +4,7 @@ namespace App\Filament\Resources\VaccinationTemplates\Pages;
 
 use App\Filament\Resources\VaccinationTemplates\VaccinationTemplateResource;
 use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 
 class ListVaccinationTemplates extends ListRecords
@@ -13,9 +14,11 @@ class ListVaccinationTemplates extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()
-                ->slideOver()
-                ->visible(fn () => VaccinationTemplateResource::canCreate()),
+            Action::make('create')
+                ->label('Create')
+                ->icon('heroicon-o-plus')
+                ->url(fn() => VaccinationTemplateResource::getUrl('create'))
+                ->visible(fn() => VaccinationTemplateResource::canCreate()),
         ];
     }
 }

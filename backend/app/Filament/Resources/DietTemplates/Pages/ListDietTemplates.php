@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\DietTemplates\Pages;
 
 use App\Filament\Resources\DietTemplates\DietTemplateResource;
-use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 
 class ListDietTemplates extends ListRecords
@@ -13,9 +13,11 @@ class ListDietTemplates extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()
-                ->slideOver()
-                ->visible(fn () => DietTemplateResource::canCreate()),
+            Action::make('create')
+                ->label('Create')
+                ->icon('heroicon-o-plus')
+                ->url(fn() => DietTemplateResource::getUrl('create'))
+                ->visible(fn() => DietTemplateResource::canCreate()),
         ];
     }
 }

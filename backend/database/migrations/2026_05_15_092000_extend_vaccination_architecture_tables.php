@@ -8,11 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('vaccinations', function (Blueprint $table) {
-            $table->integer('minimum_age_days')->nullable()->after('total_doses');
-            $table->integer('maximum_age_days')->nullable()->after('minimum_age_days');
-            $table->enum('gender_restriction', ['male', 'female', 'all'])->default('all')->after('maximum_age_days');
-        });
+
 
         Schema::table('vaccination_templates', function (Blueprint $table) {
             $table->uuid('vaccination_program_id')->nullable()->after('id');
@@ -86,12 +82,6 @@ return new class extends Migration
             $table->dropColumn('vaccination_program_id');
         });
 
-        Schema::table('vaccinations', function (Blueprint $table) {
-            $table->dropColumn([
-                'minimum_age_days',
-                'maximum_age_days',
-                'gender_restriction',
-            ]);
-        });
+
     }
 };

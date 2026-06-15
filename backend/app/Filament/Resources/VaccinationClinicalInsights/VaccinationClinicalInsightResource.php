@@ -37,7 +37,7 @@ class VaccinationClinicalInsightResource extends Resource
             'label' => 'Vaccination Clinical Insight',
             'icon' => 'heroicon-o-light-bulb',
             'sort' => 11,
-            'group' => 'Clinical',
+            'group' => 'Vaccination',
         ];
     }
 

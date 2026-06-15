@@ -147,7 +147,7 @@ class PatientDietController extends Controller
      * Example GET /api/v2/patient/diet-plan (for patient:me)
      * Example GET /api/v2/doctor/{patientId}/diet-plan (for doctor)
      */
-    public function patientPlan(Request $request, string $patientId = null)
+    public function patientPlan(Request $request, ?string $patientId = null)
     {
         // If patientId is not provided (default route), treat as "me" (authenticated patient)
         $user = $request->user();
@@ -171,7 +171,28 @@ class PatientDietController extends Controller
             ->where('patient_id', $patientId)
             ->whereIn('status', ['active', 'paused'])
             ->latest()
-            ->firstOrFail();
+            ->first();
+
+        if (! $plan) {
+            return ApiResponseService::success(
+                data: [
+                    'id' => '',
+                    'patient_id' => $patientId,
+                    'doctor_id' => '',
+                    'template_id' => '',
+                    'template_name' => '',
+                    'template_description' => '',
+                    'duration_days' => 0,
+                    'start_date' => '',
+                    'end_date' => '',
+                    'status' => 'none',
+                    'special_instructions' => '',
+                    'days' => [],
+                    'created_at' => '',
+                    'updated_at' => '',
+                ]
+            );
+        }
 
         return ApiResponseService::success(
             data: $this->planData($plan)

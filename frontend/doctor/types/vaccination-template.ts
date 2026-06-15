@@ -8,7 +8,7 @@ export interface VaccinationTemplate {
 
 export interface GetVaccinationTemplatesResponse {
     success: boolean;
-    data: VaccinationTemplate[];
+    data: ApiVaccinationTemplate[];
 }
 
 export type ApiVaccinationTemplate = {

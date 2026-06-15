@@ -18,8 +18,6 @@ return new class extends Migration
 
             $table->string('short_name')->nullable();
 
-            $table->string('manufacturer')->nullable();
-
             $table->string('disease_for')->nullable();
 
             $table->text('description')->nullable();
@@ -31,10 +29,6 @@ return new class extends Migration
             $table->text('precautions')->nullable();
 
             $table->text('dosage_information')->nullable();
-
-            $table->boolean('is_multi_dose')->default(false);
-
-            $table->integer('total_doses')->default(1);
 
             $table->boolean('is_active')->default(true);
 

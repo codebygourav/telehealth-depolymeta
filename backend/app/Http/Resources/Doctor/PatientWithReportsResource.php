@@ -36,7 +36,7 @@ class PatientWithReportsResource extends JsonResource
                 : []
             ),
 
-            'reports' => PatientReportResource::collection($this->whenLoaded('medicalReports')),
+            'reports' => PatientReportResource::collection($this->whenLoaded('medicalReports') ?? collect()),
         ];
     }
 }

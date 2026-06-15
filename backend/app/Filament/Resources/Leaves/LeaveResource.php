@@ -35,12 +35,12 @@ class LeaveResource extends Resource
     public static function getSidebarOptions(): array
     {
         return [
+            'label' => 'Leaves',
             'icon'  => 'heroicon-o-calendar',
+            'sort'  => 4,
             'group' => '',
-            'sort'  => 6,
         ];
     }
-
     // Permission methods are now provided by HasResourcePermissions trait
 
     public static function form(Schema $schema): Schema

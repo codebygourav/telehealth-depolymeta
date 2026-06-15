@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertCircle, Calendar, CheckCircle2, Clock, MoreHorizontal, ChevronUp, ChevronDown, Eye, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui";
 import { usePatientVaccinations } from "@/queries/usePatientVaccinations";
+import { createPortal } from 'react-dom';
 
 
 // vaccination table rows
@@ -17,6 +18,11 @@ function VaccineRow({
 }: any) {
 
     const [open, setOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
 
     return (
@@ -77,7 +83,7 @@ function VaccineRow({
                     </div>
                 </td>
             </tr>
-            {open && (
+            {open && mounted && createPortal(
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div
                         className="absolute inset-0 bg-black/20 backdrop-blur-sm"
@@ -131,7 +137,8 @@ function VaccineRow({
                             </ul>
                         </CardContent>
                     </Card>
-                </div>
+                </div>,
+                document.body
             )}
 
         </>
@@ -178,7 +185,10 @@ function VaccinationSet({
                         )}
                     </div>
                     <div>
-                        <h3 className="text-lg text-[#1F1E1E] font-semibold">{title}</h3>
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-lg text-[#1F1E1E] font-semibold">{title}</h3>
+                            <span className="text-xs text-[#4D4D4D] bg-surface-container-low px-2 py-1 rounded-full">{(vaccinations || []).length} vaccines</span>
+                        </div>
                         <p className="text-sm text-[#4D4D4D]">{subtitle}</p>
                     </div>
                 </div>

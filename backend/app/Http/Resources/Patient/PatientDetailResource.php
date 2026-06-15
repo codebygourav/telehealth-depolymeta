@@ -112,9 +112,9 @@ class PatientDetailResource extends JsonResource
             $data['upcoming_appointments'] = null;
         }
 
-        $data['previous_appointments'] = PreviousAppointmentResource::collection($this->whenLoaded('previousAppointments'));
-        $data['medical_reports'] = MedicalReportResource::collection($this->whenLoaded('medicalReports'))->collection;
-        $data['current_medications'] = PrescriptionResource::collection($this->whenLoaded('currentMedications'));
+        $data['previous_appointments'] = PreviousAppointmentResource::collection($this->whenLoaded('previousAppointments') ?? collect());
+        $data['medical_reports'] = MedicalReportResource::collection($this->whenLoaded('medicalReports') ?? collect())->collection;
+        $data['current_medications'] = PrescriptionResource::collection($this->whenLoaded('currentMedications') ?? collect());
 
         return $data;
     }

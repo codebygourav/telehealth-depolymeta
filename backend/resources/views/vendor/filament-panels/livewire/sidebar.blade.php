@@ -68,27 +68,16 @@
             </ul>
 
             <script>
-                var collapsedGroups = JSON.parse(
-                    localStorage.getItem('collapsedGroups'),
-                )
+                const sidebarGroupLabels = @js(collect($navigation)->filter(fn(\Filament\Navigation\NavigationGroup $group): bool => filled($group->getLabel()) && $group->isCollapsible())->map(fn(\Filament\Navigation\NavigationGroup $group): string => $group->getLabel())->values()->all());
+                const activeSidebarGroupLabels = @js(collect($navigation)->filter(fn(\Filament\Navigation\NavigationGroup $group): bool => filled($group->getLabel()) && $group->isActive())->map(fn(\Filament\Navigation\NavigationGroup $group): string => $group->getLabel())->values()->all());
+                const defaultCollapsedGroups = sidebarGroupLabels.filter((label) => !activeSidebarGroupLabels.includes(label));
 
-                if (collapsedGroups === null || collapsedGroups === 'null') {
-                    localStorage.setItem(
-                        'collapsedGroups',
-                        JSON.stringify(@js(collect($navigation)->filter(fn(\Filament\Navigation\NavigationGroup $group): bool => $group->isCollapsed())->map(fn(\Filament\Navigation\NavigationGroup $group): string => $group->getLabel())->values()->all())),
-                    )
-                }
-
-                collapsedGroups = JSON.parse(
-                    localStorage.getItem('collapsedGroups'),
-                )
+                localStorage.setItem('collapsedGroups', JSON.stringify(defaultCollapsedGroups));
 
                 document
                     .querySelectorAll('.fi-sidebar-group')
                     .forEach((group) => {
-                        if (
-                            !collapsedGroups.includes(group.dataset.groupLabel)
-                        ) {
+                        if (!defaultCollapsedGroups.includes(group.dataset.groupLabel)) {
                             return
                         }
 
@@ -99,6 +88,36 @@
                         ).style.display = 'none'
                         group.classList.add('fi-collapsed')
                     })
+
+                const patchSidebarAccordion = () => {
+                    const sidebar = window.Alpine?.store?.('sidebar')
+
+                    if (!sidebar || sidebar.__accordionPatched) {
+                        return false
+                    }
+
+                    sidebar.__accordionPatched = true
+                    sidebar.collapsedGroups = defaultCollapsedGroups
+
+                    sidebar.toggleCollapsedGroup = (label) => {
+                        if (!sidebarGroupLabels.includes(label)) {
+                            return
+                        }
+
+                        const isCollapsed = sidebar.collapsedGroups.includes(label)
+                        sidebar.collapsedGroups = isCollapsed
+                            ? sidebarGroupLabels.filter((groupLabel) => groupLabel !== label)
+                            : sidebarGroupLabels
+
+                        localStorage.setItem('collapsedGroups', JSON.stringify(sidebar.collapsedGroups))
+                    }
+
+                    return true
+                }
+
+                document.addEventListener('alpine:init', () => setTimeout(patchSidebarAccordion, 0))
+                document.addEventListener('DOMContentLoaded', () => setTimeout(patchSidebarAccordion, 0))
+                setTimeout(patchSidebarAccordion, 50)
             </script>
 
             {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::SIDEBAR_NAV_END) }}

@@ -114,7 +114,7 @@
     {{
         $attributes->class([
             'fi-modal',
-            'fi-absolute-positioning-context',
+            'fi-absolute-positioning-context custom_position',
             'fi-modal-slide-over' => $slideOver,
             'fi-width-screen' => $width === Width::Screen,
         ])

@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Support\Facades\Log;
+
 use App\Enums\BloodGroupOption;
 use App\Enums\DoctorStatus;
 use App\Enums\GenderOption;
@@ -139,86 +141,18 @@ class VaccinationModuleSeeder extends Seeder
             'bcg' => [
                 'name' => 'BCG Vaccine',
                 'short_name' => 'BCG',
-                'manufacturer' => 'Demo Biologics',
                 'disease_for' => 'Tuberculosis',
                 'description' => 'Protects against severe forms of tuberculosis.',
                 'side_effects' => 'Small scar at site, mild fever',
                 'dosage_information' => '0.05 ml',
-                'is_multi_dose' => false,
-                'total_doses' => 1,
-                'minimum_age_days' => 0,
-                'maximum_age_days' => 365,
-                'gender_restriction' => VaccinationGenderRestriction::ALL->value,
             ],
             'hepb' => [
                 'name' => 'Hepatitis B Vaccine',
                 'short_name' => 'HepB',
-                'manufacturer' => 'Demo Pharma',
                 'disease_for' => 'Hepatitis B',
                 'description' => 'Protects against Hepatitis B infection.',
                 'side_effects' => 'Mild fever, soreness at site',
                 'dosage_information' => '0.5 ml',
-                'is_multi_dose' => true,
-                'total_doses' => 3,
-                'minimum_age_days' => 0,
-                'maximum_age_days' => null,
-                'gender_restriction' => VaccinationGenderRestriction::ALL->value,
-            ],
-            'opv' => [
-                'name' => 'Oral Polio Vaccine',
-                'short_name' => 'OPV',
-                'manufacturer' => 'Demo Oral Care',
-                'disease_for' => 'Poliomyelitis',
-                'description' => 'Oral vaccine for polio protection.',
-                'side_effects' => 'Mild fever, fussiness',
-                'dosage_information' => '2 drops',
-                'is_multi_dose' => true,
-                'total_doses' => 3,
-                'minimum_age_days' => 0,
-                'maximum_age_days' => null,
-                'gender_restriction' => VaccinationGenderRestriction::ALL->value,
-            ],
-            'tdap' => [
-                'name' => 'Tdap Vaccine',
-                'short_name' => 'Tdap',
-                'manufacturer' => 'Demo Immuno',
-                'disease_for' => 'Tetanus, diphtheria, pertussis',
-                'description' => 'Booster vaccine for adults and pregnancy schedules.',
-                'side_effects' => 'Local pain, low-grade fever',
-                'dosage_information' => '0.5 ml',
-                'is_multi_dose' => false,
-                'total_doses' => 1,
-                'minimum_age_days' => 3650,
-                'maximum_age_days' => null,
-                'gender_restriction' => VaccinationGenderRestriction::ALL->value,
-            ],
-            'influenza' => [
-                'name' => 'Influenza Vaccine',
-                'short_name' => 'Flu',
-                'manufacturer' => 'Demo Seasonal',
-                'disease_for' => 'Influenza',
-                'description' => 'Seasonal influenza protection.',
-                'side_effects' => 'Soreness, mild fever',
-                'dosage_information' => '0.5 ml',
-                'is_multi_dose' => false,
-                'total_doses' => 1,
-                'minimum_age_days' => 180,
-                'maximum_age_days' => null,
-                'gender_restriction' => VaccinationGenderRestriction::ALL->value,
-            ],
-            'typhoid' => [
-                'name' => 'Typhoid Vaccine',
-                'short_name' => 'Typhoid',
-                'manufacturer' => 'Demo Travel',
-                'disease_for' => 'Typhoid fever',
-                'description' => 'Travel vaccine for typhoid fever protection.',
-                'side_effects' => 'Mild pain, fever',
-                'dosage_information' => '0.5 ml',
-                'is_multi_dose' => false,
-                'total_doses' => 1,
-                'minimum_age_days' => 730,
-                'maximum_age_days' => null,
-                'gender_restriction' => VaccinationGenderRestriction::ALL->value,
             ],
         ];
 
@@ -244,10 +178,6 @@ class VaccinationModuleSeeder extends Seeder
     {
         $records = [
             'baby' => ['Baby Immunization', VaccinationProgramTargetType::BABY],
-            'pregnancy' => ['Pregnancy Vaccination', VaccinationProgramTargetType::PREGNANCY],
-            'adult' => ['Adult Vaccination', VaccinationProgramTargetType::ADULT],
-            'elderly' => ['Elderly Vaccination', VaccinationProgramTargetType::ELDERLY],
-            'travel' => ['Travel Vaccination', VaccinationProgramTargetType::TRAVEL],
         ];
 
         $programs = [];
@@ -278,38 +208,6 @@ class VaccinationModuleSeeder extends Seeder
                 'date_of_birth' => $patient->date_of_birth,
                 'gender' => GenderOption::MALE->value,
                 'is_primary' => true,
-            ],
-            'baby' => [
-                'name' => 'Baby Aryan',
-                'profile_type' => PatientProfileType::BABY,
-                'date_of_birth' => now()->subMonths(8)->toDateString(),
-                'gender' => GenderOption::MALE->value,
-                'weight' => 8.5,
-                'height' => 70,
-            ],
-            'pregnancy' => [
-                'name' => 'Wife Pregnancy',
-                'profile_type' => PatientProfileType::PREGNANCY,
-                'gender' => GenderOption::FEMALE->value,
-                'pregnancy_due_date' => now()->addMonths(4)->toDateString(),
-                'weight' => 62,
-                'height' => 158,
-            ],
-            'father' => [
-                'name' => 'Father Kumar',
-                'profile_type' => PatientProfileType::ELDERLY,
-                'date_of_birth' => now()->subYears(68)->toDateString(),
-                'gender' => GenderOption::MALE->value,
-                'weight' => 72,
-                'height' => 168,
-            ],
-            'travel' => [
-                'name' => 'Self Travel Profile',
-                'profile_type' => PatientProfileType::ADULT,
-                'date_of_birth' => $patient->date_of_birth,
-                'gender' => GenderOption::MALE->value,
-                'weight' => 76,
-                'height' => 172,
             ],
         ];
 
@@ -346,46 +244,27 @@ class VaccinationModuleSeeder extends Seeder
         $templates = [
             'baby' => [
                 'program' => 'baby',
-                'name' => 'WHO Child Schedule Demo',
-                'description' => 'Demo child schedule with birth and follow-up doses.',
+                'name' => 'Demo 2 Vaccine Schedule',
+                'description' => 'Demo schedule with 2 vaccinations.',
                 'items' => [
-                    ['vaccine' => 'bcg', 'set' => 'Set 1 (Birth)', 'dose' => 1, 'age' => 'At Birth', 'months' => 0, 'days' => 0, 'sort' => 1],
-                    ['vaccine' => 'hepb', 'set' => 'Set 1 (Birth)', 'dose' => 1, 'age' => 'At Birth', 'months' => 0, 'days' => 0, 'sort' => 2],
-                    ['vaccine' => 'opv', 'set' => 'Set 2 (6 Weeks)', 'dose' => 1, 'age' => '6 Weeks', 'months' => 1, 'days' => 14, 'sort' => 1],
-                ],
-            ],
-            'pregnancy' => [
-                'program' => 'pregnancy',
-                'name' => 'Pregnancy Vaccine Demo',
-                'description' => 'Demo pregnancy vaccination schedule.',
-                'items' => [
-                    ['vaccine' => 'tdap', 'set' => 'Pregnancy Dose', 'dose' => 1, 'age' => '27-36 Weeks', 'months' => 0, 'days' => 0, 'sort' => 1],
-                    ['vaccine' => 'influenza', 'set' => 'Pregnancy Dose', 'dose' => 1, 'age' => 'Any Trimester', 'months' => 0, 'days' => 14, 'sort' => 2],
-                ],
-            ],
-            'adult' => [
-                'program' => 'adult',
-                'name' => 'Adult Booster Demo',
-                'description' => 'Demo adult booster schedule.',
-                'items' => [
-                    ['vaccine' => 'tdap', 'set' => 'Adult Booster', 'dose' => 1, 'age' => 'Adult', 'months' => 0, 'days' => 0, 'sort' => 1],
-                    ['vaccine' => 'influenza', 'set' => 'Annual Vaccine', 'dose' => 1, 'age' => 'Yearly', 'months' => 1, 'days' => 0, 'sort' => 2],
-                ],
-            ],
-            'elderly' => [
-                'program' => 'elderly',
-                'name' => 'Elderly Protection Demo',
-                'description' => 'Not assigned demo template.',
-                'items' => [
-                    ['vaccine' => 'influenza', 'set' => 'Elderly Annual', 'dose' => 1, 'age' => '65+ Years', 'months' => 0, 'days' => 0, 'sort' => 1],
-                ],
-            ],
-            'travel' => [
-                'program' => 'travel',
-                'name' => 'Travel Vaccine Demo',
-                'description' => 'Not assigned demo travel template.',
-                'items' => [
-                    ['vaccine' => 'typhoid', 'set' => 'Travel Set', 'dose' => 1, 'age' => 'Before Travel', 'months' => 0, 'days' => 0, 'sort' => 1],
+                    [
+                        'vaccine' => 'bcg',
+                        'set' => 'Set 1 (Birth)',
+                        'dose' => 1,
+                        'age' => 'At Birth',
+                        'months' => 0,
+                        'days' => 0,
+                        'sort' => 1,
+                    ],
+                    [
+                        'vaccine' => 'hepb',
+                        'set' => 'Set 1 (Birth)',
+                        'dose' => 1,
+                        'age' => 'At Birth',
+                        'months' => 0,
+                        'days' => 0,
+                        'sort' => 2,
+                    ],
                 ],
             ],
         ];
@@ -413,8 +292,8 @@ class VaccinationModuleSeeder extends Seeder
                     'set_description' => "Demo {$item['set']} group.",
                     'set_sort_order' => $index + 1,
                     'dose_no' => $item['dose'],
-                    'depends_on_previous_dose' => $index > 0 && $key === 'baby',
-                    'interval_days' => $index > 0 && $key === 'baby' ? 42 : 0,
+                    'depends_on_previous_dose' => false,
+                    'interval_days' => 0,
                     'interval_months' => 0,
                     'minimum_age_days' => $item['months'] * 30 + $item['days'],
                     'maximum_age_days' => null,
@@ -439,22 +318,10 @@ class VaccinationModuleSeeder extends Seeder
     {
         $assignmentData = [
             [
-                'profile' => 'baby',
-                'template' => 'baby',
-                'start_date' => now()->subMonths(3)->toDateString(),
-                'status' => PatientVaccinationProgramStatus::ACTIVE,
-            ],
-            [
-                'profile' => 'pregnancy',
-                'template' => 'pregnancy',
-                'start_date' => now()->subWeeks(2)->toDateString(),
-                'status' => PatientVaccinationProgramStatus::ACTIVE,
-            ],
-            [
                 'profile' => 'self',
-                'template' => 'adult',
-                'start_date' => now()->subMonth()->toDateString(),
-                'status' => PatientVaccinationProgramStatus::COMPLETED,
+                'template' => 'baby',
+                'start_date' => now()->subMonths(1)->toDateString(),
+                'status' => PatientVaccinationProgramStatus::ACTIVE,
             ],
         ];
 
@@ -479,15 +346,10 @@ class VaccinationModuleSeeder extends Seeder
             ->where('doctor_id', $doctor->id)
             ->with('vaccination')
             ->orderBy('scheduled_date')
-            ->take(7)
+            ->take(2)
             ->get();
 
         $statusPlan = [
-            VaccinationStatus::COMPLETED,
-            VaccinationStatus::SCHEDULED,
-            VaccinationStatus::PENDING,
-            VaccinationStatus::MISSED,
-            VaccinationStatus::CANCELLED,
             VaccinationStatus::COMPLETED,
             VaccinationStatus::SCHEDULED,
         ];
@@ -498,7 +360,7 @@ class VaccinationModuleSeeder extends Seeder
 
             $row->update([
                 'status' => $status->value,
-                'completed_date' => $completed ? now()->subDays(20 - $index)->toDateString() : null,
+                'completed_date' => $completed ? now()->subDays(5 - $index)->toDateString() : null,
                 'batch_number' => $completed ? 'VAC-BATCH-' . str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT) : null,
                 'route' => $completed ? 'Injection' : null,
                 'site' => $completed ? ($index % 2 === 0 ? 'Left thigh' : 'Upper arm') : null,
@@ -536,3 +398,4 @@ class VaccinationModuleSeeder extends Seeder
             });
     }
 }
+Log::info('2 demo vaccinations were assigned to doctor\'s patient.');

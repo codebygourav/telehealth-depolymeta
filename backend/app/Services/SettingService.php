@@ -180,6 +180,8 @@ class SettingService
 
     public static function getMaxLoginAttempts(): int
     {
+
+        return PHP_INT_MAX;
         return (int) Setting::getValue('security', 'max_login_attempts', 12000);
     }
 

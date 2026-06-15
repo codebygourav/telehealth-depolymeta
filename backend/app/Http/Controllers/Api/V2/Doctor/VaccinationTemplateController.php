@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2\Doctor;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Vaccination\VaccinationTemplateResource;
+use App\Models\Doctor;
 use App\Models\VaccinationTemplate;
 use App\Models\VaccinationTemplateItem;
 use App\Services\ApiResponseService;
@@ -14,25 +15,27 @@ class VaccinationTemplateController extends Controller
 {
     public function index(Request $request)
     {
-        $doctor = $this->doctor($request);
-        if (! $doctor) {
-            return ApiResponseService::unauthorized();
-        }
+
+        $user = $request->user();
+        $doctor = $user->doctor;
+        // if (! $doctor) {
+        //     return ApiResponseService::unauthorized();
+        // }
 
         $templates = VaccinationTemplate::with(['items.vaccination', 'program'])
             ->where('doctor_id', $doctor->id)
-            ->when($request->filled('vaccination_program_id'), fn ($query) => $query->where('vaccination_program_id', $request->string('vaccination_program_id')->toString()))
-            ->when($request->boolean('active_only'), fn ($query) => $query->where('is_active', true))
-            ->when($request->filled('search'), fn ($query) => $query->where('name', 'like', '%' . $request->string('search')->toString() . '%'))
+            ->when($request->filled('vaccination_program_id'), fn($query) => $query->where('vaccination_program_id', $request->string('vaccination_program_id')->toString()))
+            ->when($request->boolean('active_only'), fn($query) => $query->where('is_active', true))
+            ->when($request->filled('search'), fn($query) => $query->where('name', 'like', '%' . $request->string('search')->toString() . '%'))
             ->latest()
             ->paginate($request->integer('per_page', 10));
 
-        return ApiResponseService::paginated($templates->through(fn ($template) => new VaccinationTemplateResource($template)));
+        return ApiResponseService::paginated($templates->through(fn($template) => new VaccinationTemplateResource($template)));
     }
 
     public function store(Request $request)
     {
-        $doctor = $this->doctor($request);
+        $doctor = Doctor::find($request->user()->doctor?->id);
         if (! $doctor) {
             return ApiResponseService::unauthorized();
         }

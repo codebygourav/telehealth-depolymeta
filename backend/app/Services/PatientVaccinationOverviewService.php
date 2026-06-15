@@ -126,16 +126,15 @@ class PatientVaccinationOverviewService
     private function buildSchedule(Collection $vaccinations, array $setDescriptions): array
     {
         $groups = $vaccinations
-            ->groupBy(fn(PatientVaccination $row) => ($row->set_sort_order ?? 0) . '|' . ($row->set_name ?: 'General'))
-            ->sortKeys();
+            ->groupBy(fn(PatientVaccination $row) => trim((string) ($row->set_name ?: 'General')))
+            ->sortBy(fn(Collection $items) => $items->min(fn(PatientVaccination $row) => $row->set_sort_order ?? 0));
 
         $sets = [];
         $expandedAssigned = false;
 
-        foreach ($groups as $key => $items) {
-            [$sortOrder] = explode('|', (string) $key, 2);
+        foreach ($groups as $setName => $items) {
             $first = $items->first();
-            $setName = $first?->set_name ?: 'General';
+            $sortOrder = $items->min(fn(PatientVaccination $row) => $row->set_sort_order ?? 0);
             $setStatus = $this->resolveSetStatus($items);
             $expanded = ! $expandedAssigned && $setStatus === 'upcoming';
             if ($expanded) {
@@ -143,7 +142,7 @@ class PatientVaccinationOverviewService
             }
 
             $sets[] = [
-                'set_id' => (int) $sortOrder,
+                'set_id' => $sortOrder ?: count($sets) + 1,
                 'set_name' => $setName,
                 'description' => $first?->set_description
                     ?? $setDescriptions[$setName]

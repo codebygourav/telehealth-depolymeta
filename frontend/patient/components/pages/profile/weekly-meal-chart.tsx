@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
-import { addWeeks, endOfWeek, format, startOfWeek } from 'date-fns'
-import { ChevronLeft, ChevronRight, Sun, CloudSun, Moon, Zap, ChevronDown } from 'lucide-react';
 import { useDietPlan } from '@/queries/useDietPlan';
+import { addWeeks, endOfWeek, format, startOfWeek } from 'date-fns';
+import { ChevronDown, ChevronLeft, ChevronRight, CloudSun, Moon, Sun, Zap } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 const WeeklyMealChart = () => {
 
@@ -82,10 +82,9 @@ const WeeklyMealChart = () => {
             const rowMeals = days.map((dayItem) => {
                 if (!data?.data?.days) return null;
 
-                const apiDay = data.data.days.find((d: any) => d.date === dayItem.fullDate);
+                const apiDay = data.data.days.find((d: DietPlanDay) => d.date === dayItem.fullDate);
                 if (!apiDay) return null;
-
-                const meal = apiDay.meals.find((m: any) => m.meal_type === category.id);
+                const meal = apiDay.meals.find((m: Meal) => m.meal_type === category.id);
                 if (!meal) return null;
 
                 return {
@@ -112,6 +111,22 @@ const WeeklyMealChart = () => {
 
                 <p className="text-sm font-semibold text-[#4D4D4D]">
                     Loading templates...
+                </p>
+            </div>
+        );
+    }
+
+    const hasDietPlan = Array.isArray(data?.data?.days) && data?.data?.days.length > 0;
+
+    if (!hasDietPlan) {
+        return (
+            <div className="flex min-h-[320px] flex-col items-center justify-center rounded-3xl border border-dashed border-[#E7E8EB] bg-[#F9FAFB] p-10 text-center">
+                <div className="mb-4 rounded-full bg-primary/10 p-4 text-primary">
+                    <Sun className="w-6 h-6" />
+                </div>
+                <h2 className="text-xl font-semibold text-[#1F1E1E]">No diet plan assigned yet</h2>
+                <p className="mt-2 max-w-md text-sm text-[#4D4D4D]">
+                    Your personalized meal chart will appear here once your doctor assigns a diet plan.
                 </p>
             </div>
         );

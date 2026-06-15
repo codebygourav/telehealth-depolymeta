@@ -37,7 +37,7 @@ class VaccinationGeneralFaqResource extends Resource
             'label' => 'Vaccination Screen FAQs',
             'icon' => 'heroicon-o-question-mark-circle',
             'sort' => 10,
-            'group' => 'Clinical',
+            'group' => 'Vaccination',
         ];
     }
 

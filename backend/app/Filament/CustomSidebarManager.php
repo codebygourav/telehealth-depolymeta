@@ -9,7 +9,7 @@ class CustomSidebarManager
 {
     /**
      * Get processed navigation for the custom Blade sidebar.
-     * This method automatically discovers all Resources and Pages 
+     * This method automatically discovers all Resources and Pages
      * that implement the getCustomSidebarItem() method.
      */
     /**
@@ -18,7 +18,7 @@ class CustomSidebarManager
     public static function getNavigation(): array
     {
         $panel = Filament::getPanel('admin');
-        
+
         $classes = array_merge(
             $panel->getResources(),
             $panel->getPages()
@@ -129,11 +129,11 @@ class CustomSidebarManager
                         'icon' => self::getGroupIcon($groupName),
                         'isCollapsible' => $item['isCollapsible'] ?? true,
                         // Group sort is the min sort of its items
-                        'sort' => $item['sort'] ?? 99, 
+                        'sort' => $item['sort'] ?? 99,
                         'items' => [],
                     ];
                 }
-                
+
                 if (isset($item['sort']) && $item['sort'] < $groups[$groupName]['sort']) {
                     $groups[$groupName]['sort'] = $item['sort'];
                 }
@@ -147,21 +147,21 @@ class CustomSidebarManager
 
         // Add groups to the navigation list
         foreach ($groups as $group) {
-            usort($group['items'], function($a, $b) {
+            usort($group['items'], function ($a, $b) {
                 return ($a['sort'] ?? 99) <=> ($b['sort'] ?? 99);
             });
             $navigation[] = $group;
         }
 
         // Sort everything (items and groups) together by their defined sort value
-        usort($navigation, function($a, $b) {
+        usort($navigation, function ($a, $b) {
             $sortA = (int) ($a['sort'] ?? 99);
             $sortB = (int) ($b['sort'] ?? 99);
-            
+
             if ($sortA === $sortB) {
                 return strcasecmp($a['label'] ?? '', $b['label'] ?? '');
             }
-            
+
             return $sortA <=> $sortB;
         });
 
@@ -177,6 +177,8 @@ class CustomSidebarManager
             'Media' => 'heroicon-o-photo',
             'Reports' => 'heroicon-o-chart-bar',
             'System & Settings' => 'heroicon-o-cog-6-tooth',
+            'Vaccination' => 'heroicon-o-shield-check',
+            'Diet' => 'heroicon-o-heart',
             default => 'heroicon-o-folder',
         };
     }
@@ -220,7 +222,7 @@ class CustomSidebarManager
     public static function buildFilamentNavigation(\Filament\Navigation\NavigationBuilder $builder): \Filament\Navigation\NavigationBuilder
     {
         $items = self::getNavigation();
-        
+
         $navigationGroups = [];
 
         foreach ($items as $nav) {

@@ -8,6 +8,15 @@ use App\Filament\Pages\{BookAppointment, Dashboard, DoctorReport, ManageVideoLin
 use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\EmailLogs\EmailLogResource;
 use App\Filament\Resources\{Appointments\AppointmentResource, DoctorDepartments\DoctorDepartmentResource, DoctorReplacements\DoctorReplacementResource, DoctorReviews\DoctorReviewResource, Doctors\DoctorAvailabilityResource, Doctors\DoctorResource, ContactUs\ContactUsResource, ExternalBookings\ExternalBookingResource, Leaves\LeaveResource, MedicalReports\MedicalReportResource, Medicines\MedicineResource, ModuleDocuments\ModuleDocumentResource, Patients\PatientResource, Payments\PaymentResource, Symptoms\SymptomResource, Users\UserResource, Vendors\VendorResource};
+use App\Filament\Resources\DietTemplates\DietTemplateResource;
+use App\Filament\Resources\PatientVaccinationPrograms\PatientVaccinationProgramResource;
+use App\Filament\Resources\PatientVaccinations\PatientVaccinationResource;
+use App\Filament\Resources\VaccinationClinicalInsights\VaccinationClinicalInsightResource;
+use App\Filament\Resources\VaccinationDocuments\VaccinationDocumentResource;
+use App\Filament\Resources\VaccinationGeneralFaqs\VaccinationGeneralFaqResource;
+use App\Filament\Resources\VaccinationTemplates\VaccinationTemplateResource;
+use App\Filament\Resources\Vaccinations\VaccinationResource;
+use App\Filament\Resources\PatientProfiles\PatientProfileResource;
 use App\Models\Setting;
 use Filament\Http\Middleware\{Authenticate, AuthenticateSession, DisableBladeIconComponents, DispatchServingFilamentEvent};
 use Filament\Navigation\NavigationBuilder;
@@ -75,6 +84,16 @@ class AdminPanelProvider extends PanelProvider
                 MedicalReportResource::class,
                 ModuleDocumentResource::class,
                 EmailLogResource::class,
+                DietTemplateResource::class,
+                PatientVaccinationProgramResource::class,
+                PatientVaccinationResource::class,
+                VaccinationClinicalInsightResource::class,
+                VaccinationDocumentResource::class,
+                VaccinationGeneralFaqResource::class,
+                VaccinationTemplateResource::class,
+                VaccinationResource::class,
+                PatientProfileResource::class,
+
             ])
             ->navigation(fn(NavigationBuilder $builder): NavigationBuilder => \App\Filament\CustomSidebarManager::buildFilamentNavigation($builder))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')

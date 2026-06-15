@@ -35,6 +35,14 @@ class PatientResource extends Resource
         return check_permission('patients.view_any');
     }
 
+    public static function getSidebarOptions(): array
+    {
+        return [
+            'label' => 'Pateints',
+            'icon'  => 'heroicon-o-user-circle',
+            'sort'  => 4,
+        ];
+    }
     public static function requiredPermission(): string
     {
         return 'patient_manager';
@@ -75,6 +83,7 @@ class PatientResource extends Resource
             //
         ];
     }
+
 
     public static function getPages(): array
     {

@@ -1,18 +1,18 @@
 "use client";
-import { useParams, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import CustomTabs, { TabItem } from "@/components/custom/CustomTabs";
-import { useAppointmentById } from "@/queries/useAppointmentId";
-import OverviewTab from "../detail-component/OverviewTab";
-import ReportsTab from "../detail-component/ReportsTab";
-import PreviousTab from "../detail-component/PreviousTab";
-import PrescriptionTab from "../detail-component/PrescriptionTab";
-import ReviewTab from "../detail-component/ReviewTab";
-import AppointmentHeader from "../detail-component/AppointmentHeader";
-import { Skeleton } from "@/components/ui/skeleton";
-import HeroSection from "@/components/ui/hero-section";
 import { DietPlanManagement } from "@/app/(main)/appointments/detail-component/DietPlanManagement";
 import { VaccinationManagement } from "@/app/(main)/appointments/detail-component/VaccinationManagement";
+import CustomTabs, { TabItem } from "@/components/custom/CustomTabs";
+import HeroSection from "@/components/ui/hero-section";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAppointmentById } from "@/queries/useAppointmentId";
+import { useParams, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import AppointmentHeader from "../detail-component/AppointmentHeader";
+import OverviewTab from "../detail-component/OverviewTab";
+import PrescriptionTab from "../detail-component/PrescriptionTab";
+import PreviousTab from "../detail-component/PreviousTab";
+import ReportsTab from "../detail-component/ReportsTab";
+import ReviewTab from "../detail-component/ReviewTab";
 
 export default function AppointmentDetail() {
   const params = useParams();
@@ -74,7 +74,7 @@ export default function AppointmentDetail() {
         {
             key: "vaccination",
             label: "Vaccination",
-            content: <VaccinationManagement />,
+            content: <VaccinationManagement patientId={patient?.id} />,
         },
         {
             key: "diet",

@@ -1,71 +1,113 @@
-import { useState } from 'react';
+import { cn } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-    Plus,
-    Search,
-    Filter,
-    Download,
-    ChevronRight,
-    Eye,
+    AlertCircle,
     CheckCircle2,
     Clock,
-    AlertCircle,
-    Undo2,
+    Download,
+    Eye,
+    FileText,
+    Plus,
+    Search,
     Syringe,
-    FileText
+    Undo2
 } from 'lucide-react';
-import { Vaccine } from '@/types/types';
-import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
+import { useAssignVaccinationTemplate } from '@/mutations/assign-vaccination-template';
+import { useMarkVaccinationComplete } from '@/mutations/mark-vaccination-complete';
+import { usePatientVaccinations } from '@/queries/usePatientVaccinations';
 import { useVaccinationTemplates } from "@/queries/useVaccinationTemplates";
+import { DoctorPatientVaccination } from '@/types/patient-vaccination';
 import { ApiVaccinationTemplate } from '@/types/vaccination-template';
 
+interface VaccinationManagementProps {
+    patientId?: string;
+}
 
-export function VaccinationManagement() {
-    const [activeVaccines, setActiveVaccines] = useState<Vaccine[]>([]);
+export function VaccinationManagement({ patientId }: VaccinationManagementProps) {
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const [previewTemplate, setPreviewTemplate] =
         useState<ApiVaccinationTemplate | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All');
+    const statusFilter = 'All';
+
+    const queryClient = useQueryClient();
 
     const {
         data: vaccinationTemplates,
-        isLoading,
-        error,
+        isLoading: isTemplatesLoading,
+        error: templatesError,
     } = useVaccinationTemplates();
 
-    console.log("Vaccination Templates API:", vaccinationTemplates);
+    const {
+        data: patientVaccinationsResponse,
+        isLoading: isPatientVaccinationsLoading,
+        error: patientVaccinationsError,
+    } = usePatientVaccinations(patientId);
 
-    const handleAssignTemplate = (template: any) => {
-        const vaccinesWithDates = (template.items ?? []).map((item: any) => ({
-            id: item.id,
-            name: item.vaccination?.name || "N/A",
-            dosage: `Dose ${item.dose_no || "-"}`,
-            type: item.set_name || "N/A",
-            preventDisease: item.set_description || "Vaccination Protection",
-            scheduledDate: item.recommended_age_label || "N/A",
-            status: "Pending" as const,
-        }));
+    const assignTemplateMutation = useAssignVaccinationTemplate();
+    const markCompleteMutation = useMarkVaccinationComplete();
 
-        setActiveVaccines((prev) => [...prev, ...vaccinesWithDates]);
-        setIsTemplateModalOpen(false);
-        setPreviewTemplate(null);
+    const patientVaccinations: DoctorPatientVaccination[] =
+        patientVaccinationsResponse?.data ?? [];
+
+    const isLoading = isTemplatesLoading || isPatientVaccinationsLoading;
+    const error = templatesError || patientVaccinationsError;
+
+    const handleAssignTemplate = async (template: ApiVaccinationTemplate) => {
+        if (!patientId) {
+            return;
+        }
+
+        try {
+            await assignTemplateMutation.mutateAsync({
+                patientId,
+                templateId: template.id,
+            });
+
+            await queryClient.invalidateQueries(["patient-vaccinations", patientId]);
+            setIsTemplateModalOpen(false);
+            setPreviewTemplate(null);
+        } catch (assignError) {
+            console.error("Failed to assign vaccination template:", assignError);
+        }
     };
 
-    const markAsDone = (id: string) => {
-        setActiveVaccines(prev => prev.map(v =>
-            v.id === id ? { ...v, status: 'Completed', completedDate: new Date().toLocaleDateString() } : v
-        ));
-    };
+    const filteredVaccines = patientVaccinations.filter((v) => {
+        const matchesSearch =
+            v.vaccination?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false;
+        const statusValue = v.status?.toLowerCase();
+        const matchesStatus =
+            statusFilter === 'All' ||
+            statusValue === statusFilter.toLowerCase() ||
+            v.status_label?.toLowerCase() === statusFilter.toLowerCase();
 
-    const filteredVaccines = activeVaccines.filter(v => {
-        const matchesSearch = v.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'All' || v.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
 
+    const totalVaccines = patientVaccinations.length;
+    const upcomingCount = patientVaccinations.filter((v) => {
+        const statusValue = v.status?.toLowerCase();
+        return (
+            statusValue === 'pending' ||
+            statusValue === 'scheduled' ||
+            statusValue == null
+        );
+    }).length;
+    const overdueCount = patientVaccinations.filter((v) =>
+        v.status?.toLowerCase() === 'overdue' ||
+        v.status_label?.toLowerCase() === 'overdue'
+    ).length;
+
     return (
         <div className="space-y-8 animate-stagger-fade">
+            {error && !isLoading && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                    Unable to load vaccination data. Please refresh the page or try again later.
+                </div>
+            )}
+
             {/* Top Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -79,7 +121,7 @@ export function VaccinationManagement() {
                             </p>
 
                             <h3 className="text-2xl font-bold text-[#1F1E1E] mt-1">
-                                {activeVaccines.length}
+                                {totalVaccines}
                             </h3>
                         </div>
 
@@ -99,11 +141,7 @@ export function VaccinationManagement() {
                             </p>
 
                             <h3 className="text-2xl font-bold text-[#1F1E1E] mt-1">
-                                {
-                                    activeVaccines.filter(
-                                        (v) => v.status === "Pending"
-                                    ).length
-                                }
+                                {upcomingCount}
                             </h3>
                         </div>
 
@@ -123,11 +161,7 @@ export function VaccinationManagement() {
                             </p>
 
                             <h3 className="text-2xl font-bold text-[#1F1E1E] mt-1">
-                                {
-                                    activeVaccines.filter(
-                                        (v) => v.status === "Overdue"
-                                    ).length
-                                }
+                                {overdueCount}
                             </h3>
                         </div>
 
@@ -181,7 +215,6 @@ export function VaccinationManagement() {
                             <tr>
                                 <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Vaccine Name</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Type</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Prevent Disease</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Scheduled</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Status</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-[#4D4D4D]">Action</th>
@@ -190,7 +223,7 @@ export function VaccinationManagement() {
                         <tbody className="divide-y divide-outline-variant/10">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-20 text-center">
+                                    <td colSpan={5} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center justify-center gap-3">
                                             <div className="h-10 w-10 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
 
@@ -200,52 +233,56 @@ export function VaccinationManagement() {
                                         </div>
                                     </td>
                                 </tr>
-                            ) : (vaccinationTemplates?.data?.length ?? 0) > 0 ? (
-                                vaccinationTemplates?.data?.flatMap((template: any) =>
-                                    (template.items ?? []).map((v: any) => (
-                                        <tr
-                                            key={v.id}
-                                            className="hover:bg-primary/5 transition-colors group"
-                                        >
-                                            <td className="px-6 py-5">
-                                                <p className="font-semibold text-sm text-[#1F1E1E]">
-                                                    {v.vaccination?.name || "N/A"}
-                                                </p>
+                            ) : filteredVaccines.length > 0 ? (
+                                filteredVaccines.map((vaccination: DoctorPatientVaccination) => (
+                                    <tr
+                                        key={vaccination.id}
+                                        className="hover:bg-primary/5 transition-colors group"
+                                    >
+                                        <td className="px-6 py-5">
+                                            <p className="font-semibold text-sm text-[#1F1E1E]">
+                                                {vaccination.vaccination?.name || "N/A"}
+                                            </p>
 
-                                                <p className="text-xs text-[#4D4D4D] mt-1">
-                                                    Dose {v.dose_no ?? "-"}
-                                                </p>
-                                            </td>
+                                            <p className="text-xs text-[#4D4D4D] mt-1">
+                                                Dose {vaccination.dose_no ?? "-"}
+                                            </p>
+                                        </td>
 
-                                            <td className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">
-                                                {v.set_name || "N/A"}
-                                            </td>
+                                        <td className="px-6 py-5 text-[10px] font-black uppercase tracking-widest">
+                                            {vaccination.set_name || "General"}
+                                        </td>
 
-                                            <td className="px-6 py-5 text-sm font-medium text-on-surface-variant">
-                                                {v.set_description || "Vaccination Protection"}
-                                            </td>
+                                        <td className="px-6 py-5 text-sm font-bold text-on-surface">
+                                            {vaccination.scheduled_date || vaccination.recommended_age_label || "N/A"}
+                                        </td>
 
-                                            <td className="px-6 py-5 text-sm font-bold text-on-surface">
-                                                {v.recommended_age_label || "N/A"} Month
-                                            </td>
+                                        <td className="px-6 py-5">
+                                            <span className="px-3 py-1 rounded-md text-xs font-semibold bg-primary/10 text-primary">
+                                                {vaccination.status_label || vaccination.status || "Pending"}
+                                            </span>
+                                        </td>
 
-                                            <td className="px-6 py-5">
-                                                <span className="px-3 py-1 rounded-md text-xs font-semibold bg-primary/10 text-primary">
-                                                    Pending
-                                                </span>
-                                            </td>
-
-                                            <td className="px-6 py-5 text-right">
-                                                <button className="p-2 text-primary hover:bg-primary/10 rounded-md transition-all">
-                                                    <CheckCircle2 className="w-6 h-6" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )
+                                        <td className="px-6 py-5 text-right">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await markCompleteMutation.mutateAsync({ id: vaccination.id });
+                                                        await queryClient.invalidateQueries(["patient-vaccinations", patientId]);
+                                                    } catch (err) {
+                                                        console.error('Failed to mark vaccination complete', err);
+                                                    }
+                                                }}
+                                                className="p-2 text-primary hover:bg-primary/10 rounded-md transition-all"
+                                            >
+                                                <CheckCircle2 className="w-6 h-6" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-20 text-center">
+                                    <td colSpan={5} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3 opacity-50">
                                             <FileText className="w-12 h-12" />
 
@@ -380,7 +417,7 @@ export function VaccinationManagement() {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-outline-variant/20">
-                                                        {previewTemplate.items?.map((item: any) => (
+                                                        {previewTemplate.items?.map((item) => (
                                                             <tr
                                                                 key={item.id}
                                                                 className="text-sm text-[#4D4D4D]"
@@ -419,7 +456,7 @@ export function VaccinationManagement() {
                                         </div>
                                     </div>
                                 ) : (
-                                    vaccinationTemplates?.data?.map((template: any) => (
+                                    vaccinationTemplates?.data?.map((template: ApiVaccinationTemplate) => (
                                         <div
                                             key={template.id}
                                             className="rounded-lg border bg-white p-4 sm:p-5 md:p-6 shadow-sm flex flex-col justify-between"

@@ -1,0 +1,131 @@
+name: Sync backend to deploymeta
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: sync-backend-to-deploymeta
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sync-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Prepare tokens
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DEPLOYMETA_TOKEN: ${{ secrets.DEPLOYMETA_TOKEN }}
+        run: |
+          CLEAN_GITHUB_TOKEN="$(printf '%s' "$GITHUB_TOKEN" | tr -d '[:space:]')"
+          CLEAN_DEPLOYMETA_TOKEN="$(printf '%s' "$DEPLOYMETA_TOKEN" | tr -d '[:space:]')"
+
+          echo "CLEAN_GITHUB_TOKEN=$CLEAN_GITHUB_TOKEN" >> "$GITHUB_ENV"
+          echo "CLEAN_DEPLOYMETA_TOKEN=$CLEAN_DEPLOYMETA_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Clone primary CMC repo manually
+        run: |
+          git clone --depth 1 --branch "${GITHUB_REF_NAME}" \
+            "https://x-access-token:${CLEAN_GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            source
+
+      - name: Configure deploymeta git authentication
+        run: |
+          git config --global credential.helper store
+
+          cat > ~/.git-credentials <<EOF
+          https://x-access-token:${CLEAN_DEPLOYMETA_TOKEN}@github.com
+          EOF
+
+          chmod 600 ~/.git-credentials
+
+      - name: Clone deploymeta repo manually
+        run: |
+          git clone --depth 1 --branch main \
+            "https://github.com/codebygourav/telehealth-depolymeta.git" \
+            target
+
+      - name: Copy primary code into deploymeta backend folder
+        run: |
+          mkdir -p target/backend
+
+          rsync -a source/ target/backend/ \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.env' \
+            --exclude='vendor/' \
+            --exclude='node_modules/' \
+            --exclude='storage/logs/' \
+            --exclude='storage/framework/cache/' \
+            --exclude='storage/framework/sessions/' \
+            --exclude='storage/framework/views/' \
+            --exclude='bootstrap/cache/*.php' \
+            --exclude='public/storage/'
+
+      - name: Check changes
+        id: changes
+        working-directory: target
+        run: |
+          if [[ -n "$(git status --porcelain backend)" ]]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push sync branch
+        if: steps.changes.outputs.has_changes == 'true'
+        working-directory: target
+        run: |
+          SYNC_BRANCH="sync/cmc-backend"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B "$SYNC_BRANCH"
+          git add backend
+          git commit -m "sync: update backend from CMC primary repo"
+
+          git remote set-url origin "https://github.com/codebygourav/telehealth-depolymeta.git"
+          git push origin "$SYNC_BRANCH" --force
+
+          echo "SYNC_BRANCH=$SYNC_BRANCH" >> "$GITHUB_ENV"
+
+      - name: Create or update pull request
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOYMETA_TOKEN }}
+        run: |
+          CLEAN_GH_TOKEN="$(printf '%s' "$GH_TOKEN" | tr -d '[:space:]')"
+          export GH_TOKEN="$CLEAN_GH_TOKEN"
+
+          SYNC_BRANCH="sync/cmc-backend"
+
+          EXISTING_PR=$(gh pr list \
+            --repo codebygourav/telehealth-depolymeta \
+            --head "$SYNC_BRANCH" \
+            --base main \
+            --state open \
+            --json url \
+            --jq '.[0].url')
+
+          if [ -z "$EXISTING_PR" ]; then
+            gh pr create \
+              --repo codebygourav/telehealth-depolymeta \
+              --base main \
+              --head "$SYNC_BRANCH" \
+              --title "Sync backend from CMC primary repo" \
+              --body "This PR syncs the latest CMC primary repo code into the deploymeta backend folder."
+          else
+            echo "PR already exists: $EXISTING_PR"
+          fi
+
+      - name: No changes found
+        if: steps.changes.outputs.has_changes == 'false'
+        run: |
+          echo "No backend changes to sync."

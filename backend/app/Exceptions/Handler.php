@@ -80,6 +80,12 @@ class Handler extends ExceptionHandler
             ], 422);
         }
 
+        // If the request expects JSON (API or AJAX), convert all exceptions
+        // to our standard API response format so frontends receive consistent keys.
+        if ($request->expectsJson() || $request->wantsJson() || $request->is('api/*')) {
+            return $this->renderJsonException($e);
+        }
+
         return parent::render($request, $e);
     }
 

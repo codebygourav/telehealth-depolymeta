@@ -40,7 +40,7 @@ class VaccinationDocumentResource extends Resource
             'label' => 'Vaccination Documents',
             'icon' => 'heroicon-o-document-text',
             'sort' => 9,
-            'group' => 'Clinical',
+            'group' => 'Vaccination',
         ];
     }
 
