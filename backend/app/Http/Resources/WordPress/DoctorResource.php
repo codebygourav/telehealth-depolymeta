@@ -11,6 +11,8 @@ class DoctorResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $isTestDoctor = (bool) $this->is_test_doctor;
+
         // Calculate ratings summary
         $totalRatings = $this->whenLoaded('reviews')
             ? $this->reviews->count()
@@ -20,8 +22,12 @@ class DoctorResource extends JsonResource
             ? round($this->reviews->avg('rating'), 2)
             : ($this->reviews_avg_rating ?? (float) $this->reviews()->avg('rating'));
 
-        // Get the availability slot with the lowest consultation_fee
-        $lowestFeeAvailability = $this->resource->availabilities
+        $effectiveAvailabilities = $this->relationLoaded('availabilities')
+            ? app(\App\Services\DoctorAvailabilityService::class)->expandSlotsForWordPressApi($this->resource->availabilities)
+            : collect();
+
+        // Get the availability slot with the lowest effective consultation_fee
+        $lowestFeeAvailability = $effectiveAvailabilities
             ->filter(fn($slot) => $slot->consultation_fee !== null)
             ->sortBy(fn($slot) => (float) $slot->consultation_fee)
             ->first();
@@ -32,6 +38,7 @@ class DoctorResource extends JsonResource
 
         return [
             'id' => $this->id,
+
             'user' => new UserResource($this->whenLoaded('user')),
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
@@ -57,7 +64,12 @@ class DoctorResource extends JsonResource
             'description' => $this->description,
             'status' => $this->status,
             'consultation_fee' => $lowestFee,
-            'avatar_url' => $this->user->avatar ?? null,
+            'avatar_url' => storage_url($this->avatar),
+            'is_test_doctor' => $isTestDoctor,
+            'badge' => $isTestDoctor ? 'Test' : null,
+            'badges' => $isTestDoctor ? ['Test'] : [],
+
+
             'average_rating' => $averageRating ? round($averageRating, 2) : null,
             'total_rating' => $totalRatings,
             'departments' => $this->whenLoaded('departments', function () {
@@ -71,15 +83,16 @@ class DoctorResource extends JsonResource
             }),
             // Availability - only in-person and available
             'availabilities' => $this->whenLoaded('availabilities', function () {
-                return DoctorAvailabilityResource::collection(
-                    $this->availabilities->filter(function ($slot) {
-                        // Only include slots with a valid start_time, are available,
-                        // and are for in-person consultation
-                        return $slot->start_time
-                            && $slot->is_available
-                            && $slot->consultation_type === 'in-person';
-                    })->values() // Re-index to avoid sparse arrays
-                );
+                $slots = app(\App\Services\DoctorAvailabilityService::class)
+                    ->expandSlotsForWordPressApi(
+                        $this->availabilities->filter(function ($slot) {
+                            return $slot->start_time
+                                && $slot->consultation_type === 'in-person';
+                        })
+                    );
+
+                return app(\App\Services\DoctorAvailabilityService::class)
+                    ->formatSlotsForWordPressApi($slots);
             }),
         ];
     }

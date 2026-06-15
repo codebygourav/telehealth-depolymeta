@@ -76,8 +76,7 @@ class Advertisement extends Model
     public function scopeVisibleTo(\Illuminate\Database\Eloquent\Builder $query, $user = null): \Illuminate\Database\Eloquent\Builder
     {
         $user = $user ?? Auth::user();
-        if (!$user)
-            return $query->whereRaw('1 = 0');
+        if (!$user) return $query->whereRaw('1 = 0');
 
         // Admins/Managers can see everything
         if ($user->hasRole('super_admin') || $user->hasRole('doctor_manager') || $user->can('advertisements.view_any')) {

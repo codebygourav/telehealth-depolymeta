@@ -23,6 +23,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Models\User;
 use App\Services\DoctorAvailabilityValidationService;
 use App\Services\DoctorAvailabilityService;
+use App\Services\SlotCapacityService;
 
 class OPDCalendar extends Page implements HasForms
 {
@@ -537,7 +538,7 @@ class OPDCalendar extends Page implements HasForms
                     Select::make('doctor_id')
                         ->label('Doctor')
                         ->options(
-                            Doctor::all()->mapWithKeys(
+                            Doctor::active()->get()->mapWithKeys(
                                 fn($d) => [$d->id => trim(($d->title ? $d->title . ' ' : '') . $d->first_name . ' ' . $d->last_name)]
                             )
                         )
@@ -789,7 +790,8 @@ class OPDCalendar extends Page implements HasForms
 
     public function exportSlots(): StreamedResponse
     {
-        $slots = DoctorAvailability::with('doctor.user')->get();
+        $slots = DoctorAvailability::with('doctor.user')
+            ->get();
         $columns = [
             'Doctor Email',
             'Date/Day',
@@ -840,68 +842,249 @@ class OPDCalendar extends Page implements HasForms
     public $monthDays = [];
     public $schedule = [];
     public $activeDay;
-    public $viewMode = 'week';
+    public $viewMode = 'month';
     public $currentWeekLabel;
 
     public ?array $data = [];
     public $selectedDateSlots = [];
     public $selectedDateLabel;
     public $appointments = [];
+    public $selectedTimeSlot = 'none';
+    public $appointmentFilter = 'all';
+
+    public function selectTimeSlot($timeSlot)
+    {
+        $this->selectedTimeSlot = $timeSlot;
+    }
+
+    public function getFilteredDateSlots(): array
+    {
+        if ($this->selectedTimeSlot === 'none') {
+            return [];
+        }
+
+        if ($this->selectedTimeSlot === 'all') {
+            return $this->selectedDateSlots;
+        }
+
+        return collect($this->selectedDateSlots)
+            ->filter(function ($slot) {
+                $time = ($slot['start'] && $slot['end']) ? $slot['start'] . ' - ' . $slot['end'] : null;
+                return $time === $this->selectedTimeSlot;
+            })
+            ->values()
+            ->toArray();
+    }
+
+    public function setAppointmentFilter($filter)
+    {
+        $this->appointmentFilter = $filter;
+    }
+
+    public function getAppointmentTypeCounts(): array
+    {
+        if ($this->selectedTimeSlot === 'none') {
+            return ['all' => 0, 'online' => 0, 'external' => 0];
+        }
+
+        $filtered = collect($this->appointments);
+
+        if ($this->selectedTimeSlot !== 'all') {
+            $filtered = $filtered->filter(function ($appointment) {
+                $appTime = ($appointment['start_time'] && $appointment['end_time']) ? $appointment['start_time'] . ' - ' . $appointment['end_time'] : null;
+                if ($appTime === $this->selectedTimeSlot) {
+                    return true;
+                }
+
+                $parts = explode(' - ', $this->selectedTimeSlot);
+                if (count($parts) === 2) {
+                    try {
+                        $slotStart = Carbon::parse($parts[0]);
+                        $slotEnd = Carbon::parse($parts[1]);
+                        $appStart = Carbon::parse($appointment['start_time']);
+                        return $appStart->gte($slotStart) && $appStart->lte($slotEnd);
+                    } catch (\Exception $e) {
+                        return false;
+                    }
+                }
+
+                return false;
+            });
+        }
+
+        $online = $filtered->filter(fn($app) => ($app['type'] ?? 'online') === 'online')->count();
+        $external = $filtered->filter(fn($app) => ($app['type'] ?? 'online') === 'external')->count();
+
+        return [
+            'all' => $filtered->count(),
+            'online' => $online,
+            'external' => $external,
+        ];
+    }
+
+    public function getFilteredAppointments(): array
+    {
+        if ($this->selectedTimeSlot === 'none') {
+            return [];
+        }
+
+        $filtered = collect($this->appointments);
+
+        // 1. Filter by time slot
+        if ($this->selectedTimeSlot !== 'all') {
+            $filtered = $filtered->filter(function ($appointment) {
+                $appTime = ($appointment['start_time'] && $appointment['end_time']) ? $appointment['start_time'] . ' - ' . $appointment['end_time'] : null;
+                if ($appTime === $this->selectedTimeSlot) {
+                    return true;
+                }
+
+                $parts = explode(' - ', $this->selectedTimeSlot);
+                if (count($parts) === 2) {
+                    try {
+                        $slotStart = Carbon::parse($parts[0]);
+                        $slotEnd = Carbon::parse($parts[1]);
+                        $appStart = Carbon::parse($appointment['start_time']);
+                        return $appStart->gte($slotStart) && $appStart->lte($slotEnd);
+                    } catch (\Exception $e) {
+                        return false;
+                    }
+                }
+
+                return false;
+            });
+        }
+
+        // 2. Filter by type (online vs external)
+        if ($this->appointmentFilter === 'online') {
+            $filtered = $filtered->filter(fn($app) => ($app['type'] ?? 'online') === 'online');
+        } elseif ($this->appointmentFilter === 'external') {
+            $filtered = $filtered->filter(fn($app) => ($app['type'] ?? 'online') === 'external');
+        }
+
+        return $filtered->values()->toArray();
+    }
 
     public function loadAppointmentsForDate($date)
     {
-        $this->appointments = \App\Models\Appointment::with(['doctor', 'patient', 'availability'])
+        $selectedDepartment = $this->getSelectedDepartment();
+        $selectedDoctor = $this->getSelectedDoctor();
+        $selectedOpdType = $this->getSelectedOpdType();
+
+        // 1. Query Internal Appointments
+        $appointmentsQuery = \App\Models\Appointment::with(['doctor.departments', 'patient', 'availability', 'payment'])
+            ->whereHas('doctor', fn($query) => $query->active())
             ->whereDate('appointment_date', $date)
-            ->where('status', [
-                AppointmentStatus::CONFIRMED->value,
-                AppointmentStatus::COMPLETED->value,
-                AppointmentStatus::RESCHEDULED->value,
-                AppointmentStatus::CANCELLED->value,
-            ])
-            ->get()
-            ->map(function ($appointment) {
-                $doctor = $appointment->doctor;
-                $patient = $appointment->patient;
+            ->where('status', AppointmentStatus::CONFIRMED->value)
+            ->whereHas('payment', fn($query) => $query->where('status', \App\Enums\PaymentStatus::PAID->value));
 
-                $doctorName = $doctor
-                    ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
-                    : 'Dr. Unknown';
+        if ($selectedDepartment) {
+            $appointmentsQuery->whereHas('doctor.departments', fn($q) => $q->where('departments.id', $selectedDepartment));
+        }
+        if ($selectedDoctor) {
+            $appointmentsQuery->where('doctor_id', $selectedDoctor);
+        }
+        if ($selectedOpdType) {
+            $appointmentsQuery->whereHas('availability', fn($q) => $q->where('opd_type', $selectedOpdType));
+        }
 
-                return [
-                    'doctor_name' => $doctorName,
-                    'doctor_avatar' => ($doctor && $doctor->user && $doctor->user->avatar)
-                        ? asset('storage/' . $doctor->user->avatar)
-                        : asset('images/user-avatar.png'),
-                    'department' => $doctor && $doctor->departments ? $doctor->departments->pluck('name')->join(', ') : '',
-                    'specialization' => $doctor && $doctor->departments ? $doctor->departments->pluck('name')->join(', ') : '',
-                    'date' => $appointment->appointment_date,
-                    'start_time' => \Carbon\Carbon::parse($appointment->appointment_time)->format('g:i A'),
-                    'end_time' => \Carbon\Carbon::parse($appointment->availability?->end_time ?? $appointment->appointment_time)->format('g:i A'),
-                    'consultation_type' => ucfirst($appointment->consultation_type),
-                    'status' => $appointment->status,
-                    'patient_name' => $patient ? ($patient->first_name . ' ' . $patient->last_name) : '',
-                    'patient_email' => $patient?->email,
-                    'patient_phone' => $patient->mobile_no ?? null,
-                    'avatar' => $patient && $patient->user && $patient->user->avatar
-                        ? storage_url($patient->user->avatar)
-                        : asset('images/user-avatar.png'),
-                    'notes' => $appointment->notes,
-                    'reason' => $appointment->notes['reason'] ?? $appointment->notes['problem'] ?? null,
-                ];
-            })
-            ->toArray();
+        $internalList = $appointmentsQuery->get()->toBase()->map(function ($appointment) {
+            $doctor = $appointment->doctor;
+            $patient = $appointment->patient;
+
+            $doctorName = $doctor
+                ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
+                : 'Dr. Unknown';
+
+            return [
+                'id' => $appointment->id,
+                'type' => 'online',
+                'doctor_name' => $doctorName,
+                'doctor_avatar' => ($doctor && $doctor->user && $doctor->user->avatar)
+                    ? asset('storage/' . $doctor->user->avatar)
+                    : asset('images/user-avatar.png'),
+                'department' => $doctor && $doctor->departments ? $doctor->departments->pluck('name')->join(', ') : '',
+                'specialization' => $doctor && $doctor->departments ? $doctor->departments->pluck('name')->join(', ') : '',
+                'date' => $appointment->appointment_date,
+                'start_time' => \Carbon\Carbon::parse($appointment->appointment_time)->format('g:i A'),
+                'end_time' => \Carbon\Carbon::parse($appointment->availability?->end_time ?? $appointment->appointment_time)->format('g:i A'),
+                'consultation_type' => ucfirst($appointment->consultation_type),
+                'status' => $appointment->status,
+                'patient_name' => $patient ? ($patient->first_name . ' ' . $patient->last_name) : '',
+                'patient_email' => $patient?->email,
+                'patient_phone' => $patient->mobile_no ?? null,
+                'avatar' => $patient && $patient->user && $patient->user->avatar
+                    ? storage_url($patient->user->avatar)
+                    : asset('images/user-avatar.png'),
+                'notes' => $appointment->notes,
+                'reason' => $appointment->notes['reason'] ?? $appointment->notes['problem'] ?? null,
+                'unit_no' => $patient?->existing_patient_id ?? '—',
+            ];
+        });
+
+        // 2. Query External Bookings
+        $externalQuery = \App\Models\ExternalBooking::with(['doctor.departments', 'availability'])
+            ->whereHas('doctor', fn($query) => $query->active())
+            ->whereDate('appointment_date', $date);
+
+        if ($selectedDepartment) {
+            $externalQuery->whereHas('doctor.departments', fn($q) => $q->where('departments.id', $selectedDepartment));
+        }
+        if ($selectedDoctor) {
+            $externalQuery->where('doctor_id', $selectedDoctor);
+        }
+        if ($selectedOpdType) {
+            $externalQuery->where('opd_type', $selectedOpdType);
+        }
+
+        $externalList = $externalQuery->get()->toBase()->map(function ($booking) {
+            $doctor = $booking->doctor;
+            $doctorName = $doctor
+                ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
+                : ($booking->doctor_name ?? 'Dr. Unknown');
+
+            return [
+                'id' => $booking->id,
+                'type' => 'external',
+                'doctor_name' => $doctorName,
+                'doctor_avatar' => ($doctor && $doctor->user && $doctor->user->avatar)
+                    ? asset('storage/' . $doctor->user->avatar)
+                    : asset('images/user-avatar.png'),
+                'department' => $doctor && $doctor->departments ? $doctor->departments->pluck('name')->join(', ') : '',
+                'specialization' => $doctor && $doctor->departments ? $doctor->departments->pluck('name')->join(', ') : '',
+                'date' => $booking->appointment_date,
+                'start_time' => \Carbon\Carbon::parse($booking->start_time)->format('g:i A'),
+                'end_time' => \Carbon\Carbon::parse($booking->end_time ?? $booking->start_time)->format('g:i A'),
+                'consultation_type' => ucfirst($booking->consultation_type),
+                'status' => 'confirmed',
+                'patient_name' => $booking->patient_name,
+                'patient_email' => $booking->patient_email,
+                'patient_phone' => $booking->mobile ?? null,
+                'avatar' => asset('images/user-avatar.png'),
+                'notes' => $booking->raw_payload,
+                'reason' => 'External Import Booking',
+                'unit_no' => $booking->patient_unit_number ?? '—',
+            ];
+        });
+
+        // 3. Merge both collections
+        $this->appointments = $internalList->merge($externalList)->toArray();
     }
 
     public function showDaySlots($date)
     {
+        $this->selectedTimeSlot = 'none';
         $this->selectedDateLabel = Carbon::parse($date)->format('d F, Y');
         $this->loadAppointmentsForDate($date);
 
-        $query = DoctorAvailability::with('doctor.departments', 'doctor.user')
+        $query = DoctorAvailability::with('doctor.departments', 'doctor.user', 'overrides')
             ->has('doctor')
-            ->where('is_available', true)
+            ->whereHas('doctor', fn($query) => $query->active())
             ->where(function ($q) use ($date) {
                 $q->whereDate('date', $date)
+                    ->orWhere(function ($q) {
+                        $q->whereNull('date')
+                            ->whereNotNull('day_of_week');
+                    })
                     ->orWhere(function ($q) use ($date) {
                         $targetDow = Carbon::parse($date)->dayOfWeek + 1;
                         $q->where('is_recurring', true)
@@ -909,8 +1092,14 @@ class OPDCalendar extends Page implements HasForms
                                 $sub->where('day_of_week', strtolower(Carbon::parse($date)->format('l')))
                                     ->orWhereRaw("DAYOFWEEK(recurring_start_date) = ?", [$targetDow]);
                             })
-                            ->whereDate('recurring_start_date', '<=', $date)
-                            ->whereDate('recurring_end_date', '>=', $date);
+                            ->where(function ($sub) use ($date) {
+                                $sub->whereNull('recurring_start_date')
+                                    ->orWhereDate('recurring_start_date', '<=', $date);
+                            })
+                            ->where(function ($sub) use ($date) {
+                                $sub->whereNull('recurring_end_date')
+                                    ->orWhereDate('recurring_end_date', '>=', $date);
+                            });
                     });
             });
 
@@ -930,7 +1119,14 @@ class OPDCalendar extends Page implements HasForms
             $query->where('opd_type', $selectedOpdType);
         }
 
-        $slots = $query->orderBy('start_time')->get();
+        $slots = app(DoctorAvailabilityService::class)
+            ->expandSlots(
+                $query->orderBy('start_time')->get(),
+                Carbon::parse($date)->startOfDay(),
+                Carbon::parse($date)->endOfDay(),
+                includePast: true,
+                skipBlocked: false
+            );
 
         $this->selectedDateSlots = $slots->map(function ($slot) use ($date) {
             $doctor = $slot->doctor;
@@ -944,7 +1140,7 @@ class OPDCalendar extends Page implements HasForms
                 ? storage_url($doctor->user->avatar)
                 : asset('images/user-avatar.png');
 
-            $isRecurring = (bool) $slot->is_recurring;
+            $isRecurring = app(DoctorAvailabilityService::class)->isRecurringTemplate($slot);
 
             $recurringLabel = null;
             if ($isRecurring && $slot->recurring_start_date && $slot->recurring_end_date) {
@@ -960,7 +1156,22 @@ class OPDCalendar extends Page implements HasForms
             $end = $slot->end_time ? Carbon::parse($slot->end_time)->format('g:i A') : null;
             $sortTime = $slot->start_time ? Carbon::parse($slot->start_time)->timestamp : 0;
 
+            // Get status (Available vs Blocked)
+            $service = app(DoctorAvailabilityService::class);
+            $isBlocked = $service->isDateBlocked($slot, $date);
+            $status = $isBlocked ? 'blocked' : 'active';
+
+            // Get booked counts detail (Online vs External)
+            $bookedDetail = app(SlotCapacityService::class)->bookedCountsDetail(
+                doctorId: $slot->doctor_id,
+                date: $date,
+                startTime: $slot->start_time,
+                availabilityId: $slot->id,
+                consultationType: $slot->consultation_type
+            );
+
             return [
+                'id' => $slot->id,
                 'doctor' => $doctorName,
                 'doctor_id' => $doctorId,
                 'doctor_slug' => $doctorSlug,
@@ -976,6 +1187,13 @@ class OPDCalendar extends Page implements HasForms
                 'recurring_label' => $recurringLabel,
                 'date_label' => $dateLabel,
                 'sort_time' => $sortTime,
+                'status' => $status,
+                'internal_booked' => $bookedDetail['internal'] ?? 0,
+                'external_booked' => $bookedDetail['external'] ?? 0,
+                'total_booked' => $bookedDetail['total'] ?? 0,
+                'source' => $slot->source ?? 'availability',
+                'room' => $slot->doctor_room,
+                'fee' => $slot->consultation_fee,
             ];
         })
             ->sortBy('sort_time')
@@ -999,7 +1217,7 @@ class OPDCalendar extends Page implements HasForms
                     ->label('Doctor')
                     ->placeholder('All Doctors')
                     ->options(
-                        Doctor::all()->mapWithKeys(
+                        Doctor::active()->get()->mapWithKeys(
                             function ($doctor) {
                                 return [
                                     $doctor->id =>
@@ -1074,12 +1292,14 @@ class OPDCalendar extends Page implements HasForms
     public function previousMonth()
     {
         $this->currentMonthStart = $this->currentMonthStart->subMonth();
+        $this->showDaySlots($this->currentMonthStart->format('Y-m-d'));
         $this->loadMonthView();
     }
 
     public function nextMonth()
     {
         $this->currentMonthStart = $this->currentMonthStart->addMonth();
+        $this->showDaySlots($this->currentMonthStart->format('Y-m-d'));
         $this->loadMonthView();
     }
 
@@ -1116,15 +1336,26 @@ class OPDCalendar extends Page implements HasForms
         }
 
         // Fetch all events including recurring ones
-        $query = DoctorAvailability::with('doctor')
+        $query = DoctorAvailability::with('doctor', 'overrides')
             ->has('doctor')
+            ->whereHas('doctor', fn($query) => $query->active())
             ->where('is_available', true)
             ->where(function ($query) use ($calendarStart, $calendarEnd) {
                 $query->whereBetween('date', [$calendarStart, $calendarEnd])
+                    ->orWhere(function ($q) {
+                        $q->whereNull('date')
+                            ->whereNotNull('day_of_week');
+                    })
                     ->orWhere(function ($q) use ($calendarStart, $calendarEnd) {
                         $q->where('is_recurring', true)
-                            ->whereDate('recurring_start_date', '<=', $calendarEnd)
-                            ->whereDate('recurring_end_date', '>=', $calendarStart);
+                            ->where(function ($sub) use ($calendarEnd) {
+                                $sub->whereNull('recurring_start_date')
+                                    ->orWhereDate('recurring_start_date', '<=', $calendarEnd);
+                            })
+                            ->where(function ($sub) use ($calendarStart) {
+                                $sub->whereNull('recurring_end_date')
+                                    ->orWhereDate('recurring_end_date', '>=', $calendarStart);
+                            });
                     });
             });
 
@@ -1144,7 +1375,11 @@ class OPDCalendar extends Page implements HasForms
             $query->where('opd_type', $selectedOpdType);
         }
 
-        $events = $query->get();
+        $events = $this->expandCalendarSlotsUntilEndTime(
+            $query->get(),
+            $calendarStart->copy()->startOfDay(),
+            $calendarEnd->copy()->endOfDay()
+        );
 
         foreach ($events as $event) {
             $doctor = $event->doctor;
@@ -1152,29 +1387,8 @@ class OPDCalendar extends Page implements HasForms
                 ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
                 : 'Dr. Unknown';
 
-            if ($event->is_recurring) {
-                $eventStart = Carbon::parse($event->recurring_start_date);
-                $eventEnd = Carbon::parse($event->recurring_end_date);
-                $eventDayOfWeek = $event->day_of_week ?? strtolower($eventStart->format('l'));
-
-                $current = $calendarStart->copy();
-                while ($current->lte($calendarEnd)) {
-                    if (
-                        strtolower($current->format('l')) === strtolower($eventDayOfWeek) &&
-                        $current->between($eventStart, $eventEnd)
-                    ) {
-                        $dayKey = $current->format('Y-m-d');
-                        $days[$dayKey]['events'][] = [
-                            'id' => $event->id,
-                            'doctor_name' => $doctorName,
-                            'start_time' => Carbon::parse($event->start_time)->format('g:i A'),
-                            'end_time' => Carbon::parse($event->end_time)->format('g:i A'),
-                        ];
-                    }
-                    $current->addDay();
-                }
-            } else {
-                $dayKey = Carbon::parse($event->date)->format('Y-m-d');
+            $dayKey = Carbon::parse($event->date)->format('Y-m-d');
+            if (isset($days[$dayKey])) {
                 $days[$dayKey]['events'][] = [
                     'id' => $event->id,
                     'doctor_name' => $doctorName,
@@ -1200,7 +1414,7 @@ class OPDCalendar extends Page implements HasForms
         $this->currentMonthStart = Carbon::now()->startOfMonth();
         $this->form->fill();
         $this->goToToday();
-        $this->loadSchedule();
+        $this->loadMonthView();
     }
 
     public function previousDay()
@@ -1255,6 +1469,9 @@ class OPDCalendar extends Page implements HasForms
         $this->weekEnd = $this->weekStart->copy()->endOfWeek(Carbon::SUNDAY);
         $this->currentWeekLabel = $this->weekStart->format('M d') . ' - ' . $this->weekEnd->format('M d, Y');
         $this->setDays();
+        if (isset($this->days[$this->activeDay])) {
+            $this->showDaySlots($this->days[$this->activeDay]->format('Y-m-d'));
+        }
         $this->loadSchedule();
     }
 
@@ -1264,6 +1481,9 @@ class OPDCalendar extends Page implements HasForms
         $this->weekEnd = $this->weekStart->copy()->endOfWeek(Carbon::SUNDAY);
         $this->currentWeekLabel = $this->weekStart->format('M d') . ' - ' . $this->weekEnd->format('M d, Y');
         $this->setDays();
+        if (isset($this->days[$this->activeDay])) {
+            $this->showDaySlots($this->days[$this->activeDay]->format('Y-m-d'));
+        }
         $this->loadSchedule();
     }
 
@@ -1290,15 +1510,26 @@ class OPDCalendar extends Page implements HasForms
         $start = $this->weekStart->copy()->startOfDay();
         $end = $this->weekEnd->copy()->endOfDay();
 
-        $query = DoctorAvailability::with(['doctor.departments', 'doctor.user'])
+        $query = DoctorAvailability::with(['doctor.departments', 'doctor.user', 'overrides'])
             ->has('doctor')
+            ->whereHas('doctor', fn($query) => $query->active())
             ->where('is_available', true)
             ->where(function ($q) use ($start, $end) {
                 $q->whereBetween('date', [$start, $end])
+                    ->orWhere(function ($q) {
+                        $q->whereNull('date')
+                            ->whereNotNull('day_of_week');
+                    })
                     ->orWhere(function ($q) use ($start, $end) {
                         $q->where('is_recurring', true)
-                            ->whereDate('recurring_start_date', '<=', $end)
-                            ->whereDate('recurring_end_date', '>=', $start);
+                            ->where(function ($sub) use ($end) {
+                                $sub->whereNull('recurring_start_date')
+                                    ->orWhereDate('recurring_start_date', '<=', $end);
+                            })
+                            ->where(function ($sub) use ($start) {
+                                $sub->whereNull('recurring_end_date')
+                                    ->orWhereDate('recurring_end_date', '>=', $start);
+                            });
                     });
             });
 
@@ -1318,30 +1549,9 @@ class OPDCalendar extends Page implements HasForms
             $query->where('opd_type', $selectedOpdType);
         }
 
-        $slots = $query->get();
+        $slots = $this->expandCalendarSlotsUntilEndTime($query->get(), $start, $end);
 
         foreach ($slots as $slot) {
-            $dates = [];
-
-            if ($slot->is_recurring) {
-                $current = $this->weekStart->copy();
-                $end = $this->weekEnd->copy();
-                $slotStart = Carbon::parse($slot->recurring_start_date);
-                $slotEnd = Carbon::parse($slot->recurring_end_date);
-                $slotDayOfWeek = $slot->day_of_week ?? strtolower($slotStart->format('l'));
-
-                while ($current->lte($end)) {
-                    if (strtolower($current->format('l')) === strtolower($slotDayOfWeek)) {
-                        if ($current->between($slotStart, $slotEnd)) {
-                            $dates[] = $current->format('Y-m-d');
-                        }
-                    }
-                    $current->addDay();
-                }
-            } else {
-                $dates[] = $slot->date;
-            }
-
             $doctor = $slot->doctor;
             $doctorName = $doctor
                 ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
@@ -1351,20 +1561,20 @@ class OPDCalendar extends Page implements HasForms
                 ? storage_url($doctor->user->avatar)
                 : asset('images/user-avatar.png');
 
-            foreach ($dates as $date) {
-                $dayKey = strtolower(Carbon::parse($date)->format('l'));
-                $timeKey = Carbon::parse($slot->start_time)->format('H:i');
+            $dayKey = strtolower(Carbon::parse($slot->date)->format('l'));
+            $timeKey = Carbon::parse($slot->start_time)->format('H:i');
 
-                $schedule[$dayKey][$timeKey][] = [
-                    'doctor_name' => $doctorName,
-                    'departments' => $departments,
-                    'start_time' => Carbon::parse($slot->start_time)->format('g:i A'),
-                    'end_time' => Carbon::parse($slot->end_time)->format('g:i A'),
-                    'avatar' => $avatar,
-                    'consultation_type' => $slot->consultation_type,
-                    'opd_type' => $slot->consultation_type === 'video' ? null : ($slot->opd_type ?? 'general'),
-                ];
-            }
+            $schedule[$dayKey][$timeKey][] = [
+                'doctor_name' => $doctorName,
+                'departments' => $departments,
+                'start_time' => Carbon::parse($slot->start_time)->format('g:i A'),
+                'end_time' => Carbon::parse($slot->end_time)->format('g:i A'),
+                'avatar' => $avatar,
+                'consultation_type' => $slot->consultation_type,
+                'opd_type' => $slot->consultation_type === 'video' ? null : ($slot->opd_type ?? 'general'),
+                'source' => $slot->source ?? 'availability',
+                'availability_override_id' => $slot->override_id ?? null,
+            ];
         }
 
         $this->schedule = $schedule;
@@ -1375,11 +1585,16 @@ class OPDCalendar extends Page implements HasForms
         $selectedDayDate = $this->days[$this->activeDay];
         $selectedDayLower = strtolower($selectedDayDate->format('l'));
 
-        $query = DoctorAvailability::with(['doctor.departments', 'doctor.user'])
+        $query = DoctorAvailability::with(['doctor.departments', 'doctor.user', 'overrides'])
             ->has('doctor')
+            ->whereHas('doctor', fn($query) => $query->active())
             ->where('is_available', true)
             ->where(function ($q) use ($selectedDayDate, $selectedDayLower) {
                 $q->whereDate('date', $selectedDayDate)
+                    ->orWhere(function ($q) {
+                        $q->whereNull('date')
+                            ->whereNotNull('day_of_week');
+                    })
                     ->orWhere(function ($q) use ($selectedDayDate, $selectedDayLower) {
                         $targetDow = $selectedDayDate->dayOfWeek + 1;
                         $q->where('is_recurring', true)
@@ -1387,8 +1602,14 @@ class OPDCalendar extends Page implements HasForms
                                 $sub->where('day_of_week', $selectedDayLower)
                                     ->orWhereRaw("DAYOFWEEK(recurring_start_date) = ?", [$targetDow]);
                             })
-                            ->whereDate('recurring_start_date', '<=', $selectedDayDate)
-                            ->whereDate('recurring_end_date', '>=', $selectedDayDate);
+                            ->where(function ($sub) use ($selectedDayDate) {
+                                $sub->whereNull('recurring_start_date')
+                                    ->orWhereDate('recurring_start_date', '<=', $selectedDayDate);
+                            })
+                            ->where(function ($sub) use ($selectedDayDate) {
+                                $sub->whereNull('recurring_end_date')
+                                    ->orWhereDate('recurring_end_date', '>=', $selectedDayDate);
+                            });
                     });
             });
 
@@ -1408,7 +1629,11 @@ class OPDCalendar extends Page implements HasForms
             $query->where('opd_type', $selectedOpdType);
         }
 
-        $slots = $query->get();
+        $slots = $this->expandCalendarSlotsUntilEndTime(
+            $query->get(),
+            $selectedDayDate->copy()->startOfDay(),
+            $selectedDayDate->copy()->endOfDay()
+        );
 
         $daySchedule = [];
         foreach ($slots as $slot) {
@@ -1430,6 +1655,8 @@ class OPDCalendar extends Page implements HasForms
                 'avatar' => $avatar,
                 'consultation_type' => $slot->consultation_type,
                 'opd_type' => $slot->consultation_type === 'video' ? null : ($slot->opd_type ?? 'general'),
+                'source' => $slot->source ?? 'availability',
+                'availability_override_id' => $slot->override_id ?? null,
             ];
         }
 
@@ -1443,7 +1670,34 @@ class OPDCalendar extends Page implements HasForms
 
     public function getDoctorsProperty()
     {
-        return Doctor::all();
+        return Doctor::active()->get();
+    }
+
+    private function expandCalendarSlotsUntilEndTime(iterable $availabilities, Carbon $startDate, Carbon $endDate)
+    {
+        $now = Carbon::now();
+
+        return app(DoctorAvailabilityService::class)
+            ->expandSlots($availabilities, $startDate, $endDate, includePast: true)
+            ->filter(function ($slot) use ($now) {
+                $date = Carbon::parse($slot->date)->toDateString();
+                $time = $slot->end_time ?: $slot->start_time;
+                $timeString = $time instanceof Carbon ? $time->format('H:i:s') : $time;
+                $slotEnd = Carbon::parse($date . ' ' . $timeString);
+
+                if ($slot->start_time) {
+                    $startTime = $slot->start_time instanceof Carbon
+                        ? $slot->start_time->format('H:i:s')
+                        : $slot->start_time;
+                    $slotStart = Carbon::parse($date . ' ' . $startTime);
+
+                    if ($slotEnd->lessThan($slotStart)) {
+                        $slotEnd->addDay();
+                    }
+                }
+
+                return $slotEnd->greaterThanOrEqualTo($now);
+            });
     }
 
     protected function getViewData(): array

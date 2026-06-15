@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api\V2\Common\Appointment;
 
 use App\Http\Controllers\Controller;
 use App\Enums\{AppointmentStatus, PaymentStatus};
+use App\Jobs\{CreateVideoRoomJob, GenerateReceiptJob, ProcessRazorpayWebhook, SendBookingEmailJob};
 use App\Models\{Appointment, Doctor, DoctorAvailability, Patient, Payment};
 use App\Notifications\MobileNotification;
-use App\Services\{ApiResponseService, PaymentService, SettingService, WherebyService};
+use App\Services\{ApiResponseService, DoctorAvailabilityService, PaymentService, SettingService, SlotCapacityService, WherebyService};
 use App\Http\Resources\Common\{AppointmentDetailResource, AppointmentResource};
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
@@ -25,14 +25,11 @@ class BookAppointmentController extends Controller
 {
     protected PaymentService $paymentService;
 
-    protected WherebyService $wherebyService;
-
     protected $paymentOrderResult = null;
 
-    public function __construct(PaymentService $paymentService, WherebyService $wherebyService)
+    public function __construct(PaymentService $paymentService)
     {
         $this->paymentService = $paymentService;
-        $this->wherebyService = $wherebyService;
     }
 
     /**
@@ -52,6 +49,7 @@ class BookAppointmentController extends Controller
                 'appointment_date' => ['required', 'date'],
                 'appointment_time' => ['required', 'string'],
                 'consultation_type' => ['required', 'string', 'in:in-person,video'],
+                'admin_skip_payment' => ['nullable', 'boolean'],
                 // Only validate opd_type if consultation_type is in-person
             ];
 
@@ -64,6 +62,8 @@ class BookAppointmentController extends Controller
             $data = $request->validate($validationRules);
             $user = $request->user();
             $useMockPayment = SettingService::isAppointmentMockPaymentEnabled();
+            $isAdminBooking = $request->has('admin_skip_payment') && $this->canAdminBookWithoutPayment($user);
+            $adminSkipPayment = $request->boolean('admin_skip_payment') && $isAdminBooking;
 
 
             /*
@@ -82,12 +82,11 @@ class BookAppointmentController extends Controller
                     ]);
                 }
 
-            /*
+                /*
             |--------------------------------------------------------------------------
             | MOBILE APP FLOW
             |--------------------------------------------------------------------------
             */
-
             } else {
 
                 if (!$user) {
@@ -101,7 +100,6 @@ class BookAppointmentController extends Controller
                     $patient = $request->patient_id
                         ? Patient::find($request->patient_id)
                         : null;
-
                 } else {
 
                     $patient = Patient::where('user_id', $user->id)->first();
@@ -116,7 +114,13 @@ class BookAppointmentController extends Controller
 
 
 
-            $doctor = Doctor::findOrFail($data['doctor_id']);
+            $doctor = Doctor::query()
+                ->active()
+                ->find($data['doctor_id']);
+
+            if (! $doctor) {
+                return ApiResponseService::validationError('This doctor is not available for booking.');
+            }
 
             // Validate availability
             $availability = DoctorAvailability::findOrFail($data['availability_id']);
@@ -129,6 +133,11 @@ class BookAppointmentController extends Controller
             // Check if availability is active
             if (! $availability->is_available) {
                 return ApiResponseService::validationError('This time slot is not available for booking.');
+            }
+
+            // Check if availability is blocked for the selected date
+            if ($availability->isBlockedOnDate($data['appointment_date'])) {
+                return ApiResponseService::validationError('This time slot is blocked for the selected date.');
             }
 
             // Validate consultation type matches
@@ -152,7 +161,10 @@ class BookAppointmentController extends Controller
             // Validate appointment date matches availability date
             $requestedDate = Carbon::parse($data['appointment_date'])->startOfDay();
 
-            if ($availability->is_recurring) {
+            $availabilityService = app(DoctorAvailabilityService::class);
+            $isRecurringTemplate = $availabilityService->isRecurringTemplate($availability);
+
+            if ($isRecurringTemplate) {
                 $recurringStart = $availability->recurring_start_date ? Carbon::parse($availability->recurring_start_date)->startOfDay() : null;
                 $recurringEnd = $availability->recurring_end_date ? Carbon::parse($availability->recurring_end_date)->startOfDay() : null;
 
@@ -165,8 +177,8 @@ class BookAppointmentController extends Controller
                     return ApiResponseService::validationError('Appointment date is after the recurring availability end date (' . $recurringEnd->format('Y-m-d') . ').');
                 }
 
-                $targetDayOfWeek = $availability->day_of_week ?: $recurringStart?->format('l');
-                if ($targetDayOfWeek && $requestedDate->format('l') !== ucfirst($targetDayOfWeek)) {
+                $targetDayOfWeek = $availabilityService->recurringDayOfWeek($availability, $recurringStart ?: $requestedDate);
+                if ($targetDayOfWeek && strtolower($requestedDate->format('l')) !== strtolower($targetDayOfWeek)) {
                     return ApiResponseService::validationError("This slot is only available on {$targetDayOfWeek}s. The selected date is a " . $requestedDate->format('l') . ".");
                 }
             } else {
@@ -178,9 +190,22 @@ class BookAppointmentController extends Controller
             }
 
             // Validate appointment time is within availability slot
+            $effectiveSlot = $availabilityService->effectiveValuesForDate($availability, $requestedDate);
+
+            if (in_array($effectiveSlot['status'], ['blocked', 'cancelled'], true)) {
+                return ApiResponseService::validationError('This time slot is blocked for the selected date.');
+            }
+
+            if ($childSlotValidationResponse = $this->validateChildOnlySlot($availability, $patient)) {
+                return $childSlotValidationResponse;
+            }
+
             $appointmentTime = Carbon::parse($data['appointment_time'])->format('H:i:s');
-            $startTime = $availability->start_time ? Carbon::parse($availability->start_time)->format('H:i:s') : null;
-            $endTime = $availability->end_time ? Carbon::parse($availability->end_time)->format('H:i:s') : null;
+            $startTime = $effectiveSlot['start_time'] ? Carbon::parse($effectiveSlot['start_time'])->format('H:i:s') : null;
+            $endTime = $effectiveSlot['end_time'] ? Carbon::parse($effectiveSlot['end_time'])->format('H:i:s') : null;
+            $effectiveCapacity = (int) ($effectiveSlot['capacity'] ?? 1);
+            $effectiveFee = (float) ($effectiveSlot['consultation_fee'] ?? 0);
+            $override = $effectiveSlot['override'];
 
             if ($startTime && $endTime && ($appointmentTime < $startTime || $appointmentTime > $endTime)) {
                 return ApiResponseService::validationError('Appointment time must be within the selected availability slot.');
@@ -195,21 +220,18 @@ class BookAppointmentController extends Controller
                 // Block for up to 10 seconds to allow other concurrent requests to finish
                 $lock->block(10);
 
-                return DB::transaction(function () use ($requestedDate, $startTime, $endTime, $availability, $data, $patient, $doctor, $useMockPayment) {
+                return DB::transaction(function () use ($requestedDate, $startTime, $endTime, $availability, $data, $patient, $doctor, $useMockPayment, $isAdminBooking, $adminSkipPayment, $effectiveCapacity, $effectiveFee, $override) {
 
                     // 1. Capacity check INSIDE the transaction to prevent overbooking
-                    $existingCount = Appointment::where('doctor_id', $doctor->id)
-                        ->where('availability_id', $availability->id)
-                        ->whereDate('appointment_date', $requestedDate)
-                        // Note: for fixed slots we check time, but usually availability_id is unique per slot
-                        ->where('consultation_type', $data['consultation_type'])
-                        ->whereNotIn('status', [
-                            AppointmentStatus::CANCELLED->value,
-                            AppointmentStatus::FAILED->value,
-                        ])
-                        ->count();
+                    $existingCount = app(SlotCapacityService::class)->bookedCount(
+                        doctorId: $doctor->id,
+                        date: $requestedDate,
+                        startTime: $startTime,
+                        availabilityId: $availability->id,
+                        consultationType: $data['consultation_type'],
+                    );
 
-                    if ($existingCount >= ($availability->capacity ?? 1)) {
+                    if ($existingCount >= $effectiveCapacity) {
                         return ApiResponseService::error(
                             'This time slot is fully booked. Please select another slot.',
                             ['message' => 'Slot capacity reached.'],
@@ -245,7 +267,20 @@ class BookAppointmentController extends Controller
 
                         // Reset created_at to now so it looks like a fresh booking attempt (requested by user)
                         $appointment->created_at = now();
+                        $this->applyAdminPaymentMetadata($appointment, $isAdminBooking, $adminSkipPayment);
                         $appointment->save();
+
+                        if ($adminSkipPayment) {
+                            $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
+                            NotificationService::notifyAppointmentConfirmed($appointment);
+                            $appointment->load(['doctor.user', 'patient.user', 'availability', 'doctor.departments']);
+
+                            if ($appointment->consultation_type === 'video') {
+                                CreateVideoRoomJob::dispatch($appointment->id);
+                            }
+
+                            return $this->handleSuccess($appointment, null);
+                        }
 
                         if ($useMockPayment) {
                             $payment = $this->markAppointmentAsMockPaid($appointment);
@@ -265,26 +300,37 @@ class BookAppointmentController extends Controller
                     }
 
                     // 3. Create appointment
-                    $consultationFee = (float) ($availability->consultation_fee ?? 0);
+                    $consultationFee = $effectiveFee;
                     $appointment = Appointment::create([
                         'patient_id' => $patient->id,
                         'doctor_id' => $doctor->id,
                         'availability_id' => $availability->id,
+                        'availability_override_id' => $override?->id,
                         'appointment_date' => $requestedDate->toDateString(),
-                        'appointment_time' => $availability->start_time,
-                        'appointment_end_time' => $availability->end_time,
+                        'appointment_time' => $startTime,
+                        'appointment_end_time' => $endTime,
                         'status' => AppointmentStatus::PENDING->value,
                         'consultation_type' => $data['consultation_type'],
                         'notes' => $data['notes'] ?? null,
                         'fee_amount' => $consultationFee,
+                        'booking_source' => $isAdminBooking ? 'admin' : 'patient',
+                        'admin_payment_type' => $isAdminBooking
+                            ? ($adminSkipPayment ? 'without_payment' : 'with_payment')
+                            : null,
+                        'payment_waived_by' => $adminSkipPayment ? optional(request()->user())->id : null,
+                        'payment_waived_at' => $adminSkipPayment ? now() : null,
                         'slug' => Str::slug($doctor->first_name . '-' . $patient->id . '-' . time()),
                     ]);
 
                     $payment = null;
 
-                    if ($consultationFee <= 0) {
+                    if ($consultationFee <= 0 || $adminSkipPayment) {
                         $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
                         NotificationService::notifyAppointmentConfirmed($appointment);
+
+                        if ($appointment->consultation_type === 'video') {
+                            CreateVideoRoomJob::dispatch($appointment->id);
+                        }
                     } elseif ($useMockPayment) {
                         $payment = $this->markAppointmentAsMockPaid($appointment);
                     } else {
@@ -349,14 +395,11 @@ class BookAppointmentController extends Controller
             $appointment->refresh();
 
 
-            if ($appointment->status === AppointmentStatus::RESCHEDULED->value) {
-                return ApiResponseService::validationError('Cannot reschedule a rescheduled appointment.');
-            }
-            if ($appointment->status === AppointmentStatus::COMPLETED->value) {
+            if (AppointmentStatus::equals($appointment->status, AppointmentStatus::COMPLETED)) {
                 return ApiResponseService::validationError('Cannot reschedule a completed appointment.');
             }
 
-            if ($appointment->status === AppointmentStatus::CANCELLED->value) {
+            if (AppointmentStatus::equals($appointment->status, AppointmentStatus::CANCELLED)) {
                 return ApiResponseService::validationError('Cannot reschedule a cancelled appointment.');
             }
 
@@ -394,11 +437,26 @@ class BookAppointmentController extends Controller
                 return ApiResponseService::validationError('This time slot is not available for booking.');
             }
 
+            // Check if availability is blocked for the selected date
+            if ($availability->isBlockedOnDate($data['appointment_date'])) {
+                return ApiResponseService::validationError('This time slot is blocked for the selected date.');
+            }
+
             $newAppointmentDate = Carbon::parse($data['appointment_date'])->format('Y-m-d');
 
             $newAppointmentTime = strlen($data['appointment_time']) === 5
                 ? $data['appointment_time'] . ':00'
                 : $data['appointment_time'];
+            $availabilityService = app(DoctorAvailabilityService::class);
+            $effectiveSlot = $availabilityService->effectiveValuesForDate($availability, $newAppointmentDate);
+
+            if (in_array($effectiveSlot['status'], ['blocked', 'cancelled'], true)) {
+                return ApiResponseService::validationError('This time slot is blocked for the selected date.');
+            }
+
+            if ($childSlotValidationResponse = $this->validateChildOnlySlot($availability, $appointment->patient)) {
+                return $childSlotValidationResponse;
+            }
 
             // Check if rescheduling to the same slot
             if (
@@ -409,25 +467,44 @@ class BookAppointmentController extends Controller
                 return ApiResponseService::validationError('You cannot reschedule to the same time slot.');
             }
 
-            $newAppointmentEndTime = $availability->end_time
-                ? Carbon::parse($availability->end_time)->format('H:i:s')
+            $newAppointmentEndTime = $effectiveSlot['end_time']
+                ? Carbon::parse($effectiveSlot['end_time'])->format('H:i:s')
                 : null;
 
 
-            $availabilityDate = $availability->date
-                ? Carbon::parse($availability->date)->format('Y-m-d')
-                : null;
+            if ($availabilityService->isRecurringTemplate($availability)) {
+                $recurringStart = $availability->recurring_start_date ? Carbon::parse($availability->recurring_start_date)->startOfDay() : null;
+                $recurringEnd = $availability->recurring_end_date ? Carbon::parse($availability->recurring_end_date)->startOfDay() : null;
+                $selectedDate = Carbon::parse($newAppointmentDate)->startOfDay();
 
-            if ($availabilityDate && $newAppointmentDate !== $availabilityDate) {
-                return ApiResponseService::validationError('Appointment date does not match the selected availability date.');
+                if ($recurringStart && $selectedDate->lt($recurringStart)) {
+                    return ApiResponseService::validationError('Appointment date cannot be before the recurring availability start date (' . $recurringStart->format('Y-m-d') . ').');
+                }
+
+                if ($recurringEnd && $selectedDate->gt($recurringEnd)) {
+                    return ApiResponseService::validationError('Appointment date is after the recurring availability end date (' . $recurringEnd->format('Y-m-d') . ').');
+                }
+
+                $targetDayOfWeek = $availabilityService->recurringDayOfWeek($availability, $recurringStart ?: $selectedDate);
+                if ($targetDayOfWeek && strtolower($selectedDate->format('l')) !== strtolower($targetDayOfWeek)) {
+                    return ApiResponseService::validationError("This slot is only available on {$targetDayOfWeek}s. The selected date is a " . $selectedDate->format('l') . '.');
+                }
+            } else {
+                $availabilityDate = $availability->date
+                    ? Carbon::parse($availability->date)->format('Y-m-d')
+                    : null;
+
+                if ($availabilityDate && $newAppointmentDate !== $availabilityDate) {
+                    return ApiResponseService::validationError('Appointment date does not match the selected availability date.');
+                }
             }
 
-            $startTime = $availability->start_time
-                ? Carbon::parse($availability->start_time)->format('H:i:s')
+            $startTime = $effectiveSlot['start_time']
+                ? Carbon::parse($effectiveSlot['start_time'])->format('H:i:s')
                 : null;
 
-            $endTime = $availability->end_time
-                ? Carbon::parse($availability->end_time)->format('H:i:s')
+            $endTime = $effectiveSlot['end_time']
+                ? Carbon::parse($effectiveSlot['end_time'])->format('H:i:s')
                 : null;
 
             if ($startTime && $endTime && ($newAppointmentTime < $startTime || $newAppointmentTime > $endTime)) {
@@ -436,15 +513,16 @@ class BookAppointmentController extends Controller
 
             $newConsultationType = $availability->consultation_type ?? $appointment->consultation_type;
 
-            $existingCount = Appointment::where('doctor_id', $doctor->id)
-                ->where('availability_id', $availability->id)
-                ->whereDate('appointment_date', $newAppointmentDate)
-                ->where('consultation_type', $newConsultationType)
-                ->where('id', '!=', $appointment->id)
-                ->whereNotIn('status', [AppointmentStatus::CANCELLED->value])
-                ->count();
+            $existingCount = app(SlotCapacityService::class)->bookedCount(
+                doctorId: $doctor->id,
+                date: $newAppointmentDate,
+                startTime: $startTime,
+                availabilityId: $availability->id,
+                consultationType: $newConsultationType,
+                excludeAppointmentId: $appointment->id,
+            );
 
-            if ($existingCount >= ($availability->capacity ?? 1)) {
+            if ($existingCount >= (int) ($effectiveSlot['capacity'] ?? 1)) {
                 return ApiResponseService::error(
                     'This time slot is fully booked. Please select another slot.',
                     ['message' => 'Slot is fully booked.'],
@@ -452,13 +530,14 @@ class BookAppointmentController extends Controller
                 );
             }
 
-            $newConsultationFee = (float) ($availability->consultation_fee ?? 0);
+            $newConsultationFee = (float) ($effectiveSlot['consultation_fee'] ?? 0);
 
             /**
              * ✅ UPDATE + STATUS = RESCHEDULED
              */
             $appointment->update([
                 'availability_id' => $availability->id,
+                'availability_override_id' => $effectiveSlot['override']?->id,
                 'appointment_date' => $newAppointmentDate,
                 'appointment_time' => $newAppointmentTime,
                 'appointment_end_time' => $newAppointmentEndTime,
@@ -470,10 +549,12 @@ class BookAppointmentController extends Controller
             NotificationService::notifyAppointmentRescheduled($appointment);
 
 
-            if ($appointment->consultation_type === 'video' && $appointment->videoConsultation) {
-                Log::info('Appointment rescheduled - video consultation room remains active', [
-                    'appointment_id' => $appointment->id,
-                ]);
+            if ($appointment->consultation_type === 'video') {
+                if ($appointment->videoConsultation) {
+                    $wherebyService->regenerateUrls($appointment->videoConsultation);
+                } else {
+                    CreateVideoRoomJob::dispatch($appointment->id);
+                }
             }
             return ApiResponseService::success(
                 'responses.appointment.rescheduled',
@@ -600,6 +681,14 @@ class BookAppointmentController extends Controller
                 'razorpay_key_id' => $this->paymentOrderResult['key_id'] ?? null,
                 'payment_required' => ($this->paymentOrderResult['amount_rupees'] ?? 0) > 0,
             ];
+        } elseif (($appointment->booking_source ?? null) === 'admin' && ($appointment->admin_payment_type ?? null) === 'without_payment') {
+            $paymentData = [
+                'status' => 'admin_without_payment',
+                'amount' => 0,
+                'amount_paise' => 0,
+                'payment_required' => false,
+                'admin_payment_type' => 'without_payment',
+            ];
         }
 
         return ApiResponseService::created(
@@ -617,6 +706,59 @@ class BookAppointmentController extends Controller
         );
     }
 
+    protected function canAdminBookWithoutPayment($user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        foreach (['super_admin', 'admin', 'doctor_manager', 'receptionist'] as $role) {
+            if (method_exists($user, 'hasRole') && $user->hasRole($role)) {
+                return true;
+            }
+        }
+
+        return method_exists($user, 'can')
+            && (
+                $user->can('book-appointment.manage_own')
+                || $user->can('book-appointment.view')
+                || $user->can('appointments.create')
+            );
+    }
+
+    protected function applyAdminPaymentMetadata(Appointment $appointment, bool $isAdminBooking, bool $adminSkipPayment): void
+    {
+        if (! $isAdminBooking) {
+            return;
+        }
+
+        $appointment->booking_source = 'admin';
+        $appointment->admin_payment_type = $adminSkipPayment ? 'without_payment' : 'with_payment';
+
+        if ($adminSkipPayment) {
+            $appointment->payment_waived_by = optional(request()->user())->id;
+            $appointment->payment_waived_at = now();
+        }
+    }
+
+    protected function validateChildOnlySlot(DoctorAvailability $availability, ?Patient $patient)
+    {
+        if (! (bool) ($availability->is_child_only ?? false)) {
+            return null;
+        }
+
+        $childAgeLimit = SettingService::getChildAgeLimit();
+        $patientAge = $patient?->age;
+
+        if ($patientAge === null || $patientAge === '' || ! is_numeric($patientAge) || (int) $patientAge > $childAgeLimit) {
+            return ApiResponseService::validationError(
+                "This slot is for children only. Patient age must be {$childAgeLimit} years or below."
+            );
+        }
+
+        return null;
+    }
+
     /**
      * Verify payment after Razorpay checkout
      *
@@ -624,6 +766,9 @@ class BookAppointmentController extends Controller
      */
     public function verifyPayment(Request $request)
     {
+        Log::info('Razorpay verifyPayment hit', [
+            'request' => $request->all(),
+        ]);
         $validationRules = [
             'razorpay_payment_id' => ['required', 'string'],
             'razorpay_order_id' => ['required', 'string'],
@@ -653,7 +798,7 @@ class BookAppointmentController extends Controller
                 $existingPayment = $appointment->payment;
 
                 // Already confirmed → idempotent success (Very common if frontend hammers)
-                if ($appointment->status === AppointmentStatus::CONFIRMED->value) {
+                if (AppointmentStatus::equals($appointment->status, AppointmentStatus::CONFIRMED)) {
                     return $this->returnFullVerificationResponse($appointment, $existingPayment, 'Payment already verified');
                 }
 
@@ -679,24 +824,53 @@ class BookAppointmentController extends Controller
 
                 // ---------------- SUCCESS FLOW ----------------
 
-                if ($payment->status === PaymentStatus::PAID) {
+                $status = $payment->status instanceof PaymentStatus
+                    ? $payment->status->value
+                    : strtolower((string) $payment->status);
+                Log::info(
+                    'Razorpay payment marked ' . $status,
+                    [
+                        'appointment_id' => $appointment->id,
+                        'payment_id' => $payment->id ?? null,
+                        'status' => $status,
+                    ]
+                );
+                if ($status === PaymentStatus::PAID->value) {
+
                     Log::info('Razorpay payment marked PAID', [
                         'appointment_id' => $appointment->id,
                         'payment_id' => $payment->id ?? null,
+                        'status' => $status,
                     ]);
-                    $this->finalizeSuccessfulPayment($appointment, $payment);
+
+                    // Refresh the appointment model in memory to reflect database changes
+                    $appointment->refresh();
+
+                    $this->finalizeSuccessfulPayment($appointment, $payment, true);
+
+                    $appointment->load([
+                        'payment',
+                        'doctor.departments',
+                        'availability'
+                    ]);
                 }
 
-                if ($payment->status === PaymentStatus::FAILED) {
+                if ($status === PaymentStatus::FAILED->value) {
+
                     Log::warning('Razorpay payment marked FAILED', [
                         'appointment_id' => $appointment->id,
                         'payment_id' => $payment->id ?? null,
+                        'status' => $status,
                     ]);
+
                     $appointment->update([
                         'status' => AppointmentStatus::FAILED->value,
                     ]);
 
-                    NotificationService::notifyAppointmentFailed($appointment, 'Payment failed during checkout.');
+                    NotificationService::notifyAppointmentFailed(
+                        $appointment,
+                        'Payment failed during checkout.'
+                    );
                 }
 
                 return $this->returnFullVerificationResponse($appointment, $payment, 'Payment verified successfully.');
@@ -722,6 +896,14 @@ class BookAppointmentController extends Controller
      */
     protected function returnFullVerificationResponse(Appointment $appointment, $payment, string $message)
     {
+        Log::info('Booking verified', [
+            'appointment_id' => $appointment->id,
+            'payment_id' => $payment->id ?? null,
+            'status' => $payment->status instanceof PaymentStatus
+                ? $payment->status->value
+                : strtolower((string) $payment->status),
+            'message' => $message,
+        ]);
         $consultationType = $appointment->consultation_type;
         $consultationTypeLabel = $consultationType === 'video'
             ? 'Online Consultation'
@@ -785,64 +967,19 @@ class BookAppointmentController extends Controller
         return $payment->fresh();
     }
 
-    protected function finalizeSuccessfulPayment(Appointment $appointment, Payment $payment): void
+    protected function finalizeSuccessfulPayment(Appointment $appointment, Payment $payment, bool $forceNotification = false): void
     {
-        if (! AppointmentStatus::equals($appointment->status, AppointmentStatus::CONFIRMED)) {
-            $appointment->update([
-                'status' => AppointmentStatus::CONFIRMED->value,
-            ]);
+        $appointment->update([
+            'status' => AppointmentStatus::CONFIRMED->value,
+        ]);
 
+        if ($forceNotification || ! AppointmentStatus::equals($appointment->status, AppointmentStatus::CONFIRMED)) {
             NotificationService::notifyAppointmentConfirmed($appointment);
         }
 
-        if (! $payment->receipt_pdf) {
-            $pdfHtml = view('ReceiptTemplate.receipt', [
-                'payment' => $payment,
-                'appointment' => $appointment,
-            ])->render();
-
-            $patientName = trim(
-                ($appointment->patient->first_name ?? '') . '_' .
-                ($appointment->patient->last_name ?? '')
-            );
-
-            $patientName = preg_replace(
-                '/[^A-Za-z0-9_]/',
-                '',
-                str_replace(' ', '_', $patientName)
-            );
-
-            $dateTime = $appointment->appointment_date->format('Y-m-d') . '_' . $appointment->appointment_time;
-
-            $filename = "CMCTele_{$patientName}_{$dateTime}.pdf";
-            $path = 'receipts/' . $filename;
-            $fullPath = storage_path('app/public/' . $path);
-
-            if (! file_exists(dirname($fullPath))) {
-                mkdir(dirname($fullPath), 0775, true);
-            }
-
-            Pdf::loadHTML($pdfHtml)->save($fullPath);
-
-            $payment->receipt_pdf = $path;
-            $payment->save();
-        }
-
-        if (
-            $appointment->consultation_type === 'video' &&
-            ! $appointment->whereby_room_url
-        ) {
-            $room = $this->wherebyService->createVideoConsultation($appointment);
-
-            if ($room) {
-                $appointment->update([
-                    'whereby_room_url' => $room['roomUrl'] ?? null,
-                    'whereby_room_id' => $room['roomId'] ?? null,
-                ]);
-            } else {
-                Log::warning('Video room creation failed for appointment: ' . $appointment->id);
-            }
-        }
+        GenerateReceiptJob::dispatch($payment->id);
+        CreateVideoRoomJob::dispatch($appointment->id);
+        SendBookingEmailJob::dispatch($appointment->id, $payment->id)->delay(now()->addSeconds(10));
     }
 
     /**
@@ -850,24 +987,43 @@ class BookAppointmentController extends Controller
      */
     public function razorpayWebhook(Request $request)
     {
-        $payload = $request->getContent();
-        $signature = $request->header('X-Razorpay-Signature');
-        $secret = config('services.razorpay.webhook_secret');
+        try {
+            $payload = $request->getContent();
+            $signature = $request->header('X-Razorpay-Signature');
+            $secret = config('services.razorpay.webhook_secret');
 
-        // Verify signature
-        $generatedSignature = hash_hmac('sha256', $payload, $secret);
+            if (! $secret || ! $signature) {
+                Log::error('Razorpay webhook missing secret or signature');
 
-        if (! hash_equals($generatedSignature, $signature)) {
-            // Invalid signature
-            return ApiresponseService::error('Invalid signature', ['message' => 'Invalid signature'], 400);
+                return response()->json(['status' => 'invalid'], 200);
+            }
+
+            $generatedSignature = hash_hmac('sha256', $payload, $secret);
+
+            if (! hash_equals($generatedSignature, $signature)) {
+                Log::error('Invalid Razorpay webhook signature');
+
+                return response()->json(['status' => 'invalid'], 200);
+            }
+
+            $data = json_decode($payload, true);
+
+            if (! is_array($data)) {
+                Log::error('Invalid Razorpay webhook payload');
+
+                return response()->json(['status' => 'invalid'], 200);
+            }
+
+            ProcessRazorpayWebhook::dispatch($data);
+
+            return response()->json(['status' => 'ok'], 200);
+        } catch (\Throwable $e) {
+            Log::error('Razorpay webhook handler error', [
+                'message' => $e->getMessage(),
+                'exception' => $e,
+            ]);
+
+            return response()->json(['status' => 'error'], 200);
         }
-
-        $data = json_decode($payload, true);
-
-        // Process webhook normally
-        $paymentService = app(PaymentService::class);
-        $paymentService->processWebhook($data);
-
-        return ApiresponseService::success('Success', [], null, 'WEBHOOK_SUCCESS');
     }
 }

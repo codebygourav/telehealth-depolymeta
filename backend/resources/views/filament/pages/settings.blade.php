@@ -177,10 +177,11 @@
                             @endif
                         </div>
                         <div class="label-wrapper">
-                            <span class="label">{{ $group['label'] }}</span>
+                            <span class="label">{{ $group['label'] ?? ucfirst($key) }}</span>
                             <span
-                                class="desc">{{ $group['description'] ?? 'Manage ' . strtolower($group['label']) }}</span>
+                                class="desc">{{ $group['description'] ?? 'Manage ' . strtolower($group['label'] ?? $key) }}</span>
                         </div>
+
                     </div>
                 @endforeach
             </nav>

@@ -28,6 +28,7 @@ trait HasCustomSidebar
         $options = static::getSidebarSettings();
 
         return [
+            'class'         => static::class,
             'type'          => 'item',
             'label'         => $options['label'] ?? static::getSidebarLabel(),
             'icon'          => $options['icon'] ?? static::getSidebarIcon(),

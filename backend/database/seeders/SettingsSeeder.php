@@ -15,10 +15,13 @@ class SettingsSeeder extends Seeder
             ['group' => 'app', 'key' => 'tagline', 'value' => 'Your Trusted Healthcare Partner', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'version', 'value' => '1.0.0', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'primary_color', 'value' => '#073827', 'type' => 'string', 'is_public' => true],
+            ['group' => 'app', 'key' => 'booking_cutoff_rules', 'value' => '[{"value":4,"unit":"hours"},{"value":1,"unit":"hours"}]', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'secondary_color', 'value' => '#22c55e', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'email', 'value' => 'info@cmctelehealth.com', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'phone', 'value' => '+91 1234567890', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'global_stamp', 'value' => 'settings/global_stamp.png', 'type' => 'string', 'is_public' => true],
+
+            ['group' => 'booking', 'key' => 'child_age', 'value' => '12', 'type' => 'integer', 'is_public' => true],
 
             // Mail - Load from .env by default
             ['group' => 'mail', 'key' => 'host', 'value' => env('MAIL_HOST', ''), 'type' => 'string', 'is_public' => false],

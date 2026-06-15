@@ -27,7 +27,7 @@
                     @if ($type === 'availability')
                         Generate a new password and send credentials to <strong>{{ $email }}</strong>?
                     @elseif ($type === 'create')
-                        Doctor created successfully with active availability.
+                        Doctor created successfully.
                         <br><br>
                         Send login credentials to <strong>{{ $email }}</strong>?
                     @else

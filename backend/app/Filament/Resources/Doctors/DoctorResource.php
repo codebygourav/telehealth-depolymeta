@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Doctors;
 use App\Filament\Resources\Doctors\Pages\CreateDoctor;
 use App\Filament\Resources\Doctors\Pages\EditDoctor;
 use App\Filament\Resources\Doctors\Pages\ListDoctors;
+use App\Filament\Resources\Doctors\Pages\ManageDoctorAvailability;
 use App\Filament\Resources\Doctors\Pages\ViewDoctor;
 use App\Filament\Resources\Doctors\Schemas\DoctorForm;
 use App\Filament\Resources\Doctors\Tables\DoctorsTable;
@@ -89,6 +90,7 @@ class DoctorResource extends Resource
             'index' => ListDoctors::route('/'),
             'create' => CreateDoctor::route('/create'),
             'edit' => EditDoctor::route('/{record}/edit'),
+            'availability' => ManageDoctorAvailability::route('/{record}/availability'),
             'view' => ViewDoctor::route('/{record:slug}/view'),
         ];
     }

@@ -58,8 +58,11 @@ class DoctorResource extends JsonResource
             })->toArray(),
             // Availability
             'availabilities' => $this->whenLoaded('availabilities', function () {
+                $slots = app(\App\Services\DoctorAvailabilityService::class)
+                    ->expandSlotsForApi($this->availabilities->filter(fn ($slot) => $slot->start_time));
+
                 return DoctorAvailabilityResource::collection(
-                    $this->availabilities->filter(fn ($slot) => $slot->start_time)
+                    $slots
                 );
             }),
         ];

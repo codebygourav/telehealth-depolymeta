@@ -2,7 +2,6 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('appointments:update-status')
@@ -13,8 +12,17 @@ Schedule::command('appointments:send-reminders')
     ->everyMinute()
     ->withoutOverlapping();
 
+Schedule::command('queue:work --stop-when-empty')
+    ->everyMinute()
+    ->withoutOverlapping();
+
 Schedule::command('notifications:archive')
     ->weekly()
+    ->withoutOverlapping();
+
+Schedule::command('external-bookings:sync-google-sheet')
+    ->cron(config('services.google_sheets.sync_schedule', '*/15 * * * *'))
+    ->when(fn () => (bool) config('services.google_sheets.sync_schedule_enabled'))
     ->withoutOverlapping();
 
 Artisan::command('inspire', function () {

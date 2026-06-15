@@ -1,217 +1,302 @@
-<div class="space-y-6">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {{-- Payment Core Card --}}
-        <div
-            class="md:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 overflow-hidden">
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-                <div class="flex items-center gap-3">
-                    <div class="flex-shrink-0 p-3 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
-                        <x-heroicon-s-credit-card class="w-8 h-8 text-primary-600 dark:text-primary-400" />
+@php
+    use App\Enums\AppointmentStatus;
+    use App\Enums\PaymentStatus;
+
+    $payment = $entry->getRecord();
+    $appointment = $payment->appointment;
+    $patient = $appointment?->patient;
+    $doctor = $appointment?->doctor;
+
+    $value = fn($item) => filled($item) ? $item : 'N/A';
+    $formatLabel = fn($item) => filled($item)
+        ? str($item)
+            ->replace(['_', '-'], ' ')
+            ->title()
+        : 'N/A';
+
+    $paymentStatus =
+        $payment->status instanceof PaymentStatus
+            ? $payment->status
+            : PaymentStatus::tryFrom((string) $payment->status);
+    $paymentStatusValue = $paymentStatus?->value ?? (string) $payment->status;
+    $paymentStatusLabel = $paymentStatus?->label() ?? $formatLabel($paymentStatusValue);
+    $paymentStatusClasses = [
+        'pending' => 'bg-amber-50 text-amber-800 ring-amber-200',
+        'paid' => 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+        'failed' => 'bg-rose-50 text-rose-800 ring-rose-200',
+        'refunded' => 'bg-gray-100 text-gray-800 ring-gray-200',
+    ];
+
+    $appointmentStatus =
+        $appointment?->status instanceof AppointmentStatus
+            ? $appointment->status
+            : AppointmentStatus::tryFrom((string) $appointment?->status);
+    $appointmentStatusValue = $appointmentStatus?->value ?? (string) $appointment?->status;
+    $appointmentStatusLabel = $appointmentStatus?->label() ?? $formatLabel($appointmentStatusValue);
+    $appointmentStatusClasses = [
+        'pending' => 'bg-amber-50 text-amber-800 ring-amber-200',
+        'confirmed' => 'bg-sky-50 text-sky-800 ring-sky-200',
+        'completed' => 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+        'rescheduled' => 'bg-indigo-50 text-indigo-800 ring-indigo-200',
+        'cancelled' => 'bg-rose-50 text-rose-800 ring-rose-200',
+        'failed' => 'bg-rose-50 text-rose-800 ring-rose-200',
+        'no_show' => 'bg-gray-100 text-gray-800 ring-gray-200',
+    ];
+
+    $patientName = trim(($patient?->first_name ?? '') . ' ' . ($patient?->last_name ?? '')) ?: 'N/A';
+    $doctorName =
+        trim(($doctor?->first_name ?? '') . ' ' . ($doctor?->last_name ?? '')) ?: $doctor?->user?->name ?? 'N/A';
+    $patientEmail = $payment->email ?: ($patient?->email ?: $patient?->user?->email);
+    $patientPhone = $payment->contact ?: ($patient?->mobile_no ?: $patient?->user?->phone);
+
+    $appointmentDate = $appointment?->appointment_date ? \Carbon\Carbon::parse($appointment->appointment_date) : null;
+    $appointmentTime = $appointment?->appointment_time
+        ? \Carbon\Carbon::parse($appointment->appointment_time)->format('g:i A')
+        : null;
+    $appointmentEndTime = $appointment?->appointment_end_time
+        ? \Carbon\Carbon::parse($appointment->appointment_end_time)->format('g:i A')
+        : null;
+    $timeRange = collect([$appointmentTime, $appointmentEndTime])->filter()->implode(' - ');
+
+    $paymentIdentifier = $payment->razorpay_payment_id ?: $payment->transaction_id ?: $payment->id;
+    $receiptDoc = $payment->moduleDocuments()->where('name', 'receipt_pdf')->first();
+    $receiptFile = is_array($receiptDoc?->files ?? null) ? ($receiptDoc->files[0] ?? null) : null;
+    $receiptUrl = $receiptFile ? storage_url($receiptFile) : null;
+
+    $paymentDetails = [
+        ['label' => 'Amount', 'value' => '₹' . number_format((float) $payment->amount, 2)],
+        ['label' => 'Payment Status', 'value' => $paymentStatusLabel],
+        ['label' => 'Payment Method', 'value' => $formatLabel($payment->payment_method)],
+        ['label' => 'Captured', 'value' => $payment->captured === null ? null : ($payment->captured ? 'Yes' : 'No')],
+        ['label' => 'Payment Created On', 'value' => $payment->created_at?->format('d M Y, g:i A')],
+        ['label' => 'Gateway Created On', 'value' => $payment->razorpay_created_at?->format('d M Y, g:i A')],
+    ];
+
+    $patientDetails = [
+        ['label' => 'Patient ID', 'value' => $patient?->existing_patient_id ?: 'New patient'],
+        ['label' => 'Phone Number', 'value' => $patientPhone],
+        ['label' => 'Email', 'value' => $patientEmail],
+        [
+            'label' => 'Age / Gender',
+            'value' => trim(
+                ($patient?->age ? $patient->age . ' years' : 'N/A') .
+                    ' / ' .
+                    $formatLabel($patient?->gender instanceof \BackedEnum ? $patient->gender->value : $patient?->gender),
+            ),
+        ],
+    ];
+
+    $appointmentDetails = [
+        ['label' => 'Appointment ID', 'value' => $appointment?->id],
+        [
+            'label' => 'OPD Visit Date',
+            'value' => trim(($appointmentDate?->format('d M Y') ?? 'N/A') . ($timeRange ? ' · ' . $timeRange : '')),
+        ],
+        ['label' => 'Appointment Mode', 'value' => $formatLabel($appointment?->consultation_type)],
+        ['label' => 'Appointment Status', 'value' => $appointment ? $appointmentStatusLabel : null],
+        ['label' => 'Booking Created On', 'value' => $appointment?->created_at?->format('d M Y, g:i A')],
+        ['label' => 'Fee Amount', 'value' => $appointment?->fee_amount ? '₹' . number_format((float) $appointment->fee_amount, 2) : null],
+    ];
+
+    $doctorDetails = [
+        ['label' => 'Doctor', 'value' => $doctorName !== 'N/A' ? 'Dr. ' . $doctorName : null],
+        ['label' => 'Email', 'value' => $doctor?->user?->email],
+        ['label' => 'Phone Number', 'value' => $doctor?->user?->phone],
+        ['label' => 'Experience', 'value' => $doctor?->years_experience ? $doctor->years_experience . ' years' : null],
+    ];
+
+    $gatewayDetails = [
+        ['label' => 'Payment ID / Voucher ID', 'value' => $paymentIdentifier],
+        ['label' => 'Razorpay Order ID', 'value' => $payment->razorpay_order_id],
+        ['label' => 'Razorpay Payment ID', 'value' => $payment->razorpay_payment_id],
+        ['label' => 'Transaction ID', 'value' => $payment->transaction_id],
+        ['label' => 'Invoice ID', 'value' => $payment->invoice_id],
+        ['label' => 'Bank', 'value' => $payment->bank],
+        ['label' => 'UPI ID', 'value' => $payment->vpa],
+        ['label' => 'Wallet', 'value' => $payment->wallet],
+        ['label' => 'Refund Status', 'value' => $formatLabel($payment->refund_status)],
+        ['label' => 'Amount Refunded', 'value' => $payment->amount_refunded ? '₹' . number_format((float) $payment->amount_refunded, 2) : null],
+        ['label' => 'Fee', 'value' => $payment->fee ? '₹' . number_format((float) $payment->fee, 2) : null],
+        ['label' => 'Tax', 'value' => $payment->tax ? '₹' . number_format((float) $payment->tax, 2) : null],
+    ];
+
+    $failureDetails = collect([
+        ['label' => 'Error Code', 'value' => $payment->error_code],
+        ['label' => 'Description', 'value' => $payment->error_description],
+        ['label' => 'Source', 'value' => $payment->error_source],
+        ['label' => 'Step', 'value' => $payment->error_step],
+        ['label' => 'Reason', 'value' => $payment->error_reason],
+    ])->filter(fn($detail) => filled($detail['value']))->values();
+@endphp
+
+<x-dynamic-component :component="$getEntryWrapperView()" :entry="$entry">
+    <div class="space-y-6">
+        <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="p-4 sm:p-6">
+                <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold uppercase tracking-wide text-gray-500">Payment Overview</p>
+                        <h1 class="mt-1 break-words text-2xl font-bold text-gray-950">
+                            ₹{{ number_format((float) $payment->amount, 2) }}
+                        </h1>
+                        <p class="mt-1 break-all text-sm font-medium text-gray-600">
+                            {{ $value($paymentIdentifier) }}
+                        </p>
                     </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <span
+                            class="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold ring-1 {{ $paymentStatusClasses[$paymentStatusValue] ?? 'bg-gray-100 text-gray-800 ring-gray-200' }}">
+                            {{ $paymentStatusLabel }}
+                        </span>
+                        <span
+                            class="inline-flex items-center rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-800 ring-1 ring-gray-200">
+                            {{ $formatLabel($payment->payment_method) }}
+                        </span>
+                        @if ($appointment)
+                            <span
+                                class="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold ring-1 {{ $appointmentStatusClasses[$appointmentStatusValue] ?? 'bg-gray-100 text-gray-800 ring-gray-200' }}">
+                                {{ $appointmentStatusLabel }}
+                            </span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="grid gap-6 lg:grid-cols-2">
+            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-200 px-4 py-4 sm:px-6">
+                    <h2 class="text-base font-bold text-gray-950">Payment Details</h2>
+                    <p class="mt-1 text-sm text-gray-500">Transaction amount, status, method, and capture details.</p>
+                </div>
+                <div class="px-4 py-2 sm:px-6">
+                    <dl class="divide-y divide-gray-100">
+                        @foreach ($paymentDetails as $detail)
+                            <div class="grid gap-1 py-3 sm:grid-cols-[170px_1fr]">
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                    {{ $detail['label'] }}</dt>
+                                <dd class="break-words text-sm font-semibold text-gray-950 sm:text-right">
+                                    {{ $value($detail['value']) }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                </div>
+            </div>
+
+            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-200 px-4 py-4 sm:px-6">
+                    <h2 class="text-base font-bold text-gray-950">Patient Details</h2>
+                    <p class="mt-1 text-sm text-gray-500">{{ $patientName }}</p>
+                </div>
+                <div class="px-4 py-2 sm:px-6">
+                    <dl class="divide-y divide-gray-100">
+                        @foreach ($patientDetails as $detail)
+                            <div class="grid gap-1 py-3 sm:grid-cols-[170px_1fr]">
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                    {{ $detail['label'] }}</dt>
+                                <dd class="break-words text-sm font-semibold text-gray-950 sm:text-right">
+                                    {{ $value($detail['value']) }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid gap-6 lg:grid-cols-2">
+            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-4 sm:px-6">
                     <div>
-                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                            ₹{{ number_format($getState()->amount, 2) }}</h2>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-0.5">
-                            Total Transaction Amount</p>
+                        <h2 class="text-base font-bold text-gray-950">Appointment Details</h2>
+                        <p class="mt-1 text-sm text-gray-500">OPD visit and booking information linked to this payment.</p>
                     </div>
+                    @if ($appointment)
+                        <x-filament::button color="primary" outlined size="sm" icon="heroicon-o-arrow-top-right-on-square"
+                            tag="a"
+                            href="{{ \App\Filament\Resources\Appointments\AppointmentResource::getUrl('view', ['record' => $appointment->slug ?: $appointment->id]) }}">
+                            Open
+                        </x-filament::button>
+                    @endif
                 </div>
-                <div class="flex-shrink-0">
-                    <x-filament::badge :color="match ($getState()->status?->value ?? strtolower($getState()->status)) {
-                        'paid', 'captured', 'success' => 'success',
-                        'pending', 'created' => 'warning',
-                        'failed', 'cancelled' => 'danger',
-                        default => 'gray',
-                    }" size="lg">
-                        {{ $getState()->status instanceof \App\Enums\PaymentStatus ? $getState()->status->label() : ucfirst($getState()->status) }}
-                    </x-filament::badge>
+                <div class="px-4 py-2 sm:px-6">
+                    <dl class="divide-y divide-gray-100">
+                        @foreach ($appointmentDetails as $detail)
+                            <div class="grid gap-1 py-3 sm:grid-cols-[170px_1fr]">
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                    {{ $detail['label'] }}</dt>
+                                <dd class="break-words text-sm font-semibold text-gray-950 sm:text-right">
+                                    {{ $value($detail['value']) }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
                 </div>
             </div>
 
-            <div
-                class="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 py-5 border-t border-b border-gray-100 dark:border-gray-700">
+            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-200 px-4 py-4 sm:px-6">
+                    <h2 class="text-base font-bold text-gray-950">Doctor Details</h2>
+                    <p class="mt-1 text-sm text-gray-500">Consulting doctor for the linked appointment.</p>
+                </div>
+                <div class="px-4 py-2 sm:px-6">
+                    <dl class="divide-y divide-gray-100">
+                        @foreach ($doctorDetails as $detail)
+                            <div class="grid gap-1 py-3 sm:grid-cols-[170px_1fr]">
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                    {{ $detail['label'] }}</dt>
+                                <dd class="break-words text-sm font-semibold text-gray-950 sm:text-right">
+                                    {{ $value($detail['value']) }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Method</p>
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white uppercase">
-                        {{ $getState()->payment_method ?? '—' }}
-                    </p>
+                    <h2 class="text-base font-bold text-gray-950">Gateway Details</h2>
+                    <p class="mt-1 text-sm text-gray-500">Razorpay IDs, refund fields, and gateway charges.</p>
                 </div>
-                <div class="col-span-2 md:col-span-1">
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Transaction ID</p>
-                    <p class="font-mono text-sm font-semibold text-gray-900 dark:text-white break-all">
-                        {{ $getState()->transaction_id ?? '—' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Created</p>
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                        {{ $getState()->created_at ? \Carbon\Carbon::parse($getState()->created_at)->format('d M, Y H:i') : '—' }}
-                    </p>
-                </div>
-            </div>
-
-            <div class="mt-5 space-y-3">
-                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Gateway
-                    IDs</p>
-                <div
-                    class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Razorpay Order ID</span>
-                    <span
-                        class="font-mono text-xs font-medium text-gray-900 dark:text-white break-all">{{ $getState()->razorpay_order_id ?: '—' }}</span>
-                </div>
-                <div
-                    class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Razorpay Payment ID</span>
-                    <span
-                        class="font-mono text-xs font-medium text-gray-900 dark:text-white break-all">{{ $getState()->razorpay_payment_id ?: '—' }}</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- Contact Info Card --}}
-        @php
-            $payment = $getState();
-            $email =
-                $payment->email ?:
-                ($payment->appointment?->patient?->email ?:
-                $payment->appointment?->patient?->user?->email);
-            $phone =
-                $payment->contact ?:
-                ($payment->appointment?->patient?->mobile_no ?:
-                $payment->appointment?->patient?->user?->phone);
-        @endphp
-        <div
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-28 h-28 -mr-6 -mt-6 bg-primary-50 dark:bg-primary-900/10 rounded-full opacity-40 flex items-center justify-center pointer-events-none"
-                aria-hidden="true">
-                <x-heroicon-o-identification class="w-14 h-14 text-primary-200 dark:text-primary-700" />
-            </div>
-
-            <h3
-                class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 relative z-10">
-                Billing Contact</h3>
-
-            <div class="space-y-4 relative z-10">
-                <div
-                    class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
-                    <div
-                        class="flex-shrink-0 w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-                        <x-heroicon-m-envelope class="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Email</p>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $email ?: '—' }}</p>
-                    </div>
-                </div>
-
-                <div
-                    class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
-                    <div
-                        class="flex-shrink-0 w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-                        <x-heroicon-m-phone class="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Phone</p>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ $phone ?: '—' }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Relationships Section --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {{-- Related Appointment --}}
-        <div
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div
-                class="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
-                <span class="font-semibold text-sm text-gray-700 dark:text-gray-300">Linked Appointment</span>
-                <x-heroicon-o-link class="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-            </div>
-            @if ($getState()->appointment)
-                <div class="p-6">
-                    <div class="flex items-center gap-4 mb-5">
-                        <div
-                            class="flex-shrink-0 h-12 w-12 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-                            <x-heroicon-o-calendar class="w-6 h-6 text-primary-600 dark:text-primary-400" />
-                        </div>
-                        <div class="min-w-0">
-                            <p class="font-bold text-gray-900 dark:text-white">Appt
-                                #{{ substr($getState()->appointment_id ?? '', 0, 8) }}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                {{ $getState()->appointment->appointment_date ? \Carbon\Carbon::parse($getState()->appointment->appointment_date)->format('l, d M Y') : '—' }}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 mb-5">
-                        <div
-                            class="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</p>
-                            <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                                {{ $getState()->appointment->status?->label() ?? '—' }}</p>
-                        </div>
-                        <div
-                            class="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Type</p>
-                            <p class="text-sm font-semibold text-gray-900 dark:text-white uppercase">
-                                {{ $getState()->appointment->type ?? 'Standard' }}</p>
-                        </div>
-                    </div>
-                    <x-filament::button color="primary" outlined size="sm"
-                        icon="heroicon-o-arrow-top-right-on-square" tag="a"
-                        href="{{ \App\Filament\Resources\Appointments\AppointmentResource::getUrl('view', ['record' => $getState()->appointment?->slug ?? $getState()->appointment_id]) }}"
-                        class="w-full">
-                        Open Appointment Profile
+                @if ($receiptUrl)
+                    <x-filament::button color="primary" outlined size="sm" icon="heroicon-o-arrow-down-tray"
+                        tag="a" href="{{ $receiptUrl }}" target="_blank">
+                        Receipt
                     </x-filament::button>
-                </div>
-            @else
-                <div class="p-10 text-center">
-                    <x-heroicon-o-calendar class="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                    <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">No appointment linked</p>
-                </div>
-            @endif
-        </div>
-
-        {{-- Parties Involved --}}
-        <div
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div
-                class="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
-                <span class="font-semibold text-sm text-gray-700 dark:text-gray-300">Transaction Parties</span>
-                <x-heroicon-o-user-group class="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                @endif
             </div>
-            @php
-                $patient = $getState()->appointment?->patient;
-                $doctor = $getState()->appointment?->doctor;
-                $patientName = $patient ? trim($patient->first_name . ' ' . $patient->last_name) : null;
-                $doctorName = $doctor?->user?->name ? 'Dr. ' . $doctor->user->name : null;
-            @endphp
-            <div class="p-6 space-y-4">
-                {{-- Patient --}}
-                <div
-                    class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
-                    <img src="{{ storage_url($patient?->avatar) }}" alt="{{ $patientName ?: 'Patient' }}"
-                        class="h-10 w-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 flex-shrink-0" />
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Patient
-                            / Payer</p>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                            {{ $patientName ?: '—' }}</p>
+            <div class="grid gap-x-8 px-4 py-2 sm:px-6 lg:grid-cols-2">
+                @foreach ($gatewayDetails as $detail)
+                    <div class="grid gap-1 border-b border-gray-100 py-3 sm:grid-cols-[170px_1fr]">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            {{ $detail['label'] }}</dt>
+                        <dd class="break-all text-sm font-semibold text-gray-950 lg:text-right">
+                            {{ $value($detail['value']) }}</dd>
                     </div>
-                </div>
-
-                {{-- Doctor --}}
-                <div
-                    class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
-                    <img src="{{ storage_url($doctor?->avatar) }}" alt="{{ $doctorName ?: 'Doctor' }}"
-                        class="h-10 w-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 flex-shrink-0" />
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Recipient / Doctor</p>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                            {{ $doctorName ?: '—' }}</p>
-                    </div>
-                </div>
+                @endforeach
             </div>
-        </div>
+        </section>
+
+        @if ($failureDetails->isNotEmpty())
+            <section class="rounded-lg border border-rose-200 bg-white shadow-sm">
+                <div class="border-b border-rose-100 px-4 py-4 sm:px-6">
+                    <h2 class="text-base font-bold text-rose-950">Failure Details</h2>
+                    <p class="mt-1 text-sm text-rose-700">Gateway error information recorded for this payment.</p>
+                </div>
+                <div class="px-4 py-2 sm:px-6">
+                    <dl class="divide-y divide-rose-100">
+                        @foreach ($failureDetails as $detail)
+                            <div class="grid gap-1 py-3 sm:grid-cols-[170px_1fr]">
+                                <dt class="text-xs font-semibold uppercase tracking-wide text-rose-500">
+                                    {{ $detail['label'] }}</dt>
+                                <dd class="break-words text-sm font-semibold text-rose-950 sm:text-right">
+                                    {{ $detail['value'] }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                </div>
+            </section>
+        @endif
     </div>
-</div>
+</x-dynamic-component>

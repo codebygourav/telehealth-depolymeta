@@ -37,7 +37,7 @@ class LeaveResource extends Resource
         return [
             'icon'  => 'heroicon-o-calendar',
             'group' => '',
-            'sort'  => 10,
+            'sort'  => 6,
         ];
     }
 

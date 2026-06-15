@@ -27,7 +27,8 @@ class Patient extends Model
         'age',
         'bio',
         'father_name',
-        'mother_name',
+        'wife_name',
+        'husband_name',
         'mobile_no',
         'alternate_no',
         'email',
@@ -42,8 +43,6 @@ class Patient extends Model
         'partner_relation_type',
         'spouse_name',
         'blood_group',
-        'weight',
-        'height',
         'allergies',
         'existing_conditions',
         'current_medications',
@@ -68,8 +67,6 @@ class Patient extends Model
         'create_user_account' => 'boolean',
         'treatment_consent_accepted' => 'boolean',
         'insurance_policy_expiry' => 'date',
-        'weight' => 'decimal:2',
-        'height' => 'decimal:2',
     ];
 
     protected $appends = ['avatar'];
@@ -224,21 +221,6 @@ class Patient extends Model
         return $this->hasMany(Appointment::class);
     }
 
-    public function vaccinations()
-    {
-        return $this->hasMany(PatientVaccination::class);
-    }
-
-    public function profiles()
-    {
-        return $this->hasMany(PatientProfile::class);
-    }
-
-    public function dietPlans()
-    {
-        return $this->hasMany(PatientDietPlan::class);
-    }
-
     public function previousAppointments()
     {
         return $this->hasMany(Appointment::class)
@@ -249,6 +231,7 @@ class Patient extends Model
             ->orderBy('appointment_date', 'desc')
             ->limit(5);
     }
+
     public function prescriptions()
     {
         return $this->hasMany(Prescription::class);

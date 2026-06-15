@@ -113,8 +113,17 @@ class User extends Authenticatable implements FilamentUser, HasName
                 $model->id = (string) Str::uuid();
             }
 
-            if (empty($model->slug) && !empty($model->name)) {
-                $model->slug = Str::slug($model->name);
+            if (!empty($model->name)) {
+                $baseSlug = Str::slug($model->name);
+                $slug = $baseSlug;
+                $counter = 1;
+
+                // Ensure slug is unique
+                while (self::where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $counter++;
+                }
+
+                $model->slug = $slug;
             }
 
             if (auth()->check()) {
@@ -124,11 +133,13 @@ class User extends Authenticatable implements FilamentUser, HasName
         });
 
         static::updating(function ($user) {
+            // Update slug if name is dirty
             if ($user->isDirty('name')) {
                 $baseSlug = Str::slug($user->name);
                 $slug = $baseSlug;
                 $counter = 1;
 
+                // Ensure slug is unique
                 while (self::where('slug', $slug)
                     ->where('id', '!=', $user->id)
                     ->exists()
@@ -139,14 +150,9 @@ class User extends Authenticatable implements FilamentUser, HasName
                 $user->slug = $slug;
             }
 
+            // Always update the updated_by field
             if (auth()->check()) {
                 $user->updated_by = auth()->id();
-            }
-        });
-
-        static::updating(function ($model) {
-            if (auth()->check()) {
-                $model->updated_by = auth()->id();
             }
         });
 

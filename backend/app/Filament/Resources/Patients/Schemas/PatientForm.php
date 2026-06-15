@@ -22,46 +22,31 @@ class PatientForm
     {
         return $schema
             ->components([
-                Section::make('Professional Information')
-                    ->description('Professional designation and core credentials.')
-                    ->schema([
-                        FileUpload::make('avatar')
-                            ->label('Profile Photo')
-                            ->disk('public')
-                            ->directory('user_avatar')
-                            ->image()
-                            ->avatar()
-                            ->imageEditor()
-                            ->imageEditorAspectRatios([
-                                '1:1',
-                            ])
-                            ->maxSize(2048) // 2MB max file size
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                            // Note: optimize() and imageResize methods don't exist in Filament v4
-                            // Image editing is handled via imageEditor() above
-                            ->columnSpanFull(),
-
-                    ])
-                    ->columns(3)
-                    ->columnSpanFull(),
-                Section::make('Registration Settings')
-                    ->description('Configure patient source and registration options.')
+                Section::make('Registration & Login')
+                    ->description('Choose whether this patient should also get a mobile app login account.')
                     ->schema([
                         Select::make('source')
                             ->label('Source')
                             ->options([
                                 'app' => 'Mobile App',
                                 'website' => 'Website',
+                                'internal' => 'Internal',
                             ])
                             ->default('website')
                             ->required()
                             ->live()
-                            ->afterStateUpdated(function ($set, $state) {
-                                // For app source, automatically enable user account creation
+                            ->afterStateUpdated(function ($set, $get, $state) {
                                 if ($state === 'app') {
                                     $set('create_user_account', true);
+
+                                    if (blank($get('user_email')) && filled($get('email'))) {
+                                        $set('user_email', $get('email'));
+                                    }
+
+                                    if (blank($get('user_phone')) && filled($get('mobile_no'))) {
+                                        $set('user_phone', $get('mobile_no'));
+                                    }
                                 } else {
-                                    // For website, reset to false
                                     $set('create_user_account', false);
                                 }
                             }),
@@ -72,9 +57,114 @@ class PatientForm
                             ->offColor('gray')
                             ->onColor('success')
                             ->default(false)
-                            ->visible(fn($get) => $get('source') === 'website')
+                            ->visible(fn($get) => in_array($get('source'), ['website', 'internal'], true))
                             ->live()
+                            ->afterStateUpdated(function ($set, $get, $state) {
+                                if (! $state) {
+                                    return;
+                                }
+
+                                if (blank($get('user_email')) && filled($get('email'))) {
+                                    $set('user_email', $get('email'));
+                                }
+
+                                if (blank($get('user_phone')) && filled($get('mobile_no'))) {
+                                    $set('user_phone', $get('mobile_no'));
+                                }
+                            })
                             ->dehydrated(true), // Always include in form data
+                        TextInput::make('user_email')
+                            ->label('Login Email')
+                            ->email()
+                            ->disabled(fn($record) => filled($record?->user_id))
+                            ->helperText(fn($record) => filled($record?->user_id) ? 'Login email cannot be changed here. Update other patient details as needed.' : null)
+                            ->required(function ($get) {
+                                $source = $get('source');
+                                $createUserAccount = $get('create_user_account');
+
+                                return $source === 'app' || (in_array($source, ['website', 'internal'], true) && $createUserAccount === true);
+                            })
+                            ->visible(function ($get) {
+                                $source = $get('source');
+                                $createUserAccount = $get('create_user_account');
+
+                                return $source === 'app' || (in_array($source, ['website', 'internal'], true) && $createUserAccount === true);
+                            })
+                            ->afterStateHydrated(function ($component, $state, $record) {
+                                if ($record && $record->user_id && $record->user) {
+                                    $component->state($record->user->email ?? $state);
+                                }
+                            }),
+                        TextInput::make('user_phone')
+                            ->label('Login Phone')
+                            ->tel()
+                            ->maxLength(20)
+                            ->required(function ($get) {
+                                $source = $get('source');
+                                $createUserAccount = $get('create_user_account');
+
+                                return $source === 'app' || (in_array($source, ['website', 'internal'], true) && $createUserAccount === true);
+                            })
+                            ->visible(function ($get) {
+                                $source = $get('source');
+                                $createUserAccount = $get('create_user_account');
+
+                                return $source === 'app' || (in_array($source, ['website', 'internal'], true) && $createUserAccount === true);
+                            })
+                            ->afterStateHydrated(function ($component, $state, $record) {
+                                if ($record && $record->user_id && $record->user) {
+                                    $component->state($record->user->phone ?? $state);
+                                }
+                            }),
+                        TextInput::make('user_password')
+                            ->label('Login Password')
+                            ->password()
+                            ->revealable()
+                            ->required(function ($get, $livewire) {
+                                $record = $livewire->record ?? null;
+                                if ($record === null) {
+                                    $source = $get('source');
+                                    $createUserAccount = $get('create_user_account');
+
+                                    return $source === 'app' || (in_array($source, ['website', 'internal'], true) && $createUserAccount === true);
+                                }
+
+                                return false;
+                            })
+                            ->visible(function ($get) {
+                                $source = $get('source');
+                                $createUserAccount = $get('create_user_account');
+
+                                return $source === 'app' || (in_array($source, ['website', 'internal'], true) && $createUserAccount === true);
+                            })
+                            ->helperText(function ($livewire) {
+                                $record = $livewire->record ?? null;
+
+                                return $record ? 'Leave blank to keep current password' : 'Enter password for mobile app login';
+                            })
+                            ->dehydrated(fn($state) => filled($state)),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull(),
+
+                Section::make('Patient Status')
+                    ->schema([
+                        Toggle::make('is_existing_patient')
+                            ->label('Is Existing Patient')
+                            ->onIcon('heroicon-o-check')
+                            ->offIcon('heroicon-o-x-mark')
+                            ->offColor('gray')
+                            ->onColor('success')
+                            ->default(false)
+                            ->reactive()
+                            ->afterStateUpdated(function ($set, $state) {
+                                if (! $state) {
+                                    $set('existing_patient_id', null);
+                                }
+                            }),
+                        TextInput::make('existing_patient_id')
+                            ->label('Existing Patient ID')
+                            ->visible(fn($get) => $get('is_existing_patient') === true),
                     ])
                     ->columns(2)
                     ->columnSpanFull(),
@@ -122,16 +212,6 @@ class PatientForm
                             ->searchable()
                             ->dehydrateStateUsing(fn($state) => $state instanceof \BackedEnum ? $state->value : $state)
                             ->afterStateHydrated(fn($component, $state) => $component->state($state instanceof \BackedEnum ? $state->value : $state)),
-                        TextInput::make('weight')
-                            ->label('Weight (kg)')
-                            ->numeric()
-                            ->minValue(0)
-                            ->step(0.01),
-                        TextInput::make('height')
-                            ->label('Height (cm)')
-                            ->numeric()
-                            ->minValue(0)
-                            ->step(0.01),
                         Textarea::make('bio')
                         ->label('Short Bio')
                         ->placeholder('Brief professional introduction')
@@ -140,142 +220,61 @@ class PatientForm
                     ->columns(3)
                     ->columnSpanFull(),
 
+                Section::make('Profile Photo')
+                    ->schema([
+                        FileUpload::make('avatar')
+                            ->label('Profile Photo')
+                            ->disk('public')
+                            ->directory('user_avatar')
+                            ->image()
+                            ->avatar()
+                            ->imageEditor()
+                            ->imageEditorAspectRatios([
+                                '1:1',
+                            ])
+                            ->maxSize(2048)
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->columnSpanFull(),
+
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull(),
+
                 Section::make('Contact Details')
                     ->schema([
-                        // Patient fields - shown when create_user_account is false
                         TextInput::make('mobile_no')
                             ->label('Mobile Number')
                             ->maxLength(20)
+                            ->live()
                             ->required(function ($get) {
                                 $source = $get('source');
                                 $createUserAccount = $get('create_user_account');
 
-                                return $source === 'website' && $createUserAccount === false;
+                                return in_array($source, ['website', 'internal'], true) && $createUserAccount === false;
                             })
-                            ->visible(function ($get) {
-                                $source = $get('source');
-                                $createUserAccount = $get('create_user_account');
-
-                                // Show only when source is website and create_user_account is false
-                                return $source === 'website' && $createUserAccount === false;
+                            ->afterStateUpdated(function ($set, $get, $state) {
+                                if (($get('source') === 'app' || $get('create_user_account')) && blank($get('user_phone'))) {
+                                    $set('user_phone', $state);
+                                }
                             }),
                         TextInput::make('alternate_no')
                             ->label('Alternate Number')
-                            ->maxLength(20)
-                            ->visible(function ($get) {
-                                $source = $get('source');
-                                $createUserAccount = $get('create_user_account');
-
-                                // Show only when source is website and create_user_account is false
-                                return $source === 'website' && $createUserAccount === false;
-                            }),
+                            ->maxLength(20),
                         TextInput::make('email')
                             ->label('Email')
                             ->email()
+                            ->live()
                             ->required(function ($get) {
                                 $source = $get('source');
                                 $createUserAccount = $get('create_user_account');
 
-                                return $source === 'website' && $createUserAccount === false;
+                                return in_array($source, ['website', 'internal'], true) && $createUserAccount === false;
                             })
-                            ->visible(function ($get) {
-                                $source = $get('source');
-                                $createUserAccount = $get('create_user_account');
-
-                                // Show only when source is website and create_user_account is false
-                                return $source === 'website' && $createUserAccount === false;
-                            }),
-                        // User registration fields - shown when source is app OR (website and create_user_account is true)
-                        TextInput::make('user_email')
-                            ->label('Email (for Registration)')
-                            ->email()
-                            ->unique('users', 'email', ignorable: fn($record) => $record?->user)
-                            ->required(function ($get) {
-                                $source = $get('source');
-                                $createUserAccount = $get('create_user_account');
-
-                                // Required for app source always, or website when create_user_account is true
-                                return $source === 'app' || ($source === 'website' && $createUserAccount === true);
-                            })
-                            ->visible(function ($get) {
-                                $source = $get('source');
-                                $createUserAccount = $get('create_user_account');
-                                // Show for app source always
-                                if ($source === 'app') {
-                                    return true;
-                                }
-
-                                // Show for website when create_user_account is true
-                                return $source === 'website' && $createUserAccount === true;
-                            })
-                            ->afterStateHydrated(function ($component, $state, $record) {
-                                // If editing and user exists, populate from user table
-                                if ($record && $record->user_id && $record->user) {
-                                    $component->state($record->user->email ?? $state);
+                            ->afterStateUpdated(function ($set, $get, $state) {
+                                if (($get('source') === 'app' || $get('create_user_account')) && blank($get('user_email'))) {
+                                    $set('user_email', $state);
                                 }
                             }),
-                        TextInput::make('user_phone')
-                            ->label('Phone (for Registration)')
-                            ->tel()
-                            ->maxLength(20)
-                            ->unique('users', 'phone', ignorable: fn($record) => $record?->user)
-                            ->required(function ($get) {
-                                $source = $get('source');
-                                $createUserAccount = $get('create_user_account');
-
-                                // Required for app source always, or website when create_user_account is true
-                                return $source === 'app' || ($source === 'website' && $createUserAccount === true);
-                            })
-                            ->visible(function ($get) {
-                                $source = $get('source');
-                                $createUserAccount = $get('create_user_account');
-                                // Show for app source always
-                                if ($source === 'app') {
-                                    return true;
-                                }
-
-                                // Show for website when create_user_account is true
-                                return $source === 'website' && $createUserAccount === true;
-                            })
-                            ->afterStateHydrated(function ($component, $state, $record) {
-                                // If editing and user exists, populate from user table
-                                if ($record && $record->user_id && $record->user) {
-                                    $component->state($record->user->phone ?? $state);
-                                }
-                            }),
-                        TextInput::make('user_password')
-                            ->label('Password (for Registration)')
-                            ->password()
-                            ->revealable()
-                            ->required(function ($get, $livewire) {
-                                // Required when creating new record for app source or website with create_user_account
-                                $record = $livewire->record ?? null;
-                                if ($record === null) {
-                                    $source = $get('source');
-                                    $createUserAccount = $get('create_user_account');
-
-                                    return $source === 'app' || ($source === 'website' && $createUserAccount === true);
-                                }
-
-                                return false; // Not required when editing
-                            })
-                            ->visible(function ($get) {
-                                $source = $get('source');
-                                $createUserAccount = $get('create_user_account');
-                                // Show for app source always
-                                if ($source === 'app') {
-                                    return true;
-                                }
-
-                                // Show for website when create_user_account is true
-                                return $source === 'website' && $createUserAccount === true;
-                            })
-                            ->helperText(function ($livewire) {
-                                $record = $livewire->record ?? null;
-
-                                return $record ? 'Leave blank to keep current password' : 'Enter password for user registration';
-                            })
-                            ->dehydrated(fn($state) => filled($state)), // Only save if password is provided
                     ])
                     ->columns(3)
                     ->columnSpanFull(),
@@ -284,10 +283,12 @@ class PatientForm
                     ->schema([
                         TextInput::make('father_name')
                             ->label("Father's Name"),
-                        TextInput::make('mother_name')
-                            ->label("Mother's Name"),
+                        TextInput::make('wife_name')
+                            ->label("Wife's Name"),
+                        TextInput::make('husband_name')
+                            ->label("Husband's Name"),
                     ])
-                    ->columns(2)
+                    ->columns(3)
                     ->columnSpanFull(),
 
                 Section::make('Address')
@@ -314,28 +315,6 @@ class PatientForm
                     ->columns(3)
                     ->columnSpanFull(),
 
-                Section::make('Patient Status')
-                    ->schema([
-                        Toggle::make('is_existing_patient')
-                            ->label('Is Existing Patient')
-                            ->onIcon('heroicon-o-check')
-                            ->offIcon('heroicon-o-x-mark')
-                            ->offColor('gray')
-                            ->onColor('success')
-                            ->default(false)
-                            ->reactive()
-                            ->afterStateUpdated(function ($set, $state) {
-                                // If is_existing_patient is true, clear existing_patient_id if needed
-                                if (! $state) {
-                                    $set('existing_patient_id', null);
-                                }
-                            }),
-                        TextInput::make('existing_patient_id')
-                            ->label('Existing Patient ID')
-                            ->visible(fn($get) => $get('is_existing_patient') === true),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
             ]);
     }
 }

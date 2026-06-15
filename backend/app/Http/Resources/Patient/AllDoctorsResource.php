@@ -10,7 +10,8 @@ class AllDoctorsResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $availabilities = $this->resource->availabilities;
+        $availabilities = app(\App\Services\DoctorAvailabilityService::class)
+            ->expandSlotsForApi($this->resource->availabilities);
 
         $types = $availabilities
             ->where('is_available', true)
@@ -50,7 +51,7 @@ class AllDoctorsResource extends JsonResource
             'speciality' => $this->departments->map(function ($department) {
                 $symptomNames = [];
                 $symptomIds = $department->symptom_ids ?: [];
-
+                
                 if (isset($this->symptomsMap)) {
                     foreach ($symptomIds as $id) {
                         if ($symptom = $this->symptomsMap->get($id)) {
@@ -70,12 +71,7 @@ class AllDoctorsResource extends JsonResource
             'rating' => $this->average_rating ? round((float)$this->average_rating, 1) : 0,
             'total_reviews' => (int)($this->total_reviews ?? 0),
             'years_experience' => $this->resource->years_experience,
-            'languages_known' => is_array($this->resource->languages_known)
-                ? $this->resource->languages_known
-                : (is_string($this->resource->languages_known) && !empty($this->resource->languages_known)
-                    ? array_map('trim', explode(',', $this->resource->languages_known))
-                    : []),
-
+            'languages_known' => $this->resource->languages_known,
             'consultation_type' => $consultationType,
             'consultation_type_label' => $consultationTypeLabel,
             'consultation_fee' => $lowestFee ? (float)$lowestFee : null,

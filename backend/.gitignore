@@ -10,11 +10,6 @@
 /.idea
 /.nova
 /.phpunit.cache
-/repo2
-/repo2/*
-/repo2/.env
-/repo2/frontend
-/repo2/backend
 /.vscode
 /.cursor
 .cursor
@@ -34,5 +29,6 @@ storage
 /opencode.json
 /boost.json
 boost.json
-docker-compose.yml
-docker-compose.prod.yml
+storage/app/google/service-account.json
+*google/service-account.json
+google/service-account.json

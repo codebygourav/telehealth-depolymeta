@@ -8,7 +8,7 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ImportAction;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 use App\Filament\Imports\DepartmentImporter;
 use App\Filament\Exports\DepartmentExporter;
 

@@ -121,6 +121,11 @@ class Settings extends Page
         $config = config('settings', []);
 
         foreach ($config as $groupKey => $group) {
+            // Skip if 'label' key does not exist (prevent undefined key error)
+            if (!isset($group['label'])) {
+                continue;
+            }
+
             $schema[] = Section::make($group['label'])
                 ->description($group['description'] ?? null)
                 ->icon($group['icon'] ?? null)
@@ -331,17 +336,20 @@ class Settings extends Page
                 ->label($field['label'])
                 ->email()
                 ->placeholder($field['placeholder'] ?? null)
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
                 ->required(fn() => $this->activeTab === $tabId && ($field['required'] ?? false)),
 
             'tel' => TextInput::make($key)
                 ->label($field['label'])
                 ->tel()
-                ->placeholder($field['placeholder'] ?? null),
+                ->placeholder($field['placeholder'] ?? null)
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null),
 
             'url' => TextInput::make($key)
                 ->label($field['label'])
                 ->url()
-                ->placeholder($field['placeholder'] ?? null),
+                ->placeholder($field['placeholder'] ?? null)
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null),
 
             'number' => TextInput::make($key)
                 ->label($field['label'])
@@ -349,17 +357,20 @@ class Settings extends Page
                 ->placeholder($field['placeholder'] ?? null)
                 ->minValue($field['min'] ?? null)
                 ->maxValue($field['max'] ?? null)
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
                 ->default($field['default'] ?? null),
 
             'password' => TextInput::make($key)
                 ->label($field['label'])
                 ->password()
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
                 ->revealable(),
 
             'textarea' => tap(
                 Textarea::make($key)
                     ->label($field['label'])
                     ->placeholder($field['placeholder'] ?? null)
+                    ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
                     ->rows($field['rows'] ?? 3),
                 function ($component) use ($field) {
                     if (isset($field['maxLength'])) {
@@ -373,18 +384,20 @@ class Settings extends Page
                 ->options($field['options'] ?? [])
                 ->searchable(count($field['options'] ?? []) > 10)
                 ->default($field['default'] ?? null)
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
                 ->live($field['live'] ?? false),
 
             'toggle' => Toggle::make($key)
                 ->label($field['label'])
-                ->helperText($field['helper'] ?? null)
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
                 ->onColor('success')
                 ->offColor('gray')
                 ->default($field['default'] ?? false)
                 ->live($field['live'] ?? false),
 
             'color' => ColorPicker::make($key)
-                ->label($field['label']),
+                ->label($field['label'])
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null),
 
             'file' => FileUpload::make($key)
                 ->label($field['label'])
@@ -393,6 +406,7 @@ class Settings extends Page
                 ->directory($field['directory'] ?? 'settings')
                 ->disk('public')
                 ->maxSize(5120) // 5MB max file size
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
                 ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
             // Note: optimize() method doesn't exist in Filament v4
 

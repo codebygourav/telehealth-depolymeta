@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources\DoctorAvailabilities\Pages;
+namespace App\Filament\Resources\Doctors\Pages;
 
-use App\Filament\Resources\DoctorAvailabilities\DoctorAvailabilityResource;
+use App\Filament\Resources\Doctors\DoctorAvailabilityResource;
 use App\Imports\DoctorAvailabilityImport;
 use App\Models\Doctor;
 use Filament\Actions\Action;
@@ -10,7 +10,7 @@ use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;

@@ -14,7 +14,6 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 use function App\Helpers\getUserAuditColumn;
@@ -102,7 +101,6 @@ class UsersTable
                 getUserAuditColumn('deleter', 'Deleted By'),
             ])
             ->filters([
-                TrashedFilter::make(),
                 SelectFilter::make('roles')
                     ->label('User Role')
                     ->multiple()

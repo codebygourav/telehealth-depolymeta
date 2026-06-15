@@ -14,16 +14,11 @@ class HomeAvailabilityResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // Get consultation types from availabilities as a comma-separated string
-        $types = $this->resource->availabilities->pluck('consultation_type')->filter()->unique()->values();
+        $availabilities = app(\App\Services\DoctorAvailabilityService::class)
+            ->expandSlotsForApi($this->resource->availabilities);
 
-        if ($types->contains('video') && $types->contains('in-person') && $types->count() == 2) {
-            $typesstring = 'both';
-        } else {
-            $typesstring = $types->isNotEmpty() ? $types->implode(', ') : '';
-        }
-
-
+        // Get consultation types from effective availabilities
+        $types = $availabilities->pluck('consultation_type')->filter()->unique()->values();
 
         // Map types to proper labels and join with " / " if multiple exist
         $typeLabels = $types->map(function ($type) {
@@ -32,8 +27,8 @@ class HomeAvailabilityResource extends JsonResource
 
         $consultationType = $typeLabels->isNotEmpty() ? $typeLabels->implode(' / ') : null;
 
-        // Get lowest fee from availabilities
-        $lowestFee = $this->resource->availabilities
+        // Get lowest fee from effective availabilities
+        $lowestFee = $availabilities
             ->pluck('consultation_fee')
             ->filter(fn($fee) => $fee !== null)
             ->map(fn($fee) => (float) $fee)
@@ -46,7 +41,7 @@ class HomeAvailabilityResource extends JsonResource
             'rating' => $this->average_rating ? round($this->average_rating, 1) : 0,
             'years_experience' => $this->resource->years_experience,
             'total_reviews' => $this->total_reviews ?? 0,
-            'consultation_type' => $typesstring,
+            'consultation_type' => $types,
             'consultation_type_label' => $consultationType,
             'languages_known' => $this->resource->languages_known,
             'consultation_fee' => $lowestFee ? round($lowestFee, 0) : 0,

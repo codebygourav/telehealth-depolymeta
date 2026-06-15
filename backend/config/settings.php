@@ -29,7 +29,7 @@ return [
                     'logo_dark' => ['type' => 'file', 'label' => 'Logo (Dark)', 'directory' => 'settings', 'is_public' => true],
                     'favicon' => ['type' => 'file', 'label' => 'Favicon', 'directory' => 'settings', 'is_public' => true],
                     'primary_color' => ['type' => 'color', 'label' => 'Primary Color', 'default' => '#073827', 'is_public' => true],
-                    'secondary_color' => ['type' => 'color', 'label' => 'Secondary Color', 'default' => '#22c55e', 'is_public' => true],
+                    'secondary_color' => ['type' => 'color', 'label' => 'Secondary Color', 'default' => '#073827', 'is_public' => true],
                     'global_stamp' => ['type' => 'file', 'label' => 'Global Hospital Stamp', 'directory' => 'settings/stamps', 'is_public' => true],
                 ],
             ],
@@ -358,6 +358,68 @@ return [
                 'db_group' => 'privacy_and_policy', // Maps to database group 'privacy_and_policy'
                 'fields' => [
                     'privacy_and_policy_field' => ['type' => 'richtext', 'label' => 'Privacy & Policy Content', 'placeholder' => '', 'required' => true, 'is_public' => true],
+                ],
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Booking & WordPress API defaults (fallback when DB settings are empty)
+    |--------------------------------------------------------------------------
+    */
+    'booking' => [
+        'wordpress_availability_months' => 3,
+        'default_cutoff_rules' => [
+            ['value' => 4, 'unit' => 'hours'],
+            ['value' => 1, 'unit' => 'hours'],
+        ],
+        'label' => 'Booking',
+        'icon' => 'heroicon-o-calendar-days',
+        'description' => 'Booking and API settings',
+        'sections' => [
+            'rules' => [
+                'label' => 'Booking Close Time Rules',
+                'description' => 'Default rules for how long before a slot starts booking closes.',
+                'fields' => [
+                    'wordpress_availability_months' => [
+                        'type' => 'number',
+                        'label' => 'WordPress Availability Months',
+                        'default' => 3,
+                        'min' => 1,
+                        'max' => 12,
+                        'helper' => 'What this does: Defines how many future months of doctor availability slots are generated and served to the WordPress website. / Data to add: Enter a positive whole number between 1 and 12 (e.g., 3).',
+                        'is_public' => true,
+                    ],
+                    'child_age' => [
+                        'type' => 'number',
+                        'label' => 'Global Child Age Limit',
+                        'default' => 12,
+                        'min' => 1,
+                        'max' => 18,
+                        'helper' => 'Used for every OPD slot where Child only is enabled. The age is not set per slot.',
+                        'is_public' => true,
+                    ],
+                    'booking_cutoff_value' => [
+                        'type' => 'number',
+                        'label' => 'Default Booking Close Time',
+                        'default' => 4,
+                        'min' => 1,
+                        'helper' => 'What this does: Defines how long before a session starts booking is automatically closed. / Data to add: Enter a positive numeric value (e.g., 4).',
+                        'is_public' => true,
+                    ],
+                    'booking_cutoff_unit' => [
+                        'type' => 'select',
+                        'label' => 'Default Booking Close Time Unit',
+                        'options' => [
+                            'minutes' => 'Minutes',
+                            'hours' => 'Hours',
+                            'days' => 'Days',
+                        ],
+                        'default' => 'hours',
+                        'helper' => 'What this does: Selects the unit of time (Minutes, Hours, or Days) for the Default Booking Close Time. / Data to add: Choose an option from the dropdown list.',
+                        'is_public' => true,
+                    ],
                 ],
             ],
         ],

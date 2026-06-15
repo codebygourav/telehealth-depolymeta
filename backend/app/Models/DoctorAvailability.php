@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use App\Enums\AppointmentStatus;
 
 class DoctorAvailability extends Model
 {
@@ -39,11 +40,14 @@ class DoctorAvailability extends Model
         'recurring_end_date',
         'opd_type',
         'consultation_fee',
+        'is_child_only',
         'recurring_months',
         'doctor_room',
         'created_by',
         'updated_by',
         'deleted_by',
+        'blocked_dates',
+        'booking_cutoff_rules',
         // 'series_id',
         // 'custom_dates',
     ];
@@ -57,7 +61,10 @@ class DoctorAvailability extends Model
         'recurring_end_date' => 'date',
         'opd_type' => 'string',
         'consultation_fee' => 'decimal:2',
+        'is_child_only' => 'boolean',
         'recurring_months' => 'integer',
+        'blocked_dates' => 'array',
+        'booking_cutoff_rules' => 'array',
         // 'custom_dates' => 'array',
     ];
 
@@ -66,6 +73,7 @@ class DoctorAvailability extends Model
         'is_available' => true,
         'capacity' => 1,
         'is_recurring' => false,
+        'is_child_only' => false,
     ];
     /**
      * Get the doctor that owns the availability.
@@ -82,6 +90,22 @@ class DoctorAvailability extends Model
     {
         return $this->hasMany(Appointment::class, 'availability_id');
     }
+
+    public function overrides()
+    {
+        return $this->hasMany(DoctorAvailabilityOverride::class, 'doctor_availability_id');
+    }
+
+    public function hasBookedAppointments(): bool
+    {
+        return $this->appointments()
+            ->whereNotIn('status', [
+                AppointmentStatus::CANCELLED->value,
+                AppointmentStatus::FAILED->value,
+            ])
+            ->exists();
+    }
+
     public function getFormattedDateAttribute(): ?string
     {
         if (empty($this->date)) {
@@ -349,6 +373,7 @@ class DoctorAvailability extends Model
     public function scopeAvailableInRange($query, $startDate, $endDate)
     {
         return $query->where('is_available', true)
+            ->withoutTestDoctors()
             ->whereNull('deleted_at')
             ->where(function ($subQ) use ($startDate, $endDate) {
                 $subQ->where(function ($q) use ($startDate, $endDate) {
@@ -358,9 +383,32 @@ class DoctorAvailability extends Model
                 })
                     ->orWhere(function ($q) use ($startDate, $endDate) {
                         $q->where('is_recurring', true)
-                            ->where('recurring_start_date', '<=', $endDate)
-                            ->where('recurring_end_date', '>=', $startDate);
+                            ->where(function ($query) use ($endDate) {
+                                $query->whereNull('recurring_start_date')
+                                    ->orWhere('recurring_start_date', '<=', $endDate);
+                            })
+                            ->where(function ($query) use ($startDate) {
+                                $query->whereNull('recurring_end_date')
+                                    ->orWhere('recurring_end_date', '>=', $startDate);
+                            });
+                    })
+                    ->orWhere(function ($q) {
+                        $q->where('is_recurring', false)
+                            ->whereNull('date')
+                            ->whereNotNull('day_of_week');
                     });
             });
+    }
+
+    public function scopeWithoutTestDoctors($query)
+    {
+        return $query->whereHas('doctor', function ($query) {
+            $query->withoutTestDoctors();
+        });
+    }
+
+    public function isBlockedOnDate($date): bool
+    {
+        return app(\App\Services\DoctorAvailabilityService::class)->isDateBlocked($this, $date);
     }
 }

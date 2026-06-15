@@ -7,7 +7,6 @@ use Filament\Tables\Table;
 use App\Filament\Resources\Medicines\MedicineResource;
 use Filament\Tables\Columns\TextColumn;
 use function App\Helpers\getUserAuditColumn;
-use Filament\Tables\Filters\TrashedFilter;
 
 class MedicinesTable
 {
@@ -25,7 +24,6 @@ class MedicinesTable
                 getUserAuditColumn('deleter', 'Deleted By'),
             ])
             ->filters([
-                TrashedFilter::make(),
             ])
             ->recordActions([
                 ActionGroup::make([

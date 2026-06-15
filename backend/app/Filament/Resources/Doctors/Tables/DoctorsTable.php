@@ -11,12 +11,14 @@ use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 use function App\Helpers\getUserAuditColumn;
+
+
 
 class DoctorsTable
 {
@@ -47,20 +49,10 @@ class DoctorsTable
                 // Eager load relationships to prevent N+1 queries
                 return $query->with([
                     'user:id,name,email,phone', // avatar is accessed via InteractsWithModuleDocuments trait
-                    'replacements' => function ($q) {
-                        $q->where('is_active', true)
-                            ->where(function ($q) {
-                                $q->whereNull('start_date')
-                                    ->orWhere('start_date', '<=', now()->format('Y-m-d'));
-                            })
-                            ->where(function ($q) {
-                                $q->whereNull('end_date')
-                                    ->orWhere('end_date', '>=', now()->format('Y-m-d'));
-                            })
-                            ->with(['replacementDoctor:id,first_name,last_name']);
-                    },
                 ]);
             })
+            ->paginationPageOptions([10, 25, 50, 100, 200, 'all'])
+            ->defaultPaginationPageOption(50)
             ->columns([
                 ImageColumn::make('avatar')
                     ->label('Photo')
@@ -77,19 +69,10 @@ class DoctorsTable
                     }),
 
 
-
-                TextColumn::make('doctor_code')
-                    ->label('ID')
-                    ->sortable()
-                    ->searchable()
-                    ->toggleable()
-                    ->color('primary-950'),
-
                 TextColumn::make('user.name')
                     ->label('Name')
                     ->sortable()
                     ->searchable(),
-
 
                 TextColumn::make('user.phone')
                     ->label('Phone')
@@ -97,41 +80,24 @@ class DoctorsTable
                     ->toggleable(),
 
 
+                TextColumn::make('user.email')
+                    ->label('Email')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
 
-                TextColumn::make('replaced_by_doctor')
-                    ->label('Replaced By')
-                    ->getStateUsing(function ($record) {
-                        // Use pre-loaded relationship instead of querying
-                        $activeReplacement = $record->replacements->first();
+                ToggleColumn::make('hide_from_mobile_app')
+                    ->label('Hide Mobile')
+                    ->tooltip('When enabled, this doctor is hidden from mobile browse/search only, but remains available for admin booking.')
+                    ->onColor('success')
+                    ->offColor('danger')
+                    ->toggleable(),
 
-                        if ($activeReplacement && $activeReplacement->replacementDoctor) {
-                            return "Dr. {$activeReplacement->replacementDoctor->first_name} {$activeReplacement->replacementDoctor->last_name}";
-                        }
-
-                        return '—';
-                    })
-                    ->badge()
-                    ->color(function ($record) {
-                        // Use pre-loaded relationship
-                        return $record->replacements->isNotEmpty() ? 'warning' : 'gray';
-                    })
-                    ->tooltip(function ($record) {
-                        // Use pre-loaded relationship
-                        $activeReplacement = $record->replacements->first();
-
-                        if ($activeReplacement && $activeReplacement->replacementDoctor) {
-                            $dateRange = '';
-                            if ($activeReplacement->start_date && $activeReplacement->end_date) {
-                                $dateRange = " ({$activeReplacement->start_date->format('M d')} - {$activeReplacement->end_date->format('M d, Y')})";
-                            } elseif ($activeReplacement->start_date) {
-                                $dateRange = " (from {$activeReplacement->start_date->format('M d, Y')})";
-                            }
-
-                            return "Replaced by Dr. {$activeReplacement->replacementDoctor->first_name} {$activeReplacement->replacementDoctor->last_name}{$dateRange}";
-                        }
-
-                        return null;
-                    })
+                ToggleColumn::make('hide_from_wordpress_api')
+                    ->label('Hide WordPress')
+                    ->tooltip('When enabled, this doctor is hidden from WordPress/public website APIs only.')
+                    ->onColor('success')
+                    ->offColor('danger')
                     ->toggleable(),
 
                 // Add a note into the Status column label clarifying it's updatable
@@ -231,7 +197,6 @@ class DoctorsTable
                     ),
             ])
             ->filters([
-                TrashedFilter::make(),
                 SelectFilter::make('department')
                     ->label('Department')
                     ->options(fn() => Department::pluck('name', 'slug'))
@@ -247,7 +212,7 @@ class DoctorsTable
                         });
                     }),
                 TernaryFilter::make('has_opd_schedule')
-                    ->label('Filter to show those doctors only who are having OPD schedule')
+                    ->label('Doctors')
                     ->placeholder('All doctors')
                     ->trueLabel('Doctors with OPD schedule')
                     ->falseLabel('Doctors without OPD schedule')

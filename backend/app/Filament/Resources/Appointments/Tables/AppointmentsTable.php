@@ -18,37 +18,65 @@ class AppointmentsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->searchable(false)
             ->modifyQueryUsing(function ($query) {
                 // Eager load relationships to prevent N+1 queries
                 return $query->with([
-                    'patient:id,user_id,first_name,last_name',
+                    'patient:id,user_id,first_name,last_name,existing_patient_id',
                     'doctor:id,user_id,first_name,last_name',
                     'doctor.user:id,name,email',
                     'payment:id,appointment_id,status,razorpay_payment_id',
+                    'paymentWaiver:id,name',
                     'availability:id,doctor_id,opd_type,consultation_type',
+                    'videoConsultation:id,appointment_id,room_url,host_url,participate_url,room_id,status,started_at,ended_at',
                     'doctor.replacements' => function ($q) {
                         $q->where('is_active', true)
                             ->with(['replacementDoctor:id,first_name,last_name']);
                     }
                 ]);
             })
+            ->defaultSort('created_at', 'desc')
             ->columns([
 
-                TextColumn::make('id')
-                    ->label('Appoinment ID')
-                    ->sortable(),
-
-                TextColumn::make('payment.razorpay_payment_id')
-                    ->label('Razorpay ID')
-                    ->searchable()
+                TextColumn::make('created_at')
+                    ->label('Booking Created On')
+                    ->html()
+                    ->formatStateUsing(function ($record) {
+                        if (!$record || !$record->created_at) return '-';
+                        $carbon = \Carbon\Carbon::parse($record->created_at);
+                        $date = $carbon->format('M d, Y');
+                        $time = $carbon->format('h:i A');
+                        $isTodayBadge = '';
+                        if ($carbon->isToday()) {
+                            $isTodayBadge = "<span class='inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 uppercase tracking-wider animate-pulse ml-1.5'>New Today</span>";
+                        }
+                        return "<div class='flex flex-col gap-1'>
+                                    <div class='flex items-center'>
+                                        <span class='text-sm font-semibold text-gray-900 dark:text-white'>{$date}</span>
+                                        {$isTodayBadge}
+                                    </div>
+                                    <div class='text-xs text-gray-500'>{$time}</div>
+                                </div>";
+                    })
+                    ->sortable()
                     ->toggleable(),
 
-                BadgeColumn::make('payment.status')
+                BadgeColumn::make('payment_display_status')
                     ->label('Payment Status')
-                    ->searchable()
+                    ->getStateUsing(function ($record) {
+                        if (($record->booking_source ?? null) === 'admin' && ($record->admin_payment_type ?? null) === 'without_payment') {
+                            return 'admin_without_payment';
+                        }
+
+                        return $record->payment?->status;
+                    })
                     ->formatStateUsing(function ($state) {
+                        if ($state === 'admin_without_payment') {
+                            return 'Admin No Payment';
+                        }
+
                         if (!$state) return 'Unpaid';
-                        
+
                         $statusEnum = $state instanceof PaymentStatus
                             ? $state
                             : PaymentStatus::tryFrom($state);
@@ -58,8 +86,12 @@ class AppointmentsTable
                             : (is_string($state) ? ucfirst($state) : 'Unpaid');
                     })
                     ->color(function ($state) {
+                        if ($state === 'admin_without_payment') {
+                            return 'info';
+                        }
+
                         if (!$state) return 'danger';
-                        
+
                         $statusValue = $state instanceof PaymentStatus
                             ? $state->value
                             : (is_object($state) ? null : $state);
@@ -71,27 +103,55 @@ class AppointmentsTable
                             PaymentStatus::REFUNDED->value => 'secondary',
                             default => 'danger',
                         };
+                    }),
+
+                BadgeColumn::make('booking_source')
+                    ->label('Booking Source')
+                    ->getStateUsing(function ($record) {
+                        if (($record->booking_source ?? null) === 'admin') {
+                            return ($record->admin_payment_type ?? null) === 'without_payment'
+                                ? 'Admin - No Payment'
+                                : 'Admin - With Payment';
+                        }
+
+                        return is_string($record->booking_source ?? null)
+                            ? str($record->booking_source)->replace('_', ' ')->title()->toString()
+                            : 'Patient';
                     })
-                    ->sortable(),
+                    ->color(fn ($state) => str_starts_with((string) $state, 'Admin') ? 'primary' : 'gray')
+                    ->toggleable(),
 
                 TextColumn::make('appointment_date')
-                    ->label('Date')
-                    ->date()
-                    ->sortable(),
+                    ->label('OPD Visit Date')
+                    ->html()
+                    ->formatStateUsing(function ($record) {
+                        if (!$record->appointment_date) {
+                            return '-';
+                        }
+                        $date = \Carbon\Carbon::parse($record->appointment_date)->format('M d, Y');
+                        $startTime = $record->appointment_time
+                            ? \Carbon\Carbon::parse($record->appointment_time)->format('h:i A')
+                            : '';
+                        $endTime = $record->appointment_end_time
+                            ? \Carbon\Carbon::parse($record->appointment_end_time)->format('h:i A')
+                            : '';
+                        $timeRange = trim("{$startTime} - {$endTime}", ' -');
 
-                TextColumn::make('appointment_time')
-                    ->label('Time')
-                    ->time('H:i')
-                    ->sortable(),
-
-                TextColumn::make('patient.first_name')
-                    ->label('Patient')
-                    ->searchable()
-                    ->sortable(),
+                        return "<div class='flex flex-col gap-1.5 py-1'>
+                                    <span class='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-primary-100 text-primary-800 dark:bg-primary-950/40 dark:text-primary-300 border border-primary-200 dark:border-primary-800/50 w-fit shadow-2xs'>
+                                        <svg class='w-3.5 h-3.5 text-primary' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5' /></svg>
+                                        {$date}
+                                    </span>
+                                    <span class='inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/20 dark:text-amber-300 border border-amber-200/40 dark:border-amber-900/20 w-fit'>
+                                        <svg class='w-3.5 h-3.5 text-amber-500' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='currentColor'><path stroke-linecap='round' stroke-linejoin='round' d='M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' /></svg>
+                                        {$timeRange}
+                                    </span>
+                                </div>";
+                    })
+                    ->sortable(['appointment_date', 'appointment_time']),
 
                 TextColumn::make('doctor.user.name')
                     ->label('Doctor')
-                    ->searchable()
                     ->sortable()
                     ->description(function ($record) {
                         // Use pre-loaded relationship instead of querying
@@ -114,9 +174,58 @@ class AppointmentsTable
                     })
                     ->color(fn($record) => $record->hasActiveReplacement() ? 'warning' : null),
 
+                TextColumn::make('patient.first_name')
+                    ->label('Patient')
+                    ->sortable(),
+
+                TextColumn::make('patient.existing_patient_id')
+                    ->label('Patient ID')
+                    ->formatStateUsing(function ($state) {
+                        return $state ? $state : 'New patient';
+                    })
+                    ->sortable(),
+
+                TextColumn::make('booking_email_status')
+                    ->label('Booking Email')
+                    ->html()
+                    ->getStateUsing(function ($record) {
+                        $apptStatus = $record?->status instanceof \App\Enums\AppointmentStatus ? $record->status->value : ($record?->status ?? null);
+                        $paymentStatus = $record?->payment?->status instanceof \App\Enums\PaymentStatus ? $record->payment->status->value : ($record?->payment?->status ?? null);
+
+                        // Only show for confirmed appointments with paid payments
+                        if (! in_array($apptStatus, [\App\Enums\AppointmentStatus::CONFIRMED->value, \App\Enums\AppointmentStatus::COMPLETED->value])) {
+                            return '';
+                        }
+                        if ($paymentStatus !== \App\Enums\PaymentStatus::PAID->value) {
+                            return '';
+                        }
+
+                        $log = \App\Models\EmailLog::where('appointment_id', $record->id)
+                            ->where('type', 'like', '%PatientBookingConfirmation%')
+                            ->orderBy('created_at', 'desc')
+                            ->first();
+
+                        if (! $log) {
+                            return '<span class="text-gray-500">Not sent</span>';
+                        }
+
+                        if ($log->status === 'sent') {
+                            return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">Sent</span>';
+                        }
+
+                        return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800 border border-red-200">Failed</span>';
+                    })
+                    ->toggleable(),
+
+                TextColumn::make('consultation_type')
+                    ->label('Appointment Mode'),
+
+                getUserAuditColumn('creator', 'Created By'),
+                getUserAuditColumn('updater', 'Updated By'),
+                getUserAuditColumn('deleter', 'Deleted By'),
 
                 BadgeColumn::make('status')
-                    ->label('Status')
+                    ->label('Appointment Status')
                     ->formatStateUsing(function ($state) {
                         $statusEnum = $state instanceof AppointmentStatus
                             ? $state
@@ -143,114 +252,194 @@ class AppointmentsTable
                         };
                     })
                     ->sortable(),
-                TextColumn::make('consultation_type')
-                    ->label('Appointment Mode'),
-                getUserAuditColumn('creator', 'Created By'),
-                getUserAuditColumn('updater', 'Updated By'),
-                getUserAuditColumn('deleter', 'Deleted By'),
+
+                TextColumn::make('id')
+                    ->label('Appointment ID')
+                    ->limit(15)
+                    ->sortable(),
             ])
 
             ->filters([
                 // --------------------------
-                // 1. DATE RANGE FILTER
+                // CUSTOM SEARCH INPUT
                 // --------------------------
-                Filter::make('appointment_date')
+                Filter::make('search')
                     ->form([
-                        \Filament\Forms\Components\DatePicker::make('date')->label('appointment_date'),
+                        \Filament\Forms\Components\TextInput::make('query')
+                            ->label('Search')
+                            ->placeholder('Search by patient, ID, doctor...')
                     ])
                     ->query(function ($query, array $data) {
-                        return $query
-                            ->when($data['date'], fn($q) => $q->whereDate('appointment_date', '=', $data['date']));
+                        if (empty($data['query'])) {
+                            return $query;
+                        }
+                        $search = $data['query'];
+
+                        // If search query is a UUID, search by exact appointment ID
+                        if (\Illuminate\Support\Str::isUuid($search)) {
+                            return $query->where('id', $search);
+                        }
+
+                        return $query->where(function ($q) use ($search) {
+                            // Prefix match on appointment ID for performance
+                            $q->where('id', 'like', "{$search}%")
+                                ->orWhereHas('patient', function ($pq) use ($search) {
+                                    $pq->where('first_name', 'like', "%{$search}%")
+                                        ->orWhere('last_name', 'like', "%{$search}%")
+                                        ->orWhere(\Illuminate\Support\Facades\DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$search}%")
+                                        ->orWhere('existing_patient_id', 'like', "{$search}%");
+                                })
+                                ->orWhereHas('doctor', function ($dq) use ($search) {
+                                    $dq->where('first_name', 'like', "%{$search}%")
+                                        ->orWhere('last_name', 'like', "%{$search}%")
+                                        ->orWhere(\Illuminate\Support\Facades\DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$search}%")
+                                        ->orWhereHas('user', function ($uq) use ($search) {
+                                            $uq->where('name', 'like', "%{$search}%");
+                                        });
+                                });
+                        });
                     }),
 
                 // --------------------------
-                // 2. TIME RANGE FILTER
+                // OPD VISIT DATE FILTER
                 // --------------------------
-                \Filament\Tables\Filters\SelectFilter::make('appointment_time')
-                    ->label('Appointment Time')
-                    ->options(
-                        \App\Models\Appointment::query()
-                            ->select('appointment_time')
-                            ->whereNotNull('appointment_time')
-                            ->distinct()
-                            ->orderBy('appointment_time')
-                            ->pluck('appointment_time', 'appointment_time')
-                            ->filter(fn($value) => !is_null($value))
-                            ->toArray()
-                    ),
+                Filter::make('appointment_date')
+                    ->label('OPD Visit Date')
+                    ->form([
+                        \Filament\Forms\Components\DatePicker::make('date')
+                            ->label('OPD Visit Date')
+                            ->placeholder('Select date')
+                    ])
+                    ->query(function ($query, array $data) {
+                        if (empty($data['date'])) {
+                            return $query;
+                        }
+                        $date = \Carbon\Carbon::parse($data['date']);
+                        return $query->where('appointment_date', $date->toDateString());
+                    }),
 
                 // --------------------------
-                // 3. DOCTOR FILTER
+                // DOCTOR FILTER
                 // --------------------------
                 SelectFilter::make('doctor_id')
-                    ->label('Doctor')
-                    ->relationship('doctor.user', 'name', function ($query) {
-                        return $query->whereNotNull('name');
-                    }) // doctor → user.name
+                    ->label('Filter by Doctor')
+                    ->options(
+                        \App\Models\Doctor::query()
+                            ->where('status', 'active')
+                            ->with('user:id,name')
+                            ->orderBy('first_name')
+                            ->get()
+                            ->mapWithKeys(function ($doctor) {
+                                $name = $doctor->user?->name ?: trim("{$doctor->first_name} {$doctor->last_name}");
+                                return [$doctor->id => $name];
+                            })
+                            ->toArray()
+                    )
                     ->searchable()
                     ->preload(),
 
                 // --------------------------
-                // 4. STATUS FILTER
+                // APPOINTMENT STATUS FILTER
                 // --------------------------
                 SelectFilter::make('status')
-                    ->label('Status')
-                    ->options(
-                        collect(AppointmentStatus::cases())
-                            ->mapWithKeys(fn($status) => [$status->value => $status->label()])
-                            ->toArray()
-                    ),
+                    ->label('Appointment Status')
+                    ->options(collect(AppointmentStatus::cases())->mapWithKeys(fn($status) => [$status->value => $status->label()])->toArray()),
 
                 // --------------------------
-                // 5. APPOINTMENT MODE FILTER (In-Person or Video)
+                // PAYMENT STATUS FILTER
                 // --------------------------
-                SelectFilter::make('consultation_type')
-                    ->label('Appointment Mode')
+                SelectFilter::make('payment_status')
+                    ->label('Payment Status')
                     ->options([
-                        'in-person' => 'In-Person',
-                        'video'     => 'Video',
-                    ]),
-
-                // --------------------------
-                // 6. OPD TYPE FILTER (General or Private) - Only for In-Person appointments
-                // --------------------------
-                SelectFilter::make('opd_type')
-                    ->label('OPD Type')
-                    ->placeholder('All OPD Types')
-                    ->options([
-                        'general' => 'General OPD',
-                        'private' => 'Private OPD',
+                        ...collect(PaymentStatus::cases())->mapWithKeys(fn($status) => [$status->value => $status->label()])->toArray(),
+                        'admin_without_payment' => 'Admin No Payment',
                     ])
-                    ->query(function ($query, $data) {
-                        $opdType = $data['value'] ?? null;
-                        if (!$opdType) {
+                    ->query(function ($query, array $data) {
+                        if (empty($data['value'])) {
                             return $query;
                         }
-                        // Filter appointments that have availability with the specified OPD type
-                        // and are in-person (since OPD type only applies to in-person)
-                        return $query->where('consultation_type', 'in-person')
-                            ->whereHas('availability', function ($q) use ($opdType) {
-                                $q->where('opd_type', $opdType);
-                            });
-                    })
-                    ->visible(function ($livewire) {
-                        // Only show OPD Type filter when Appointment Mode is NOT 'video'
-                        $filterState = $livewire->getTableFilterState('consultation_type');
-                        $consultationType = $filterState['value'] ?? null;
 
-                        // Hide if video is selected, show otherwise
-                        return $consultationType !== 'video';
+                        if ($data['value'] === 'admin_without_payment') {
+                            return $query
+                                ->where('booking_source', 'admin')
+                                ->where('admin_payment_type', 'without_payment');
+                        }
+
+                        return $query->whereHas('payment', fn($q) => $q->where('status', $data['value']));
                     }),
-            ])
+
+                SelectFilter::make('admin_payment_type')
+                    ->label('Admin Payment')
+                    ->options([
+                        'with_payment' => 'Admin - With Payment',
+                        'without_payment' => 'Admin - No Payment',
+                    ])
+                    ->query(function ($query, array $data) {
+                        if (empty($data['value'])) {
+                            return $query;
+                        }
+                        return $query->where('booking_source', 'admin')
+                            ->where('admin_payment_type', $data['value']);
+                    }),
+            ], layout: \Filament\Tables\Enums\FiltersLayout::AboveContent)
+            ->filtersFormColumns(6)
+            ->deferFilters(false)
 
 
             ->extraAttributes([
-                'class' => 'custom-pagination',
+                'class' => 'custom-pagination custom-appointment-table-cls',
             ])
 
             ->recordActions([
                 ActionGroup::make([
                     ViewAction::make(),
+                    \Filament\Actions\Action::make('change_status')
+                        ->label('Change Status')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->form([
+                            \Filament\Forms\Components\Select::make('status')
+                                ->label('Status')
+                                ->options(collect(AppointmentStatus::cases())->mapWithKeys(fn($status) => [$status->value => $status->label()])->toArray())
+                                ->required(),
+                        ])
+                        ->mountUsing(fn (\Filament\Forms\ComponentContainer $form, $record) => $form->fill([
+                            'status' => $record->status instanceof AppointmentStatus ? $record->status->value : $record->status,
+                        ]))
+                        ->action(function ($record, array $data) {
+                            $record->update([
+                                'status' => $data['status'],
+                            ]);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Appointment Status Updated')
+                                ->body("The appointment status has been updated to " . AppointmentStatus::tryFrom($data['status'])?->label() . ".")
+                                ->success()
+                                ->send();
+                        })
+                        ->visible(fn($record) => AppointmentResource::canEdit($record)),
+                    \Filament\Actions\Action::make('generate_video_link')
+                        ->label('Generate Video Link')
+                        ->icon('heroicon-o-link')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('Generate video link')
+                        ->modalDescription('Create a Whereby room with host and participant URLs for this appointment.')
+                        ->visible(fn ($record): bool => $record->consultation_type === 'video' && !self::hasCompleteVideoLinks($record))
+                        ->action(function ($record): void {
+                            self::generateVideoLink($record);
+                        }),
+                    \Filament\Actions\Action::make('view_video_links')
+                        ->label('View Video Links')
+                        ->icon('heroicon-o-video-camera')
+                        ->color('success')
+                        ->visible(fn ($record): bool => $record->consultation_type === 'video' && self::hasCompleteVideoLinks($record))
+                        ->modalHeading('Video consultation links')
+                        ->modalContent(fn ($record) => view('filament.pages.video-consultation-urls', [
+                            'videoConsultation' => $record->videoConsultation,
+                        ]))
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Close'),
                     \Filament\Actions\Action::make('replace_doctor')
                         ->label('Replace Doctor')
                         ->icon('heroicon-o-arrow-path')
@@ -488,5 +677,66 @@ class AppointmentsTable
             'is_available' => true,
             'is_recurring' => false,
         ]);
+    }
+
+    protected static function hasCompleteVideoLinks($appointment): bool
+    {
+        $videoConsultation = $appointment->videoConsultation;
+
+        return $videoConsultation
+            && filled($videoConsultation->host_url)
+            && (filled($videoConsultation->participate_url) || filled($videoConsultation->room_url));
+    }
+
+    protected static function generateVideoLink($appointment, bool $notify = true): ?\App\Models\VideoConsultation
+    {
+        $wherebyService = app(\App\Services\WherebyService::class);
+
+        if (! $wherebyService->isConfigured()) {
+            if ($notify) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Whereby API not configured')
+                    ->body('Add WHEREBY_API_KEY in Settings > Third Party API, then try again.')
+                    ->danger()
+                    ->send();
+            }
+
+            return null;
+        }
+
+        $appointment->load('videoConsultation');
+
+        $videoConsultation = $appointment->videoConsultation
+            ? $wherebyService->regenerateUrls($appointment->videoConsultation)
+            : $wherebyService->createVideoConsultation($appointment);
+
+        if (! $videoConsultation) {
+            if ($notify) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Failed to generate video link')
+                    ->body('The Whereby API request failed. Check logs for details.')
+                    ->danger()
+                    ->send();
+            }
+
+            return null;
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('appointments', 'whereby_room_url')) {
+            $appointment->update([
+                'whereby_room_url' => $videoConsultation->room_url,
+                'whereby_room_id' => $videoConsultation->room_id,
+            ]);
+        }
+
+        if ($notify) {
+            \Filament\Notifications\Notification::make()
+                ->title('Video link generated')
+                ->body('Host and participant URLs are now available for this appointment.')
+                ->success()
+                ->send();
+        }
+
+        return $videoConsultation;
     }
 }

@@ -59,7 +59,8 @@ class PatientDetailResource extends JsonResource
             'blood_group' => $this->blood_group,
             'marital_status' => $this->marital_status,
             'father_name' => $this->father_name,
-            'mother_name' => $this->mother_name,
+            'wife_name' => $this->wife_name,
+            'husband_name' => $this->husband_name,
         ];
 
         // --- UPCOMING_APPOINTMENTS AS FLATTENED SINGLE ITEM OR NULL ---

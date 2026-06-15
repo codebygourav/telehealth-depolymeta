@@ -23,21 +23,22 @@ class UserSeeder extends Seeder
             ]);
         }
 
-        // Create super admin
-        $user = User::firstOrNew(['email' => 'quickcoderzindia@gmail.com']);
-        $user->name = 'Super Admin';
-        $user->slug = Str::slug($user->name);
-        $user->email_verified_at = Carbon::now();
-        $user->password = Hash::make('uFx5vs4WmXyjQpm');
-        $user->phone = '9864796436';
-        $user->save();
+        // Create or update super admin user
+        $user = User::firstOrCreate(
+            ['email' => 'superadmin@telehealth.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => bcrypt('password'), // Change this password after seeding
+                'email_verified_at' => now(),
+                'remember_token' => Str::random(10),
+            ]
+        );
 
         // Now we have user ID — update audit fields
-        $user->update([
-            'created_by' => $user->id,
-            'updated_by' => $user->id,
-            'deleted_by' => null,
-        ]);
+        $user->created_by = $user->id;
+        $user->updated_by = $user->id;
+        $user->deleted_by = null;
+        $user->save();
 
         // Assign enum role
         $user->assignRole(UserRole::SuperAdmin->value);

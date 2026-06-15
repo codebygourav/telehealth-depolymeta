@@ -10,13 +10,18 @@ class DoctorMinimalResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $isTestDoctor = (bool) $this->is_test_doctor;
+
         return [
             'id'          => $this->id,
             'first_name'  => $this->first_name,
             'last_name'   => $this->last_name,
             'years_experience' => $this->years_experience,
-            'avatar_url'  => storage_url($this->user->avatar),
+            'avatar_url' => storage_url($this->avatar),
             'slug'    => $this->slug,
+            'is_test_doctor' => $isTestDoctor,
+            'badge' => $isTestDoctor ? 'Test' : null,
+            'badges' => $isTestDoctor ? ['Test'] : [],
             'education_info' => $this->education_info,
             'languages_known' => $this->languages_known,
             'departments' => $this->whenLoaded('departments', function () {
@@ -27,12 +32,6 @@ class DoctorMinimalResource extends JsonResource
                         'order' => $department->pivot->order,
                     ];
                 })->toArray();
-            }),
-            // Availability - only in-person
-            'availabilities' => $this->whenLoaded('availabilities', function () {
-                return DoctorAvailabilityResource::collection(
-                    $this->availabilities->filter(fn($slot) => $slot->start_time)
-                );
             }),
         ];
     }

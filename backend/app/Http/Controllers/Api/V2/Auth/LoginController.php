@@ -218,6 +218,8 @@ class LoginController extends Controller
             $profileIdKey = 'patient_id';
             $profileId = $patient?->id;
             $status = $user->status ?? null;
+            $is_existing_patient = $patient?->is_existing_patient ?? 0;
+            $existing_patient_id = $patient?->existing_patient_id ?? '';
         }
 
         return ApiResponseService::success(
@@ -239,6 +241,12 @@ class LoginController extends Controller
                 'avatar' => $avatar,
                 $profileIdKey => $profileId,
                 'status' => $status,
+                // Only return patient keys if patient, not doctor
+                ...($role === 'patient' ? [
+                    'is_existing_patient' => $is_existing_patient,
+                    'existing_patient_id' => $existing_patient_id,
+                ] : []),
+        
             ],
             code: 'LOGIN_SUCCESS'
         );

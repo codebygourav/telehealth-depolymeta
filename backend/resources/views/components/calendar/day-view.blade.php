@@ -14,12 +14,26 @@
     <div class="grid grid-cols-2 gap-6">
         {{-- Left: Selected Day Slots (50%) --}}
         <div class="col-span-1">
-            <x-calendar.selected-day-slots :selectedDateLabel="$selectedDateLabel" :selectedDateSlots="$selectedDateSlots" :showHeader="true" :gridLayout="false" />
+            <x-calendar.selected-day-slots 
+                :selectedDateLabel="$selectedDateLabel" 
+                :selectedDateSlots="$this->getFilteredDateSlots()" 
+                :allSlots="$selectedDateSlots"
+                :selectedTimeSlot="$selectedTimeSlot"
+                :showHeader="true" 
+                :gridLayout="false" 
+            />
         </div>
 
         {{-- Right: Appointments (50%) --}}
         <div class="col-span-1">
-            <x-appointments.appointments-card-view :appointments="$appointments" title="Patient Appointments" :selectedDateLabel="$selectedDateLabel" />
+            <x-appointments.appointments-card-view 
+                :appointments="$this->getFilteredAppointments()" 
+                title="Patient Appointments" 
+                :selectedDateLabel="$selectedDateLabel" 
+                :selectedTimeSlot="$selectedTimeSlot"
+                :typeCounts="$this->getAppointmentTypeCounts()"
+                :currentFilter="$appointmentFilter"
+            />
         </div>
     </div>
 </div>

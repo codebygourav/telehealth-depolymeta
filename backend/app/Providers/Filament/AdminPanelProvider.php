@@ -4,18 +4,10 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login as CustomLogin;
 use Filament\Enums\DatabaseNotificationsPosition;
-use App\Filament\Pages\{Dashboard, DoctorReport, OPDCalendar, RolePermissionMatrix, Settings, TestRazorpayBooking};
+use App\Filament\Pages\{BookAppointment, Dashboard, DoctorReport, ManageVideoLinks, OPDCalendar, RolePermissionMatrix, Settings};
 use App\Filament\Resources\Advertisements\AdvertisementResource;
-use App\Filament\Resources\{Appointments\AppointmentResource, DoctorDepartments\DoctorDepartmentResource, DoctorReplacements\DoctorReplacementResource, DoctorReviews\DoctorReviewResource, Doctors\DoctorResource, ContactUs\ContactUsResource, Leaves\LeaveResource, MedicalReports\MedicalReportResource, Medicines\MedicineResource, ModuleDocuments\ModuleDocumentResource, Patients\PatientResource, Payments\PaymentResource, Symptoms\SymptomResource, Users\UserResource, Vendors\VendorResource};
-use App\Filament\Resources\DietTemplates\DietTemplateResource;
-use App\Filament\Resources\Vaccinations\VaccinationResource;
-use App\Filament\Resources\VaccinationTemplates\VaccinationTemplateResource;
-use App\Filament\Resources\PatientVaccinations\PatientVaccinationResource;
-use App\Filament\Resources\PatientProfiles\PatientProfileResource;
-use App\Filament\Resources\PatientVaccinationPrograms\PatientVaccinationProgramResource;
-use App\Filament\Resources\VaccinationDocuments\VaccinationDocumentResource;
-use App\Filament\Resources\VaccinationGeneralFaqs\VaccinationGeneralFaqResource;
-use App\Filament\Resources\VaccinationClinicalInsights\VaccinationClinicalInsightResource;
+use App\Filament\Resources\EmailLogs\EmailLogResource;
+use App\Filament\Resources\{Appointments\AppointmentResource, DoctorDepartments\DoctorDepartmentResource, DoctorReplacements\DoctorReplacementResource, DoctorReviews\DoctorReviewResource, Doctors\DoctorAvailabilityResource, Doctors\DoctorResource, ContactUs\ContactUsResource, ExternalBookings\ExternalBookingResource, Leaves\LeaveResource, MedicalReports\MedicalReportResource, Medicines\MedicineResource, ModuleDocuments\ModuleDocumentResource, Patients\PatientResource, Payments\PaymentResource, Symptoms\SymptomResource, Users\UserResource, Vendors\VendorResource};
 use App\Models\Setting;
 use Filament\Http\Middleware\{Authenticate, AuthenticateSession, DisableBladeIconComponents, DispatchServingFilamentEvent};
 use Filament\Navigation\NavigationBuilder;
@@ -37,6 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->authGuard('web')
             ->login(CustomLogin::class)
+            ->passwordReset()
             ->colors([
                 'primary' => $this->getPrimaryColor(),
                 'success' => $this->getSecondaryColor(),
@@ -58,14 +51,16 @@ class AdminPanelProvider extends PanelProvider
                 OPDCalendar::class,
                 RolePermissionMatrix::class,
                 Settings::class,
-                TestRazorpayBooking::class,
-                TestRazorpayBooking::class,
+                BookAppointment::class,
                 DoctorReport::class,
+                ManageVideoLinks::class,
             ])
             ->resources([
                 AppointmentResource::class,
+                ExternalBookingResource::class,
                 PatientResource::class,
                 DoctorResource::class,
+                DoctorAvailabilityResource::class,
                 ContactUsResource::class,
                 DoctorDepartmentResource::class,
                 MedicineResource::class,
@@ -79,24 +74,15 @@ class AdminPanelProvider extends PanelProvider
                 PaymentResource::class,
                 MedicalReportResource::class,
                 ModuleDocumentResource::class,
-                VaccinationResource::class,
-                VaccinationTemplateResource::class,
-                DietTemplateResource::class,
-                PatientProfileResource::class,
-                PatientVaccinationProgramResource::class,
-                PatientVaccinationResource::class,
-                VaccinationDocumentResource::class,
-                VaccinationGeneralFaqResource::class,
-                VaccinationClinicalInsightResource::class,
+                EmailLogResource::class,
             ])
             ->navigation(fn(NavigationBuilder $builder): NavigationBuilder => \App\Filament\CustomSidebarManager::buildFilamentNavigation($builder))
-            ->unsavedChangesAlerts()
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
             ])
-            ->profile(isSimple: true)
+            ->profile(isSimple: false)
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -120,12 +106,7 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::SIDEBAR_FOOTER,
                 fn(): string => view('filament.components.sidebar-user-menu')->render(),
             )
-            ->renderHook(
-                PanelsRenderHook::BODY_END,
-                fn (): string => view('filament.partial.vaccination-accordion-script')->render(),
-            )
             ->databaseNotifications(position: DatabaseNotificationsPosition::Sidebar)
-            ->unsavedChangesAlerts()
             ->authMiddleware([
                 Authenticate::class,
             ]);
@@ -148,9 +129,9 @@ class AdminPanelProvider extends PanelProvider
     protected function getSecondaryColor(): string
     {
         try {
-            return Setting::getValue('app', 'secondary_color', '#22c55e') ?? '#22c55e';
+            return Setting::getValue('app', 'secondary_color', '#073827') ?? '#073827';
         } catch (\Exception $e) {
-            return '#22c55e';
+            return '#073827';
         }
     }
 
@@ -158,7 +139,8 @@ class AdminPanelProvider extends PanelProvider
     {
         // Default Assets
         $logo = asset('images/cmc-telehealth.png');
-        $icon = asset('images/cmc-telehealth.png');
+        $black_logo = asset('images/cmc-telehealth-black.png');
+        $icon = asset('images/cmc-telehealth-black.png');
 
         try {
             // Check for dynamic logo from Settings
@@ -166,10 +148,6 @@ class AdminPanelProvider extends PanelProvider
             if ($settingLogo && \Illuminate\Support\Facades\Storage::disk('public')->exists($settingLogo)) {
                 $logo = storage_url($settingLogo);
             }
-
-            // Check for dynamic icon/favicon from Settings
-            // Note: The user mentioned "flateicon" or "favicon" in settings.
-            // We use this for the collapsed icon as well to prefer the user's uploaded icon if available.
             $settingFavicon = Setting::getValue('app', 'favicon');
             if ($settingFavicon && \Illuminate\Support\Facades\Storage::disk('public')->exists($settingFavicon)) {
                 $icon = storage_url($settingFavicon);

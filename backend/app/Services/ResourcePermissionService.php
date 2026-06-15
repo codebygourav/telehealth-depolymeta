@@ -428,6 +428,13 @@ class ResourcePermissionService
      */
     protected static function getResourceSlug(string $resourceClass): string
     {
+        if (property_exists($resourceClass, 'slug')) {
+            $slug = $resourceClass::$slug ?? null;
+            if ($slug) {
+                return $slug;
+            }
+        }
+
         if (method_exists($resourceClass, 'getSlug')) {
             $slug = $resourceClass::getSlug();
             if ($slug) {

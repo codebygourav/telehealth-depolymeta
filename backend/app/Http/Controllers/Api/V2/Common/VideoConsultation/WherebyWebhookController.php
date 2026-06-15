@@ -198,6 +198,13 @@ class WherebyWebhookController extends Controller
                     'status' => 'completed',
                     'ended_at' => now()
                 ]);
+
+                if ($appointment) {
+                    $appointment->update([
+                        'status' => AppointmentStatus::COMPLETED->value,
+                    ]);
+                    NotificationService::notifyAppointmentCompleted($appointment);
+                }
                 break;
 
             case 'room.client.knockCancelled':

@@ -12,39 +12,25 @@
  */
 :root {
     --app-primary-hex: #073827;
-    --app-secondary-hex: #22c55e;
-    --app-primary-hex-12: #07382712;
+    --app-secondary-hex: #073827;
+    --app-primary-hex-12: #0738271f;
     --border: oklch(0.922 0 0);
 }
 
-/* Override Filament's primary color with green */
-[x-cloak] {
-    --primary-50: 240 253 247;
-    --primary-100: 209 250 229;
-    --primary-200: 167 243 208;
-    --primary-300: 110 231 183;
-    --primary-400: 52 211 153;
-    --primary-500: 16 185 129;
-    --primary-600: 5 150 105;
-    --primary-700: 4 120 87;
-    --primary-800: 6 95 70;
-    --primary-900: 7 56 39;
-    --primary-950: 2 34 23;
-}
-
-/* For light mode */
+/* Filament primary palette — brand #073827 */
+[x-cloak],
 :root {
-    --primary-50: 240 253 247;
-    --primary-100: 209 250 229;
-    --primary-200: 167 243 208;
-    --primary-300: 110 231 183;
-    --primary-400: 52 211 153;
-    --primary-500: 16 185 129;
-    --primary-600: 5 150 105;
-    --primary-700: 4 120 87;
-    --primary-800: 6 95 70;
-    --primary-900: 7 56 39;
-    --primary-950: 2 34 23;
+    --primary-50: 236 249 243;
+    --primary-100: 207 237 225;
+    --primary-200: 163 219 195;
+    --primary-300: 111 195 160;
+    --primary-400: 58 166 124;
+    --primary-500: 22 130 92;
+    --primary-600: 7 56 39;
+    --primary-700: 6 47 33;
+    --primary-800: 4 36 25;
+    --primary-900: 3 28 19;
+    --primary-950: 1 14 10;
 }
 
 /* Tailwind v4 overrides - no @layer needed, direct CSS */
@@ -210,6 +196,10 @@ li.fi-sidebar-group.fi-collapsible.fi-collapsed {
     border-bottom: 1px solid #0738271a;
 }
 
+.fi-sidebar-group {
+    row-gap: 0 !important;
+}
+
 /* Make footer (logout) stick to bottom */
 .fi-sidebar .fi-sidebar-footer {
     margin-top: auto;
@@ -320,15 +310,6 @@ li.fi-sidebar-group.fi-collapsible.fi-collapsed {
     display: none;
 }
 
-.fi-tabs-item {
-    &.fi-active {
-
-        & .fi-tabs-item-label,
-        & .fi-icon {
-            color: var(--app-primary-hex) !important;
-        }
-    }
-}
 
 .fi-simple-header-heading {
     display: none !important;
@@ -945,7 +926,7 @@ input[type="checkbox"]:checked::after {
 
     /* Open State (Expanded) */
     .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar.fi-sidebar-open {
-        width: 17rem !important;
+        width: 15rem !important;
     }
 
     /* Hide Text when Collapsed - using max-width for smooth transition instead of display:none */
@@ -990,75 +971,686 @@ input[type="checkbox"]:checked::after {
     }
 }
 
+.fi-fo-radio-label input[type=radio].fi-radio-input:checked {
+    background-color: rgb(7 56 39) !important;
+}
+
 /* =====================
-   VACCINATION SLIDEOVER ACCORDION
+   Clean Sidebar Hierarchy
+   Uses CustomSidebarManager -> Filament NavigationBuilder.
 ===================== */
-.vaccination-accordion-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.vaccination-accordion-form .vaccination-accordion-section {
-    border: 1px solid #e5e7eb !important;
-    border-radius: 0.75rem !important;
-    overflow: hidden;
+.fi-sidebar {
     background: #ffffff !important;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    border-right: 1px solid #e7ecea !important;
+    box-shadow: none !important;
 }
 
-.vaccination-accordion-form .vaccination-accordion-section .fi-section-header {
-    background: #f8fafc !important;
-    border-bottom: 1px solid transparent;
-    padding-block: 0.85rem !important;
+.fi-sidebar .fi-sidebar-header-ctn {
+    background: var(--app-primary-hex) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
-.vaccination-accordion-form .vaccination-accordion-section .fi-section-header-heading {
-    font-weight: 700 !important;
-    color: #0f172a !important;
-}
-
-.vaccination-accordion-form .vaccination-accordion-section .fi-section-header-description {
-    color: #64748b !important;
-    font-size: 0.8125rem !important;
-}
-
-.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="true"] {
-    border-color: #059669 !important;
-    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.12);
-}
-
-.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="true"] .fi-section-header {
-    background: linear-gradient(90deg, #ecfdf5 0%, #ffffff 100%) !important;
-    border-bottom: 1px solid #bbf7d0 !important;
-}
-
-.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="true"] .fi-section-header-heading {
-    color: #047857 !important;
-}
-
-.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="false"] .fi-section-header {
-    background: #f1f5f9 !important;
-}
-
-.vaccination-accordion-form .vaccination-accordion-section .fi-section-content {
+.fi-sidebar .fi-sidebar-nav {
     background: #ffffff !important;
-    padding-top: 1rem !important;
+    padding-block: 0.375rem !important;
 }
 
-.vaccination-accordion-form .vaccination-accordion-section[aria-expanded="false"] .fi-section-content {
+.fi-sidebar .fi-sidebar-nav-groups {
+    gap: 0 !important;
+    padding: 0 0 1rem !important;
+}
+
+.fi-sidebar .fi-sidebar-group {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.fi-sidebar .fi-sidebar-group-btn {
+    min-height: 2.875rem !important;
+    padding: 0 1.125rem !important;
+    color: #374151 !important;
+    font-size: 0.875rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    border-bottom: 1px solid rgba(229, 231, 235, 1) !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-active) .fi-sidebar-group-btn {
+    background: var(--app-primary-hex) !important;
+    color: #ffffff !important;
+    border-bottom-color: var(--app-primary-hex) !important;
+}
+
+.fi-sidebar .fi-sidebar-group-btn:hover {
+    background: transparent !important;
+    color: #111827 !important;
+}
+
+.fi-sidebar .fi-sidebar-group-collapse-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+    border-radius: 0.375rem !important;
+    background: transparent !important;
+    color: #9aa4b2 !important;
+    opacity: 1 !important;
+    transition: transform 160ms ease, color 160ms ease, background 160ms ease, opacity 160ms ease !important;
+}
+
+.fi-sidebar .fi-sidebar-group-collapse-btn svg {
+    width: 1rem !important;
+    height: 1rem !important;
+    stroke-width: 3 !important;
+    transform: rotate(180deg) !important;
+    transition: transform 160ms ease !important;
+    color: #073827;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-active) .fi-sidebar-group-collapse-btn,
+.fi-sidebar .fi-sidebar-group-btn:hover .fi-sidebar-group-collapse-btn {
+    background: transparent !important;
+    color: currentColor !important;
+    opacity: 1 !important;
+}
+
+.fi-sidebar .fi-sidebar-group.fi-collapsed .fi-sidebar-group-collapse-btn {
+    transform: none !important;
+}
+
+
+.fi-sidebar .fi-sidebar-group-items {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.fi-sidebar .fi-sidebar-group .fi-sidebar-group-btn span.fi-sidebar-group-label {
+    color: #073827;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-active) .fi-sidebar-group-btn span.fi-sidebar-group-label,
+.fi-sidebar .fi-sidebar-group:has(.fi-active) .fi-sidebar-group-collapse-btn svg {
+    color: #ffffff !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-group-items {
+    background: #0738270d !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn)+.fi-sidebar-group {
+    margin-top: 0.375rem !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-group-items::before {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    left: 23px !important;
+    top: 0.65rem !important;
+    bottom: 0.65rem !important;
+    width: 1px !important;
+    background: color-mix(in srgb, var(--app-primary-hex) 14%, #ffffff) !important;
+    z-index: 1 !important;
+}
+
+.fi-sidebar .fi-sidebar-item {
+    position: relative !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-item::before {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    left: 1.34rem !important;
+    top: 50% !important;
+    width: 0.3rem !important;
+    height: 0.3rem !important;
+    border-radius: 999px !important;
+    background: color-mix(in srgb, var(--app-primary-hex) 20%, #ffffff) !important;
+    transform: translateY(-50%) !important;
+    z-index: 2 !important;
+}
+
+.fi-sidebar .fi-sidebar-item-btn {
+    min-height: 2.875rem !important;
+    padding: 0 1.25rem !important;
+    border-radius: 0 !important;
+    color: #34414d !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-item-btn {
+    min-height: 2.875rem !important;
+    padding: 0 1.125rem 0 2.6rem !important;
+    border-radius: 0 !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-item-icon {
     display: none !important;
 }
 
-/* Vaccination documents grid (module-documents style) */
-.vaccination-documents-grid-table .fi-ta-content-grid .fi-checkbox-input {
-    position: absolute;
-    z-index: 10;
-    top: 7px;
-    right: 9px;
+.fi-sidebar .fi-sidebar-item:not(:last-child)>.fi-sidebar-item-btn {
+    border-bottom: 0 !important;
+    border-radius: 0 !important;
 }
 
-.vaccination-documents-grid-table .fi-ta-record-content-ctn {
-    row-gap: 0;
+.fi-sidebar .fi-sidebar-item-btn:hover {
+    background: #f1f5f3 !important;
+    color: var(--app-primary-hex) !important;
+}
+
+.fi-sidebar .fi-sidebar-item-icon {
+    color: #98a2b3 !important;
+}
+
+.fi-sidebar .fi-sidebar-item-btn:hover .fi-sidebar-item-icon {
+    color: var(--app-primary-hex) !important;
+}
+
+.fi-sidebar .fi-sidebar-item.fi-active>.fi-sidebar-item-btn {
+    background: var(--app-primary-hex) !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    border-bottom-color: var(--app-primary-hex) !important;
+    border-radius: 0 !important;
+}
+
+.fi-sidebar .fi-sidebar-group:not(:has(.fi-sidebar-group-btn)) .fi-sidebar-item.fi-active>.fi-sidebar-item-btn::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 4px !important;
+    background: #d6b13f !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-item.fi-active>.fi-sidebar-item-btn {
+    background: color-mix(in srgb, var(--app-primary-hex) 10%, #ffffff) !important;
+    color: var(--app-primary-hex) !important;
+    border-bottom-color: transparent !important;
+    box-shadow: none !important;
+    font-weight: 800 !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-item.fi-active>.fi-sidebar-item-btn .fi-sidebar-item-icon,
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-item.fi-active>.fi-sidebar-item-btn .fi-sidebar-item-label {
+    color: var(--app-primary-hex) !important;
+}
+
+.fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-item.fi-active::before {
+    background: var(--app-primary-hex) !important;
+}
+
+.fi-sidebar .fi-sidebar-item.fi-active>.fi-sidebar-item-btn .fi-sidebar-item-icon,
+.fi-sidebar .fi-sidebar-item.fi-active>.fi-sidebar-item-btn .fi-sidebar-item-label {
+    color: inherit !important;
+}
+
+@media (min-width: 1024px) {
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-nav-groups {
+        padding: 0.5rem 0.375rem !important;
+    }
+
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group {
+        border-color: transparent !important;
+        background: transparent !important;
+        border-radius: 0 !important;
+        margin-bottom: 0.25rem !important;
+    }
+
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group-items {
+        background: transparent !important;
+        padding: 0 !important;
+    }
+
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group-items::before,
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item::before {
+        display: none !important;
+    }
+
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-btn {
+        width: 3rem !important;
+        min-height: 3rem !important;
+        margin-inline: auto !important;
+        justify-content: center !important;
+        border-radius: 0.75rem !important;
+        border-bottom: 0 !important;
+    }
+}
+
+.custom_position .fi-modal-window-ctn.fi-clickable {
+    grid-template-rows: 1fr auto 1fr;
+}
+
+.fi-page-header-main-ctn .fi-header {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
+
+/* ==========================================
+   CUSTOM APPOINTMENTS UI POLISH & THEME MATCH
+   ========================================== */
+
+/* Header Stats cards matching the primary theme color dynamically */
+.header-stat-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.header-stat-card.is-active {
+    background-color: color-mix(in srgb, var(--app-primary-hex) 12%, #ffffff) !important;
+    border-color: var(--app-primary-hex) !important;
+    border-width: 2px !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05) !important;
+    transform: translateY(-2px) scale(1.01);
+}
+
+.dark .header-stat-card.is-active {
+    background-color: color-mix(in srgb, var(--app-primary-hex) 15%, #111827) !important;
+}
+
+/* Color text inside active cards to make active state extremely obvious */
+.header-stat-card.is-active span.uppercase {
+    color: var(--app-primary-hex) !important;
+    font-weight: 800 !important;
+}
+
+.header-stat-card.is-active .text-3xl {
+    color: var(--app-primary-hex) !important;
+}
+
+.header-stat-card.is-inactive {
+    background-color: rgba(249, 250, 251, 0.5) !important;
+    /* bg-gray-50/50 */
+    border-color: #d8d9da !important;
+}
+
+.dark .header-stat-card.is-inactive {
+    background-color: rgba(17, 24, 39, 0.5) !important;
+    /* dark:bg-gray-900/50 */
+    border-color: #1f2937 !important;
+    /* dark:border-gray-800 */
+}
+
+
+.header-stat-card.is-inactive:hover {
+    border-color: #d1d5db !important;
+    /* hover:border-gray-300 */
+}
+
+.dark .header-stat-card.is-inactive:hover {
+    border-color: #374151 !important;
+    /* dark:hover:border-gray-700 */
+}
+
+/* Icon Containers */
+.header-stat-icon {
+    padding: 0.875rem !important;
+    /* p-3.5 */
+    border-radius: 0.75rem !important;
+    /* rounded-xl */
+    transition: all 0.3s ease;
+}
+
+.header-stat-icon.is-active {
+    background-color: var(--app-primary-hex) !important;
+    color: #ffffff !important;
+}
+
+.header-stat-icon.is-inactive {
+    background-color: color-mix(in srgb, var(--app-primary-hex) 10%, transparent) !important;
+    color: var(--app-primary-hex) !important;
+}
+
+.dark .header-stat-icon.is-inactive {
+    background-color: color-mix(in srgb, var(--app-primary-hex) 20%, transparent) !important;
+    color: color-mix(in srgb, var(--app-primary-hex) 80%, white) !important;
+}
+
+/* Active indicator badges */
+.header-stat-badge.is-active {
+    background-color: color-mix(in srgb, var(--app-primary-hex) 15%, transparent) !important;
+    color: var(--app-primary-hex) !important;
+}
+
+.dark .header-stat-badge.is-active {
+    background-color: color-mix(in srgb, var(--app-primary-hex) 30%, transparent) !important;
+    color: color-mix(in srgb, var(--app-primary-hex) 90%, white) !important;
+}
+
+/* Table Header Toolbar cleanup scoped to .custom-pagination table */
+/* .custom-pagination .fi-ta-header-toolbar {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-top: -12px !important;
+    margin-bottom: 8px !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+} */
+
+/* .custom-pagination .fi-ta-header-toolbar>div {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+} */
+
+/* Desktop-specific alignment: Force filters into a single row and pull the toggle button inline */
+@media (min-width: 1024px) {
+
+    /* Target the filters grid container inside the form to force single-row Flexbox layout */
+    .custom-pagination .fi-ta-filters form .grid,
+    .custom-pagination .fi-ta-filters form>.fi-sc,
+    :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-filters form .grid,
+    :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-filters form>.fi-sc {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-end !important;
+        gap: 1rem !important;
+        padding-right: 0 !important;
+    }
+
+    /* Make all filter fields flexible */
+    .custom-pagination .fi-ta-filters form .grid>*,
+    .custom-pagination .fi-ta-filters form>.fi-sc>*,
+    :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-filters form .grid>*,
+    :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-filters form>.fi-sc>* {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+    }
+
+    .custom-pagination .fi-ta-filters form .grid>.fi-ta-header-toolbar,
+    .custom-pagination .fi-ta-filters form>.fi-sc>.fi-ta-header-toolbar,
+    :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-filters form .grid>.fi-ta-header-toolbar,
+    :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-filters form>.fi-sc>.fi-ta-header-toolbar {
+        flex: 0 0 auto !important;
+        min-width: auto !important;
+    }
+
+    /* Make the Search filter (first child) wider */
+    .custom-pagination .fi-ta-filters form .grid>*:first-child,
+    .custom-pagination .fi-ta-filters form>.fi-sc>*:first-child,
+    :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-filters form .grid>*:first-child,
+    :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-filters form>.fi-sc>*:first-child {
+        flex: 1.8 1 0% !important;
+    }
+
+    /* Place the column toggle button in the natural flow, pulled up inline with inputs */
+    /* .custom-pagination .fi-ta-header-toolbar {
+        position: relative !important;
+        margin-top: -3.75rem !important;
+        margin-bottom: 1.5rem !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        z-index: 10 !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        pointer-events: none !important;
+    }
+
+    .custom-pagination .fi-ta-header-toolbar>div {
+        pointer-events: auto !important;
+        margin-right: 1.5rem !important;
+    } */
+}
+
+.custom-appointment-table-cls nav.fi-tabs,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) nav.fi-tabs {
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex;
+    justify-content: center;
+    border-bottom: 1px solid #e7e3e4 !important;
+    margin-top: 0 !important;
+    padding: 20px 0px;
+    gap: 12px;
+}
+
+.custom-pagination .fi-ta-content,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-content {
+    overflow-x: auto !important;
+    display: block !important;
+    width: 100% !important;
+}
+
+.custom-pagination .fi-ta-content.fi-ta-content-grid,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-content.fi-ta-content-grid {
+    display: grid !important;
+}
+
+.custom-pagination table,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) table {
+    min-width: 1400px !important;
+    width: 100% !important;
+    table-layout: auto !important;
+}
+
+.medical-reports-grid-table .fi-ta-content,
+.module-documents-grid-table .fi-ta-content,
+.advertisements-grid-table .fi-ta-content {
+    overflow: visible !important;
+}
+
+.medical-reports-grid-table .fi-ta-content.fi-ta-content-grid,
+.module-documents-grid-table .fi-ta-content.fi-ta-content-grid,
+.advertisements-grid-table .fi-ta-content.fi-ta-content-grid {
+    display: grid !important;
+}
+
+.medical-reports-grid-table table,
+.module-documents-grid-table table,
+.advertisements-grid-table table {
+    min-width: 0 !important;
+}
+
+.fi-ta-filters-above-content-ctn .fi-ta-header-toolbar {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: flex-end !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.fi-ta-filters-above-content-ctn .fi-ta-header-toolbar > div:last-child {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+}
+
+.fi-ta-filters-above-content-ctn .fi-ta-search-field {
+    width: 18rem !important;
+    max-width: 100% !important;
+}
+
+.custom-appointment-table-cls button.fi-tabs-item.fi-active,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) button.fi-tabs-item.fi-active {
+    background: #073827;
+}
+
+
+.custom-appointment-table-cls button.fi-tabs-item,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) button.fi-tabs-item {
+    background-color: #d1d5db3b;
+    border: 1px solid #dddd;
+}
+
+.custom-appointment-table-cls .fi-tabs-item-label,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item-label {
+    font-size: 13px !important;
+    color: #000;
+}
+
+.fi-sidebar-item-grouped-border {
+    display: none !important;
+}
+
+.custom-appointment-table-cls .fi-tabs-item.fi-active .fi-tabs-item-label,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item.fi-active .fi-tabs-item-label {
+    color: #fff !important;
+    font-size: 13px !important;
+}
+
+
+.no-scrollbar {
+    -ms-overflow-style: none !important;
+    /* IE and Edge */
+    scrollbar-width: none !important;
+    /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+    /* Chrome, Safari and Opera */
+}
+
+/* ========================================================
+   APPOINTMENTS PAGE TABS STYLING & ACCENT SEPARATION
+   ======================================================== */
+
+/* Style the page tabs as a separate centered card container */
+.fi-resource-appointments-list-appointments-page nav.fi-tabs,
+.fi-resource-payments-list-payments-page nav.fi-tabs,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) nav.fi-tabs {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background-color: #ffffff !important;
+    /* white card background */
+    border: 1px solid #dee2e6 !important;
+    /* light grey border */
+    border-radius: 0.75rem !important;
+    /* rounded-xl */
+    padding: 0.5rem 1rem !important;
+    /* spacing inside card */
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+    /* subtle shadow */
+    margin: 1.25rem 0 !important;
+    /* separate margin */
+    width: 100% !important;
+}
+
+.dark .fi-resource-appointments-list-appointments-page nav.fi-tabs,
+.dark .fi-resource-payments-list-payments-page nav.fi-tabs,
+.dark :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) nav.fi-tabs {
+    background-color: #111827 !important;
+    /* dark mode background */
+    border-color: #1f2937 !important;
+}
+
+/* Center the tab items list inside the nav card */
+.fi-resource-appointments-list-appointments-page nav.fi-tabs>div,
+.fi-resource-appointments-list-appointments-page nav.fi-tabs>ul,
+.fi-resource-payments-list-payments-page nav.fi-tabs>div,
+.fi-resource-payments-list-payments-page nav.fi-tabs>ul,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) nav.fi-tabs>div,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) nav.fi-tabs>ul {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    border: none !important;
+    /* Remove any default border under the tab list */
+    margin: 0 auto !important;
+}
+
+/* Style individual tab items */
+.fi-resource-appointments-list-appointments-page .fi-tabs-item,
+.fi-resource-payments-list-payments-page .fi-tabs-item,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item {
+    border-radius: 0.5rem !important;
+    /* rounded-lg */
+    padding: 0.5rem 1rem !important;
+    transition: all 0.2s ease !important;
+    font-weight: 700 !important;
+}
+
+/* Active tab style: solid primary color background with white text */
+.fi-resource-appointments-list-appointments-page .fi-tabs-item.fi-active,
+.fi-resource-payments-list-payments-page .fi-tabs-item.fi-active,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item.fi-active {
+    background-color: var(--app-primary-hex) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.fi-resource-appointments-list-appointments-page .fi-tabs-item.fi-active .fi-tabs-item-label,
+.fi-resource-payments-list-payments-page .fi-tabs-item.fi-active .fi-tabs-item-label,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item.fi-active .fi-tabs-item-label {
+    color: #ffffff !important;
+}
+
+/* Inactive tab style: hover effect */
+.fi-resource-appointments-list-appointments-page .fi-tabs-item:not(.fi-active):hover,
+.fi-resource-payments-list-payments-page .fi-tabs-item:not(.fi-active):hover,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item:not(.fi-active):hover {
+    background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+.dark .fi-resource-appointments-list-appointments-page .fi-tabs-item:not(.fi-active):hover,
+.dark .fi-resource-payments-list-payments-page .fi-tabs-item:not(.fi-active):hover,
+.dark :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item:not(.fi-active):hover {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Style badges inside active tabs */
+.fi-resource-appointments-list-appointments-page .fi-tabs-item.fi-active .fi-badge,
+.fi-resource-appointments-list-appointments-page .fi-tabs-item.fi-active span.fi-badge,
+.fi-resource-payments-list-payments-page .fi-tabs-item.fi-active .fi-badge,
+.fi-resource-payments-list-payments-page .fi-tabs-item.fi-active span.fi-badge,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item.fi-active .fi-badge,
+:where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item.fi-active span.fi-badge {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+}
+
+/* Position the column toggle button nicely above table content, separate from the tabs card */
+@media (min-width: 1024px) {
+
+    .fi-resource-appointments-list-appointments-page .fi-ta-header-toolbar,
+    .fi-resource-payments-list-payments-page .fi-ta-header-toolbar,
+    :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-ta-header-toolbar {
+        position: relative !important;
+        margin-top: 0 !important;
+        /* Stop pulling it up into the tabs section */
+        margin-bottom: 0.75rem !important;
+        pointer-events: auto !important;
+    }
 }

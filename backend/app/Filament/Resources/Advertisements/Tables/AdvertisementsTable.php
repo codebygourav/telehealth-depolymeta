@@ -7,7 +7,7 @@ use function App\Helpers\getUserAuditColumn;
 use Filament\Tables\Columns\{IconColumn, ImageColumn, TextColumn};
 use Filament\Tables\Columns\Layout\{Stack, Split, Panel};
 use Filament\Support\Enums\FontWeight;
-use Filament\Tables\{Filters\TrashedFilter, Table};
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Actions\{Action, ActionGroup, BulkActionGroup, DeleteBulkAction, ForceDeleteBulkAction, RestoreBulkAction, ViewAction, DeleteAction, EditAction};
 
@@ -82,7 +82,6 @@ class AdvertisementsTable
                 '2xl' => 5,
             ])
             ->filters([
-                TrashedFilter::make(),
             ])
             ->actions([
                 ActionGroup::make([

@@ -41,6 +41,7 @@ class DoctorRevenueChart extends ChartWidget
         // Revenue Data
         $revenueDataRaw = Payment::where('payments.status', 'paid')
             ->join('appointments', 'appointments.id', '=', 'payments.appointment_id')
+            ->join('doctors', 'doctors.id', '=', 'appointments.doctor_id')
             ->when($doctorId, fn($q) => $q->where('appointments.doctor_id', $doctorId))
             ->whereBetween('appointments.appointment_date', [$start, $end])
             ->selectRaw(match ($period) {

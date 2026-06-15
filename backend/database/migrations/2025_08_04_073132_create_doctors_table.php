@@ -60,10 +60,10 @@ return new class extends Migration
             $table->json('certifications_info')->nullable(); // name, from
             $table->json('fellowships_info')->nullable(); // title, institution, from, to
 
-            // 🔹 Additional Information (stored as JSON)
-            $table->string('special_interests')->nullable(); // days, from, to
-            $table->string('availability_info')->nullable(); // days, from, to
-            $table->string('memberships_info')->nullable(); // name, from
+            // 🔹 Additional Information (HTML from rich text editor)
+            $table->longText('special_interests')->nullable();
+            $table->longText('availability_info')->nullable();
+            $table->longText('memberships_info')->nullable();
 
             $table->uuid('created_by')->nullable();
             $table->uuid('updated_by')->nullable();

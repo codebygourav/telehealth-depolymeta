@@ -22,6 +22,7 @@ class Doctor extends Model
 
     protected $fillable = [
         'user_id',
+        'google_sheet_doctor_id',
         'first_name',
         'last_name',
         'dob',
@@ -58,6 +59,8 @@ class Doctor extends Model
         'memberships_info',
         'status',
         'hide_from_mobile_app',
+        'hide_from_wordpress_api',
+        'is_test_doctor',
         'slug',
         'email_sent',
         'created_by',
@@ -77,12 +80,22 @@ class Doctor extends Model
      */
     public function getAvatarFallback()
     {
-        return $this->user?->avatar;
+        return $this->getRawOriginal('avatar') ?: $this->user?->avatar;
+    }
+
+    /**
+     * Fallback for signature attribute if not found in module_documents for Doctor.
+     */
+    public function getSignatureFallback()
+    {
+        return $this->getRawOriginal('signature');
     }
 
     protected $casts = [
         'email_sent' => 'boolean',
         'hide_from_mobile_app' => 'boolean',
+        'hide_from_wordpress_api' => 'boolean',
+        'is_test_doctor' => 'boolean',
         'years_experience' => 'integer',
         'education_info' => 'array',
         'awards_info' => 'array',
@@ -94,6 +107,11 @@ class Doctor extends Model
         'gender' => GenderOption::class,
         'status' => \App\Enums\DoctorStatus::class,
     ];
+
+    public function externalBookings()
+    {
+        return $this->hasMany(ExternalBooking::class);
+    }
 
     protected static function booted()
     {
@@ -195,7 +213,7 @@ class Doctor extends Model
         });
 
         static::saved(function ($doctor) {
-            if ($doctor->wasChanged(['hide_from_mobile_app', 'status'])) {
+            if ($doctor->wasChanged(['hide_from_mobile_app', 'hide_from_wordpress_api', 'is_test_doctor', 'status'])) {
                 \Illuminate\Support\Facades\Cache::forget('home_doctors');
                 \Illuminate\Support\Facades\Cache::forget('home_patient_reviews');
             }
@@ -306,7 +324,7 @@ class Doctor extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class)->withTrashed();
+        return $this->belongsTo(User::class);
     }
 
     public function departments()
@@ -324,6 +342,11 @@ class Doctor extends Model
         return $this->hasMany(DoctorAvailability::class);
     }
 
+    public function availabilityOverrides()
+    {
+        return $this->hasMany(DoctorAvailabilityOverride::class);
+    }
+
     public function reviews()
     {
         return $this->hasMany(\App\Models\DoctorReview::class, 'doctor_id');
@@ -333,10 +356,6 @@ class Doctor extends Model
     {
         return $this->hasMany(DoctorReplacement::class, 'original_doctor_id');
     }
-
-
-
-
 
     public static function canUserAccess(): bool
     {
@@ -429,6 +448,22 @@ class Doctor extends Model
         });
     }
 
+    public function scopeVisibleInWordPressApi($query)
+    {
+        return $query->where(function ($query) {
+            $query->where('hide_from_wordpress_api', false)
+                ->orWhereNull('hide_from_wordpress_api');
+        });
+    }
+
+    public function scopeWithoutTestDoctors($query)
+    {
+        return $query->where(function ($query) {
+            $query->where('is_test_doctor', false)
+                ->orWhereNull('is_test_doctor');
+        });
+    }
+
     /**
      * Scope a query to include doctors with available slots in a date range.
      */
@@ -448,8 +483,19 @@ class Doctor extends Model
                     })
                         ->orWhere(function ($q) use ($startDate, $endDate) {
                             $q->where('is_recurring', true)
-                                ->where('recurring_start_date', '<=', $endDate)
-                                ->where('recurring_end_date', '>=', $startDate);
+                                ->where(function ($query) use ($endDate) {
+                                    $query->whereNull('recurring_start_date')
+                                        ->orWhere('recurring_start_date', '<=', $endDate);
+                                })
+                                ->where(function ($query) use ($startDate) {
+                                    $query->whereNull('recurring_end_date')
+                                        ->orWhere('recurring_end_date', '>=', $startDate);
+                                });
+                        })
+                        ->orWhere(function ($q) {
+                            $q->where('is_recurring', false)
+                                ->whereNull('date')
+                                ->whereNotNull('day_of_week');
                         });
                 });
         });

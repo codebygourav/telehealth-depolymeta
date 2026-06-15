@@ -4,7 +4,7 @@ namespace App\Filament\Resources\Medicines\Pages;
 
 use App\Filament\Resources\Medicines\MedicineResource;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 use App\Filament\Resources\Medicines\Pages\ManageCategoriesTypes;
 use App\Models\{MedicineCategory, MedicineType};
 use Filament\Notifications\Notification;

@@ -16,7 +16,6 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
 
@@ -62,30 +61,49 @@ class PatientsTable
                     ->icon('heroicon-o-envelope')
                     ->iconColor(' text-primary'),
 
-                TextColumn::make('gender')
-                    ->label('Gender'),
-
-                TextColumn::make('age')
-                    ->numeric()
-                    ->label('Age')
-                    ->sortable(),
+                TextColumn::make('existing_patient_id')
+                    ->label('Patient ID')
+                    ->searchable()
+                    ->sortable()
+                    ->placeholder('-'),
 
                 TextColumn::make('mobile_no')
                     ->label('Mobile')
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('city')
-                    ->label('City')
-                    ->searchable(),
-
-                TextColumn::make('blood_group')
-                    ->label('Blood Group'),
-
                 BadgeColumn::make('source')
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'app' => 'Mobile App',
+                        'website' => 'Website',
+                        'internal' => 'Internal',
+                        default => ucfirst((string) $state),
+                    })
                     ->colors([
                         'info' => 'website',
                         'success' => 'app',
+                        'gray' => 'internal',
+                    ]),
+
+                BadgeColumn::make('login_status')
+                    ->label('Login')
+                    ->getStateUsing(function ($record) {
+                        if (! $record->user_id || ! $record->user) {
+                            return 'Disabled';
+                        }
+
+                        $status = $record->user->status instanceof \App\Enums\AuthStatus
+                            ? $record->user->status->value
+                            : $record->user->status;
+
+                        return $record->user->email_verified_at && $status === \App\Enums\AuthStatus::registered->value
+                            ? 'Verified'
+                            : 'Pending';
+                    })
+                    ->colors([
+                        'success' => 'Verified',
+                        'warning' => 'Pending',
+                        'gray' => 'Disabled',
                     ]),
 
                 TextColumn::make('created_at')
@@ -100,7 +118,6 @@ class PatientsTable
 
             ])
             ->filters([
-                TrashedFilter::make(),
             ])
             ->recordActions([
                 ActionGroup::make([

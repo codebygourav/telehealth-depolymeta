@@ -80,7 +80,8 @@ class DoctorProfileResource extends JsonResource
                 $slots = $service->expandSlots(
                     $this->availabilities,
                     Carbon::today(),
-                    Carbon::today()->addDays(15)
+                    Carbon::today()->addMonths(1)
+
                 );
                 return $service->groupSlotsByDate($slots)->map(fn($group) => [
                     'date' => $group['date'],

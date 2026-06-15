@@ -28,9 +28,12 @@ class DoctorScheduleSlotResource extends JsonResource
             'slot_capacity' => $this['slot_capacity'] ?? 1,
             'booked_count' => $this['booked_count'] ?? 0,
             'available_slots' => $this['available_slots'] ?? 0,
+            'is_full' => $this['is_full'] ?? false,
             'is_recurring' => $this['is_recurring'] ?? false,
             'doctor_room' => $this['doctor_room'] ?? null,
             'is_available' => $this['is_available'] ?? true,
+            'appointments' => $this['appointments'] ?? [],
+            'external_bookings' => $this['external_bookings'] ?? [],
         ];
     }
 }

@@ -4,7 +4,6 @@ namespace App\Filament\Resources\DoctorDepartments\Tables;
 
 use Filament\Tables\Table;
 use Filament\Tables\Columns\{TextColumn, ImageColumn};
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Columns\ViewColumn;
 use Filament\Actions\{ActionGroup};
 use App\Filament\Resources\DoctorDepartments\DoctorDepartmentResource;
@@ -57,7 +56,6 @@ class DoctorDepartmentsTable
             ])
 
             ->filters([
-                TrashedFilter::make(),
             ])
 
             // Switched from ActionGroup to array of actions, since ActionGroup does not exist

@@ -28,6 +28,16 @@ return [
         'mock_booking_enabled' => env('APPOINTMENT_MOCK_PAYMENT_ENABLED', false),
     ],
 
+    'google_sheets' => [
+        'spreadsheet_id' => env('GOOGLE_SHEETS_SPREADSHEET_ID'),
+        'range' => env('GOOGLE_SHEETS_RANGE', 'A:L'),
+        'service_account_json_path' => env('GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON_PATH'),
+        'service_account_json' => env('GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON'),
+        'timeout' => env('GOOGLE_SHEETS_TIMEOUT', 30),
+        'sync_schedule_enabled' => env('GOOGLE_SHEETS_EXTERNAL_BOOKINGS_SYNC_ENABLED', false),
+        'sync_schedule' => env('GOOGLE_SHEETS_EXTERNAL_BOOKINGS_SYNC_SCHEDULE', '*/15 * * * *'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

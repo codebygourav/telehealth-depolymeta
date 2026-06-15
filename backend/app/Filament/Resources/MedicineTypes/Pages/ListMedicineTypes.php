@@ -5,7 +5,7 @@ namespace App\Filament\Resources\MedicineTypes\Pages;
 use Filament\Support\Enums\{Width, Alignment};
 use App\Filament\Resources\MedicineTypes\MedicineTypeResource;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 
 class ListMedicineTypes extends ListRecords
 {

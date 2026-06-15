@@ -5,6 +5,7 @@ return [
     'patient' => [
         'personal_information' => [
             'fields' => [
+                'existing_patient_id',
                 'first_name',
                 'last_name',
                 'mobile_no',
@@ -14,6 +15,7 @@ return [
                 'bio'
             ],
             'validation' => [
+                'existing_patient_id' => 'nullable|string|max:255',
                 'first_name' => 'sometimes|string|max:255',
                 'last_name' => 'sometimes|string|max:255',
                 'mobile_no' => 'sometimes|string|max:20',
@@ -23,6 +25,7 @@ return [
                 'bio'=>'sometimes|string|max:2000',
             ],
             'field_types' => [
+                'existing_patient_id' => 'text',
                 'first_name' => 'text',
                 'last_name' => 'text',
                 'mobile_no' => 'text',

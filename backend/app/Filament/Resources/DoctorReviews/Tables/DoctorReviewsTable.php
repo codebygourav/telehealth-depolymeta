@@ -6,7 +6,6 @@ use App\Filament\Resources\DoctorReviews\DoctorReviewResource;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use function App\Helpers\getUserAuditColumn;
@@ -117,8 +116,6 @@ class DoctorReviewsTable
                 getUserAuditColumn('deleter', 'Deleted By'),
             ])
             ->filters([
-                TrashedFilter::make(),
-
                 SelectFilter::make('review_type')
                     ->label('Review Type')
                     ->options([
