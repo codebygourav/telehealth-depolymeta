@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
             DietTemplateSeeder::class,
             MedicalReportSeeder::class,
 
-            // MedicalReportSeeder::class,
+            MedicalReportSeeder::class,
         ]);
     }
 }
