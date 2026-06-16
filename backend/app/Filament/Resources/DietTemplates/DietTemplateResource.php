@@ -24,6 +24,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -222,9 +224,8 @@ class DietTemplateResource extends Resource
                                                 ->label('Fat (g)')
                                                 ->numeric()
                                                 ->minValue(0),
-                                            TextInput::make('start_time')
-                                                ->label('Start Time')
-                                                ->time(),
+                                            TimePicker::make('start_time')
+                                                ->label('Start Time'),
                                         ]),
                                 ]),
                         ]),

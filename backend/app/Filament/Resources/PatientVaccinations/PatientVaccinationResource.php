@@ -116,6 +116,8 @@ class PatientVaccinationResource extends Resource
                                 ->label('Vaccine')
                                 ->options(fn() => Vaccination::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))
                                 ->searchable()
+                                ->preload()
+                                ->optionsLimit(1000)
                                 ->required(),
                             Select::make('vaccination_template_id')
                                 ->label('Source Template')
@@ -139,6 +141,8 @@ class PatientVaccinationResource extends Resource
                             Select::make('status')
                                 ->label('Status')
                                 ->options(VaccinationStatus::options())
+                                ->searchable()
+                                ->preload()
                                 ->required()
                                 ->default(VaccinationStatus::PENDING->value),
                             DatePicker::make('scheduled_date')

@@ -178,6 +178,8 @@ class VaccinationTemplateResource extends Resource
                                                 ->label('Vaccine')
                                                 ->options(fn() => Vaccination::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))
                                                 ->searchable()
+                                                ->preload()
+                                                ->optionsLimit(1000)
                                                 ->required()
                                                 ->columnSpan(4),
                                             TextInput::make('dose_no')
