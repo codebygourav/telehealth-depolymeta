@@ -1,16 +1,12 @@
-import BabyProfileCard from "./baby-profile-card";
+import { HelpCircle } from "lucide-react";
+import InfoAboutVaccinations from "./info-about-vaccinations";
 import ProgressCircleCard from "./progress-circle-card";
 import VaccinationSchedule from "./vaccination-schedule";
-import InfoAboutVaccinations from "./info-about-vaccinations";
-import { HelpCircle } from "lucide-react";
 
 const MyVaccination = () => {
     return (
         <div className="space-y-8 sm:space-y-10">
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 sm:gap-6">
-                <BabyProfileCard />
-                <ProgressCircleCard />
-            </div>
+            <ProgressCircleCard />
 
             <VaccinationSchedule />
 

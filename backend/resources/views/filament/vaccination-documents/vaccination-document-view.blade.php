@@ -1,9 +1,8 @@
 @php
     $record = $getState();
-    $record->loadMissing(['patientVaccination.patient', 'patientVaccination.patientProfile', 'patientVaccination.vaccination', 'patientVaccination.doctor']);
+    $record->loadMissing(['patientVaccination.patient', 'patientVaccination.vaccination', 'patientVaccination.doctor']);
 
     $patientName = trim(($record->patientVaccination?->patient?->first_name ?? '').' '.($record->patientVaccination?->patient?->last_name ?? '')) ?: '—';
-    $profileName = $record->patientVaccination?->patientProfile?->name ?? '—';
     $vaccineName = $record->patientVaccination?->vaccination?->name ?? '—';
     $doctorName = trim(($record->patientVaccination?->doctor?->first_name ?? '').' '.($record->patientVaccination?->doctor?->last_name ?? '')) ?: '—';
     $documentPath = $record->document;
@@ -33,10 +32,6 @@
             <div class="p-4 bg-primary-50 rounded-xl border border-primary-100 shadow-sm">
                 <p class="text-[10px] font-bold text-primary-600 uppercase tracking-widest">Patient</p>
                 <p class="text-sm font-bold text-primary-800 mt-1">{{ $patientName }}</p>
-            </div>
-            <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100 shadow-sm">
-                <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Profile</p>
-                <p class="text-sm font-bold text-emerald-800 mt-1">{{ $profileName }}</p>
             </div>
             <div class="p-4 bg-purple-50 rounded-xl border border-purple-100 shadow-sm">
                 <p class="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Vaccine</p>
@@ -74,9 +69,9 @@
 
                 <div class="p-4">
                     @if ($isImage)
-                        <img src="{{ $url }}" alt="Vaccination document" class="w-full max-h-[32rem] object-contain rounded-lg border border-gray-100 bg-gray-50">
+                        <img src="{{ $url }}" alt="Vaccination document" class="w-full max-h-128 object-contain rounded-lg border border-gray-100 bg-gray-50">
                     @elseif ($isPdf)
-                        <iframe src="{{ $url }}" class="w-full h-[32rem] rounded-lg border border-gray-200" title="PDF preview"></iframe>
+                        <iframe src="{{ $url }}" class="w-full h-128 rounded-lg border border-gray-200" title="PDF preview"></iframe>
                     @else
                         <div class="p-8 text-center text-sm text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
                             Preview not available for this file type. Use Open or Download.

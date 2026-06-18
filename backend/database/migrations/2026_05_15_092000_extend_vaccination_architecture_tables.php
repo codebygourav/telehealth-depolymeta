@@ -25,7 +25,6 @@ return new class extends Migration
         });
 
         Schema::table('patient_vaccinations', function (Blueprint $table) {
-            $table->uuid('patient_profile_id')->nullable()->after('patient_id');
             $table->uuid('patient_vaccination_program_id')->nullable()->after('vaccination_template_id');
             $table->string('route')->nullable()->after('manufacturer');
             $table->string('site')->nullable()->after('route');
@@ -34,8 +33,6 @@ return new class extends Migration
             $table->integer('reminder_count')->default(0)->after('last_reminder_sent_at');
             $table->timestamp('next_reminder_at')->nullable()->after('reminder_count');
 
-            $table->foreign('patient_profile_id')->references('id')->on('patient_profiles')->nullOnDelete();
-            $table->index(['patient_profile_id', 'status', 'scheduled_date'], 'pv_profile_status_date_idx');
             $table->index(['next_reminder_at', 'status'], 'pv_next_reminder_status_idx');
         });
 
@@ -51,11 +48,8 @@ return new class extends Migration
         });
 
         Schema::table('patient_vaccinations', function (Blueprint $table) {
-            $table->dropForeign(['patient_profile_id']);
-            $table->dropIndex('pv_profile_status_date_idx');
             $table->dropIndex('pv_next_reminder_status_idx');
             $table->dropColumn([
-                'patient_profile_id',
                 'patient_vaccination_program_id',
                 'route',
                 'site',
@@ -81,7 +75,5 @@ return new class extends Migration
             $table->dropIndex('vt_program_active_idx');
             $table->dropColumn('vaccination_program_id');
         });
-
-
     }
 };

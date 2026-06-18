@@ -11,26 +11,26 @@
  * See: resources/views/filament/partial/theme-colors.blade.php
  */
 :root {
-    --app-primary-hex: #073827;
-    --app-secondary-hex: #073827;
-    --app-primary-hex-12: #0738271f;
+    --app-primary-hex: #055bd9;
+    --app-secondary-hex: #055bd9;
+    --app-primary-hex-12: #055bd91f;
     --border: oklch(0.922 0 0);
 }
 
-/* Filament primary palette — brand #073827 */
+/* Filament primary palette — brand #055bd9 */
 [x-cloak],
 :root {
-    --primary-50: 236 249 243;
-    --primary-100: 207 237 225;
-    --primary-200: 163 219 195;
-    --primary-300: 111 195 160;
-    --primary-400: 58 166 124;
-    --primary-500: 22 130 92;
-    --primary-600: 7 56 39;
-    --primary-700: 6 47 33;
-    --primary-800: 4 36 25;
-    --primary-900: 3 28 19;
-    --primary-950: 1 14 10;
+    --primary-50: 239 245 255;
+    --primary-100: 219 232 255;
+    --primary-200: 190 212 255;
+    --primary-300: 141 178 255;
+    --primary-400: 84 143 246;
+    --primary-500: 35 111 231;
+    --primary-600: 5 91 217;
+    --primary-700: 4 74 176;
+    --primary-800: 5 59 138;
+    --primary-900: 8 48 107;
+    --primary-950: 7 32 69;
 }
 
 /* Tailwind v4 overrides - no @layer needed, direct CSS */
@@ -175,6 +175,475 @@
     background-color: color-mix(in srgb, var(--app-primary-hex) 14%, transparent);
 }
 
+/* Vaccination template admin screens */
+.vax-admin-shell {
+    display: grid;
+    gap: 1rem;
+}
+
+.vax-page-head,
+.vax-template-card,
+.vax-section,
+.vax-edit-panel {
+    background: #fff;
+    border: 1px solid #dfe7e3;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.vax-page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.vax-kicker {
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.vax-page-head h1,
+.vax-template-card h2,
+.vax-section h2,
+.vax-edit-panel h2 {
+    margin: 0;
+    color: #17231f;
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.vax-page-head p,
+.vax-section p,
+.vax-edit-panel p,
+.vax-card-title p {
+    margin-top: 0.25rem;
+    color: #647067;
+    font-size: 0.82rem;
+}
+
+.vax-head-actions,
+.vax-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.vax-pill,
+.vax-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.vax-pill.is-green,
+.vax-chip.is-green {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+
+.vax-pill.is-blue,
+.vax-chip.is-blue {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.vax-pill.is-gray,
+.vax-chip.is-gray {
+    background: #f3f4f6;
+    color: #374151;
+    border-color: #e5e7eb;
+}
+
+.vax-chip.is-amber {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.vax-chip.is-rose {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.vax-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.vax-stats-grid.is-compact {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.vax-stat {
+    min-height: 76px;
+    padding: 0.9rem;
+    background: #fff;
+    border: 1px solid #dfe7e3;
+    border-radius: 8px;
+}
+
+.vax-stat span,
+.vax-template-side dt {
+    display: block;
+    color: #647067;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.vax-stat strong {
+    display: block;
+    margin-top: 0.35rem;
+    color: #111827;
+    font-size: 1.2rem;
+    font-weight: 900;
+}
+
+.vax-stat small {
+    color: #647067;
+    font-size: 0.68rem;
+}
+
+.vax-template-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    overflow: hidden;
+}
+
+.vax-template-main {
+    padding: 1rem;
+}
+
+.vax-card-title,
+.vax-section-head,
+.vax-edit-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.vax-dose-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+}
+
+.vax-dose-grid.is-compact {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.vax-compact-summary {
+    padding: 0.85rem 1rem;
+}
+
+.vax-dose-mini,
+.vax-empty-mini {
+    min-height: 70px;
+    padding: 0.7rem;
+    background: #f8faf9;
+    border: 1px solid #e5ece8;
+    border-radius: 8px;
+}
+
+.vax-dose-mini strong,
+.vax-dose-mini span,
+.vax-dose-mini small {
+    display: block;
+}
+
+.vax-dose-mini strong {
+    color: #17231f;
+    font-size: 0.75rem;
+}
+
+.vax-dose-mini span {
+    margin-top: 0.25rem;
+    color: #374151;
+    font-size: 0.72rem;
+}
+
+.vax-dose-mini small {
+    margin-top: 0.15rem;
+    color: #647067;
+    font-size: 0.68rem;
+}
+
+.vax-template-side {
+    padding: 1rem;
+    border-left: 1px solid #dfe7e3;
+    background: #fbfcfb;
+}
+
+.vax-template-side dl {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.vax-template-side div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.vax-template-side dd {
+    color: #111827;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.vax-section {
+    padding: 1rem;
+}
+
+.vax-two-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.vax-note-box {
+    margin-top: 0.75rem;
+    padding: 0.85rem;
+    color: #647067;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    background: #f8faf9;
+    border: 1px dashed #b9c8c0;
+    border-radius: 8px;
+}
+
+.vax-dose-table {
+    margin-top: 0.75rem;
+    border: 1px solid #e5ece8;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.vax-dose-row {
+    display: grid;
+    grid-template-columns: 0.7fr 1.2fr 1fr 1.4fr 1.6fr;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.85rem;
+    border-top: 1px solid #e5ece8;
+    font-size: 0.78rem;
+}
+
+.vax-dose-row:first-child {
+    border-top: 0;
+}
+
+.vax-dose-row.is-head {
+    background: #f3f7f5;
+    color: #47554d;
+    font-size: 0.72rem;
+    font-weight: 900;
+}
+
+.vax-dose-row em {
+    display: inline-flex;
+    border: 1px solid;
+    border-radius: 999px;
+    padding: 0.2rem 0.45rem;
+    font-style: normal;
+    font-size: 0.66rem;
+    font-weight: 900;
+}
+
+.vax-dose-row small {
+    color: #647067;
+}
+
+.vax-preview-list {
+    position: relative;
+    margin-top: 0.75rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--app-primary-hex);
+}
+
+.vax-preview-item {
+    position: relative;
+    margin-bottom: 0.6rem;
+    padding: 0.8rem;
+    background: #fff;
+    border: 1px solid #e5ece8;
+    border-radius: 8px;
+}
+
+.vax-preview-item:last-child {
+    margin-bottom: 0;
+}
+
+.vax-preview-item::before {
+    content: "";
+    position: absolute;
+    left: -1.38rem;
+    top: 1rem;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--app-primary-hex);
+}
+
+.vax-preview-item strong,
+.vax-preview-item span {
+    display: block;
+}
+
+.vax-preview-item strong {
+    color: #17231f;
+    font-size: 0.82rem;
+}
+
+.vax-preview-item span {
+    margin-top: 0.2rem;
+    color: #647067;
+    font-size: 0.74rem;
+}
+
+.vax-edit-panel {
+    overflow: hidden;
+}
+
+.vax-edit-head {
+    padding: 1rem;
+    border-bottom: 1px solid #dfe7e3;
+}
+
+.vax-edit-layout {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 0;
+}
+
+.vax-step-rail {
+    padding: 1rem;
+    background: #fbfcfb;
+    border-right: 1px solid #dfe7e3;
+}
+
+.vax-step {
+    display: flex;
+    gap: 0.65rem;
+    padding: 0.8rem;
+    border: 1px solid #e5ece8;
+    border-bottom: 0;
+    background: #fff;
+}
+
+.vax-step:first-child {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.vax-step:last-child {
+    border-bottom: 1px solid #e5ece8;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.vax-step.is-active {
+    background: #e9f7ef;
+}
+
+.vax-step strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: #d1d9d4;
+    color: #17231f;
+    font-size: 0.72rem;
+}
+
+.vax-step.is-active strong {
+    background: var(--app-primary-hex);
+    color: #fff;
+}
+
+.vax-step span {
+    color: #17231f;
+    font-size: 0.78rem;
+    font-weight: 900;
+    line-height: 1.1;
+}
+
+.vax-step small {
+    display: block;
+    margin-top: 0.15rem;
+    color: #647067;
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+.vax-form-surface {
+    min-width: 0;
+    padding: 1rem;
+}
+
+.vax-empty-state {
+    padding: 1rem;
+    color: #647067;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+@media (max-width: 1200px) {
+
+    .vax-stats-grid,
+    .vax-dose-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vax-template-card,
+    .vax-edit-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .vax-template-side,
+    .vax-step-rail {
+        border-left: 0;
+        border-right: 0;
+        border-top: 1px solid #dfe7e3;
+    }
+}
+
+@media (max-width: 800px) {
+
+    .vax-page-head,
+    .vax-card-title,
+    .vax-section-head,
+    .vax-edit-head {
+        flex-direction: column;
+    }
+
+    .vax-stats-grid,
+    .vax-dose-grid,
+    .vax-two-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vax-dose-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Primary button override to match the attached image color */
 .fi-btn:not(.fi-outlined):not(.fi-disabled),
 button.fi-btn:not(.fi-outlined):not(.fi-disabled),
@@ -193,7 +662,7 @@ a.fi-btn:not(.fi-outlined):not(.fi-disabled):hover {
 /* Slight divider between items (subtle) */
 .fi-sidebar .fi-sidebar-nav .fi-sidebar-item,
 li.fi-sidebar-group.fi-collapsible.fi-collapsed {
-    border-bottom: 1px solid #0738271a;
+    border-bottom: 1px solid #055bd91a;
 }
 
 .fi-sidebar-group {
@@ -372,7 +841,7 @@ img.fi-logo {
     overflow: visible;
 }
 
-.vaccination-template-builder > .fi-section-header {
+.vaccination-template-builder>.fi-section-header {
     background: linear-gradient(90deg, #eef7f3 0%, #ffffff 72%);
     border-bottom: 1px solid #d7e3de;
 }
@@ -381,32 +850,33 @@ img.fi-logo {
     background: #fbfcfb;
 }
 
-.vaccination-set-repeater > .fi-fo-repeater-items {
+.vaccination-set-repeater>.fi-fo-repeater-items {
     gap: 16px !important;
 }
 
-.vaccination-set-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item {
+.vaccination-set-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item {
     border: 1px solid #b9d5ca !important;
     border-radius: 12px !important;
     background: #ffffff !important;
-    box-shadow: 0 10px 28px rgba(7, 56, 39, 0.08) !important;
+    box-shadow: 0 10px 28px rgba(5, 91, 217, 0.08) !important;
     overflow: visible;
 }
 
-.vaccination-set-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item > .fi-fo-repeater-item-header {
+.vaccination-set-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header {
     min-height: 52px;
     background: #eef7f3 !important;
     border-bottom: 1px solid #cfe2da !important;
     padding-inline: 16px !important;
+    border-radius: 12px;
 }
 
-.vaccination-set-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item > .fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
+.vaccination-set-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
     color: var(--app-primary-hex) !important;
     font-size: 0.95rem !important;
     font-weight: 700 !important;
 }
 
-.vaccination-set-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item > .fi-fo-repeater-item-content {
+.vaccination-set-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content {
     padding: 16px !important;
 }
 
@@ -416,11 +886,11 @@ img.fi-logo {
     padding-top: 14px;
 }
 
-.vaccination-dose-repeater > .fi-fo-repeater-items {
+.vaccination-dose-repeater>.fi-fo-repeater-items {
     gap: 10px !important;
 }
 
-.vaccination-dose-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item {
+.vaccination-dose-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item {
     border: 1px solid #dce7e2 !important;
     border-radius: 8px !important;
     background: #ffffff !important;
@@ -428,20 +898,20 @@ img.fi-logo {
     overflow: visible;
 }
 
-.vaccination-dose-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item > .fi-fo-repeater-item-header {
+.vaccination-dose-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header {
     min-height: 42px;
     background: #f6faf8 !important;
     border-bottom: 1px solid #edf2ef !important;
     padding-inline: 12px !important;
 }
 
-.vaccination-dose-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item > .fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
+.vaccination-dose-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
     color: #233c32 !important;
     font-size: 0.86rem !important;
     font-weight: 700 !important;
 }
 
-.vaccination-dose-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item > .fi-fo-repeater-item-content {
+.vaccination-dose-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content {
     padding: 12px !important;
 }
 
@@ -486,12 +956,12 @@ img.fi-logo {
     overflow: visible;
 }
 
-.patient-vaccination-form > .fi-section-header {
+.patient-vaccination-form>.fi-section-header {
     background: #f6faf8;
     border-bottom: 1px solid #d7e3de;
 }
 
-.patient-vaccination-primary > .fi-section-header {
+.patient-vaccination-primary>.fi-section-header {
     background: linear-gradient(90deg, #eef7f3 0%, #ffffff 70%);
 }
 
@@ -523,7 +993,7 @@ img.fi-logo {
 .patient-vaccination-form .fi-input-wrp:focus-within,
 .vaccination-template-builder .fi-input-wrp:focus-within {
     border-color: var(--app-primary-hex) !important;
-    box-shadow: 0 0 0 3px rgba(7, 56, 39, 0.12) !important;
+    box-shadow: 0 0 0 3px rgba(5, 91, 217, 0.12) !important;
 }
 
 .patient-vaccination-form .fi-input,
@@ -543,7 +1013,7 @@ img.fi-logo {
     color: #65746e !important;
 }
 
-.patient-vaccination-admin.fi-collapsed > .fi-section-header {
+.patient-vaccination-admin.fi-collapsed>.fi-section-header {
     border-bottom: 0;
 }
 
@@ -552,9 +1022,182 @@ img.fi-logo {
     box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08) !important;
 }
 
+/* Diet template weekly meal chart */
+.diet-template-chart.fi-section {
+    border-color: #d7e3de !important;
+    overflow: visible;
+}
+
+.diet-template-chart>.fi-section-header {
+    background: linear-gradient(90deg, #f6faf8 0%, #ffffff 72%);
+    border-bottom: 1px solid #d7e3de;
+}
+
+.diet-template-chart .fi-section-content-ctn {
+    background: #fbfcfb;
+}
+
+.diet-chart-helper {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.diet-chart-helper__item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    min-width: 0;
+    border: 1px solid #d7e3de;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.diet-chart-helper__step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    border-radius: 999px;
+    background: var(--app-primary-hex);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.diet-chart-helper__title {
+    color: #253a31;
+    font-size: 0.86rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.diet-chart-helper__text {
+    color: #65746e;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    margin-top: 2px;
+}
+
+.diet-day-repeater>.fi-fo-repeater-items {
+    gap: 16px !important;
+}
+
+.diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item {
+    border: 1px solid #b9d5ca !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    box-shadow: 0 10px 28px rgba(5, 91, 217, 0.08) !important;
+    overflow: visible;
+}
+
+.diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header {
+    min-height: 52px;
+    background: #eef7f3 !important;
+    border-bottom: 1px solid #cfe2da !important;
+    padding-inline: 16px !important;
+}
+
+.diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
+    color: var(--app-primary-hex) !important;
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
+}
+
+.diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content {
+    padding: 16px !important;
+}
+
+.diet-meal-repeater {
+    margin-top: 8px;
+    border-top: 1px dashed #b9d5ca;
+    padding-top: 14px;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items {
+    gap: 10px !important;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item {
+    border: 1px solid #dce7e2 !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    overflow: visible;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header {
+    min-height: 42px;
+    background: #f6faf8 !important;
+    border-bottom: 1px solid #edf2ef !important;
+    padding-inline: 12px !important;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
+    color: #233c32 !important;
+    font-size: 0.86rem !important;
+    font-weight: 800 !important;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content {
+    padding: 12px !important;
+}
+
+.diet-template-chart .fi-fo-field-wrp-label label {
+    color: #253a31 !important;
+    font-weight: 700 !important;
+}
+
+.diet-template-chart .fi-input-wrp {
+    background-color: #ffffff !important;
+    border: 1px solid #c7d3ce !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    min-height: 38px;
+    overflow: visible;
+}
+
+.diet-template-chart .fi-input-wrp:hover {
+    border-color: #9fb8ae !important;
+}
+
+.diet-template-chart .fi-input-wrp:focus-within {
+    border-color: var(--app-primary-hex) !important;
+    box-shadow: 0 0 0 3px rgba(5, 91, 217, 0.12) !important;
+}
+
+.diet-template-chart .fi-input,
+.diet-template-chart .fi-select-input {
+    background: transparent !important;
+}
+
+.diet-template-chart .fi-fo-field-wrp-helper-text {
+    color: #65746e !important;
+    font-size: 0.75rem !important;
+}
+
+.diet-day-repeater .fi-fo-repeater-add,
+.diet-meal-repeater .fi-fo-repeater-add {
+    justify-content: flex-end !important;
+    padding-top: 10px;
+}
+
+@media (max-width: 900px) {
+    .diet-chart-helper {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
-    .vaccination-set-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item > .fi-fo-repeater-item-content,
-    .vaccination-dose-repeater > .fi-fo-repeater-items > .fi-fo-repeater-item > .fi-fo-repeater-item-content {
+
+    .vaccination-set-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content,
+    .vaccination-dose-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content,
+    .diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content,
+    .diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content {
         padding: 12px !important;
     }
 }
@@ -931,7 +1574,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .custom-sidebar-badge-primary {
-    background-color: rgba(7, 56, 39, 0.1);
+    background-color: rgba(5, 91, 217, 0.1);
     color: var(--app-primary-hex);
 }
 
@@ -1165,7 +1808,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .fi-fo-radio-label input[type=radio].fi-radio-input:checked {
-    background-color: rgb(7 56 39) !important;
+    background-color: rgb(5 91 217) !important;
 }
 
 /* =====================
@@ -1251,7 +1894,7 @@ input[type="checkbox"]:checked::after {
     stroke-width: 3 !important;
     transform: rotate(180deg) !important;
     transition: transform 160ms ease !important;
-    color: #073827;
+    color: #055bd9;
 }
 
 .fi-sidebar .fi-sidebar-group:has(.fi-active) .fi-sidebar-group-collapse-btn,
@@ -1276,7 +1919,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .fi-sidebar .fi-sidebar-group .fi-sidebar-group-btn span.fi-sidebar-group-label {
-    color: #073827;
+    color: #000;
 }
 
 .fi-sidebar .fi-sidebar-group:has(.fi-active) .fi-sidebar-group-btn span.fi-sidebar-group-label,
@@ -1285,7 +1928,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-group-items {
-    background: #0738270d !important;
+    background: #055bd90d !important;
     margin-top: 0 !important;
     padding: 0 !important;
 }
@@ -1683,7 +2326,7 @@ input[type="checkbox"]:checked::after {
     margin: 0 !important;
 }
 
-.fi-ta-filters-above-content-ctn .fi-ta-header-toolbar > div:last-child {
+.fi-ta-filters-above-content-ctn .fi-ta-header-toolbar>div:last-child {
     display: flex !important;
     align-items: center !important;
     gap: 0.75rem !important;
@@ -1696,7 +2339,7 @@ input[type="checkbox"]:checked::after {
 
 .custom-appointment-table-cls button.fi-tabs-item.fi-active,
 :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) button.fi-tabs-item.fi-active {
-    background: #073827;
+    background: #055bd9;
 }
 
 
@@ -1720,6 +2363,58 @@ input[type="checkbox"]:checked::after {
 :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) .fi-tabs-item.fi-active .fi-tabs-item-label {
     color: #fff !important;
     font-size: 13px !important;
+}
+
+/* Vaccination admin list polish */
+:where([class*="fi-resource-patient-vaccinations"][class*="-list-"][class*="-page"]),
+:where([class*="fi-resource-vaccination-templates"][class*="-list-"][class*="-page"]),
+:where([class*="fi-resource-vaccinations"][class*="-list-"][class*="-page"]) {
+    --vax-list-border: #d7e3de;
+    --vax-list-head: #f3f8f5;
+}
+
+:where([class*="fi-resource-patient-vaccinations"][class*="-list-"][class*="-page"]) .fi-ta-ctn,
+:where([class*="fi-resource-vaccination-templates"][class*="-list-"][class*="-page"]) .fi-ta-ctn,
+:where([class*="fi-resource-vaccinations"][class*="-list-"][class*="-page"]) .fi-ta-ctn {
+    border: 1px solid var(--vax-list-border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(5, 91, 217, 0.05);
+    background: #ffffff;
+}
+
+:where([class*="fi-resource-patient-vaccinations"][class*="-list-"][class*="-page"]) .fi-ta-header,
+:where([class*="fi-resource-vaccination-templates"][class*="-list-"][class*="-page"]) .fi-ta-header,
+:where([class*="fi-resource-vaccinations"][class*="-list-"][class*="-page"]) .fi-ta-header {
+    background: linear-gradient(90deg, var(--vax-list-head) 0%, #ffffff 70%);
+}
+
+:where([class*="fi-resource-patient-vaccinations"][class*="-list-"][class*="-page"]) table,
+:where([class*="fi-resource-vaccination-templates"][class*="-list-"][class*="-page"]) table,
+:where([class*="fi-resource-vaccinations"][class*="-list-"][class*="-page"]) table {
+    min-width: 1200px !important;
+}
+
+:where([class*="fi-resource-patient-vaccinations"][class*="-list-"][class*="-page"]) .fi-ta-row:hover,
+:where([class*="fi-resource-vaccination-templates"][class*="-list-"][class*="-page"]) .fi-ta-row:hover,
+:where([class*="fi-resource-vaccinations"][class*="-list-"][class*="-page"]) .fi-ta-row:hover {
+    background: #f8fbf9 !important;
+}
+
+:where([class*="fi-resource-patient-vaccinations"][class*="-list-"][class*="-page"]) .fi-badge,
+:where([class*="fi-resource-vaccination-templates"][class*="-list-"][class*="-page"]) .fi-badge,
+:where([class*="fi-resource-vaccinations"][class*="-list-"][class*="-page"]) .fi-badge {
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+/* Patient vaccination view: keep audit logs collapsed/toggleable by default */
+#dose-audit-history>summary {
+    user-select: none;
+}
+
+#dose-audit-history>summary::-webkit-details-marker {
+    display: none;
 }
 
 

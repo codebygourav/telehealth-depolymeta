@@ -2,23 +2,17 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Support\Facades\Log;
-
 use App\Enums\BloodGroupOption;
 use App\Enums\DoctorStatus;
 use App\Enums\GenderOption;
 use App\Enums\MaritalStatus;
-use App\Enums\PatientProfileType;
-use App\Enums\PatientVaccinationProgramStatus;
 use App\Enums\VaccinationDocumentType;
 use App\Enums\VaccinationGenderRestriction;
 use App\Enums\VaccinationProgramTargetType;
 use App\Enums\VaccinationStatus;
 use App\Models\Doctor;
 use App\Models\Patient;
-use App\Models\PatientProfile;
 use App\Models\PatientVaccination;
-use App\Models\PatientVaccinationProgram;
 use App\Models\User;
 use App\Models\Vaccination;
 use App\Models\VaccinationDocument;
@@ -38,10 +32,9 @@ class VaccinationModuleSeeder extends Seeder
 
         $vaccines = $this->vaccines();
         $programs = $this->programs();
-        $profiles = $this->profiles($patient);
         $templates = $this->templates($doctor, $programs, $vaccines);
 
-        $this->assignments($doctor, $profiles, $templates);
+        $this->assignments($doctor, $patient, $templates);
         $this->documents();
 
         $this->call(VaccinationModuleContentSeeder::class);
@@ -142,16 +135,72 @@ class VaccinationModuleSeeder extends Seeder
                 'name' => 'BCG Vaccine',
                 'short_name' => 'BCG',
                 'disease_for' => 'Tuberculosis',
-                'description' => 'Protects against severe forms of tuberculosis.',
-                'side_effects' => 'Small scar at site, mild fever',
+                'description' => 'Protects against tuberculosis.',
+                'side_effects' => 'Scar at injection site, fever',
                 'dosage_information' => '0.05 ml',
             ],
             'hepb' => [
                 'name' => 'Hepatitis B Vaccine',
                 'short_name' => 'HepB',
                 'disease_for' => 'Hepatitis B',
-                'description' => 'Protects against Hepatitis B infection.',
-                'side_effects' => 'Mild fever, soreness at site',
+                'description' => 'Protects against Hepatitis B.',
+                'side_effects' => 'Soreness, mild fever',
+                'dosage_information' => '0.5 ml',
+            ],
+            'tdap' => [
+                'name' => 'Tdap Vaccine',
+                'short_name' => 'Tdap',
+                'disease_for' => 'Tetanus, Diphtheria, Pertussis',
+                'description' => 'Booster immunization against tetanus, diphtheria, and pertussis.',
+                'side_effects' => 'Pain at injection site, headache, tiredness',
+                'dosage_information' => '0.5 ml',
+            ],
+            'flu' => [
+                'name' => 'Influenza Vaccine (Seasonal)',
+                'short_name' => 'Flu',
+                'disease_for' => 'Seasonal Influenza',
+                'description' => 'Seasonal vaccine protecting against flu strains.',
+                'side_effects' => 'Slight soreness, low-grade fever',
+                'dosage_information' => '0.5 ml',
+            ],
+            'mmr' => [
+                'name' => 'MMR Vaccine',
+                'short_name' => 'MMR',
+                'disease_for' => 'Measles, Mumps, Rubella',
+                'description' => 'Protects against measles, mumps, and rubella.',
+                'side_effects' => 'Fever, mild rash, swollen glands',
+                'dosage_information' => '0.5 ml',
+            ],
+            'pcv' => [
+                'name' => 'Pneumococcal Vaccine',
+                'short_name' => 'PCV',
+                'disease_for' => 'Pneumococcal Disease',
+                'description' => 'Protects against meningitis and blood infections.',
+                'side_effects' => 'Soreness, redness, irritability',
+                'dosage_information' => '0.5 ml',
+            ],
+            'shingles' => [
+                'name' => 'Recombinant Shingles Vaccine',
+                'short_name' => 'Shingles',
+                'disease_for' => 'Herpes Zoster (Shingles)',
+                'description' => 'Protects older adults from shingles and nerve pain.',
+                'side_effects' => 'Sore arm, muscle pain, tiredness',
+                'dosage_information' => '0.5 ml',
+            ],
+            'hepa' => [
+                'name' => 'Hepatitis A Vaccine',
+                'short_name' => 'HepA',
+                'disease_for' => 'Hepatitis A',
+                'description' => 'Protects travelers and high-risk groups from Hep A.',
+                'side_effects' => 'Soreness, headache',
+                'dosage_information' => '1.0 ml',
+            ],
+            'typhoid' => [
+                'name' => 'Typhoid Vaccine (Polysaccharide)',
+                'short_name' => 'Typhoid',
+                'disease_for' => 'Typhoid Fever',
+                'description' => 'Protects travelers going to high-risk zones.',
+                'side_effects' => 'Redness at injection site, headache',
                 'dosage_information' => '0.5 ml',
             ],
         ];
@@ -161,8 +210,8 @@ class VaccinationModuleSeeder extends Seeder
             $vaccines[$key] = Vaccination::updateOrCreate(
                 ['name' => $record['name']],
                 array_merge($record, [
-                    'contraindications' => 'Severe allergy to previous dose',
-                    'precautions' => 'Check allergy and fever history before administration',
+                    'contraindications' => 'Severe allergic reaction to any component',
+                    'precautions' => 'Moderate or severe acute illness with or without fever',
                     'is_active' => true,
                 ])
             );
@@ -178,6 +227,11 @@ class VaccinationModuleSeeder extends Seeder
     {
         $records = [
             'baby' => ['Baby Immunization', VaccinationProgramTargetType::BABY],
+            'pregnancy' => ['Maternal Care Plan', VaccinationProgramTargetType::PREGNANCY],
+            'child' => ['Child Routine Care', VaccinationProgramTargetType::CHILD],
+            'adult' => ['General Adult Protection', VaccinationProgramTargetType::ADULT],
+            'elderly' => ['Senior Wellness Plan', VaccinationProgramTargetType::ELDERLY],
+            'travel' => ['Travel Immunization', VaccinationProgramTargetType::TRAVEL],
         ];
 
         $programs = [];
@@ -186,7 +240,7 @@ class VaccinationModuleSeeder extends Seeder
                 ['slug' => Str::slug($name)],
                 [
                     'name' => $name,
-                    'description' => "{$type->label()} demo program.",
+                    'description' => "{$type->label()} program.",
                     'target_type' => $type->value,
                     'is_active' => true,
                 ]
@@ -197,44 +251,6 @@ class VaccinationModuleSeeder extends Seeder
     }
 
     /**
-     * @return array<string, PatientProfile>
-     */
-    private function profiles(Patient $patient): array
-    {
-        $records = [
-            'self' => [
-                'name' => trim("{$patient->first_name} {$patient->last_name}") ?: 'Self',
-                'profile_type' => PatientProfileType::SELF,
-                'date_of_birth' => $patient->date_of_birth,
-                'gender' => GenderOption::MALE->value,
-                'is_primary' => true,
-            ],
-        ];
-
-        $profiles = [];
-        foreach ($records as $key => $record) {
-            $profiles[$key] = PatientProfile::updateOrCreate(
-                [
-                    'patient_id' => $patient->id,
-                    'name' => $record['name'],
-                ],
-                [
-                    'profile_type' => $record['profile_type']->value,
-                    'date_of_birth' => $record['date_of_birth'] ?? null,
-                    'gender' => $record['gender'] ?? null,
-                    'pregnancy_due_date' => $record['pregnancy_due_date'] ?? null,
-                    'blood_group' => BloodGroupOption::O_POSITIVE->value,
-                    'weight' => $record['weight'] ?? null,
-                    'height' => $record['height'] ?? null,
-                    'is_primary' => $record['is_primary'] ?? false,
-                ]
-            );
-        }
-
-        return $profiles;
-    }
-
-    /**
      * @param array<string, VaccinationProgram> $programs
      * @param array<string, Vaccination> $vaccines
      * @return array<string, VaccinationTemplate>
@@ -242,28 +258,170 @@ class VaccinationModuleSeeder extends Seeder
     private function templates(Doctor $doctor, array $programs, array $vaccines): array
     {
         $templates = [
-            'baby' => [
+            'baby_schedule' => [
                 'program' => 'baby',
-                'name' => 'Demo 2 Vaccine Schedule',
-                'description' => 'Demo schedule with 2 vaccinations.',
+                'name' => 'Standard Baby Birth Schedule',
+                'description' => 'Core immunizations given to newborn infants right at birth.',
                 'items' => [
                     [
                         'vaccine' => 'bcg',
-                        'set' => 'Set 1 (Birth)',
+                        'set' => 'At Birth',
                         'dose' => 1,
                         'age' => 'At Birth',
+                        'depends' => false,
                         'months' => 0,
                         'days' => 0,
                         'sort' => 1,
                     ],
                     [
                         'vaccine' => 'hepb',
-                        'set' => 'Set 1 (Birth)',
+                        'set' => 'At Birth',
                         'dose' => 1,
                         'age' => 'At Birth',
+                        'depends' => false,
                         'months' => 0,
                         'days' => 0,
                         'sort' => 2,
+                    ],
+                ],
+            ],
+            'child_schedule' => [
+                'program' => 'child',
+                'name' => 'Routine Pediatric Plan',
+                'description' => 'Standard childhood immunization given at 6 and 10 weeks of age.',
+                'items' => [
+                    [
+                        'vaccine' => 'mmr',
+                        'set' => '6 Weeks Phase',
+                        'dose' => 1,
+                        'age' => '6 Weeks',
+                        'depends' => false,
+                        'months' => 1,
+                        'days' => 14,
+                        'sort' => 1,
+                    ],
+                    [
+                        'vaccine' => 'pcv',
+                        'set' => '6 Weeks Phase',
+                        'dose' => 1,
+                        'age' => '6 Weeks',
+                        'depends' => false,
+                        'months' => 1,
+                        'days' => 14,
+                        'sort' => 2,
+                    ],
+                    [
+                        'vaccine' => 'pcv',
+                        'set' => '10 Weeks Phase',
+                        'dose' => 2,
+                        'age' => '10 Weeks',
+                        'depends' => true,
+                        'months' => 1,
+                        'days' => 0,
+                        'sort' => 3,
+                    ],
+                ],
+            ],
+            'pregnancy_schedule' => [
+                'program' => 'pregnancy',
+                'name' => 'Maternal Vaccination Schedule',
+                'description' => 'Vital vaccines administered during pregnancy to protect both mother and baby.',
+                'items' => [
+                    [
+                        'vaccine' => 'flu',
+                        'set' => 'Second Trimester',
+                        'dose' => 1,
+                        'age' => '2nd Trimester (16 Weeks)',
+                        'depends' => false,
+                        'months' => 16,
+                        'days' => 0,
+                        'offset_unit' => 'weeks',
+                        'sort' => 1,
+                    ],
+                    [
+                        'vaccine' => 'tdap',
+                        'set' => 'Third Trimester',
+                        'dose' => 1,
+                        'age' => '27-36 Weeks (28 Weeks)',
+                        'depends' => false,
+                        'months' => 28,
+                        'days' => 0,
+                        'offset_unit' => 'weeks',
+                        'sort' => 2,
+                    ],
+                ],
+            ],
+            'travel_schedule' => [
+                'program' => 'travel',
+                'name' => 'Adult International Travel Plan',
+                'description' => 'Important protection for travelers heading to endemic regions.',
+                'items' => [
+                    [
+                        'vaccine' => 'hepa',
+                        'set' => 'Pre-Departure',
+                        'dose' => 1,
+                        'age' => 'Immediate',
+                        'depends' => false,
+                        'months' => 0,
+                        'days' => 0,
+                        'sort' => 1,
+                    ],
+                    [
+                        'vaccine' => 'typhoid',
+                        'set' => 'Pre-Departure',
+                        'dose' => 1,
+                        'age' => 'Immediate',
+                        'depends' => false,
+                        'months' => 0,
+                        'days' => 0,
+                        'sort' => 2,
+                    ],
+                    [
+                        'vaccine' => 'hepa',
+                        'set' => 'Post-Travel Booster',
+                        'dose' => 2,
+                        'age' => '6 Months Later',
+                        'depends' => true,
+                        'months' => 6,
+                        'days' => 0,
+                        'sort' => 3,
+                    ],
+                ],
+            ],
+            'elderly_schedule' => [
+                'program' => 'elderly',
+                'name' => 'Senior Shingles & Pneumo Protocol',
+                'description' => 'Recommended schedule for adults aged 65 and older.',
+                'items' => [
+                    [
+                        'vaccine' => 'pcv',
+                        'set' => 'Initial Assessment',
+                        'dose' => 1,
+                        'age' => 'Immediate',
+                        'depends' => false,
+                        'months' => 0,
+                        'days' => 0,
+                        'sort' => 1,
+                    ],
+                    [
+                        'vaccine' => 'shingles',
+                        'set' => 'Initial Assessment',
+                        'dose' => 1,
+                        'age' => 'Immediate',
+                        'depends' => false,
+                        'months' => 0,
+                        'days' => 0,
+                        'sort' => 2,
+                    ],
+                    [
+                        'vaccine' => 'shingles',
+                        'set' => 'Follow-up Booster',
+                        'dose' => 2,
+                        'age' => '2 Months Later',
+                        'depends' => true,
+                        'months' => 2,
+                        'days' => 0,
+                        'sort' => 3,
                     ],
                 ],
             ],
@@ -279,27 +437,45 @@ class VaccinationModuleSeeder extends Seeder
                 [
                     'vaccination_program_id' => $programs[$templateData['program']]->id,
                     'description' => $templateData['description'],
+                    'reminder_1_days_before' => 7,
+                    'reminder_2_days_before' => 3,
+                    'reminder_3_days_before' => 1,
+                    'overdue_alert_days_after' => 1,
                     'is_active' => true,
                 ]
             );
 
             $template->items()->delete();
+            $isPregnancy = $templateData['program'] === 'pregnancy';
+
             foreach ($templateData['items'] as $index => $item) {
+                $minAgeDays = $item['depends'] ? null : ($isPregnancy ? ($item['months'] * 7 + $item['days']) : ($item['months'] * 30 + $item['days']));
+                $timingType = $item['depends'] ? 'previous_dose' : 'base_date';
+                $offsetUnit = $item['offset_unit'] ?? ($item['months'] > 0 ? 'months' : 'days');
+                $offsetValue = $item['depends'] ? 0 : ($offsetUnit === 'days' ? $item['days'] : $item['months']);
+                $intervalUnit = $item['months'] > 0 ? 'months' : 'days';
+                $intervalValue = $item['depends'] ? ($intervalUnit === 'days' ? $item['days'] : $item['months']) : 0;
+
                 VaccinationTemplateItem::create([
                     'vaccination_template_id' => $template->id,
                     'vaccination_id' => $vaccines[$item['vaccine']]->id,
                     'set_name' => $item['set'],
-                    'set_description' => "Demo {$item['set']} group.",
+                    'set_description' => "Seeded {$item['set']} group.",
                     'set_sort_order' => $index + 1,
                     'dose_no' => $item['dose'],
-                    'depends_on_previous_dose' => false,
-                    'interval_days' => 0,
-                    'interval_months' => 0,
-                    'minimum_age_days' => $item['months'] * 30 + $item['days'],
+                    'depends_on_previous_dose' => $item['depends'],
+                    'interval_days' => $item['depends'] ? $item['days'] : 0,
+                    'interval_months' => $item['depends'] ? $item['months'] : 0,
+                    'minimum_age_days' => $minAgeDays,
                     'maximum_age_days' => null,
                     'recommended_age_label' => $item['age'],
-                    'due_after_months' => $item['months'],
-                    'due_after_days' => $item['days'],
+                    'due_after_months' => $item['depends'] ? 0 : $item['months'],
+                    'due_after_days' => $item['depends'] ? 0 : $item['days'],
+                    'timing_type' => $timingType,
+                    'offset_value' => $offsetValue,
+                    'offset_unit' => $offsetUnit,
+                    'interval_value' => $intervalValue,
+                    'interval_unit' => $intervalUnit,
                     'sort_order' => $item['sort'],
                 ]);
             }
@@ -311,71 +487,200 @@ class VaccinationModuleSeeder extends Seeder
     }
 
     /**
-     * @param array<string, PatientProfile> $profiles
      * @param array<string, VaccinationTemplate> $templates
      */
-    private function assignments(Doctor $doctor, array $profiles, array $templates): void
+    private function assignments(Doctor $doctor, Patient $patient, array $templates): void
     {
+        $today = now()->startOfDay();
+
         $assignmentData = [
             [
-                'profile' => 'self',
-                'template' => 'baby',
-                'start_date' => now()->subMonths(1)->toDateString(),
-                'status' => PatientVaccinationProgramStatus::ACTIVE,
+                'template' => 'baby_schedule',
+                'start_date' => $today->copy()->toDateString(),
+            ],
+            [
+                'template' => 'pregnancy_schedule',
+                'start_date' => $today->copy()->subWeeks(16)->toDateString(),
+            ],
+            [
+                'template' => 'travel_schedule',
+                'start_date' => $today->copy()->subDays(5)->toDateString(),
+            ],
+            [
+                'template' => 'elderly_schedule',
+                'start_date' => $today->copy()->toDateString(),
             ],
         ];
 
         foreach ($assignmentData as $data) {
-            $assignment = PatientVaccinationProgram::updateOrCreate(
-                [
-                    'patient_profile_id' => $profiles[$data['profile']]->id,
-                    'vaccination_template_id' => $templates[$data['template']]->id,
-                    'doctor_id' => $doctor->id,
-                ],
-                [
-                    'vaccination_program_id' => $templates[$data['template']]->vaccination_program_id,
-                    'start_date' => $data['start_date'],
-                    'status' => $data['status']->value,
-                ]
+            $this->seedTemplateDosesForPatient(
+                doctor: $doctor,
+                patient: $patient,
+                template: $templates[$data['template']],
+                startDate: \Carbon\Carbon::parse($data['start_date'])->startOfDay()
             );
-
-            $assignment->generateVaccinationRows();
         }
 
-        $rows = PatientVaccination::query()
+        // Shape a current-month demo timeline: completed, due today, overdue, on hold, skipped, and future doses.
+        foreach ($templates as $template) {
+            $doses = PatientVaccination::query()
+                ->where('doctor_id', $doctor->id)
+                ->where('patient_id', $patient->id)
+                ->where('vaccination_template_id', $template->id)
+                ->orderBy('set_sort_order')
+                ->orderBy('scheduled_date')
+                ->orderBy('dose_no')
+                ->get();
+
+            $firstDose = $doses->first();
+
+            if ($firstDose) {
+                $firstDose->update([
+                    'status' => VaccinationStatus::COMPLETED->value,
+                    'completed_date' => $today->copy()->subDays(2)->toDateString(),
+                    'batch_number' => 'VAC-BATCH-001',
+                    'route' => 'Injection',
+                    'site' => 'Left thigh',
+                    'dose_amount' => $firstDose->vaccination?->dosage_information ?: '0.5 ml',
+                    'given_at' => 'Demo Clinic',
+                    'given_by' => 'Dr. Vaccination Demo',
+                    'doctor_notes' => 'First dose completed successfully during routine visit.',
+                    'side_effect_observed' => 'No immediate side effects observed.',
+                    'patient_reaction' => 'Normal',
+                ]);
+            }
+
+            $secondDose = $doses->skip(1)->first();
+            if ($secondDose) {
+                $secondDose->update([
+                    'status' => VaccinationStatus::UPCOMING->value,
+                    'due_date' => $today->copy()->toDateString(),
+                    'scheduled_date' => $today->copy()->toDateString(),
+                    'expected_date' => $today->copy()->toDateString(),
+                    'overdue_date' => $today->copy()->addDay()->toDateString(),
+                    'missed_date' => $today->copy()->addDays(7)->toDateString(),
+                ]);
+            }
+
+            $thirdDose = $doses->skip(2)->first();
+            if ($thirdDose) {
+                $thirdDose->update([
+                    'status' => VaccinationStatus::UPCOMING->value,
+                    'due_date' => $today->copy()->addWeeks(3)->toDateString(),
+                    'scheduled_date' => $today->copy()->addWeeks(3)->toDateString(),
+                    'expected_date' => $today->copy()->addWeeks(3)->toDateString(),
+                    'overdue_date' => $today->copy()->addWeeks(3)->addDay()->toDateString(),
+                    'missed_date' => $today->copy()->addWeeks(4)->toDateString(),
+                ]);
+            }
+        }
+
+        PatientVaccination::query()
             ->where('doctor_id', $doctor->id)
-            ->with('vaccination')
-            ->orderBy('scheduled_date')
-            ->take(2)
-            ->get();
+            ->whereHas('vaccination', fn($query) => $query->where('name', 'BCG Vaccine'))
+            ->first()
+            ?->update([
+                'status' => VaccinationStatus::MISSED->value,
+                'due_date' => $today->copy()->subWeeks(2)->toDateString(),
+                'scheduled_date' => $today->copy()->subWeeks(2)->toDateString(),
+                'expected_date' => $today->copy()->subWeeks(2)->toDateString(),
+                'overdue_date' => $today->copy()->subWeeks(2)->addDay()->toDateString(),
+                'missed_date' => $today->copy()->subWeek()->toDateString(),
+                'doctor_notes' => 'Missed during newborn follow-up. Doctor should review before rescheduling.',
+            ]);
 
-        $statusPlan = [
-            VaccinationStatus::COMPLETED,
-            VaccinationStatus::SCHEDULED,
-        ];
+        PatientVaccination::query()
+            ->where('doctor_id', $doctor->id)
+            ->whereHas('vaccination', fn($query) => $query->where('name', 'Tdap Vaccine'))
+            ->first()
+            ?->update([
+                'status' => VaccinationStatus::ON_HOLD->value,
+                'due_date' => $today->copy()->addWeeks(8)->toDateString(),
+                'scheduled_date' => $today->copy()->addWeeks(8)->toDateString(),
+                'expected_date' => $today->copy()->addWeeks(8)->toDateString(),
+                'on_hold_reason' => 'Awaiting pregnancy checkup before confirming the dose date.',
+            ]);
 
-        foreach ($rows as $index => $row) {
-            $status = $statusPlan[$index] ?? VaccinationStatus::SCHEDULED;
-            $completed = $status === VaccinationStatus::COMPLETED;
+        PatientVaccination::query()
+            ->where('doctor_id', $doctor->id)
+            ->whereHas('vaccination', fn($query) => $query->where('name', 'Typhoid Vaccine (Polysaccharide)'))
+            ->first()
+            ?->update([
+                'status' => VaccinationStatus::SKIPPED_BY_DOCTOR->value,
+                'due_date' => $today->copy()->toDateString(),
+                'scheduled_date' => $today->copy()->toDateString(),
+                'expected_date' => $today->copy()->toDateString(),
+                'skipped_reason' => 'Skipped for demo testing after doctor review.',
+            ]);
+    }
 
-            $row->update([
-                'status' => $status->value,
-                'completed_date' => $completed ? now()->subDays(5 - $index)->toDateString() : null,
-                'batch_number' => $completed ? 'VAC-BATCH-' . str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT) : null,
-                'route' => $completed ? 'Injection' : null,
-                'site' => $completed ? ($index % 2 === 0 ? 'Left thigh' : 'Upper arm') : null,
-                'dose_amount' => $completed ? ($row->vaccination?->dosage_information ?? '0.5 ml') : null,
-                'given_at' => $completed ? 'Demo Clinic' : null,
-                'given_by' => $completed ? 'Dr. Vaccination Demo' : null,
-                'doctor_notes' => $completed ? 'Demo dose completed successfully.' : 'Demo pending/scheduled dose.',
-                'side_effect_observed' => $completed ? 'No immediate side effects observed.' : null,
-                'patient_reaction' => $completed ? 'Normal' : null,
-                'reminder_sent' => $index % 2 === 0,
-                'last_reminder_sent_at' => $index % 2 === 0 ? now()->subDays(2) : null,
-                'reminder_count' => $index % 2 === 0 ? 1 : 0,
-                'next_reminder_at' => $status === VaccinationStatus::SCHEDULED ? now()->addDays(1) : null,
+    private function seedTemplateDosesForPatient(Doctor $doctor, Patient $patient, VaccinationTemplate $template, \Carbon\Carbon $startDate): void
+    {
+        $template->loadMissing(['items.vaccination', 'program']);
+
+        $ageBaseDate = $startDate->copy();
+
+        $previousDate = $startDate->copy();
+
+        foreach ($template->items as $index => $item) {
+            $timingType = $item->effectiveTimingType();
+            $scheduledDate = null;
+
+            if ($timingType !== 'doctor_manual_date') {
+                $baseDate = $timingType === 'previous_dose' ? $previousDate : $ageBaseDate;
+                $value = $timingType === 'previous_dose'
+                    ? $item->effectiveIntervalValue()
+                    : $item->effectiveOffsetValue();
+                $unit = $timingType === 'previous_dose'
+                    ? $item->effectiveIntervalUnit()
+                    : $item->effectiveOffsetUnit();
+
+                $scheduledDate = $this->addValueUnitToDate($baseDate, $value, $unit);
+                $previousDate = $scheduledDate->copy()->startOfDay();
+            }
+
+            PatientVaccination::updateOrCreate([
+                'patient_id' => $patient->id,
+                'doctor_id' => $doctor->id,
+                'vaccination_id' => $item->vaccination_id,
+                'vaccination_template_id' => $template->id,
+                'dose_no' => $item->dose_no ?? ($index + 1),
+                'set_name' => $item->set_name,
+            ], [
+                'patient_vaccination_program_id' => null,
+                'set_name' => $item->set_name,
+                'set_sort_order' => $item->set_sort_order ?? ($index + 1),
+                'recommended_age_label' => $item->recommended_age_label,
+                'dose_no' => $item->dose_no ?? ($index + 1),
+                'first_dose_date' => $startDate->toDateString(),
+                'due_after_days' => $item->due_after_days ?? 0,
+                'due_after_months' => $item->due_after_months ?? 0,
+                'expected_date' => $scheduledDate?->toDateString(),
+                'assigned_date' => $startDate->toDateString(),
+                'due_date' => $scheduledDate?->toDateString(),
+                'scheduled_date' => $scheduledDate?->toDateString(),
+                'grace_period_before_days' => $item->grace_period_before_days ?? 0,
+                'grace_period_after_days' => $item->grace_period_after_days ?? 0,
+                'missed_date' => $scheduledDate?->copy()->addDays($item->grace_period_after_days ?? 0)->toDateString(),
+                'overdue_date' => $scheduledDate?->copy()->addDay()->toDateString(),
+                'status' => VaccinationStatus::UPCOMING,
+                'manufacturer' => $item->vaccination?->manufacturer,
+                'reminder_sent' => false,
+                'next_reminder_at' => ($scheduledDate && $scheduledDate->copy()->subDay()->greaterThanOrEqualTo(\Carbon\Carbon::create(1970, 1, 2)))
+                    ? $scheduledDate->copy()->subDay()
+                    : null,
             ]);
         }
+    }
+
+    private function addValueUnitToDate(\Carbon\Carbon $date, int $value, string $unit): \Carbon\Carbon
+    {
+        return match ($unit) {
+            'weeks' => $date->copy()->addWeeks($value),
+            'months' => $date->copy()->addMonths($value),
+            'years' => $date->copy()->addYears($value),
+            default => $date->copy()->addDays($value),
+        };
     }
 
     private function documents(): void
@@ -398,4 +703,3 @@ class VaccinationModuleSeeder extends Seeder
             });
     }
 }
-Log::info('2 demo vaccinations were assigned to doctor\'s patient.');

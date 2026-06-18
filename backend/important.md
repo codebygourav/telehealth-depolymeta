@@ -1,4 +1,7 @@
-docker exec -it cmc_telehealth_app php artisan migrate:fresh --seed
+docker exec -it tele-backend-app php artisan migrate:fresh --seed
+
+docker exec tele-backend-app php artisan vaccinations:send-reminders
+
 
 php artisan queue:work --daemon
 

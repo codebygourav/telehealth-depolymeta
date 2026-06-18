@@ -21,7 +21,7 @@ export const markAllAsRead = async () => {
 };
 
 //! mark single notification as read
-export const markNotificationAsRead = async (notificationId: number) => {
+export const markNotificationAsRead = async (notificationId: string) => {
     const { data } = await api.post(`/notifications/${notificationId}/read`);
     return data;
 };

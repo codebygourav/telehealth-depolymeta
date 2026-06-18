@@ -23,10 +23,18 @@ class VaccinationTemplate extends Model
         'name',
         'description',
         'is_active',
+        'reminder_1_days_before',
+        'reminder_2_days_before',
+        'reminder_3_days_before',
+        'overdue_alert_days_after',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'reminder_1_days_before' => 'integer',
+        'reminder_2_days_before' => 'integer',
+        'reminder_3_days_before' => 'integer',
+        'overdue_alert_days_after' => 'integer',
     ];
 
     protected static function booted(): void
@@ -58,10 +66,5 @@ class VaccinationTemplate extends Model
     public function patientVaccinations(): HasMany
     {
         return $this->hasMany(PatientVaccination::class);
-    }
-
-    public function patientPrograms(): HasMany
-    {
-        return $this->hasMany(PatientVaccinationProgram::class);
     }
 }

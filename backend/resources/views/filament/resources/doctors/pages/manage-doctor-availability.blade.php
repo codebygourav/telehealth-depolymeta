@@ -19,7 +19,7 @@
 
     <style>
         .availability-shell {
-            --av-primary: #073827;
+            --av-primary: #055bd9;
             --av-primary-hover: #052a1f;
             --av-border: #e2e8f0;
             --av-border-strong: #cbd5e1;
@@ -378,11 +378,11 @@
             line-height: 1.5;
         }
 
-        /* Filament modal toggles — #073827 on, gray off */
+        /* Filament modal toggles — #055bd9 on, gray off */
         .fi-modal .fi-fo-toggle[aria-checked="true"] .fi-toggle,
         .fi-modal .fi-fo-toggle[aria-checked="true"] {
-            background-color: #073827 !important;
-            border-color: #073827 !important;
+            background-color: #055bd9 !important;
+            border-color: #055bd9 !important;
         }
 
         .fi-modal .fi-fo-toggle[aria-checked="false"] .fi-toggle,
@@ -859,14 +859,14 @@
 
     <div class="availability-shell" wire:key="availability-shell-{{ $this->availabilityRefreshVersion }}">
         <div class="availability-kpis">
-            <div class="availability-kpi" style="--kpi-dot: #073827">
+            <div class="availability-kpi" style="--kpi-dot: #055bd9">
                 <div class="availability-kpi__top">
                     <span class="availability-kpi__label">Total slots</span>
                     <span class="availability-kpi__dot"></span>
                 </div>
                 <div class="availability-kpi__value">{{ $summary['total'] }}</div>
             </div>
-            <div class="availability-kpi" style="--kpi-dot: #073827; --kpi-value-color: #073827">
+            <div class="availability-kpi" style="--kpi-dot: #055bd9; --kpi-value-color: #055bd9">
                 <div class="availability-kpi__top">
                     <span class="availability-kpi__label">Available</span>
                     <span class="availability-kpi__dot"></span>
@@ -1181,7 +1181,7 @@
                                                 style="color: var(--av-primary); font-weight: 700; text-decoration: none;">Profile</a>
                                         @endif
                                     </div>
-                                    
+
                                 @endif
                                 <div>
                                     <div class="availability-main">

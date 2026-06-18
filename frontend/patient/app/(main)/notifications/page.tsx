@@ -1,18 +1,17 @@
 "use client";
 
-import { useNotifications, useUnreadCount } from "@/queries/useNotifications";
-import { Card, CardContent } from "@/components/ui/card";
+import { markAllAsRead, markNotificationAsRead } from "@/api/notifications";
+import { CustomPagination } from "@/components/custom/CustomPagination";
+import CustomTabs from "@/components/custom/CustomTabs";
+import { EmptyState } from "@/components/custom/EmptyState";
+import HeroSection from "@/components/hero-section";
+import { NotificationCard } from "@/components/pages/notification/NotificationCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, Loader2, CircleCheck } from "lucide-react";
-import { useState, useEffect } from "react";
-import CustomTabs from "@/components/custom/CustomTabs";
-import { fetchNotifications, markAllAsRead, markNotificationAsRead } from "@/api/notifications";
+import { useNotifications, useUnreadCount } from "@/queries/useNotifications";
 import { useQueryClient } from "@tanstack/react-query";
-import { NotificationCard } from "@/components/pages/notification/NotificationCard";
-import HeroSection from "@/components/hero-section";
-import { EmptyState } from "@/components/custom/EmptyState";
-import { CustomPagination } from "@/components/custom/CustomPagination";
+import { CircleCheck } from "lucide-react";
+import { useEffect, useState } from "react";
 
 
 
@@ -27,7 +26,7 @@ interface Notification {
 
 interface NotificationsResponse {
     data: Notification[];
-    CustomPagination?: {
+    pagination?: {
         current_page: number;
         last_page: number;
         per_page: number;
@@ -50,7 +49,7 @@ export default function Notifications() {
 
     const handleMarkAsRead = async (notificationId: string | number) => {
         try {
-            await markNotificationAsRead(Number(notificationId));
+            await markNotificationAsRead(String(notificationId));
 
             setAllNotifications(prev =>
                 prev.map(n =>
@@ -79,7 +78,7 @@ export default function Notifications() {
     useEffect(() => {
         if (data?.data) {
             setAllNotifications(data.data);
-            setTotalPages(data?.CustomPagination?.last_page || 1);
+            setTotalPages(data?.pagination?.last_page || 1);
         }
     }, [data]);
 
@@ -137,11 +136,11 @@ export default function Notifications() {
                         totalPages={totalPages}
                         onPageChange={setCurrentPage}
                     />
-                    {data?.CustomPagination && (
+                    {data?.pagination && (
                         <p className="text-xs text-muted-foreground font-medium">
-                            Showing <span className="text-foreground">{(currentPage - 1) * (data.CustomPagination.per_page || 10) + 1}</span> to{" "}
-                            <span className="text-foreground">{Math.min(currentPage * (data.CustomPagination.per_page || 10), data.CustomPagination.total)}</span> of{" "}
-                            <span className="text-foreground">{data.CustomPagination.total} </span> notifications
+                            Showing <span className="text-foreground">{(currentPage - 1) * (data.pagination.per_page || 10) + 1}</span> to{" "}
+                            <span className="text-foreground">{Math.min(currentPage * (data.pagination.per_page || 10), data.pagination.total)}</span> of{" "}
+                            <span className="text-foreground">{data.pagination.total} </span> notifications
                         </p>
                     )}
                 </div>

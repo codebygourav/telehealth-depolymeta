@@ -6,6 +6,7 @@ use App\Models\Leave;
 use App\Models\Appointment;
 use App\Models\DoctorReview;
 use App\Models\User;
+use App\Models\PatientVaccination;
 use App\Notifications\SystemNotification;
 use App\Enums\NotificationType;
 use Illuminate\Support\Facades\Log;
@@ -695,5 +696,134 @@ class NotificationService
                 ]
             );
         }
+    }
+
+    /**
+     * Notify patient when a vaccination dose is due or approaching due.
+     */
+    public static function notifyVaccinationDue(PatientVaccination $vaccination, string $daysLabel)
+    {
+        if ($vaccination->patient && $vaccination->patient->user) {
+            $vaccineName = $vaccination->vaccination?->name ?: 'Vaccine';
+            $dueDate = $vaccination->due_date ? $vaccination->due_date->format('M d, Y') : '—';
+            $patientName = trim(($vaccination->patient?->first_name ?? '') . ' ' . ($vaccination->patient?->last_name ?? '')) ?: 'your account';
+
+            $message = "The vaccination dose for {$vaccineName} ({$patientName}) is {$daysLabel}. Due date: {$dueDate}.";
+
+            self::send(
+                user: $vaccination->patient->user,
+                type: NotificationType::VACCINATION_DUE->value,
+                title: 'Vaccination Dose Due Alert',
+                message: $message,
+                category: 'system',
+                entityType: 'patient_vaccination',
+                entityId: $vaccination->id,
+                meta: [
+                    'vaccine_name' => $vaccineName,
+                    'due_date' => $dueDate,
+                    'days_label' => $daysLabel,
+                    'dose_no' => $vaccination->dose_no,
+                    'patient_name' => $patientName,
+                ]
+            );
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Notify patient when a vaccination dose is overdue.
+     */
+    public static function notifyVaccinationOverdue(PatientVaccination $vaccination)
+    {
+        if ($vaccination->patient && $vaccination->patient->user) {
+            $vaccineName = $vaccination->vaccination?->name ?: 'Vaccine';
+            $dueDate = $vaccination->due_date ? $vaccination->due_date->format('M d, Y') : '—';
+            $patientName = trim(($vaccination->patient?->first_name ?? '') . ' ' . ($vaccination->patient?->last_name ?? '')) ?: 'your account';
+
+            $message = "WARNING: The vaccination dose for {$vaccineName} ({$patientName}) was due on {$dueDate} and is now OVERDUE.";
+
+            self::send(
+                user: $vaccination->patient->user,
+                type: NotificationType::VACCINATION_OVERDUE->value,
+                title: 'Vaccination OVERDUE Warning',
+                message: $message,
+                category: 'system',
+                entityType: 'patient_vaccination',
+                entityId: $vaccination->id,
+                meta: [
+                    'vaccine_name' => $vaccineName,
+                    'due_date' => $dueDate,
+                    'dose_no' => $vaccination->dose_no,
+                    'patient_name' => $patientName,
+                ]
+            );
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Notify patient when a vaccination dose is marked completed.
+     */
+    public static function notifyVaccinationCompleted(PatientVaccination $vaccination)
+    {
+        if ($vaccination->patient && $vaccination->patient->user) {
+            $vaccineName = $vaccination->vaccination?->name ?: 'Vaccine';
+            $completedDate = $vaccination->completed_date ? $vaccination->completed_date->format('M d, Y') : '—';
+            $patientName = trim(($vaccination->patient?->first_name ?? '') . ' ' . ($vaccination->patient?->last_name ?? '')) ?: 'your account';
+
+            $message = "Great news! The vaccination dose for {$vaccineName} ({$patientName}) has been successfully administered and marked completed on {$completedDate}.";
+
+            self::send(
+                user: $vaccination->patient->user,
+                type: NotificationType::VACCINATION_COMPLETED->value,
+                title: 'Vaccination Dose Completed',
+                message: $message,
+                category: 'system',
+                entityType: 'patient_vaccination',
+                entityId: $vaccination->id,
+                meta: [
+                    'vaccine_name' => $vaccineName,
+                    'completed_date' => $completedDate,
+                    'dose_no' => $vaccination->dose_no,
+                    'patient_name' => $patientName,
+                ]
+            );
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Notify patient when a vaccination dose has been missed (past grace period).
+     */
+    public static function notifyVaccinationMissed(PatientVaccination $vaccination)
+    {
+        if ($vaccination->patient && $vaccination->patient->user) {
+            $vaccineName = $vaccination->vaccination?->name ?: 'Vaccine';
+            $dueDate = $vaccination->due_date ? $vaccination->due_date->format('M d, Y') : '—';
+            $patientName = trim(($vaccination->patient?->first_name ?? '') . ' ' . ($vaccination->patient?->last_name ?? '')) ?: 'your account';
+
+            $message = "Alert: The vaccination dose for {$vaccineName} ({$patientName}) due on {$dueDate} has been marked as MISSED. Please contact your doctor to reschedule.";
+
+            self::send(
+                user: $vaccination->patient->user,
+                type: NotificationType::VACCINATION_MISSED->value,
+                title: 'Vaccination Dose Missed',
+                message: $message,
+                category: 'system',
+                entityType: 'patient_vaccination',
+                entityId: $vaccination->id,
+                meta: [
+                    'vaccine_name' => $vaccineName,
+                    'due_date' => $dueDate,
+                    'dose_no' => $vaccination->dose_no,
+                    'patient_name' => $patientName,
+                ]
+            );
+            return true;
+        }
+        return false;
     }
 }

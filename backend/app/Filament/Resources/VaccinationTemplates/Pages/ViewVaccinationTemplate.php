@@ -10,6 +10,8 @@ class ViewVaccinationTemplate extends ViewRecord
 {
     protected static string $resource = VaccinationTemplateResource::class;
 
+    protected string $view = 'filament.resources.vaccination-templates.pages.view-vaccination-template';
+
     protected function getHeaderActions(): array
     {
         return [

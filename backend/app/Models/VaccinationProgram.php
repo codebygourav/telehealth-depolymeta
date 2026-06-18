@@ -46,9 +46,4 @@ class VaccinationProgram extends Model
     {
         return $this->hasMany(VaccinationTemplate::class);
     }
-
-    public function patientPrograms(): HasMany
-    {
-        return $this->hasMany(PatientVaccinationProgram::class);
-    }
 }

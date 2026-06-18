@@ -6,7 +6,6 @@ use App\Enums\VaccinationStatus;
 use App\Filament\Resources\PatientVaccinations\Pages;
 use App\Models\Doctor;
 use App\Models\Patient;
-use App\Models\PatientProfile;
 use App\Models\PatientVaccination;
 use App\Models\Vaccination;
 use App\Models\VaccinationTemplate;
@@ -24,9 +23,9 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
-use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Filament\Infolists\Components\ViewEntry;
 use Illuminate\Database\Eloquent\Builder;
@@ -65,7 +64,7 @@ class PatientVaccinationResource extends Resource
     {
         return $schema->components([
             Section::make('Patient and Vaccine')
-                ->description('Choose the patient profile and the vaccine dose being scheduled.')
+                ->description('Choose the patient account and the vaccine dose being scheduled.')
                 ->extraAttributes(['class' => 'patient-vaccination-form patient-vaccination-primary'])
                 ->schema([
                     Grid::make(2)
@@ -80,27 +79,7 @@ class PatientVaccinationResource extends Resource
                                     ]))
                                 ->searchable()
                                 ->required()
-                                ->live()
-                                ->afterStateUpdated(fn(callable $set) => $set('patient_profile_id', null)),
-                            Select::make('patient_profile_id')
-                                ->label('Vaccination Profile')
-                                ->options(function (callable $get): array {
-                                    if (! $get('patient_id')) {
-                                        return [];
-                                    }
-
-                                    return PatientProfile::query()
-                                        ->where('patient_id', $get('patient_id'))
-                                        ->orderBy('name')
-                                        ->get()
-                                        ->mapWithKeys(fn(PatientProfile $profile) => [
-                                            $profile->id => $profile->name ?: $profile->id,
-                                        ])
-                                        ->all();
-                                })
-                                ->searchable()
-                                ->preload()
-                                ->helperText('Select the child or family member profile when applicable.'),
+                                ->live(),
                             Select::make('doctor_id')
                                 ->label('Doctor')
                                 ->options(fn() => Doctor::query()
@@ -136,21 +115,59 @@ class PatientVaccinationResource extends Resource
                 ->description('Set where this dose appears in the schedule and when it is due.')
                 ->extraAttributes(['class' => 'patient-vaccination-form patient-vaccination-schedule'])
                 ->schema([
-                    Grid::make(4)
+                    Grid::make(3)
                         ->schema([
                             Select::make('status')
                                 ->label('Status')
                                 ->options(VaccinationStatus::options())
                                 ->searchable()
                                 ->preload()
+                                ->live()
                                 ->required()
-                                ->default(VaccinationStatus::PENDING->value),
-                            DatePicker::make('scheduled_date')
-                                ->label('Scheduled Date'),
-                            DatePicker::make('first_dose_date')
-                                ->label('First Dose Date'),
+                                ->default(VaccinationStatus::UPCOMING->value),
+                            DatePicker::make('expected_date')
+                                ->label('Expected Date (System Calculated)')
+                                ->disabled()
+                                ->dehydrated(),
+                            DatePicker::make('assigned_date')
+                                ->label('Assigned / Category Start Date')
+                                ->helperText('Adult, travel, elderly, and hospital staff schedules use this as base date.'),
+                            DatePicker::make('due_date')
+                                ->label('Current Due Date'),
+                            DatePicker::make('changed_date')
+                                ->label('Changed Date (Doctor Override)')
+                                ->helperText('Use when doctor reschedules after reviewing the patient.'),
                             DatePicker::make('completed_date')
-                                ->label('Completed Date'),
+                                ->label('Completed Date')
+                                ->visible(fn($get) => $get('status') === VaccinationStatus::COMPLETED->value),
+                            DatePicker::make('overdue_date')
+                                ->label('Overdue Date')
+                                ->disabled()
+                                ->dehydrated()
+                                ->visible(fn($get) => in_array((string) $get('status'), [VaccinationStatus::OVERDUE->value, VaccinationStatus::MISSED->value], true)),
+                            DatePicker::make('missed_date')
+                                ->label('Missed Date')
+                                ->disabled()
+                                ->dehydrated()
+                                ->visible(fn($get) => $get('status') === VaccinationStatus::MISSED->value),
+                            TextInput::make('grace_period_before_days')
+                                ->label('Grace Period Before (Days)')
+                                ->numeric()
+                                ->default(0),
+                            TextInput::make('grace_period_after_days')
+                                ->label('Grace Period After (Days)')
+                                ->numeric()
+                                ->default(0),
+                            TextInput::make('skipped_reason')
+                                ->label('Skipped Reason')
+                                ->placeholder('Specify medical reason if skipped')
+                                ->visible(fn($get) => $get('status') === VaccinationStatus::SKIPPED_BY_DOCTOR->value)
+                                ->required(fn($get) => $get('status') === VaccinationStatus::SKIPPED_BY_DOCTOR->value),
+                            TextInput::make('on_hold_reason')
+                                ->label('On Hold Reason')
+                                ->placeholder('Specify medical reason if paused')
+                                ->visible(fn($get) => $get('status') === VaccinationStatus::ON_HOLD->value)
+                                ->required(fn($get) => $get('status') === VaccinationStatus::ON_HOLD->value),
                         ]),
                     Grid::make(4)
                         ->schema([
@@ -161,12 +178,12 @@ class PatientVaccinationResource extends Resource
                                 ->label('Recommended Age')
                                 ->placeholder('Birth, 6 weeks, 9 months'),
                             TextInput::make('due_after_months')
-                                ->label('Months From Start')
+                                ->label('Legacy Offset Months')
                                 ->numeric()
                                 ->minValue(0)
                                 ->default(0),
                             TextInput::make('due_after_days')
-                                ->label('Days From Start')
+                                ->label('Legacy Offset Days')
                                 ->numeric()
                                 ->minValue(0)
                                 ->default(0),
@@ -246,11 +263,6 @@ class PatientVaccinationResource extends Resource
                 TextColumn::make('patient.mobile_no')
                     ->label('Patient Phone')
                     ->toggleable(),
-                TextColumn::make('patientProfile.name')
-                    ->label('Profile')
-                    ->placeholder('-')
-                    ->searchable()
-                    ->toggleable(),
                 TextColumn::make('doctor.first_name')
                     ->label('Doctor')
                     ->formatStateUsing(fn($state, PatientVaccination $record): string => trim(($record->doctor?->first_name ?? '') . ' ' . ($record->doctor?->last_name ?? '')))
@@ -269,7 +281,7 @@ class PatientVaccinationResource extends Resource
                     ->placeholder('-')
                     ->toggleable(),
                 TextColumn::make('template.program.name')
-                    ->label('Program')
+                    ->label('Category')
                     ->placeholder('-')
                     ->toggleable(),
                 TextColumn::make('set_name')
@@ -284,27 +296,33 @@ class PatientVaccinationResource extends Resource
                     ->label('Dose')
                     ->sortable(),
                 TextColumn::make('status')
+                    ->label('Status')
                     ->badge()
-                    ->color(fn($state) => match ($state instanceof VaccinationStatus ? $state->value : (string) $state) {
+                    ->color(fn($state, PatientVaccination $record) => match (static::effectiveStatus($record)) {
                         VaccinationStatus::COMPLETED->value => 'success',
+                        VaccinationStatus::DUE_TODAY->value, 'due' => 'warning',
+                        VaccinationStatus::DUE_SOON->value => 'info',
                         VaccinationStatus::PENDING->value => 'warning',
                         VaccinationStatus::SCHEDULED->value => 'info',
+                        VaccinationStatus::OVERDUE->value, 'overdue' => 'danger',
                         VaccinationStatus::MISSED->value, VaccinationStatus::CANCELLED->value => 'danger',
+                        VaccinationStatus::ON_HOLD->value, VaccinationStatus::RESCHEDULED->value => 'gray',
+                        VaccinationStatus::SKIPPED_BY_DOCTOR->value => 'gray',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn($state): string => $state instanceof VaccinationStatus ? $state->label() : ucfirst((string) $state))
+                    ->formatStateUsing(fn($state, PatientVaccination $record): string => static::statusLabel(static::effectiveStatus($record)))
                     ->sortable(),
-                TextColumn::make('scheduled_date')
+                TextColumn::make('due_date')
+                    ->label('Due Date')
                     ->date()
                     ->sortable(),
-                TextColumn::make('first_dose_date')
-                    ->date()
-                    ->label('First Dose Date')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('completed_date')
-                    ->date()
+                TextColumn::make('status_timeline')
+                    ->label('Status Timeline')
+                    ->badge()
+                    ->formatStateUsing(fn($state, PatientVaccination $record): string => static::timelineLabel($record))
+                    ->color(fn($state, PatientVaccination $record): string => static::timelineColor($record))
                     ->placeholder('-')
-                    ->sortable(),
+                    ->toggleable(),
                 IconColumn::make('reminder_sent')
                     ->boolean()
                     ->label('Reminder Sent'),
@@ -314,8 +332,50 @@ class PatientVaccinationResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('patient_id')
+                    ->label('Patient')
+                    ->options(fn() => Patient::query()
+                        ->orderBy('first_name')
+                        ->get()
+                        ->mapWithKeys(fn(Patient $patient) => [
+                            $patient->id => trim("{$patient->first_name} {$patient->last_name}") ?: ($patient->email ?: $patient->id),
+                        ]))
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('vaccination_template_id')
+                    ->label('Template')
+                    ->relationship('template', 'name')
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('program')
+                    ->label('Category')
+                    ->options(fn() => \App\Models\VaccinationProgram::query()->orderBy('name')->pluck('name', 'id'))
+                    ->query(fn(Builder $query, array $data): Builder => $query->when(
+                        $data['value'] ?? null,
+                        fn(Builder $query, $programId) => $query->whereHas('template', fn(Builder $templateQuery) => $templateQuery->where('vaccination_program_id', $programId))
+                    ))
+                    ->searchable()
+                    ->preload(),
                 SelectFilter::make('status')
                     ->options(VaccinationStatus::options()),
+                Filter::make('current')
+                    ->label('Current / Due Now')
+                    ->query(fn(Builder $query): Builder => $query->whereIn('status', [
+                        VaccinationStatus::DUE_SOON->value,
+                        VaccinationStatus::DUE_TODAY->value,
+                        VaccinationStatus::OVERDUE->value,
+                    ])),
+                Filter::make('upcoming')
+                    ->label('Upcoming')
+                    ->query(fn(Builder $query): Builder => $query->where('status', VaccinationStatus::UPCOMING->value)),
+                Filter::make('due_date')
+                    ->form([
+                        DatePicker::make('from')->label('Due From'),
+                        DatePicker::make('until')->label('Due Until'),
+                    ])
+                    ->query(fn(Builder $query, array $data): Builder => $query
+                        ->when($data['from'] ?? null, fn(Builder $query, $date) => $query->whereDate('due_date', '>=', $date))
+                        ->when($data['until'] ?? null, fn(Builder $query, $date) => $query->whereDate('due_date', '<=', $date))),
                 TrashedFilter::make(),
             ])
             ->recordActions([
@@ -324,15 +384,7 @@ class PatientVaccinationResource extends Resource
                     EditAction::make(),
                 ]),
             ])
-            ->groups([
-                Group::make('set_name')
-                    ->label('Schedule Set')
-                    ->titlePrefixedWithLabel(false)
-                    ->getTitleFromRecordUsing(fn(PatientVaccination $record): string => $record->set_name ?: 'No schedule set')
-                    ->collapsible(),
-            ])
-            ->defaultGroup('set_name')
-            ->defaultSort('set_sort_order')
+            ->defaultSort('scheduled_date')
             ->recordUrl(null);
     }
 
@@ -349,9 +401,78 @@ class PatientVaccinationResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['patient.user', 'doctor.user', 'vaccination', 'template.program', 'patientProfile'])
+            ->with(['patient.user', 'doctor.user', 'vaccination', 'template.program'])
             ->orderBy('set_sort_order')
             ->orderByRaw('scheduled_date IS NULL, scheduled_date ASC')
             ->withoutGlobalScopes();
+    }
+
+    protected static function effectiveStatus(PatientVaccination $record): string
+    {
+        $status = $record->status instanceof VaccinationStatus ? $record->status->value : (string) $record->status;
+
+        if ($status === VaccinationStatus::COMPLETED->value) {
+            return $status;
+        }
+
+        if (
+            in_array($status, [VaccinationStatus::PENDING->value, VaccinationStatus::SCHEDULED->value], true)
+            && $record->scheduled_date
+        ) {
+            if ($record->scheduled_date->isToday()) {
+                return 'due';
+            }
+
+            if ($record->scheduled_date->isPast()) {
+                return 'overdue';
+            }
+        }
+
+        return $status ?: VaccinationStatus::PENDING->value;
+    }
+
+    protected static function statusLabel(string $status): string
+    {
+        if ($status === 'due') {
+            return 'Due Today';
+        }
+
+        return VaccinationStatus::tryFrom($status)?->label() ?? str($status)->replace('_', ' ')->title()->toString();
+    }
+
+    protected static function timelineLabel(PatientVaccination $record): string
+    {
+        $effectiveStatus = static::effectiveStatus($record);
+
+        $date = match ($effectiveStatus) {
+            VaccinationStatus::COMPLETED->value => $record->completed_date,
+            VaccinationStatus::MISSED->value => $record->missed_date,
+            VaccinationStatus::OVERDUE->value, 'overdue' => $record->overdue_date,
+            VaccinationStatus::RESCHEDULED->value => $record->changed_date,
+            default => $record->due_date,
+        };
+
+        $label = match ($effectiveStatus) {
+            VaccinationStatus::COMPLETED->value => 'Completed',
+            VaccinationStatus::MISSED->value => 'Missed',
+            VaccinationStatus::OVERDUE->value, 'overdue' => 'Overdue',
+            VaccinationStatus::RESCHEDULED->value => 'Rescheduled',
+            default => 'Due',
+        };
+
+        return $date ? "{$label}: {$date->format('d M Y')}" : $label;
+    }
+
+    protected static function timelineColor(PatientVaccination $record): string
+    {
+        $effectiveStatus = static::effectiveStatus($record);
+
+        return match ($effectiveStatus) {
+            VaccinationStatus::COMPLETED->value => 'success',
+            VaccinationStatus::MISSED->value, VaccinationStatus::OVERDUE->value, 'overdue' => 'danger',
+            VaccinationStatus::RESCHEDULED->value => 'gray',
+            VaccinationStatus::DUE_SOON->value, VaccinationStatus::DUE_TODAY->value, 'due' => 'warning',
+            default => 'info',
+        };
     }
 }

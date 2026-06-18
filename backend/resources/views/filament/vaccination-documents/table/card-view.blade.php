@@ -1,9 +1,8 @@
 @php
     $record = $getRecord();
-    $record->loadMissing(['patientVaccination.patient', 'patientVaccination.patientProfile', 'patientVaccination.vaccination']);
+    $record->loadMissing(['patientVaccination.patient', 'patientVaccination.vaccination']);
 
     $patientName = trim(($record->patientVaccination?->patient?->first_name ?? '').' '.($record->patientVaccination?->patient?->last_name ?? '')) ?: 'Patient';
-    $profileName = $record->patientVaccination?->patientProfile?->name ?? 'Profile';
     $vaccineName = $record->patientVaccination?->vaccination?->name ?? 'Vaccine';
     $documentPath = $record->document;
     $url = $documentPath ? storage_url($documentPath) : null;
@@ -16,7 +15,7 @@
 @endphp
 
 <div class="h-full w-full bg-white rounded-xl group overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition">
-    <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-white">
+    <div class="p-4 border-b border-gray-100 bg-white">
         <div class="flex items-start gap-3">
             <div class="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center shadow">
                 @if ($isPdf)
@@ -36,7 +35,6 @@
 
     <div class="p-3 border-b border-gray-100 bg-gray-50 text-xs space-y-1">
         <p class="text-gray-500"><span class="font-bold text-gray-700">Patient:</span> {{ $patientName }}</p>
-        <p class="text-gray-500"><span class="font-bold text-gray-700">Profile:</span> {{ $profileName }}</p>
         @if ($record->certificate_number)
             <p class="text-gray-500"><span class="font-bold text-gray-700">Certificate #:</span> {{ $record->certificate_number }}</p>
         @endif

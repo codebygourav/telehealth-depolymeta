@@ -22,6 +22,7 @@ class VaccinationResource extends JsonResource
             'description' => $this->description,
             'side_effects' => $this->side_effects,
             'contraindications' => $this->contraindications,
+            'prevention' => $this->contraindications,
             'precautions' => $this->precautions,
             'dosage_information' => $this->dosage_information,
             'is_multi_dose' => $this->is_multi_dose,

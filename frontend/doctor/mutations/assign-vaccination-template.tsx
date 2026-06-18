@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 
 export const useAssignVaccinationTemplate = () => {
     return useMutation({
-        mutationFn: ({ patientId, templateId }: { patientId: string; templateId: string }) =>
-            assignVaccinationTemplate(patientId, templateId),
+        mutationFn: ({ patientId, templateId, firstDoseDate }: { patientId: string; templateId: string; firstDoseDate?: string }) =>
+            assignVaccinationTemplate(patientId, templateId, firstDoseDate),
     });
 };

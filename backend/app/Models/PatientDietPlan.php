@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -64,5 +65,15 @@ class PatientDietPlan extends Model
     {
         return $this->hasMany(PatientDietPlanDay::class)
             ->orderBy('day_number');
+    }
+
+    public function meals(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            PatientDietPlanMeal::class,
+            PatientDietPlanDay::class,
+            'patient_diet_plan_id',
+            'patient_diet_plan_day_id'
+        );
     }
 }

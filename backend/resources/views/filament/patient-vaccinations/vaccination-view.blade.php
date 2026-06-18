@@ -1,23 +1,38 @@
 @php
     $record = $getState();
-    $record->loadMissing(['patient.user', 'patientProfile', 'doctor.user', 'vaccination', 'template.program', 'documents']);
+    $record->loadMissing(['patient.user', 'doctor.user', 'vaccination', 'template.program', 'documents', 'logs.performedBy']);
 
     $patientName = trim(($record->patient?->first_name ?? '').' '.($record->patient?->last_name ?? '')) ?: '—';
-    $profileName = $record->patientProfile?->name ?? '—';
     $doctorName = trim(($record->doctor?->first_name ?? '').' '.($record->doctor?->last_name ?? '')) ?: '—';
-    $vaccineName = $record->vaccination??->name ?? '—';
-    
-    $status = $record->status instanceof \App\Enums\VaccinationStatus 
-        ? $record->status 
+    $vaccineName = $record->vaccination?->name ?? '—';
+
+    $status = $record->status instanceof \App\Enums\VaccinationStatus
+        ? $record->status
         : \App\Enums\VaccinationStatus::tryFrom((string)$record->status) ?? \App\Enums\VaccinationStatus::PENDING;
 
-    $statusColor = match($status->value) {
+    $effectiveStatus = $status->value;
+    if (
+        in_array($status->value, ['pending', 'scheduled'], true)
+        && $record->scheduled_date
+        && $record->scheduled_date->isPast()
+        && ! $record->scheduled_date->isToday()
+    ) {
+        $effectiveStatus = 'overdue';
+    }
+
+    $statusColor = match($effectiveStatus) {
         'completed' => 'emerald',
-        'scheduled' => 'blue',
-        'pending' => 'amber',
+        'scheduled', 'upcoming', 'due_soon', 'rescheduled' => 'blue',
+        'pending', 'due_today', 'on_hold', 'skipped_by_doctor' => 'amber',
+        'overdue' => 'rose',
         'missed', 'cancelled' => 'rose',
         default => 'gray',
     };
+    $statusLabel = \App\Enums\VaccinationStatus::tryFrom($effectiveStatus)?->label() ?? str($effectiveStatus)->replace('_', ' ')->title();
+    $showCompletedDate = $effectiveStatus === \App\Enums\VaccinationStatus::COMPLETED->value;
+    $showOverdueDate = in_array($effectiveStatus, [\App\Enums\VaccinationStatus::OVERDUE->value, \App\Enums\VaccinationStatus::MISSED->value], true);
+    $showMissedDate = $effectiveStatus === \App\Enums\VaccinationStatus::MISSED->value;
+    $showChangedDate = filled($record->changed_date);
 
     $colorMap = [
         'emerald' => [
@@ -63,7 +78,7 @@
 <div class="space-y-6">
     <!-- Header Block -->
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
-        <div class="p-6 bg-gradient-to-r {{ $classes['bgGradient'] }} to-transparent">
+        <div class="p-6 bg-linear-to-r {{ $classes['bgGradient'] }} to-transparent">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                 <div class="flex items-start gap-4">
                     <div class="w-12 h-12 rounded-xl {{ $classes['bgIcon'] }} flex items-center justify-center shrink-0 mt-0.5">
@@ -81,11 +96,11 @@
                             @endif
                         </div>
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ $vaccineName }}</h2>
-                        
+
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-gray-500 dark:text-gray-400">
                             <div class="flex items-center gap-1">
                                 <x-heroicon-m-user class="w-4 h-4 text-gray-400" />
-                                <span>Patient: <strong class="text-gray-700 dark:text-gray-300">{{ $patientName }} ({{ $profileName }})</strong></span>
+                                <span>Patient: <strong class="text-gray-700 dark:text-gray-300">{{ $patientName }}</strong></span>
                             </div>
                             @if($record->doctor)
                                 <div class="flex items-center gap-1">
@@ -96,11 +111,11 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="shrink-0">
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold {{ $classes['badge'] }} rounded-full shadow-sm">
                         <span class="w-1.5 h-1.5 rounded-full {{ $classes['dot'] }} animate-pulse"></span>
-                        {{ $status->label() }}
+                        {{ $statusLabel }}
                     </span>
                 </div>
             </div>
@@ -172,6 +187,78 @@
                 </div>
             </x-filament::section>
 
+            <!-- Calculation and Doctor Override Logic -->
+            <x-filament::section>
+                <x-slot name="heading">
+                    <div class="flex items-center gap-2">
+                        <x-heroicon-m-adjustments-horizontal class="w-5 h-5 text-gray-500" />
+                        <span>Calculation & Doctor Override</span>
+                    </div>
+                </x-slot>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div class="rounded-xl border border-gray-100 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-900/30">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Base Logic</h4>
+                        <p class="mt-2 text-gray-700 dark:text-gray-300">
+                            @php
+                                $programType = $record->template?->program?->target_type?->value ?? $record->template?->program?->target_type;
+                                $baseLogic = match($programType) {
+                                    'baby', 'child' => 'DOB based: calculated from selected patient/family profile birth date.',
+                                    'pregnancy' => 'Pregnancy based: calculated from LMP / pregnancy start date.',
+                                    default => 'Assignment based: calculated from category start / template assignment date.',
+                                };
+                            @endphp
+                            {{ $baseLogic }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl border border-gray-100 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-900/30">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Doctor Actions Allowed</h4>
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                            @foreach(['Reschedule', 'Mark Completed', 'Skip with Reason', 'Put On Hold', 'Add Remark', 'Add Booster / Extra Dose'] as $action)
+                                <span class="px-2 py-1 text-[10px] font-semibold rounded-md bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300">{{ $action }}</span>
+                            @endforeach
+                        </div>
+                        <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Each save creates an audit log below with old value, new value, user, date, and reason when provided.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Expected Date</h4>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ $record->expected_date ? $record->expected_date->format('d M Y') : 'Doctor manual date' }}</p>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Current Due Date</h4>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white mt-1">{{ $record->due_date ? $record->due_date->format('d M Y') : 'Not set' }}</p>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Doctor Changed Date</h4>
+                        <p class="text-sm font-semibold text-amber-600 dark:text-amber-400 mt-1">{{ $record->changed_date ? $record->changed_date->format('d M Y') : 'No override' }}</p>
+                    </div>
+                </div>
+
+                @if($record->skipped_reason || $record->on_hold_reason || ($showMissedDate && $record->doctor_notes))
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        @if($showMissedDate && $record->doctor_notes)
+                            <div class="rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50/60 dark:bg-rose-950/20 p-3 text-xs text-rose-800 dark:text-rose-300">
+                                <strong>Missed Remark:</strong> {{ $record->doctor_notes }}
+                            </div>
+                        @endif
+                        @if($record->skipped_reason)
+                            <div class="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50/60 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-300">
+                                <strong>Skipped Reason:</strong> {{ $record->skipped_reason }}
+                            </div>
+                        @endif
+                        @if($record->on_hold_reason)
+                            <div class="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/20 p-3 text-xs text-blue-800 dark:text-blue-300">
+                                <strong>On Hold Reason:</strong> {{ $record->on_hold_reason }}
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            </x-filament::section>
+
             <!-- Notes and Reaction -->
             <x-filament::section>
                 <x-slot name="heading">
@@ -192,14 +279,14 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
                             <h4 class="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">Side Effects Observed</h4>
-                            <div class="mt-2 text-xs text-gray-700 dark:text-gray-300 bg-rose-50/10 dark:bg-rose-950/10 p-3 rounded-lg border border-rose-100/50 dark:border-rose-900/20 min-h-[4rem]">
+                            <div class="mt-2 text-xs text-gray-700 dark:text-gray-300 bg-rose-50/10 dark:bg-rose-950/10 p-3 rounded-lg border border-rose-100/50 dark:border-rose-900/20 min-h-16">
                                 {{ $record->side_effect_observed ?: 'No adverse reactions noted.' }}
                             </div>
                         </div>
 
                         <div>
                             <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Patient Reaction Description</h4>
-                            <div class="mt-2 text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800 min-h-[4rem]">
+                            <div class="mt-2 text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800 min-h-16">
                                 {{ $record->patient_reaction ?: 'No patient reaction reported.' }}
                             </div>
                         </div>
@@ -221,34 +308,70 @@
 
                 <div class="space-y-4">
                     <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
-                        <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Scheduled Date</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Expected Date</span>
                         <span class="text-sm font-semibold text-gray-900 dark:text-white">
-                            {{ $record->scheduled_date ? $record->scheduled_date->format('d M Y') : '—' }}
+                            {{ $record->expected_date ? $record->expected_date->format('d M Y') : '—' }}
                         </span>
                     </div>
 
                     <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
-                        <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">First Dose Date</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Assigned Date</span>
                         <span class="text-sm font-semibold text-gray-900 dark:text-white">
-                            {{ $record->first_dose_date ? $record->first_dose_date->format('d M Y') : '—' }}
+                            {{ $record->assigned_date ? $record->assigned_date->format('d M Y') : '—' }}
                         </span>
                     </div>
 
                     <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
-                        <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Completed Date</span>
-                        <span class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                            {{ $record->completed_date ? $record->completed_date->format('d M Y') : '—' }}
+                        <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Due Date</span>
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">
+                            {{ $record->due_date ? $record->due_date->format('d M Y') : '—' }}
                         </span>
                     </div>
+
+                    @if($showChangedDate)
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                            <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Changed Date</span>
+                            <span class="text-sm font-semibold text-amber-600">
+                                {{ $record->changed_date->format('d M Y') }}
+                            </span>
+                        </div>
+                    @endif
+
+                    @if($showCompletedDate)
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                            <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Completed Date</span>
+                            <span class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                                {{ $record->completed_date ? $record->completed_date->format('d M Y') : '—' }}
+                            </span>
+                        </div>
+                    @endif
+
+                    @if($showOverdueDate)
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                            <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Overdue Date</span>
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white">
+                                {{ $record->overdue_date ? $record->overdue_date->format('d M Y') : '—' }}
+                            </span>
+                        </div>
+                    @endif
+
+                    @if($showMissedDate)
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                            <span class="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Missed Date</span>
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white">
+                                {{ $record->missed_date ? $record->missed_date->format('d M Y') : '—' }}
+                            </span>
+                        </div>
+                    @endif
 
                     <div class="flex items-center justify-between text-[11px] text-gray-400 dark:text-gray-500 pt-2">
-                        <span>Offset Days saved:</span>
-                        <span>{{ $record->due_after_days ?? 0 }} days ({{ $record->due_after_months ?? 0 }} months)</span>
+                        <span>Grace period (before/after):</span>
+                        <span>-{{ $record->grace_period_before_days ?? 0 }}d / +{{ $record->grace_period_after_days ?? 0 }}d</span>
                     </div>
                 </div>
             </x-filament::section>
 
-            <!-- Linked Template & Program -->
+            <!-- Linked Template & Category -->
             @if($record->template)
                 <x-filament::section>
                     <x-slot name="heading">
@@ -267,7 +390,7 @@
                         </div>
                         @if($record->template->program)
                             <div>
-                                <h5 class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Program Target</h5>
+                                <h5 class="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Category / Target</h5>
                                 <p class="text-xs font-semibold text-gray-900 dark:text-white mt-0.5">
                                     {{ $record->template->program->name }}
                                 </p>
@@ -319,4 +442,54 @@
             </x-filament::section>
         </div>
     </div>
+
+    <!-- Audit History Logs -->
+    <x-filament::section class="mt-6">
+        <details class="group" id="dose-audit-history">
+            <summary class="list-none cursor-pointer flex items-center justify-between gap-3 py-1">
+                <div class="flex items-center gap-2">
+                    <x-heroicon-m-clock class="w-5 h-5 text-gray-500" />
+                    <span class="font-semibold text-sm text-gray-900 dark:text-white">Dose Audit History Logs</span>
+                </div>
+                <x-heroicon-m-chevron-down class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" />
+            </summary>
+
+            <div class="mt-4">
+                @if($record->logs->isNotEmpty())
+                    <div class="relative border-l border-gray-200 dark:border-gray-800 ml-3 space-y-4 pb-2">
+                        @foreach($record->logs as $log)
+                            <div class="relative pl-6 group">
+                                <div class="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-white dark:bg-gray-950 border-2 border-primary-600 dark:border-primary-500 flex items-center justify-center"></div>
+
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    <span class="font-bold text-gray-700 dark:text-gray-300">
+                                        {{ $log->performedBy ? $log->performedBy->name : 'System' }}
+                                    </span>
+                                    performed
+                                    <span class="font-semibold text-primary-600 dark:text-primary-400">
+                                        {{ str_replace('updated_', 'updated ', $log->action) }}
+                                    </span>
+                                    on {{ $log->created_at->format('d M Y, h:i A') }}
+                                </div>
+
+                                <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                                    @if($log->old_value !== null && $log->old_value !== '')
+                                        <p>Old: <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">{{ $log->old_value }}</span></p>
+                                    @endif
+                                    @if($log->new_value !== null && $log->new_value !== '')
+                                        <p>New: <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">{{ $log->new_value }}</span></p>
+                                    @endif
+                                    @if($log->reason)
+                                        <p class="italic text-gray-500 dark:text-gray-500 mt-1">Reason: "{{ $log->reason }}"</p>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-xs text-gray-400 dark:text-gray-500 italic">No history logs recorded yet.</p>
+                @endif
+            </div>
+        </details>
+    </x-filament::section>
 </div>

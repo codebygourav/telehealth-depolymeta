@@ -15,12 +15,12 @@ class DietTemplateController extends Controller
     public function index(Request $request)
     {
         $doctor = $this->doctor($request);
-        if (! $doctor) {
+        if (! $doctor && ! $this->canManageAllTemplates($request)) {
             return ApiResponseService::unauthorized();
         }
 
         $templates = DietTemplate::with(['days.meals'])
-            ->where('doctor_id', $doctor->id)
+            ->when($doctor, fn ($query) => $query->where('doctor_id', $doctor->id))
             ->when($request->boolean('active_only'), fn ($query) => $query->where('is_active', true))
             ->when($request->filled('search'), fn ($query) => $query->where('name', 'like', '%' . $request->string('search')->toString() . '%'))
             ->latest()
@@ -181,6 +181,15 @@ class DietTemplateController extends Controller
     private function doctor(Request $request)
     {
         return $request->user()?->doctor;
+    }
+
+    private function canManageAllTemplates(Request $request): bool
+    {
+        $user = $request->user();
+
+        return is_object($user)
+            && method_exists($user, 'hasAnyRole')
+            && $user->hasAnyRole(['super_admin', 'admin', 'doctor_manager', 'receptionist']);
     }
 
     private function templateData(DietTemplate $template): array

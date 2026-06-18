@@ -6,14 +6,7 @@ use App\Filament\Resources\Vaccinations\Pages;
 use App\Models\Vaccination;
 use App\Traits\HasCustomSidebar;
 use App\Traits\HasResourcePermissions;
-use Filament\Actions\ActionGroup;
-use Filament\Actions\Action;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\{ActionGroup,Action,BulkActionGroup,DeleteAction,DeleteBulkAction,EditAction,ForceDeleteBulkAction,RestoreBulkAction};
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -23,12 +16,12 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Filament\Infolists\Components\ViewEntry;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class VaccinationResource extends Resource
 {
@@ -53,10 +46,10 @@ class VaccinationResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         return check_permission(['vaccinations.view_any', 'vaccinations.view', 'vaccinations.manage_own'])
-            || $user?->hasAnyRole(['super_admin', 'admin', 'doctor_manager', 'receptionist', 'doctor']);
+            || (is_object($user) && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin', 'doctor_manager', 'receptionist', 'doctor']));
     }
 
     public static function form(Schema $schema): Schema
@@ -126,11 +119,24 @@ class VaccinationResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name')->searchable()->sortable(),
-                TextColumn::make('short_name')->searchable(),
-                TextColumn::make('disease_for')->searchable(),
-                IconColumn::make('is_active')->boolean(),
-                TextColumn::make('created_at')->dateTime()->sortable(),
+                TextColumn::make('name')
+                    ->label('Vaccine Name')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('semibold'),
+                TextColumn::make('short_name')
+                    ->label('Short Name')
+                    ->searchable()
+                    ->toggleable(),
+                TextColumn::make('disease_for')
+                    ->label('Protects Against')
+                    ->searchable(),
+                TextColumn::make('is_active')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn($state): string => ((bool) $state) ? 'Active' : 'Inactive')
+                    ->color(fn($state): string => ((bool) $state) ? 'success' : 'gray'),
+                TextColumn::make('updated_at')->label('Updated')->dateTime()->sortable(),
             ])
             ->filters([
                 TrashedFilter::make(),

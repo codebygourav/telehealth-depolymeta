@@ -9,14 +9,13 @@ use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\EmailLogs\EmailLogResource;
 use App\Filament\Resources\{Appointments\AppointmentResource, DoctorDepartments\DoctorDepartmentResource, DoctorReplacements\DoctorReplacementResource, DoctorReviews\DoctorReviewResource, Doctors\DoctorAvailabilityResource, Doctors\DoctorResource, ContactUs\ContactUsResource, ExternalBookings\ExternalBookingResource, Leaves\LeaveResource, MedicalReports\MedicalReportResource, Medicines\MedicineResource, ModuleDocuments\ModuleDocumentResource, Patients\PatientResource, Payments\PaymentResource, Symptoms\SymptomResource, Users\UserResource, Vendors\VendorResource};
 use App\Filament\Resources\DietTemplates\DietTemplateResource;
-use App\Filament\Resources\PatientVaccinationPrograms\PatientVaccinationProgramResource;
+use App\Filament\Resources\PatientDietPlans\PatientDietPlanResource;
 use App\Filament\Resources\PatientVaccinations\PatientVaccinationResource;
 use App\Filament\Resources\VaccinationClinicalInsights\VaccinationClinicalInsightResource;
 use App\Filament\Resources\VaccinationDocuments\VaccinationDocumentResource;
 use App\Filament\Resources\VaccinationGeneralFaqs\VaccinationGeneralFaqResource;
 use App\Filament\Resources\VaccinationTemplates\VaccinationTemplateResource;
 use App\Filament\Resources\Vaccinations\VaccinationResource;
-use App\Filament\Resources\PatientProfiles\PatientProfileResource;
 use App\Models\Setting;
 use Filament\Http\Middleware\{Authenticate, AuthenticateSession, DisableBladeIconComponents, DispatchServingFilamentEvent};
 use Filament\Navigation\NavigationBuilder;
@@ -85,14 +84,13 @@ class AdminPanelProvider extends PanelProvider
                 ModuleDocumentResource::class,
                 EmailLogResource::class,
                 DietTemplateResource::class,
-                PatientVaccinationProgramResource::class,
+                PatientDietPlanResource::class,
                 PatientVaccinationResource::class,
                 VaccinationClinicalInsightResource::class,
                 VaccinationDocumentResource::class,
                 VaccinationGeneralFaqResource::class,
                 VaccinationTemplateResource::class,
                 VaccinationResource::class,
-                PatientProfileResource::class,
 
             ])
             ->navigation(fn(NavigationBuilder $builder): NavigationBuilder => \App\Filament\CustomSidebarManager::buildFilamentNavigation($builder))
@@ -139,27 +137,27 @@ class AdminPanelProvider extends PanelProvider
     protected function getPrimaryColor(): string
     {
         try {
-            return Setting::getValue('app', 'primary_color', '#073827') ?? '#073827';
+            return Setting::getValue('app', 'primary_color', '#055bd9') ?? '#055bd9';
         } catch (\Exception $e) {
-            return '#073827';
+            return '#055bd9';
         }
     }
 
     protected function getSecondaryColor(): string
     {
         try {
-            return Setting::getValue('app', 'secondary_color', '#073827') ?? '#073827';
+            return Setting::getValue('app', 'secondary_color', '#055bd9') ?? '#055bd9';
         } catch (\Exception $e) {
-            return '#073827';
+            return '#055bd9';
         }
     }
 
     protected function getBrandLogo(): \Illuminate\Contracts\View\View
     {
         // Default Assets
-        $logo = asset('images/cmc-telehealth.png');
-        $black_logo = asset('images/cmc-telehealth-black.png');
-        $icon = asset('images/cmc-telehealth-black.png');
+        $logo = asset('images/white-logo.png');
+        $black_logo = asset('images/deploymeta.png');
+        $icon = asset('images/deploymeta.png');
 
         try {
             // Check for dynamic logo from Settings
@@ -191,8 +189,7 @@ class AdminPanelProvider extends PanelProvider
         } catch (\Exception $e) {
             // Fallback to default
         }
-
-        return asset('favicon.ico');
+        return asset('images/fav-icon.png');
     }
 
     protected function getAppName(): string

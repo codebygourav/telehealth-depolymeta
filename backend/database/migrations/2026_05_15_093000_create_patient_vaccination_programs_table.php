@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('patient_vaccination_programs', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('patient_profile_id');
+            $table->uuid('patient_id');
             $table->uuid('vaccination_program_id');
             $table->uuid('vaccination_template_id');
             $table->uuid('doctor_id');
@@ -18,11 +18,11 @@ return new class extends Migration
             $table->enum('status', ['active', 'completed', 'cancelled'])->default('active');
             $table->timestamps();
 
-            $table->foreign('patient_profile_id')->references('id')->on('patient_profiles')->cascadeOnDelete();
+            $table->foreign('patient_id')->references('id')->on('patients')->cascadeOnDelete();
             $table->foreign('vaccination_program_id')->references('id')->on('vaccination_programs')->cascadeOnDelete();
             $table->foreign('vaccination_template_id')->references('id')->on('vaccination_templates')->cascadeOnDelete();
             $table->foreign('doctor_id')->references('id')->on('doctors')->cascadeOnDelete();
-            $table->index(['patient_profile_id', 'status'], 'pvp_profile_status_idx');
+            $table->index(['patient_id', 'status'], 'pvp_patient_status_idx');
             $table->index(['doctor_id', 'status'], 'pvp_doctor_status_idx');
         });
 

@@ -15,15 +15,14 @@ class VaccinationTemplateController extends Controller
 {
     public function index(Request $request)
     {
-
         $user = $request->user();
         $doctor = $user->doctor;
-        // if (! $doctor) {
-        //     return ApiResponseService::unauthorized();
-        // }
+        if (! $doctor) {
+            return ApiResponseService::unauthorized();
+        }
 
         $templates = VaccinationTemplate::with(['items.vaccination', 'program'])
-            ->where('doctor_id', $doctor->id)
+            ->where(fn($query) => $query->where('doctor_id', $doctor->id)->orWhereNull('doctor_id'))
             ->when($request->filled('vaccination_program_id'), fn($query) => $query->where('vaccination_program_id', $request->string('vaccination_program_id')->toString()))
             ->when($request->boolean('active_only'), fn($query) => $query->where('is_active', true))
             ->when($request->filled('search'), fn($query) => $query->where('name', 'like', '%' . $request->string('search')->toString() . '%'))
@@ -80,6 +79,11 @@ class VaccinationTemplateController extends Controller
             return ApiResponseService::unauthorized();
         }
 
+        $doctor = $this->doctor($request);
+        if ($template->doctor_id !== $doctor?->id) {
+            return ApiResponseService::unauthorized();
+        }
+
         $data = $this->validatedData($request, true);
 
         DB::transaction(function () use ($template, $data) {
@@ -100,6 +104,11 @@ class VaccinationTemplateController extends Controller
     {
         $template = $this->ownedTemplate($request, $id);
         if (! $template) {
+            return ApiResponseService::unauthorized();
+        }
+
+        $doctor = $this->doctor($request);
+        if ($template->doctor_id !== $doctor?->id) {
             return ApiResponseService::unauthorized();
         }
 
@@ -137,13 +146,19 @@ class VaccinationTemplateController extends Controller
                     'set_sort_order' => $item->set_sort_order ?? 0,
                     'dose_no' => $item->dose_no,
                     'depends_on_previous_dose' => $item->depends_on_previous_dose,
+                    'timing_type' => $item->effectiveTimingType(),
                     'interval_days' => $item->interval_days ?? 0,
                     'interval_months' => $item->interval_months ?? 0,
+                    'interval_value' => $item->effectiveIntervalValue(),
+                    'interval_unit' => $item->effectiveIntervalUnit(),
+                    'doctor_manual_date' => $item->doctor_manual_date,
                     'minimum_age_days' => $item->minimum_age_days,
                     'maximum_age_days' => $item->maximum_age_days,
                     'recommended_age_label' => $item->recommended_age_label,
                     'due_after_days' => $item->due_after_days,
                     'due_after_months' => $item->due_after_months ?? 0,
+                    'offset_value' => $item->effectiveOffsetValue(),
+                    'offset_unit' => $item->effectiveOffsetUnit(),
                     'sort_order' => $item->sort_order,
                 ]);
             }
@@ -172,13 +187,18 @@ class VaccinationTemplateController extends Controller
             'items.*.set_sort_order' => ['nullable', 'integer', 'min:0'],
             'items.*.dose_no' => ['nullable', 'integer', 'min:1'],
             'items.*.depends_on_previous_dose' => ['sometimes', 'boolean'],
+            'items.*.timing_type' => ['nullable', 'string', 'in:base_date,previous_dose,doctor_manual_date'],
             'items.*.interval_days' => ['nullable', 'integer', 'min:0'],
             'items.*.interval_months' => ['nullable', 'integer', 'min:0'],
+            'items.*.interval_value' => ['nullable', 'integer', 'min:0'],
+            'items.*.interval_unit' => ['nullable', 'string', 'in:days,weeks,months,years'],
             'items.*.minimum_age_days' => ['nullable', 'integer', 'min:0'],
             'items.*.maximum_age_days' => ['nullable', 'integer', 'min:0'],
             'items.*.recommended_age_label' => ['nullable', 'string', 'max:255'],
             'items.*.due_after_days' => ['nullable', 'integer', 'min:0'],
             'items.*.due_after_months' => ['nullable', 'integer', 'min:0'],
+            'items.*.offset_value' => ['nullable', 'integer', 'min:0'],
+            'items.*.offset_unit' => ['nullable', 'string', 'in:days,weeks,months,years'],
             'items.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
     }
@@ -186,6 +206,14 @@ class VaccinationTemplateController extends Controller
     private function syncItems(VaccinationTemplate $template, array $items): void
     {
         foreach (array_values($items) as $index => $item) {
+            $timingType = $item['timing_type'] ?? (($item['depends_on_previous_dose'] ?? false) ? 'previous_dose' : 'base_date');
+            $offsetValue = (int) ($item['offset_value'] ?? 0);
+            $offsetUnit = $item['offset_unit'] ?? 'days';
+            $intervalValue = (int) ($item['interval_value'] ?? 0);
+            $intervalUnit = $item['interval_unit'] ?? 'days';
+            [$dueAfterDays, $dueAfterMonths] = $this->legacyValueColumns($offsetValue, $offsetUnit);
+            [$intervalDays, $intervalMonths] = $this->legacyValueColumns($intervalValue, $intervalUnit);
+
             VaccinationTemplateItem::create([
                 'vaccination_template_id' => $template->id,
                 'vaccination_id' => $item['vaccination_id'],
@@ -193,17 +221,33 @@ class VaccinationTemplateController extends Controller
                 'set_description' => $item['set_description'] ?? null,
                 'set_sort_order' => $item['set_sort_order'] ?? 0,
                 'dose_no' => $item['dose_no'] ?? 1,
-                'depends_on_previous_dose' => $item['depends_on_previous_dose'] ?? false,
-                'interval_days' => $item['interval_days'] ?? 0,
-                'interval_months' => $item['interval_months'] ?? 0,
+                'depends_on_previous_dose' => $timingType === 'previous_dose',
+                'timing_type' => $timingType,
+                'interval_days' => $intervalDays,
+                'interval_months' => $intervalMonths,
+                'interval_value' => $intervalValue,
+                'interval_unit' => $intervalUnit,
+                'doctor_manual_date' => $timingType === 'doctor_manual_date',
                 'minimum_age_days' => $item['minimum_age_days'] ?? null,
                 'maximum_age_days' => $item['maximum_age_days'] ?? null,
                 'recommended_age_label' => $item['recommended_age_label'] ?? null,
-                'due_after_days' => $item['due_after_days'] ?? 0,
-                'due_after_months' => $item['due_after_months'] ?? 0,
+                'due_after_days' => $dueAfterDays,
+                'due_after_months' => $dueAfterMonths,
+                'offset_value' => $offsetValue,
+                'offset_unit' => $offsetUnit,
                 'sort_order' => $item['sort_order'] ?? $index,
             ]);
         }
+    }
+
+    private function legacyValueColumns(int $value, string $unit): array
+    {
+        return match ($unit) {
+            'weeks' => [$value * 7, 0],
+            'months' => [0, $value],
+            'years' => [0, $value * 12],
+            default => [$value, 0],
+        };
     }
 
     private function ownedTemplate(Request $request, string $id): ?VaccinationTemplate
@@ -214,7 +258,7 @@ class VaccinationTemplateController extends Controller
         }
 
         return VaccinationTemplate::with(['items', 'program'])
-            ->where('doctor_id', $doctor->id)
+            ->where(fn($query) => $query->where('doctor_id', $doctor->id)->orWhereNull('doctor_id'))
             ->findOrFail($id);
     }
 

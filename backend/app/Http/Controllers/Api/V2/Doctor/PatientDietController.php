@@ -21,7 +21,7 @@ class PatientDietController extends Controller
     public function assign(Request $request)
     {
         $doctor = $this->doctor($request);
-        if (! $doctor) {
+        if (! $doctor && ! $this->canManageAllDietPlans($request)) {
             return ApiResponseService::unauthorized();
         }
 
@@ -34,20 +34,25 @@ class PatientDietController extends Controller
         ]);
 
         $patient = $this->patientOrFail($data['patient_id']);
-        $template = DietTemplate::query()
+        $templateQuery = DietTemplate::query()
             ->with(['days.meals'])
-            ->where('doctor_id', $doctor->id)
-            ->where('is_active', true)
-            ->findOrFail($data['template_id']);
+            ->where('is_active', true);
+
+        if ($doctor) {
+            $templateQuery->where('doctor_id', $doctor->id);
+        }
+
+        $template = $templateQuery->findOrFail($data['template_id']);
+        $planDoctorId = $doctor?->id ?? $template->doctor_id;
 
         $startDate = Carbon::parse($data['start_date'])->startOfDay();
         $durationDays = (int) ($data['duration_days'] ?? $template->duration_days ?? 7);
         $endDate = $startDate->copy()->addDays(max(0, $durationDays - 1));
 
-        $plan = DB::transaction(function () use ($doctor, $patient, $template, $data, $startDate, $endDate, $durationDays): PatientDietPlan {
+        $plan = DB::transaction(function () use ($planDoctorId, $patient, $template, $data, $startDate, $endDate, $durationDays): PatientDietPlan {
             $plan = PatientDietPlan::create([
                 'patient_id' => $patient->id,
-                'doctor_id' => $doctor->id,
+                'doctor_id' => $planDoctorId,
                 'diet_template_id' => $template->id,
                 'template_name' => $template->name,
                 'template_description' => $template->description,
@@ -106,8 +111,9 @@ class PatientDietController extends Controller
             ->where('patient_id', $patientId)
             ->where('doctor_id', $doctor->id)
             ->latest()
-            ->firstOrFail();
-        if (empty($plan)) {
+            ->first();
+
+        if (! $plan) {
             return ApiResponseService::notFound('Diet plan not found');
         }
 
@@ -125,7 +131,11 @@ class PatientDietController extends Controller
 
         $plan = PatientDietPlan::query()
             ->where('doctor_id', $doctor->id)
-            ->findOrFail($id);
+            ->find($id);
+
+        if (! $plan) {
+            return ApiResponseService::notFound('Diet plan not found');
+        }
 
         $data = $request->validate([
             'status' => ['sometimes', Rule::in(['draft', 'active', 'paused', 'completed', 'cancelled'])],
@@ -252,6 +262,15 @@ class PatientDietController extends Controller
     private function doctor(Request $request)
     {
         return $request->user()?->doctor;
+    }
+
+    private function canManageAllDietPlans(Request $request): bool
+    {
+        $user = $request->user();
+
+        return is_object($user)
+            && method_exists($user, 'hasAnyRole')
+            && $user->hasAnyRole(['super_admin', 'admin', 'doctor_manager', 'receptionist']);
     }
 
     private function patientOrFail(string $patientId): Patient

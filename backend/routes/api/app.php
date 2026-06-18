@@ -17,7 +17,6 @@ use App\Http\Controllers\Api\V2\Doctor\UsageAnalyticsController;
 use App\Http\Controllers\Api\V2\Patient\DoctorBrowseController;
 use App\Http\Controllers\Api\V2\Patient\PatientHomeController;
 use App\Http\Controllers\Api\V2\Patient\PatientMedicalReportController;
-use App\Http\Controllers\Api\V2\Patient\PatientProfileController;
 use App\Http\Controllers\Api\V2\Patient\TransactionsController;
 use App\Http\Controllers\Api\V2\Wordpress\DepartmentController as WordpressDepartmentController;
 use App\Services\ApiResponseService;
@@ -29,7 +28,6 @@ use App\Http\Controllers\Api\V2\Doctor\PatientDietController;
 use App\Http\Controllers\Api\V2\Doctor\PatientVaccinationController;
 use App\Http\Controllers\Api\V2\Doctor\VaccinationController;
 use App\Http\Controllers\Api\V2\Doctor\VaccinationTemplateController;
-use App\Http\Controllers\Api\V2\Patient\PatientProfileMemberController;
 use App\Http\Controllers\Api\V2\Vaccination\VaccinationModuleContentController;
 
 
@@ -52,24 +50,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // api used in patient screen (doctor profile, appointments, specialities and symptoms, all doctors, patient profile, doctor reviews etc)
     Route::prefix('patient')->group(function () {
         Route::get('/home', [PatientHomeController::class, 'index']);
-        Route::get('/{user_id}/profile', [PatientProfileController::class, 'show']);
         Route::get('/browse-doctors', [DoctorBrowseController::class, 'index']);
         Route::get('/browse-doctor/{user_id}', [DoctorBrowseController::class, 'show']);
         Route::get('/departments-and-symptoms-list', [DoctorBrowseController::class, 'getDepartmentsAndSymptomsList']);
         Route::get('/my-transactions', [TransactionsController::class, 'index']); // get all transactions for the patient
         Route::get('/transactions/{id}', [TransactionsController::class, 'show']);
-        Route::post('/{user_id}', [PatientProfileController::class, 'update']);
         // Medical reports: list, upload, delete
         Route::get('/{user_id}/medical-reports', [PatientMedicalReportController::class, 'index']);
         Route::post('/{user_id}/medical-reports', [PatientMedicalReportController::class, 'store']);
         Route::delete('/medical-reports/{appointmentId}/{report}', [PatientMedicalReportController::class, 'medicalReportDeleteForAppointment']);
         Route::delete('/medical-reports/{report}', [PatientMedicalReportController::class, 'destroy']);
         Route::get('/diet-plan', [PatientDietController::class, 'patientPlan']);
-        Route::get('/profiles', [PatientProfileMemberController::class, 'index']);
-        Route::post('/profiles', [PatientProfileMemberController::class, 'store']);
-        Route::get('/profiles/{id}', [PatientProfileMemberController::class, 'show']);
-        Route::match(['put', 'post'], '/profiles/{id}', [PatientProfileMemberController::class, 'update']);
-        Route::delete('/profiles/{id}', [PatientProfileMemberController::class, 'destroy']);
         Route::post('/diet/meal/{mealId}/complete', [PatientDietController::class, 'markMealCompleted']);
         Route::get('/vaccinations', [PatientVaccinationController::class, 'patientVaccinations']);
         Route::get('/vaccination-content', [VaccinationModuleContentController::class, 'index']);
@@ -116,10 +107,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::match(['put', 'post'], '/vaccination-templates/{id}', [VaccinationTemplateController::class, 'update']);
 
         // assign vaccination template
-        Route::get('/patients/{patientId}/profiles', [PatientVaccinationController::class, 'patientProfiles']);
-        Route::post('/patients/{patientId}/profiles', [PatientVaccinationController::class, 'storePatientProfile']);
-        Route::match(['put', 'post'], '/patients/{patientId}/profiles/{profileId}', [PatientVaccinationController::class, 'updatePatientProfile']);
-        Route::delete('/patients/{patientId}/profiles/{profileId}', [PatientVaccinationController::class, 'destroyPatientProfile']);
         Route::post(
             '/{patientId}/assign-template',
             [PatientVaccinationController::class, 'assignTemplate']
@@ -129,12 +116,9 @@ Route::middleware('auth:sanctum')->group(function () {
             [PatientVaccinationController::class, 'assignCustomVaccination']
         );
         // patient vaccinations
-        Route::get(
-            '/{patientId}/vaccination-program-assignments',
-            [PatientVaccinationController::class, 'doctorPatientPrograms']
-        );
         Route::get('/{patientId}/vaccinations', [PatientVaccinationController::class, 'index']);
         // mark vaccination completed
+        Route::post('/patient-vaccinations/complete-multiple', [PatientVaccinationController::class, 'completeMultiple']);
         Route::post('/patient-vaccinations/{id}/complete', [PatientVaccinationController::class, 'markCompleted']);
         Route::post('/patient-vaccinations/{id}/documents', [PatientVaccinationController::class, 'addDocument']);
         Route::delete('/vaccination-documents/{documentId}', [PatientVaccinationController::class, 'deleteDocument']);

@@ -21,6 +21,7 @@ use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class VaccinationDocumentResource extends Resource
 {
@@ -46,10 +47,10 @@ class VaccinationDocumentResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         return check_permission(['vaccination-documents.view_any', 'vaccination-documents.view', 'vaccination-documents.manage_own'])
-            || $user?->hasAnyRole(['super_admin', 'admin', 'doctor_manager', 'receptionist', 'doctor']);
+            || (is_object($user) && method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['super_admin', 'admin', 'doctor_manager', 'receptionist', 'doctor']));
     }
 
     public static function infolist(Schema $schema): Schema
@@ -57,7 +58,7 @@ class VaccinationDocumentResource extends Resource
         return $schema->components([
             ViewEntry::make('document_details')
                 ->view('filament.vaccination-documents.vaccination-document-view')
-                ->state(fn ($record) => $record)
+                ->state(fn($record) => $record)
                 ->columnSpanFull(),
         ]);
     }
@@ -69,13 +70,13 @@ class VaccinationDocumentResource extends Resource
                 Select::make('patient_vaccination_id')
                     ->label('Patient Vaccine Dose')
                     ->helperText('Choose the dose this document belongs to.')
-                    ->options(fn () => PatientVaccination::query()
-                        ->with(['patient', 'patientProfile', 'vaccination'])
+                    ->options(fn() => PatientVaccination::query()
+                        ->with(['patient', 'vaccination'])
                         ->latest()
                         ->limit(200)
                         ->get()
-                        ->mapWithKeys(fn (PatientVaccination $dose) => [
-                            $dose->id => trim(($dose->patient?->first_name ?? '').' '.($dose->patient?->last_name ?? '')).' — '.($dose->patientProfile?->name ?? 'Profile').' — '.($dose->vaccination?->name ?? 'Vaccine'),
+                        ->mapWithKeys(fn(PatientVaccination $dose) => [
+                            $dose->id => trim(($dose->patient?->first_name ?? '') . ' ' . ($dose->patient?->last_name ?? '')) . ' — ' . ($dose->vaccination?->name ?? 'Vaccine'),
                         ]))
                     ->searchable()
                     ->required(),
@@ -113,7 +114,7 @@ class VaccinationDocumentResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['patientVaccination.patient', 'patientVaccination.patientProfile', 'patientVaccination.vaccination', 'patientVaccination.doctor'])
+            ->with(['patientVaccination.patient', 'patientVaccination.vaccination', 'patientVaccination.doctor'])
             ->withoutGlobalScopes();
     }
 }

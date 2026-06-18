@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import HeroSection from "@/components/hero-section";
 import WeeklyMealChart from "@/components/pages/profile/weekly-meal-chart";
+import notification from "@/components/pages/notification";
 import MyVaccination from "@/components/pages/profile/my-vaccination";
 
 

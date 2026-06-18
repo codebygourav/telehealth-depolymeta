@@ -16,7 +16,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('queue:work --stop-when-empty')
             ->everyMinute()
             ->withoutOverlapping();
-            
+
+        // Send daily vaccination reminders at 8 AM
+        $schedule->command('vaccinations:send-reminders')
+            ->dailyAt('08:00')
+            ->withoutOverlapping();
     }
 
     /**

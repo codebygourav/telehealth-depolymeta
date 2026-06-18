@@ -32,4 +32,9 @@ enum NotificationType: string
     case VIDEO_CALL_LEFT = 'video_call_left';
     case VIDEO_CALL_KNOCK_CANCELLED = 'video_call_knock_cancelled';
     case LEAVE_ADDED = 'leave_added';
+
+    case VACCINATION_DUE = 'vaccination_due';
+    case VACCINATION_OVERDUE = 'vaccination_overdue';
+    case VACCINATION_COMPLETED = 'vaccination_completed';
+    case VACCINATION_MISSED = 'vaccination_missed';
 }

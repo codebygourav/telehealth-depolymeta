@@ -25,12 +25,12 @@ class SettingService
 
     public static function getPrimaryColor(): string
     {
-        return Setting::getValue('app', 'primary_color', '#073827');
+        return Setting::getValue('app', 'primary_color', '#055bd9');
     }
 
     public static function getSecondaryColor(): string
     {
-        return Setting::getValue('app', 'secondary_color', '#073827');
+        return Setting::getValue('app', 'secondary_color', '#055bd9');
     }
 
     /**

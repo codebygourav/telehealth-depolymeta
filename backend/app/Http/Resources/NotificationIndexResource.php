@@ -18,6 +18,7 @@ class NotificationIndexResource extends JsonResource
             'is_read' => $this->read_at !== null,
             'created_at' => $this->created_at->diffForHumans(),
             'group' => $this->category ?? 'system',
+            'event_type' => $this->event_type,
         ];
     }
 }
