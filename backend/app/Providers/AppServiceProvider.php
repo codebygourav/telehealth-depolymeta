@@ -16,6 +16,7 @@ use App\Listeners\LogPushNotificationStatus;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Http\Middleware\TrustProxies;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,18 +33,33 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        // Detect HTTPS from multiple sources — must run before any URL generation
+        // so that Livewire's signed temporary upload URLs use the correct scheme.
         $forwardedProto = strtolower((string) request()->header('x-forwarded-proto'));
+        $serverHttps    = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
+        $xForwardedSsl  = strtolower((string) request()->header('x-forwarded-ssl'));
 
-        if (
-            request()->isSecure()
+        $isHttps = request()->isSecure()
             || str_contains($forwardedProto, 'https')
-            || str_starts_with((string) config('app.url'), 'https://')
-        ) {
+            || $serverHttps === 'on'
+            || $xForwardedSsl === 'on'
+            || str_starts_with((string) config('app.url'), 'https://');
+
+        if ($isHttps) {
             URL::forceScheme('https');
         }
 
+        // Build the public disk URL directly from APP_URL (not via url() helper)
+        // so the scheme is already resolved before the URL helper runs.
         if (! app()->runningInConsole()) {
-            config(['filesystems.disks.public.url' => url('/storage')]);
+            $appUrl = rtrim((string) config('app.url'), '/');
+
+            // If we detected HTTPS but APP_URL is still http://, correct it.
+            if ($isHttps) {
+                $appUrl = preg_replace('#^http://#', 'https://', $appUrl);
+            }
+
+            config(['filesystems.disks.public.url' => $appUrl . '/storage']);
         }
 
         Blade::component('ui.page-header', 'ui-page-header');
