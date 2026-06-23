@@ -42,11 +42,11 @@
                 class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm px-5 py-4 flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-3">
                     <div
-                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-100 dark:bg-emerald-900/30 text-primary-700 dark:text-emerald-300">
+                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
                         <x-heroicon-o-users class="w-5 h-5" />
                     </div>
                     <span
-                        class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 dark:bg-emerald-900/30 text-primary-700 dark:text-emerald-300 px-2 py-0.5 text-[11px] font-medium">
+                        class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 text-[11px] font-medium">
                         <span class="w-1.5 h-1.5 rounded-full bg-primary-1000 animate-pulse"></span>
                         Patient base
                     </span>
@@ -65,11 +65,11 @@
                 class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm px-5 py-4 flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-3">
                     <div
-                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-100 dark:bg-emerald-900/30 text-primary-700 dark:text-emerald-300">
+                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
                         <x-heroicon-o-calendar-days class="w-5 h-5" />
                     </div>
                     <span
-                        class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 dark:bg-emerald-900/30 text-primary-700 dark:text-emerald-300 px-2 py-0.5 text-[11px] font-medium">
+                        class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 text-[11px] font-medium">
                         <span
                             class="w-1.5 h-1.5 rounded-full bg-primary-1000 {{ ($summary['appointments_today'] ?? 0) > 0 ? 'animate-pulse' : '' }}"></span>
                         {{ ($summary['appointments_today'] ?? 0) > 0 ? 'In progress' : 'No slots today' }}
@@ -89,11 +89,11 @@
                 class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm px-5 py-4 flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-3">
                     <div
-                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-100 dark:bg-emerald-900/30 text-primary-700 dark:text-emerald-300">
+                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
                         <x-heroicon-o-user-group class="w-5 h-5" />
                     </div>
                     <span
-                        class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 dark:bg-emerald-900/30 text-primary-700 dark:text-emerald-300 px-2 py-0.5 text-[11px] font-medium">
+                        class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 text-[11px] font-medium">
                         <span class="w-1.5 h-1.5 rounded-full bg-primary-1000"></span>
                         Active doctors
                     </span>
@@ -112,11 +112,11 @@
                 class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm px-5 py-4 flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-3">
                     <div
-                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-100 dark:bg-emerald-900/30 text-primary-700 dark:text-emerald-300">
+                        class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
                         <x-heroicon-o-star class="w-5 h-5" />
                     </div>
                     <span
-                        class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 dark:bg-emerald-900/30 text-primary-700 dark:text-emerald-300 px-2 py-0.5 text-[11px] font-medium">
+                        class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 text-[11px] font-medium">
                         <span class="w-1.5 h-1.5 rounded-full bg-primary-1000"></span>
                         Awaiting review
                     </span>
@@ -139,7 +139,7 @@
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                            <x-heroicon-o-chart-bar class="w-5 h-5 text-emerald-500" />
+                            <x-heroicon-o-chart-bar class="w-5 h-5 text-primary" />
                             Appointments Overview
                         </h2>
                         <div class="mt-1 flex items-center gap-3 text-[11px] text-gray-500">
@@ -181,7 +181,7 @@
                         <button type="button" class="px-3 py-1 rounded-full transition"
                             :class="activeAppointmentTab === 'video'
                                 ?
-                                'bg-white dark:bg-gray-900 text-primary-700 dark:text-emerald-300 shadow-sm' :
+                                'bg-white dark:bg-gray-900 text-primary-700 dark:text-primary-300 shadow-sm' :
                                 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'"
                             @click="setAppointmentTab('video')">
                             Video
@@ -189,7 +189,7 @@
                         <button type="button" class="px-3 py-1 rounded-full transition"
                             :class="activeAppointmentTab === 'general'
                                 ?
-                                'bg-white dark:bg-gray-900 text-primary-700 dark:text-emerald-300 shadow-sm' :
+                                'bg-white dark:bg-gray-900 text-primary-700 dark:text-primary-300 shadow-sm' :
                                 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'"
                             @click="setAppointmentTab('general')">
                             General
@@ -232,19 +232,19 @@
                                 <defs>
                                     <linearGradient id="appointmentsArea" x1="0" y1="0"
                                         x2="0" y2="1">
-                                        <stop offset="0%" stop-color="rgb(16 185 129)" stop-opacity="0.25" />
-                                        <stop offset="100%" stop-color="rgb(16 185 129)" stop-opacity="0" />
+                                        <stop offset="0%" stop-color="#075bd9" stop-opacity="0.25" />
+                                        <stop offset="100%" stop-color="#075bd9" stop-opacity="0" />
                                     </linearGradient>
                                 </defs>
 
                                 <path fill="url(#appointmentsArea)" stroke="none" :d="appointmentAreaPath"></path>
 
-                                <polyline fill="none" stroke="rgb(16 185 129)" stroke-width="0.8"
+                                <polyline fill="none" stroke="#075bd9" stroke-width="0.8"
                                     stroke-linecap="round" stroke-linejoin="round" :points="appointmentLinePoints">
                                 </polyline>
 
                                 <template x-for="(value, index) in currentAppointments" :key="index">
-                                    <circle r="2" fill="white" stroke="rgb(16 185 129)" stroke-width="1"
+                                    <circle r="2" fill="white" stroke="#075bd9" stroke-width="1"
                                         :cx="pointForIndex(index, currentAppointments.length).x"
                                         :cy="pointForIndex(index, currentAppointments.length).yFor(value,
                                             maxAppointmentValue)"
@@ -260,8 +260,8 @@
                                 :style="`left: calc(${tooltip.x}%); top: 0.5rem; transform: translateX(-50%);`">
                                 <div class="flex items-center gap-2">
                                     <span class="font-medium" x-text="tooltip.label"></span>
-                                    <span class="inline-flex items-center gap-1 text-emerald-300">
-                                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                    <span class="inline-flex items-center gap-1 text-primary-300">
+                                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-primary-400"></span>
                                         <span x-text="tooltip.value + ' appointments'"></span>
                                     </span>
                                 </div>
@@ -288,7 +288,7 @@
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                            <x-heroicon-o-banknotes class="w-5 h-5 text-emerald-500" />
+                            <x-heroicon-o-banknotes class="w-5 h-5 text-primary" />
                             Payments Trend
                         </h2>
                         <p class="text-xs text-gray-500 mt-1">
@@ -297,7 +297,7 @@
                     </div>
                     <div class="text-right">
                         <p class="text-[11px] uppercase tracking-wide text-gray-400">Total Paid</p>
-                        <p class="text-base font-semibold text-emerald-600 dark:text-emerald-400"
+                        <p class="text-base font-semibold text-primary-600 dark:text-primary-400"
                             x-text="formattedTotalPayments"></p>
                     </div>
                 </div>
@@ -316,13 +316,13 @@
 
                 <div class="mt-3">
                     <div
-                        class="relative h-52 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 bg-gradient-to-b from-emerald-50 to-white dark:from-emerald-900/40 dark:to-slate-950 overflow-hidden px-4 py-4">
+                        class="relative h-52 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 bg-gradient-to-b from-primary-50 to-white dark:from-primary-900/40 dark:to-slate-950 overflow-hidden px-4 py-4">
                         {{-- Soft grid lines --}}
                         <div class="absolute inset-x-4 inset-y-4 pointer-events-none">
                             <div class="h-full flex flex-col justify-between opacity-60">
-                                <div class="border-t border-emerald-100 dark:border-emerald-900/60"></div>
-                                <div class="border-t border-emerald-100 dark:border-emerald-900/60"></div>
-                                <div class="border-t border-emerald-100 dark:border-emerald-900/60"></div>
+                                <div class="border-t border-primary-100 dark:border-primary-900/60"></div>
+                                <div class="border-t border-primary-100 dark:border-primary-900/60"></div>
+                                <div class="border-t border-primary-100 dark:border-primary-900/60"></div>
                             </div>
                         </div>
 
@@ -332,19 +332,19 @@
                                 <defs>
                                     <linearGradient id="paymentsArea" x1="0" y1="0" x2="0"
                                         y2="1">
-                                        <stop offset="0%" stop-color="rgb(16 185 129)" stop-opacity="0.25" />
-                                        <stop offset="100%" stop-color="rgb(16 185 129)" stop-opacity="0" />
+                                        <stop offset="0%" stop-color="#075bd9" stop-opacity="0.25" />
+                                        <stop offset="100%" stop-color="#075bd9" stop-opacity="0" />
                                     </linearGradient>
                                 </defs>
 
                                 <path fill="url(#paymentsArea)" stroke="none" :d="paymentAreaPath"></path>
 
-                                <polyline fill="none" stroke="rgb(16 185 129)" stroke-width="0.8"
+                                <polyline fill="none" stroke="#075bd9" stroke-width="0.8"
                                     stroke-linecap="round" stroke-linejoin="round" :points="paymentLinePoints">
                                 </polyline>
 
                                 <template x-for="(amount, index) in paymentsTotal" :key="index">
-                                    <circle r="2" fill="white" stroke="rgb(16 185 129)" stroke-width="1"
+                                    <circle r="2" fill="white" stroke="#075bd9" stroke-width="1"
                                         :cx="pointForIndex(index, paymentsTotal.length).x"
                                         :cy="pointForIndex(index, paymentsTotal.length).yFor(amount, maxPaymentValue)"
                                         style="pointer-events: auto; cursor: pointer;"
@@ -359,8 +359,8 @@
                                 :style="`left: calc(${tooltip.x}%); top: 0.5rem; transform: translateX(-50%);`">
                                 <div class="flex items-center gap-2">
                                     <span class="font-medium" x-text="tooltip.label"></span>
-                                    <span class="inline-flex items-center gap-1 text-emerald-300">
-                                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                    <span class="inline-flex items-center gap-1 text-primary-300">
+                                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-primary-400"></span>
                                         <span x-text="formatAmountShort(tooltip.value)"></span>
                                     </span>
                                 </div>
@@ -389,7 +389,7 @@
                 class="lg:col-span-2 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                        <x-heroicon-o-clipboard-document-list class="w-5 h-5 text-emerald-500" />
+                        <x-heroicon-o-clipboard-document-list class="w-5 h-5 text-primary" />
                         Operational Snapshot
                     </h2>
                     <span class="text-[11px] text-gray-500">High-level audit view</span>
@@ -430,7 +430,7 @@
             <div
                 class="rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-6 flex flex-col gap-4">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <x-heroicon-o-bolt class="w-5 h-5 text-emerald-500" />
+                    <x-heroicon-o-bolt class="w-5 h-5 text-primary" />
                     Quick Actions
                 </h2>
                 <div class="space-y-2 text-sm">

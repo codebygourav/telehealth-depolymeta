@@ -101,7 +101,7 @@ class DoctorRevenueChart extends ChartWidget
                 [
                     'label' => 'Revenue (₹)',
                     'data' => $revenueData,
-                    'backgroundColor' => '#10b981',
+                    'backgroundColor' => '#055bd9bf',
                     'borderRadius' => 4,
                     'borderColor' => 'transparent',
                 ],

@@ -125,7 +125,7 @@ export function VaccinationManagement({ patientId }: VaccinationManagementProps)
                     status: 'rescheduled'
                 }
             });
-            await queryClient.invalidateQueries(["patient-vaccinations", patientId]);
+            await queryClient.invalidateQueries({ queryKey: ["patient-vaccinations", patientId] });
             setRescheduleTarget(null);
         } catch (err) {
             console.error('Failed to reschedule vaccination', err);
@@ -142,7 +142,7 @@ export function VaccinationManagement({ patientId }: VaccinationManagementProps)
                     skipped_reason: skipReason.trim()
                 }
             });
-            await queryClient.invalidateQueries(["patient-vaccinations", patientId]);
+            await queryClient.invalidateQueries({ queryKey: ["patient-vaccinations", patientId] });
             setSkipTarget(null);
             setSkipReason('');
         } catch (err) {
@@ -160,7 +160,7 @@ export function VaccinationManagement({ patientId }: VaccinationManagementProps)
                     on_hold_reason: holdReason.trim()
                 }
             });
-            await queryClient.invalidateQueries(["patient-vaccinations", patientId]);
+            await queryClient.invalidateQueries({ queryKey: ["patient-vaccinations", patientId] });
             setHoldTarget(null);
             setHoldReason('');
         } catch (err) {
@@ -191,7 +191,7 @@ export function VaccinationManagement({ patientId }: VaccinationManagementProps)
                 firstDoseDate: assignmentDate,
             });
 
-            await queryClient.invalidateQueries(["patient-vaccinations", patientId]);
+            await queryClient.invalidateQueries({ queryKey: ["patient-vaccinations", patientId] });
             setIsTemplateModalOpen(false);
             setPreviewTemplate(null);
         } catch (assignError) {
@@ -273,7 +273,7 @@ export function VaccinationManagement({ patientId }: VaccinationManagementProps)
 
         try {
             await markCompleteMutation.mutateAsync({ id: completionTarget.id, body });
-            await queryClient.invalidateQueries(["patient-vaccinations", patientId]);
+            await queryClient.invalidateQueries({ queryKey: ["patient-vaccinations", patientId] });
             setCompletionTarget(null);
         } catch (err) {
             console.error('Failed to mark vaccination complete', err);
@@ -1479,14 +1479,14 @@ export function VaccinationManagement({ patientId }: VaccinationManagementProps)
                                 const isMissed = sv === 'missed' && !isCompleted;
                                 const isOverdue = sv === 'overdue' && !isCompleted;
                                 const statusDate = statusDateDescriptor(detailsTarget);
-                                const rows: [string, string | null | undefined, string][] = [
+                                const rows = [
                                     ["Assigned", detailsTarget.assigned_date || detailsTarget.first_dose_date, "text-[#1F1E1E]"],
                                     ["Expected", detailsTarget.expected_date || detailsTarget.scheduled_date, "text-[#1F1E1E]"],
-                                    ...(isCompleted ? [["Completed", detailsTarget.completed_date, "text-green-700"] as [string, string | null | undefined, string]] : []),
-                                    ...(!isCompleted && statusDate ? [[statusDate.label, statusDate.value, statusDate.color]] as [string, string | null | undefined, string][] : []),
-                                    ...(isOverdue && !statusDate ? [["Overdue", detailsTarget.overdue_date, "text-red-600"] as [string, string | null | undefined, string]] : []),
-                                    ...(isMissed && !statusDate ? [["Missed", detailsTarget.missed_date, "text-rose-700"] as [string, string | null | undefined, string]] : []),
-                                ].filter(([, value]) => Boolean(value));
+                                    ...(isCompleted ? [["Completed", detailsTarget.completed_date, "text-green-700"]] : []),
+                                    ...(!isCompleted && statusDate ? [[statusDate.label, statusDate.value, statusDate.color]] : []),
+                                    ...(isOverdue && !statusDate ? [["Overdue", detailsTarget.overdue_date, "text-red-600"]] : []),
+                                    ...(isMissed && !statusDate ? [["Missed", detailsTarget.missed_date, "text-rose-700"]] : []),
+                                ].filter(([, value]) => Boolean(value)) as Array<[string, string | null | undefined, string]>;
                                 return rows.length > 0 ? (
                                     <div className={`grid gap-3 ${rows.length <= 2 ? 'grid-cols-2' : rows.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
                                         {rows.map(([label, value, colorClass]) => (

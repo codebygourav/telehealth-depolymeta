@@ -9,6 +9,7 @@ use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\EmailLogs\EmailLogResource;
 use App\Filament\Resources\{Appointments\AppointmentResource, DoctorDepartments\DoctorDepartmentResource, DoctorReplacements\DoctorReplacementResource, DoctorReviews\DoctorReviewResource, Doctors\DoctorAvailabilityResource, Doctors\DoctorResource, ContactUs\ContactUsResource, ExternalBookings\ExternalBookingResource, Leaves\LeaveResource, MedicalReports\MedicalReportResource, Medicines\MedicineResource, ModuleDocuments\ModuleDocumentResource, Patients\PatientResource, Payments\PaymentResource, Symptoms\SymptomResource, Users\UserResource, Vendors\VendorResource};
 use App\Filament\Resources\DietTemplates\DietTemplateResource;
+use App\Filament\Resources\MedicineTemplates\MedicineTemplateResource;
 use App\Filament\Resources\PatientDietPlans\PatientDietPlanResource;
 use App\Filament\Resources\PatientVaccinations\PatientVaccinationResource;
 use App\Filament\Resources\VaccinationClinicalInsights\VaccinationClinicalInsightResource;
@@ -72,6 +73,7 @@ class AdminPanelProvider extends PanelProvider
                 ContactUsResource::class,
                 DoctorDepartmentResource::class,
                 MedicineResource::class,
+                MedicineTemplateResource::class,
                 SymptomResource::class,
                 LeaveResource::class,
                 VendorResource::class,

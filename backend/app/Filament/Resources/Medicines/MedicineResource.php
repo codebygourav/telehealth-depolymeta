@@ -22,9 +22,10 @@ class MedicineResource extends Resource
     public static function getSidebarOptions(): array
     {
         return [
+            'label' => 'Medicines',
             'icon'  => 'heroicon-o-beaker',
-            'sort'  => 3,
-            'group' => null, // Standalone menu
+            'sort'  => 999,
+            'group' => 'Medicine',
         ];
     }
 

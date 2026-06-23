@@ -33,6 +33,11 @@ export interface MedicineDetail {
   meal: string;
   status: string;
   notes: string | null;
+  use_type?: string;
+  take_when?: string;
+  min_gap?: string;
+  max_doses_per_day?: string;
+  patient_instruction?: string;
 }
 
 export interface MedicineDetailsData {

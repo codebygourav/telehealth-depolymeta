@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V2\Common\VideoConsultation\WherebyWebhookControlle
 use App\Http\Controllers\Api\V2\Doctor\DoctorController;
 use App\Http\Controllers\Api\V2\Doctor\DoctorHomeController;
 use App\Http\Controllers\Api\V2\Doctor\MedicineController;
+use App\Http\Controllers\Api\V2\Doctor\MedicineTemplateController;
 use App\Http\Controllers\Api\V2\Doctor\PatientBrowserController;
 use App\Http\Controllers\Api\V2\Doctor\UsageAnalyticsController;
 use App\Http\Controllers\Api\V2\Patient\DoctorBrowseController;
@@ -71,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [PrescriptionController::class, 'getPrescriptionByUser']);
         Route::get('/detail/{appointmentid}', [PrescriptionController::class, 'show']);
         Route::get('/download/{appointmentid}', [PrescriptionController::class, 'download']);
+        Route::delete('/{id}', [PrescriptionController::class, 'destroy']);
     });
 
     Route::prefix('doctor')->group(function () {
@@ -85,6 +87,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/medicines', [PrescriptionController::class, 'index']);
         Route::get('/departments', [DepartmentController::class, 'index']);
         Route::post('{appointmentId}/prescriptions', [PrescriptionController::class, 'store']);
+        Route::get('/medicine-templates', [MedicineTemplateController::class, 'index']);
+        Route::get('/medicine-templates/{id}', [MedicineTemplateController::class, 'show']);
+        Route::post('/{appointmentId}/assign-medicine-template', [MedicineTemplateController::class, 'assign']);
 
         // vaccination master lookup only; master creation is admin-side
         Route::get('/vaccinations', [VaccinationController::class, 'index']);

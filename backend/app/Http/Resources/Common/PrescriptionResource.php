@@ -51,6 +51,11 @@ class PrescriptionResource extends JsonResource
             'end_date_formatted' => $endDate ? $endDate->format('Y-m-d') : null,
             'order' => $this->order,
             'status' => $this->status,
+            'use_type' => $this->use_type ?? 'regular',
+            'take_when' => $this->take_when,
+            'min_gap' => $this->min_gap,
+            'max_doses_per_day' => $this->max_doses_per_day,
+            'patient_instruction' => $this->patient_instruction,
         ];
     }
 }

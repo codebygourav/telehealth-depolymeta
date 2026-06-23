@@ -28,7 +28,13 @@ export const MedicineItem = ({ medicine }: MedicineItemProps) => {
             <p className="text-sm font-medium g-text-muted flex flex-wrap gap-1 items-center">
               <span>{medicine.dosage}</span>
               <span className="opacity-50">•</span>
-              <span>{medicine.frequencylabel || medicine.frequency}</span>
+              <span className="capitalize">
+                {medicine.use_type === 'sos'
+                  ? 'SOS (As Needed)'
+                  : (medicine.use_type && medicine.use_type !== 'regular'
+                      ? medicine.use_type.replace('_', ' ')
+                      : (medicine.frequencylabel || medicine.frequency))}
+              </span>
               {medicine.meal && (
                 <>
                   <span className="opacity-50">•</span>
@@ -50,7 +56,7 @@ export const MedicineItem = ({ medicine }: MedicineItemProps) => {
           <div className="flex items-center sm:justify-end gap-1.5 g-text-dark font-bold">
             <Info className="w-4 h-4 text-primary opacity-70" />
             <p className="text-sm tracking-widest uppercase">
-              {medicine.times}
+              {medicine.use_type === 'sos' ? 'SOS' : medicine.times}
             </p>
           </div>
           <p className="text-sm font-medium g-text-muted mt-0.5 sm:mt-1">
@@ -58,6 +64,36 @@ export const MedicineItem = ({ medicine }: MedicineItemProps) => {
           </p>
         </div>
       </div>
+
+      {medicine.use_type === 'sos' && (
+        <div className="pt-3 border-t border-outline-variant/10 grid grid-cols-3 gap-3">
+          {medicine.take_when && (
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Take When / Reason</span>
+              <p className="text-xs sm:text-sm font-semibold g-text-dark capitalize">{medicine.take_when}</p>
+            </div>
+          )}
+          {medicine.min_gap && (
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Minimum Gap</span>
+              <p className="text-xs sm:text-sm font-semibold g-text-dark capitalize">{medicine.min_gap}</p>
+            </div>
+          )}
+          {medicine.max_doses_per_day && (
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Max Doses Per Day</span>
+              <p className="text-xs sm:text-sm font-semibold g-text-dark capitalize">{medicine.max_doses_per_day}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {medicine.use_type && medicine.use_type !== 'regular' && medicine.use_type !== 'sos' && (
+        <div className="pt-3 border-t border-outline-variant/10">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-semibold">Special Instructions</span>
+          <p className="text-xs sm:text-sm font-semibold g-text-dark capitalize">Take as {medicine.use_type.replace('_', ' ')}</p>
+        </div>
+      )}
 
       {(medicine.instructions && medicine.instructions.length > 0) && (
         <div className="pt-3 border-t border-outline-variant/10">

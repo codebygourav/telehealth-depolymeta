@@ -39,6 +39,11 @@ class Prescription extends Model
         'created_by',
         'updated_by',
         'deleted_by',
+        'use_type',
+        'take_when',
+        'min_gap',
+        'max_doses_per_day',
+        'patient_instruction',
     ];
 
     protected $hidden = [

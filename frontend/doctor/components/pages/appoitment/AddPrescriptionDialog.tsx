@@ -32,7 +32,7 @@ import { useAddPrescription } from "@/queries/useAddPrescription";
 import { useMedicines } from "@/queries/useMedicines";
 
 const PrescriptionSchema = z.object({
-  medicine_id: z.string().min(1, "Medicine selection required"),
+  medicine_id: z.string().optional(),
   medicine_name: z.string().min(2, "Medication required"),
   medication_type: z.string().min(1, "Medication type required"),
   dosage: z.string().min(1, "Dosage required"),
@@ -184,7 +184,7 @@ export default function AddPrescriptionDialog({
       stamp_preference: data.stamp_preference,
       medicines: [
         {
-          medicine_id: data.medicine_id,
+          medicine_id: data.medicine_id === "custom" || !data.medicine_id ? null : data.medicine_id,
           medicine_name: data.medicine_name,
           dosage: data.dosage,
           frequency: data.frequency,
@@ -266,6 +266,17 @@ export default function AddPrescriptionDialog({
 
                     {!!searchQuery && (
                       <div className="max-h-48 sm:max-h-56 overflow-y-auto rounded-md border bg-background">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setValue("medicine_id", "custom", { shouldValidate: true });
+                            setValue("medicine_name", searchQuery, { shouldValidate: true });
+                            setSearchQuery("");
+                          }}
+                          className="flex w-full items-center justify-between px-2 sm:px-3 py-1.5 sm:py-2 text-left hover:bg-muted border-b text-primary font-medium"
+                        >
+                          <span className="text-xs sm:text-sm">Use "{searchQuery}" as custom medicine</span>
+                        </button>
                         {medicinesQuery.isLoading ? (
                           <div className="p-2 sm:p-3 text-xs sm:text-sm text-muted-foreground">
                             Searching...

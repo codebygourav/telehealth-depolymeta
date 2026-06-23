@@ -179,6 +179,7 @@ class CustomSidebarManager
             'System & Settings' => 'heroicon-o-cog-6-tooth',
             'Vaccination' => 'heroicon-o-shield-check',
             'Diet' => 'heroicon-o-heart',
+            'Medicine' => 'heroicon-o-beaker',
             default => 'heroicon-o-folder',
         };
     }

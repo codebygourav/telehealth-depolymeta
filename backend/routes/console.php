@@ -20,6 +20,10 @@ Schedule::command('notifications:archive')
     ->weekly()
     ->withoutOverlapping();
 
+Schedule::command('vaccinations:send-reminders')
+    ->daily()
+    ->withoutOverlapping();
+
 Schedule::command('external-bookings:sync-google-sheet')
     ->cron(config('services.google_sheets.sync_schedule', '*/15 * * * *'))
     ->when(fn () => (bool) config('services.google_sheets.sync_schedule_enabled'))

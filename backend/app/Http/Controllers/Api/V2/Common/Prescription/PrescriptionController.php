@@ -349,7 +349,9 @@ class PrescriptionController extends Controller
                 'BD' => 'Twice a day',
                 'TDS' => '3 times a day',
                 'SOS' => 'As needed',
-                default => $med->frequency,
+                default => str_ends_with((string) $med->frequency, '_TIMES')
+                    ? str_replace('_', ' ', strtolower((string) $med->frequency)) . ' a day'
+                    : $med->frequency,
             };
 
             $instructions = [];
@@ -391,6 +393,11 @@ class PrescriptionController extends Controller
                 'meal' => $med->meal_timing,
                 'status' => $status,
                 'notes' => $med->notes,
+                'use_type' => $med->use_type ?? 'regular',
+                'take_when' => $med->take_when,
+                'min_gap' => $med->min_gap,
+                'max_doses_per_day' => $med->max_doses_per_day,
+                'patient_instruction' => $med->patient_instruction,
             ];
 
             if ($status === 'Ongoing') {
@@ -436,6 +443,36 @@ class PrescriptionController extends Controller
     protected function getPrescriptionPdfUrl($appointmentId)
     {
         return Storage::disk('public')->url('prescriptions/Prescription-' . $appointmentId . '.pdf');
+    }
+
+    public function destroy(string $id)
+    {
+        $prescription = Prescription::withTrashed()->find($id);
+
+        if (!$prescription) {
+            return ApiResponseService::notFound(__('responses.prescription.not_found'));
+        }
+
+        if ($prescription->trashed()) {
+            return ApiResponseService::success('responses.success');
+        }
+
+        $appointmentId = $prescription->appointment_id;
+
+        $prescription->delete();
+
+        // Delete existing PDF and regenerate
+        $pdfPath = 'prescriptions/Prescription-' . $appointmentId . '.pdf';
+        if (Storage::disk('public')->exists($pdfPath)) {
+            Storage::disk('public')->delete($pdfPath);
+        }
+
+        $remaining = Prescription::where('appointment_id', $appointmentId)->count();
+        if ($remaining > 0) {
+            PrescriptionService::generatePdf($appointmentId);
+        }
+
+        return ApiResponseService::success('responses.success');
     }
 
     protected function resolvePrescriptionData($appointmentId)

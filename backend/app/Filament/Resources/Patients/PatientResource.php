@@ -40,7 +40,7 @@ class PatientResource extends Resource
         return [
             'label' => 'Pateints',
             'icon'  => 'heroicon-o-user-circle',
-            'sort'  => 4,
+            'sort'  => 3,
         ];
     }
     public static function requiredPermission(): string

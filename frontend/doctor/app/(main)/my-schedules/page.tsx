@@ -15,7 +15,7 @@ import BookAppointments from "@/components/pages/my-schedules/BookAppointments";
 import { Stethoscope } from "lucide-react";
 import HeroSection from "@/components/ui/hero-section";
 
-export const filterAppointmentsByDate = (
+const filterAppointmentsByDate = (
     appointments: any[],
     selectedDate?: Date
 ) => {

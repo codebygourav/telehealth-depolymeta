@@ -27,7 +27,7 @@ class DoctorSeeder extends Seeder
         for ($i = 0; $i < 1; $i++) {
             $first_name = $firstNames[$i];
             $last_name = $lastNames[$i];
-            $email = strtolower($first_name) . '.' . strtolower($last_name) . '@telehealth.test';
+            $email = strtolower($first_name) . '.' . strtolower($last_name) . '@deploymeta.test';
 
             // USER CREATE OR UPDATE
             $user = User::firstOrNew(['email' => $email]);

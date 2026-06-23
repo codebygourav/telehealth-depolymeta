@@ -80,6 +80,20 @@
 // };
 // =======
 
+export type AssignDietTemplatePayload = {
+  patient_id: string;
+  template_id: string;
+  start_date: string;
+  duration_days: number;
+  special_instructions?: string;
+};
+
+export type AssignDietTemplateResponse = {
+  success: boolean;
+  data: any;
+  message?: string;
+};
+
 export interface DietTemplate {
     id: string;
     name: string;

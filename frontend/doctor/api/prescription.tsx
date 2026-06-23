@@ -6,3 +6,9 @@ export const fetchPrescriptionByAppointmentId = async (appointmentId: string) =>
 
     return data;
 };
+
+export const deletePrescriptionItem = async (prescriptionId: string) => {
+    const { data } = await api.delete(`/prescriptions/${prescriptionId}`);
+
+    return data;
+};
