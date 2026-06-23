@@ -20,12 +20,13 @@ class DoctorAvailabilitySeeder extends Seeder
         }
 
         foreach ($doctors as $doctor) {
-            // 1. One recurring slot (e.g., Mondays)
+            // 1. Recurring video slot
             $this->createRecurringSlots($doctor, [1], '09:00', '12:00', 'video');
 
-            // 2. One future one-time slot (e.g., Tomorrow)
+            // 2. In-person general and private OPD slots
             $futureDate = Carbon::tomorrow();
-            $this->createOneOffSlot($doctor, $futureDate, '14:00', '16:00', 'in-person');
+            $this->createOneOffSlot($doctor, $futureDate, '14:00', '16:00', 'in-person', 'general');
+            $this->createOneOffSlot($doctor, $futureDate->copy()->addDay(), '10:00', '12:00', 'in-person', 'private');
         }
     }
 
@@ -56,7 +57,7 @@ class DoctorAvailabilitySeeder extends Seeder
         }
     }
 
-    private function createOneOffSlot(Doctor $doctor, Carbon $date, string $start, string $end, string $type): void
+    private function createOneOffSlot(Doctor $doctor, Carbon $date, string $start, string $end, string $type, ?string $opd = null): void
     {
         DoctorAvailability::create([
             'doctor_id' => $doctor->id,
@@ -67,7 +68,7 @@ class DoctorAvailabilitySeeder extends Seeder
             'capacity' => 5,
             'consultation_type' => $type,
             'is_recurring' => false,
-            'opd_type' => null,
+            'opd_type' => $type === 'in-person' ? $opd : null,
             'consultation_fee' => 1,
             'is_available' => true,
         ]);

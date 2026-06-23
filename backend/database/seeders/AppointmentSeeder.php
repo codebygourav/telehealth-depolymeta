@@ -11,6 +11,18 @@ use Illuminate\Support\Str;
 
 class AppointmentSeeder extends Seeder
 {
+    /**
+     * @var array<int, array{label: string, consultation_type: string, opd_type: string|null, completed: bool}>
+     */
+    private const APPOINTMENT_SPECS = [
+        ['label' => 'Video consultation 1', 'consultation_type' => 'video', 'opd_type' => null, 'completed' => true],
+        ['label' => 'Video consultation 2', 'consultation_type' => 'video', 'opd_type' => null, 'completed' => false],
+        ['label' => 'General OPD 1', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'completed' => true],
+        ['label' => 'General OPD 2', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'completed' => false],
+        ['label' => 'Private OPD 1', 'consultation_type' => 'in-person', 'opd_type' => 'private', 'completed' => true],
+        ['label' => 'Private OPD 2', 'consultation_type' => 'in-person', 'opd_type' => 'private', 'completed' => false],
+    ];
+
     public function run(): void
     {
         $doctors = Doctor::with('user')->get();
@@ -31,17 +43,25 @@ class AppointmentSeeder extends Seeder
             ['name' => 'X-Ray Analysis', 'type' => 'radiology'],
         ];
 
-        $this->command->info("Creating 5 test appointments...");
+        $this->command->info('Creating test appointments (2 video, 2 general OPD, 2 private OPD)...');
 
-        for ($i = 0; $i < 5; $i++) {
+        $created = 0;
+
+        foreach (self::APPOINTMENT_SPECS as $spec) {
             $doctor = $doctors->random();
             $patient = $patients->random();
-            $availability = DoctorAvailability::where('doctor_id', $doctor->id)->inRandomOrder()->first();
+            $availability = $this->resolveAvailability(
+                $doctor,
+                $spec['consultation_type'],
+                $spec['opd_type'],
+            );
 
-            if (!$availability) continue;
+            if (!$availability) {
+                $this->command->warn("Skipping {$spec['label']}: no matching availability found.");
+                continue;
+            }
 
-            // First 2 are past completed appointments
-            if ($i < 2) {
+            if ($spec['completed']) {
                 $date = Carbon::today()->subDays(rand(1, 15));
                 $status = AppointmentStatus::COMPLETED->value;
             } else {
@@ -60,18 +80,17 @@ class AppointmentSeeder extends Seeder
                 'consultation_type' => $availability->consultation_type,
                 'status' => $status,
                 'fee_amount' => 1,
-                'notes' => ['Test appointment ' . ($i + 1)],
+                'visit_reason' => [$spec['label']],
                 'slug' => implode('-', array_filter([
                     Str::slug($doctor->first_name . '-' . $doctor->last_name),
-                    $date instanceof \Carbon\Carbon ? $date->format('Y-m-d') : (is_string($date) ? \Carbon\Carbon::parse($date)->format('Y-m-d') : null),
+                    $date instanceof Carbon ? $date->format('Y-m-d') : Carbon::parse($date)->format('Y-m-d'),
                     Str::lower(Str::random(3)),
                 ])),
             ]);
 
             $this->createPayment($appointment, 1, 'paid');
 
-            // Add medical report and prescription for completed or confirmed appointments
-            if (in_array($status, [AppointmentStatus::COMPLETED->value, AppointmentStatus::CONFIRMED->value])) {
+            if (in_array($status, [AppointmentStatus::COMPLETED->value, AppointmentStatus::CONFIRMED->value], true)) {
                 $prescData = $prescriptionData[array_rand($prescriptionData)];
                 $this->createPrescription($appointment, $prescData, 0);
                 PrescriptionService::generatePdf($appointment->id);
@@ -79,24 +98,66 @@ class AppointmentSeeder extends Seeder
                 $reportData = $reportTypes[array_rand($reportTypes)];
                 $this->createMedicalReport($appointment, $reportData, Carbon::parse($date));
             }
+
+            $created++;
         }
 
-        $this->command->info('5 Appointments seeded successfully!');
+        $this->command->info("{$created} appointments seeded successfully!");
     }
 
-    // Removal of createAvailability method as requested.
-    // Централизация создания слотов в DoctorAvailabilitySeeder.
+    private function resolveAvailability(Doctor $doctor, string $consultationType, ?string $opdType): ?DoctorAvailability
+    {
+        $availability = $this->findAvailability($consultationType, $opdType);
 
-    /**
-     * Create a payment record
-     */
+        if ($availability) {
+            return $availability;
+        }
+
+        return $this->createAvailability($doctor, $consultationType, $opdType);
+    }
+
+    private function findAvailability(string $consultationType, ?string $opdType): ?DoctorAvailability
+    {
+        $query = DoctorAvailability::query()
+            ->where('consultation_type', $consultationType)
+            ->where('is_available', true);
+
+        if ($consultationType === 'in-person' && $opdType) {
+            $query->where('opd_type', $opdType);
+        }
+
+        return $query->inRandomOrder()->first();
+    }
+
+    private function createAvailability(Doctor $doctor, string $consultationType, ?string $opdType): DoctorAvailability
+    {
+        $isVideo = $consultationType === 'video';
+        $futureDate = Carbon::tomorrow();
+
+        return DoctorAvailability::create([
+            'doctor_id' => $doctor->id,
+            'date' => $isVideo ? null : $futureDate->format('Y-m-d'),
+            'day_of_week' => $isVideo ? null : strtolower($futureDate->format('l')),
+            'start_time' => $isVideo ? '09:00' : '14:00',
+            'end_time' => $isVideo ? '12:00' : '16:00',
+            'capacity' => 10,
+            'consultation_type' => $consultationType,
+            'is_recurring' => $isVideo,
+            'opd_type' => $isVideo ? null : $opdType,
+            'consultation_fee' => 1,
+            'is_available' => true,
+            'recurring_start_date' => $isVideo ? Carbon::today()->format('Y-m-d') : null,
+            'recurring_end_date' => $isVideo ? Carbon::today()->addMonths(3)->format('Y-m-d') : null,
+        ]);
+    }
+
     private function createPayment(Appointment $appointment, float $amount, string $status = 'paid'): void
     {
         $paymentMethods = ['card', 'netbanking', 'wallet', 'upi'];
 
         Payment::create([
             'appointment_id' => $appointment->id,
-            'amount' => 1, // HARD CODE PAYMENT AMOUNT TO 1
+            'amount' => 1,
             'fee' => 0,
             'payment_method' => $paymentMethods[array_rand($paymentMethods)],
             'status' => $status,
@@ -106,9 +167,6 @@ class AppointmentSeeder extends Seeder
         ]);
     }
 
-    /**
-     * Create a prescription record
-     */
     private function createPrescription(Appointment $appointment, array $data, int $order): void
     {
         Prescription::create([
@@ -128,14 +186,8 @@ class AppointmentSeeder extends Seeder
             'end_date' => Carbon::parse($appointment->appointment_date)->addDays(5),
             'order' => $order,
         ]);
-
-        // PDF generation is now handled after the loop for efficiency
-        // PrescriptionService::generatePdf($appointment->id);
     }
 
-    /**
-     * Create a medical report record
-     */
     private function createMedicalReport(Appointment $appointment, array $data, Carbon $date): void
     {
         $isShared = ($appointment->doctor_id && $appointment->id) ? true : false;
@@ -144,7 +196,7 @@ class AppointmentSeeder extends Seeder
             'appointment_id' => $isShared ? $appointment->id : null,
             'patient_id' => $isShared ? $appointment->patient_id : null,
             'doctor_id' => $isShared ? $appointment->doctor_id : null,
-            'name' => $data['name'], // fixed from 'title' to 'name'
+            'name' => $data['name'],
             'type' => $data['type'],
             'description' => 'Test results for ' . $data['name'],
             'report_date' => $date->copy()->subDays(rand(1, 5)),
@@ -163,7 +215,6 @@ class AppointmentSeeder extends Seeder
             'https://raw.githubusercontent.com/mantinedev/mantine/master/.demo/images/bg-3.webp',
         ];
 
-        // Attach a file (mix of PDF and images)
         $fileUrl = rand(0, 1) === 0 ? $pdfUrl : $imageUrls[array_rand($imageUrls)];
 
         ModuleDocument::create([
