@@ -855,7 +855,7 @@ img.fi-logo {
 }
 
 .vaccination-set-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item {
-    border: 1px solid #075bd9 !important;
+    border: 1px solid #b3d1ff !important;
     border-radius: 12px !important;
     background: #ffffff !important;
     box-shadow: 0 10px 28px #075bd91c !important;
@@ -865,7 +865,7 @@ img.fi-logo {
 .vaccination-set-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header {
     min-height: 52px;
     background: #075bd91c !important;
-    border-bottom: 1px solid #075bd9 !important;
+    border-bottom: 1px solid #b3d1ff !important;
     padding-inline: 16px !important;
     border-radius: 12px;
 }
