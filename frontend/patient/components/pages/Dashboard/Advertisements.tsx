@@ -51,8 +51,8 @@ export function Advertisements({ ads }: AdvertisementsProps) {
             <SectionHeader
                 title="Safe & Advanced Surgical Care"
                 subtitle="With Super specialist doctors and state-of-the-art technology, we cover the complete spectrum of medical specialties"
-                headingClassName="text-primary"
-                subtitleClassName="text-primary"
+                headingClassName="text-black"
+                subtitleClassName="text-black"
                 containerClassName="mb-2 px-5 sm:px-5"
             />
             <DashboardCarousel
