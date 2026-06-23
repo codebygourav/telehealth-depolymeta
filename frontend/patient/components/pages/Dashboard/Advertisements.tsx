@@ -47,12 +47,12 @@ export function Advertisements({ ads }: AdvertisementsProps) {
     };
 
     return (
-        <FullWidthDashboardSection className="pt-9 pb-9 bg-primary">
+        <FullWidthDashboardSection className="pt-9 pb-9 bg-[#f5f6f8]">
             <SectionHeader
                 title="Safe & Advanced Surgical Care"
                 subtitle="With Super specialist doctors and state-of-the-art technology, we cover the complete spectrum of medical specialties"
-                headingClassName="text-primary-foreground"
-                subtitleClassName="text-primary-foreground/80"
+                headingClassName="text-primary"
+                subtitleClassName="text-primary"
                 containerClassName="mb-2 px-5 sm:px-5"
             />
             <DashboardCarousel

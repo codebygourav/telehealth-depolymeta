@@ -33,24 +33,24 @@ export function SectionHeader({
             {/* Left Content */}
             <div>
                 <div className="flex items-start justify-between gap-2">
-                <h1
-                    className={cn(
-                        "font-bold text-foreground font-headline tracking-tight",
-                        headingClassName
-                    )}
-                >
-                    {title}
-                </h1>
-                {showAction && (
-                    <button
-                        type="button"
-                        onClick={onActionClick}
-                        className="md:hidden flex items-center gap-2  text-primary justify-between mt-2"
-                        aria-label={actionText}
+                    <h1
+                        className={cn(
+                            "font-bold text-foreground font-headline tracking-tight",
+                            headingClassName
+                        )}
                     >
-                        <ChevronRight className="size-6 ml-0" />
-                    </button>
-                )}
+                        {title}
+                    </h1>
+                    {showAction && (
+                        <button
+                            type="button"
+                            onClick={onActionClick}
+                            className="md:hidden flex items-center gap-2  text-primary justify-between mt-2"
+                            aria-label={actionText}
+                        >
+                            <ChevronRight className="size-6 ml-0" />
+                        </button>
+                    )}
                 </div>
 
                 {subtitle && (
@@ -62,16 +62,16 @@ export function SectionHeader({
 
             {/* Right Action */}
             {showAction && (
-            <div className="flex justify-end text-end">
-                <Button
-                    onClick={onActionClick}
-                    className="hidden md:flex items-center w-auto h-10 gap-1 ml-0 btn-primary-cta"
-                >
-                    {actionText}
-                    <ChevronRight className="size-4.5 ml-0" />
-                </Button>
-                
-            </div>
+                <div className="flex justify-end text-end">
+                    <Button
+                        onClick={onActionClick}
+                        className="hidden md:flex items-center w-auto h-10 gap-1 ml-0 btn-primary-cta"
+                    >
+                        {actionText}
+                        <ChevronRight className="size-4.5 ml-0" />
+                    </Button>
+
+                </div>
             )}
         </div>
     );
