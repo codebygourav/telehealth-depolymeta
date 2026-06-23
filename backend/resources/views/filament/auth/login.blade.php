@@ -6,7 +6,7 @@
 <div class="w-full">
     <div class="mb-6 text-center">
         <div class="mb-3 flex justify-center">
-            <img src="{{ asset('images/cmc-telehealth-black.png') }}" alt="{{ config('app.name') }}" class="h-17">
+            <img src="{{ asset('images/deploymeta.png') }}" alt="{{ config('app.name') }}" class="h-17">
         </div>
 
         @if ($subheadingCopy)

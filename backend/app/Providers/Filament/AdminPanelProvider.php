@@ -157,7 +157,7 @@ class AdminPanelProvider extends PanelProvider
     protected function getBrandLogo(): \Illuminate\Contracts\View\View
     {
         // Default Assets
-        $logo = asset('images/deploymeta.png');
+        $logo = asset('images/white-logo.png');
         $black_logo = asset('images/deploymeta.png');
         $icon = asset('images/deploymeta.png');
 
