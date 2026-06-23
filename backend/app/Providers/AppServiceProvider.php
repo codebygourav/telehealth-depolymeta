@@ -16,7 +16,6 @@ use App\Listeners\LogPushNotificationStatus;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Storage;
 
 class AppServiceProvider extends ServiceProvider
@@ -60,9 +59,25 @@ class AppServiceProvider extends ServiceProvider
             $appUrl = preg_replace('#^http://#', 'https://', $appUrl);
         }
 
+        // Use the actual request host when available so Livewire signed upload URLs
+        // match the browser URL (critical when APP_URL differs from the live domain).
+        if (! $this->app->runningInConsole() && request()->hasHeader('Host')) {
+            $appUrl = rtrim(request()->getSchemeAndHttpHost(), '/');
+        }
+
+        URL::forceRootUrl($appUrl);
+
         config([
             'filesystems.disks.public.url' => $appUrl . '/storage',
         ]);
+
+        // Ensure upload directories exist and are writable on shared hosting.
+        try {
+            Storage::disk('public')->makeDirectory('advertisements');
+            Storage::disk('local')->makeDirectory('livewire-tmp');
+        } catch (\Throwable) {
+            // Non-fatal — upload will surface a clearer error if permissions are wrong.
+        }
 
         Blade::component('ui.page-header', 'ui-page-header');
         Blade::component('ui.page-body', 'ui-page-body');

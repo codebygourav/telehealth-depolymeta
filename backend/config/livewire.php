@@ -64,17 +64,16 @@ return [
     */
 
     'temporary_file_upload' => [
-        'disk' => 'local',     // Explicit local disk — avoids env-specific 'null' resolution
-        'rules' => null,       // Example: ['file', 'mimes:png,jpg']  | Default: ['required', 'file', 'max:12288'] (12MB)
-        'directory' => null,   // Example: 'tmp'                      | Default: 'livewire-tmp'
-        'middleware' => null,  // Example: 'throttle:5,1'             | Default: 'throttle:60,1'
-        'preview_mimes' => [   // Supported file types for temporary pre-signed file URLs...
-            'png', 'gif', 'bmp', 'svg', 'wav', 'mp4',
-            'mov', 'avi', 'wmv', 'mp3', 'm4a',
-            'jpg', 'jpeg', 'mpga', 'webp', 'wma',
+        'disk' => env('LIVEWIRE_TEMP_DISK', 'local'),
+        'rules' => ['required', 'file', 'max:10240'],
+        'directory' => 'livewire-tmp',
+        'middleware' => null,
+        'preview_mimes' => [
+            'png', 'gif', 'bmp', 'svg', 'webp', 'avif', 'heic', 'heif',
+            'jpg', 'jpeg', 'jpe', 'jfif', 'pjpeg', 'pjp', 'tif', 'tiff',
         ],
-        'max_upload_time' => 10, // Increased to 10 min for slower production connections
-        'cleanup' => true, // Should cleanup temporary uploads older than 24 hrs...
+        'max_upload_time' => 10,
+        'cleanup' => true,
     ],
 
     /*

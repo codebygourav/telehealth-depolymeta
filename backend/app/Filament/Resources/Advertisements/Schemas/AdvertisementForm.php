@@ -27,12 +27,11 @@ class AdvertisementForm
                     ->directory('advertisements')
                     ->visibility('public')
                     ->image()
-                    ->imageResizeMode('cover')
-                    ->imageCropAspectRatio('16:9')
-                    ->maxSize(5120) // 5 MB
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-                    ->preserveFilenames(false) // prevent filename collision issues
-                    ->storeFiles(true)
+                    ->maxSize(10240) // 10 MB — matches Livewire temp upload limit
+                    ->fetchFileInformation(false) // avoid flaky exists/mime checks on shared hosting
+                    ->orientImagesFromExif(false) // EXIF extension often disabled on shared hosts
+                    ->openable()
+                    ->downloadable()
                     ->columnSpanFull(),
 
                 Toggle::make('is_active')
