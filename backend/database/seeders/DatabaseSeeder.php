@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
             MedicalReportSeeder::class,
 
             MedicalReportSeeder::class,
+            MedicineTemplateSeeder::class,
         ]);
     }
 }
