@@ -17,6 +17,7 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Support\Facades\Storage;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -33,8 +34,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        // Detect HTTPS from multiple sources — must run before any URL generation
-        // so that Livewire's signed temporary upload URLs use the correct scheme.
+        // ── HTTPS Detection ──────────────────────────────────────────────────
+        // Must run before ANY URL generation so Livewire's signed temporary
+        // upload URLs use the correct scheme (critical for Hostinger/reverse-proxy).
         $forwardedProto = strtolower((string) request()->header('x-forwarded-proto'));
         $serverHttps    = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
         $xForwardedSsl  = strtolower((string) request()->header('x-forwarded-ssl'));
@@ -49,18 +51,18 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        // Build the public disk URL directly from APP_URL (not via url() helper)
-        // so the scheme is already resolved before the URL helper runs.
-        if (! app()->runningInConsole()) {
-            $appUrl = rtrim((string) config('app.url'), '/');
+        // ── Fix Public Disk URL ───────────────────────────────────────────────
+        // Always correct the public disk URL so storage links work on live.
+        // Do NOT guard with runningInConsole() — queue workers need this too.
+        $appUrl = rtrim((string) config('app.url'), '/');
 
-            // If we detected HTTPS but APP_URL is still http://, correct it.
-            if ($isHttps) {
-                $appUrl = preg_replace('#^http://#', 'https://', $appUrl);
-            }
-
-            config(['filesystems.disks.public.url' => $appUrl . '/storage']);
+        if ($isHttps) {
+            $appUrl = preg_replace('#^http://#', 'https://', $appUrl);
         }
+
+        config([
+            'filesystems.disks.public.url' => $appUrl . '/storage',
+        ]);
 
         Blade::component('ui.page-header', 'ui-page-header');
         Blade::component('ui.page-body', 'ui-page-body');

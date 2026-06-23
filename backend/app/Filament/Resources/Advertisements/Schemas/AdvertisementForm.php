@@ -25,9 +25,14 @@ class AdvertisementForm
                     ->label('Advertisement Image')
                     ->disk('public')
                     ->directory('advertisements')
+                    ->visibility('public')
                     ->image()
-                    ->maxSize(2048)
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                    ->imageResizeMode('cover')
+                    ->imageCropAspectRatio('16:9')
+                    ->maxSize(5120) // 5 MB
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+                    ->preserveFilenames(false) // prevent filename collision issues
+                    ->storeFiles(true)
                     ->columnSpanFull(),
 
                 Toggle::make('is_active')
