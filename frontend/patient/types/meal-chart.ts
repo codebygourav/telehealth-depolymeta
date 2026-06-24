@@ -26,6 +26,7 @@ export interface DietPlanData {
   id: string;
   patient_id: string;
   doctor_id: string;
+  doctor_name?: string;
   template_id: string;
   template_name: string;
   template_description: string;
@@ -34,6 +35,18 @@ export interface DietPlanData {
   end_date: string;
   status: string;
   special_instructions: string | null;
+  restrictions?: string | null;
+  diet_category?: string | null;
+  patient_type?: string | null;
+  daily_calories?: string | null;
+  protein_target?: string | null;
+  carbs_limit?: string | null;
+  salt_limit?: string | null;
+  doctor_remark?: string | null;
+  allowed_food_notes?: string | null;
+  hydration_advice?: string | null;
+  exercise_advice?: string | null;
+  features?: any;
   days: DietPlanDay[];
   created_at: string;
   updated_at: string;

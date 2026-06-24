@@ -13,12 +13,15 @@ import {
     Star,
     Check,
     Eye,
+    Pill,
+    Shield,
+    CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationItem } from "@/types/notification";
 
 const getNotificationIcon = (group: string) => {
-    switch (group) {
+    switch (group?.toLowerCase()) {
         case "appointment":
             return Calendar;
         case "review":
@@ -27,13 +30,19 @@ const getNotificationIcon = (group: string) => {
             return Clock;
         case "document":
             return FileText;
+        case "prescription":
+            return Pill;
+        case "vaccination":
+            return Shield;
+        case "payment":
+            return CreditCard;
         default:
             return Bell;
     }
 };
 
 const getIconColor = (group: string) => {
-    switch (group) {
+    switch (group?.toLowerCase()) {
         case "appointment":
             return "text-blue-600";
         case "review":
@@ -42,6 +51,14 @@ const getIconColor = (group: string) => {
             return "text-emerald-600";
         case "document":
             return "text-rose-600";
+        case "prescription":
+            return "text-green-600";
+        case "vaccination":
+            return "text-rose-600";
+        case "payment":
+            return "text-indigo-600";
+        case "system":
+            return "text-red-600";
         default:
             return "text-primary";
     }

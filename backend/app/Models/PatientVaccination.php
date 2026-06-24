@@ -101,6 +101,15 @@ class PatientVaccination extends Model
                 'action' => 'created',
                 'new_value' => 'Vaccination dose created in system',
             ]);
+
+            // Notify patient when a vaccination is assigned
+            if ($vaccination->patient && $vaccination->patient->user) {
+                try {
+                    \App\Services\NotificationService::notifyVaccinationAssigned($vaccination);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to notify vaccination assignment: " . $e->getMessage());
+                }
+            }
         });
 
         static::saving(function (PatientVaccination $vaccination) {

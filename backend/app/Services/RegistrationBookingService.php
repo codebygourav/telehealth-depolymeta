@@ -315,6 +315,7 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
                         ['appointment_id' => $appointment->id]
                     ));
                     $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
+                    $appointment->assignQueueNumber();
                     NotificationService::notifyAppointmentConfirmed($appointment);
 
                     if ($appointment->consultation_type === 'video') {
@@ -438,6 +439,8 @@ public function book(Patient $patient, array $data, bool $useMockPayment): array
             $appointment->update([
                 'status' => AppointmentStatus::CONFIRMED->value,
             ]);
+
+            $appointment->assignQueueNumber();
 
             NotificationService::notifyAppointmentConfirmed($appointment);
         }

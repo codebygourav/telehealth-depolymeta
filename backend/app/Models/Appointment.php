@@ -25,6 +25,8 @@ class Appointment extends Model
         'appointment_time',
         'appointment_end_time',
         'status',
+        'queue_number',
+        'queue_status',
         'consultation_type',
         'visit_reason',
         'instructions_by_doctor',
@@ -115,14 +117,118 @@ class Appointment extends Model
                 $model->slug = implode('-', $slugParts);
             }
 
+            if (empty($model->queue_status)) {
+                $model->queue_status = 'waiting';
+            }
+
             if (Auth::check()) {
                 $model->created_by = Auth::id();
             }
         });
 
         static::updating(function ($model) {
+            // Synchronize status columns if queue_status changed
+            if ($model->isDirty('queue_status')) {
+                $newVal = $model->queue_status;
+                if ($newVal === 'completed') {
+                    $model->status = \App\Enums\AppointmentStatus::COMPLETED;
+                } elseif ($newVal === 'not_completed') {
+                    $model->status = \App\Enums\AppointmentStatus::NO_SHOW;
+                } elseif ($newVal === 'running') {
+                    // No other fields to update on the appointments table
+                } elseif ($newVal === 'waiting') {
+                    $model->status = \App\Enums\AppointmentStatus::CONFIRMED;
+                }
+            }
+
             if (Auth::check()) {
                 $model->updated_by = Auth::id();
+            }
+        });
+
+        static::updated(function ($model) {
+            // Check if queue_status was changed
+            if ($model->wasChanged('queue_status')) {
+                $newStatus = $model->queue_status;
+                $user = \Illuminate\Support\Facades\Auth::user();
+
+                if ($newStatus === 'waiting') {
+                    // Send check-in notification to patient & doctor
+                    try {
+                        \App\Services\NotificationService::notifyPatientCheckedIn($model);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("Failed to notify patient check-in: " . $e->getMessage());
+                    }
+
+                    // Create queue log entry
+                    \App\Models\AppointmentQueueLog::create([
+                        'doctor_id' => $model->doctor_id,
+                        'appointment_id' => $model->id,
+                        'action' => 'revert',
+                        'queue_status' => 'waiting',
+                        'created_by' => $user?->id,
+                    ]);
+                } elseif ($newStatus === 'running') {
+                    // Send notification to patient
+                    try {
+                        \App\Services\NotificationService::notifyConsultationStarted($model);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("Failed to notify patient consultation started: " . $e->getMessage());
+                    }
+
+                    // Start consultation log entry
+                    \App\Models\AppointmentQueueLog::create([
+                        'doctor_id' => $model->doctor_id,
+                        'appointment_id' => $model->id,
+                        'action' => 'start',
+                        'queue_status' => 'running',
+                        'started_at' => now(),
+                        'created_by' => $user?->id,
+                    ]);
+                } else {
+                    // Completed, Skipped, Not Completed
+                    // Find active start log to calculate duration
+                    $runningLog = \App\Models\AppointmentQueueLog::where('appointment_id', $model->id)
+                        ->where('action', 'start')
+                        ->whereNull('ended_at')
+                        ->latest()
+                        ->first();
+
+                    $startedAt = $runningLog ? $runningLog->started_at : now();
+                    $endedAt = now();
+                    $duration = $runningLog ? abs($endedAt->diffInSeconds($startedAt)) : 0;
+
+                    if ($runningLog) {
+                        $runningLog->update([
+                            'ended_at' => $endedAt,
+                            'duration_seconds' => $duration,
+                        ]);
+                    }
+
+                    \App\Models\AppointmentQueueLog::create([
+                        'doctor_id' => $model->doctor_id,
+                        'appointment_id' => $model->id,
+                        'action' => match ($newStatus) {
+                            'completed' => 'complete',
+                            'skipped' => 'skip',
+                            'not_completed' => 'not_complete',
+                            default => $newStatus,
+                        },
+                        'queue_status' => $newStatus,
+                        'started_at' => $startedAt,
+                        'ended_at' => $endedAt,
+                        'duration_seconds' => $duration,
+                        'created_by' => $user?->id,
+                    ]);
+
+                    if ($newStatus === 'completed') {
+                        try {
+                            \App\Services\NotificationService::notifyAppointmentCompleted($model);
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error("Failed to notify completion: " . $e->getMessage());
+                        }
+                    }
+                }
             }
         });
 
@@ -365,5 +471,39 @@ class Appointment extends Model
     public function getWherebyRoomIdAttribute(): ?string
     {
         return $this->videoConsultation?->room_id;
+    }
+
+    /**
+     * Generate and save a unique token number for this appointment.
+     */
+    public function assignQueueNumber(): void
+    {
+        if (!empty($this->queue_number)) {
+            return;
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () {
+            $doctor = $this->doctor ?? \App\Models\Doctor::find($this->doctor_id);
+            $prefix = $doctor ? strtoupper(substr($doctor->first_name, 0, 1)) : 'A';
+
+            // Find the latest queue number for the same doctor and date using lockForUpdate
+            $latest = self::where('doctor_id', $this->doctor_id)
+                ->where('appointment_date', $this->appointment_date)
+                ->whereNotNull('queue_number')
+                ->where('queue_number', 'LIKE', 'TOK-%')
+                ->orderByRaw('CAST(SUBSTRING_INDEX(queue_number, "-", -1) AS UNSIGNED) DESC')
+                ->lockForUpdate()
+                ->first();
+
+            $nextNum = 1;
+            if ($latest) {
+                $parts = explode('-', $latest->queue_number);
+                $lastNum = (int) end($parts);
+                $nextNum = $lastNum + 1;
+            }
+
+            $this->queue_number = 'TOK-' . str_pad($nextNum, 3, '0', STR_PAD_LEFT);
+            $this->save();
+        });
     }
 }

@@ -29,12 +29,24 @@ class PatientDietPlan extends Model
         'end_date',
         'status',
         'special_instructions',
+        'diet_category',
+        'patient_type',
+        'daily_calories',
+        'protein_target',
+        'carbs_limit',
+        'salt_limit',
+        'doctor_remark',
+        'allowed_food_notes',
+        'hydration_advice',
+        'exercise_advice',
+        'features',
     ];
 
     protected $casts = [
         'duration_days' => 'integer',
         'start_date' => 'date',
         'end_date' => 'date',
+        'features' => 'array',
     ];
 
     protected static function booted(): void

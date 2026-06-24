@@ -25,11 +25,23 @@ class DietTemplate extends Model
         'restrictions',
         'notes',
         'is_active',
+        'diet_category',
+        'patient_type',
+        'daily_calories',
+        'protein_target',
+        'carbs_limit',
+        'salt_limit',
+        'doctor_remark',
+        'allowed_food_notes',
+        'hydration_advice',
+        'exercise_advice',
+        'features',
     ];
 
     protected $casts = [
         'duration_days' => 'integer',
         'is_active' => 'boolean',
+        'features' => 'array',
     ];
 
     protected static function booted(): void

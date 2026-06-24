@@ -23,6 +23,17 @@ class AppointmentSeeder extends Seeder
         ['label' => 'Private OPD 2', 'consultation_type' => 'in-person', 'opd_type' => 'private', 'completed' => false],
     ];
 
+    /**
+     * @var array<int, array{label: string, consultation_type: string, opd_type: string|null, status: string, queue_status: string}>
+     */
+    private const TODAY_APPOINTMENT_SPECS = [
+        ['label' => 'Today Video Completed', 'consultation_type' => 'video', 'opd_type' => null, 'status' => 'completed', 'queue_status' => 'completed'],
+        ['label' => 'Today In-Person Running', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'running'],
+        ['label' => 'Today In-Person Waiting 1', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'waiting'],
+        ['label' => 'Today In-Person Waiting 2', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'waiting'],
+        ['label' => 'Today In-Person Skipped', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'skipped'],
+    ];
+
     public function run(): void
     {
         $doctors = Doctor::with('user')->get();
@@ -88,6 +99,8 @@ class AppointmentSeeder extends Seeder
                 ])),
             ]);
 
+            $appointment->assignQueueNumber();
+
             $this->createPayment($appointment, 1, 'paid');
 
             if (in_array($status, [AppointmentStatus::COMPLETED->value, AppointmentStatus::CONFIRMED->value], true)) {
@@ -102,25 +115,88 @@ class AppointmentSeeder extends Seeder
             $created++;
         }
 
+        foreach (self::TODAY_APPOINTMENT_SPECS as $spec) {
+            $doctor = $doctors->random();
+            $patient = $patients->random();
+            $availability = $this->resolveAvailability(
+                $doctor,
+                $spec['consultation_type'],
+                $spec['opd_type'],
+                Carbon::today()
+            );
+
+            if (!$availability) {
+                $this->command->warn("Skipping today spec {$spec['label']}: no availability resolved.");
+                continue;
+            }
+
+            $appointment = Appointment::create([
+                'id' => Str::uuid(),
+                'patient_id' => $patient->id,
+                'doctor_id' => $doctor->id,
+                'availability_id' => $availability->id,
+                'appointment_date' => Carbon::today(),
+                'appointment_time' => $availability->start_time,
+                'appointment_end_time' => $availability->end_time,
+                'consultation_type' => $availability->consultation_type,
+                'status' => $spec['status'] === 'completed' ? AppointmentStatus::COMPLETED->value : AppointmentStatus::CONFIRMED->value,
+                'queue_status' => $spec['queue_status'],
+                'fee_amount' => 1,
+                'visit_reason' => [$spec['label']],
+                'slug' => implode('-', array_filter([
+                    Str::slug($doctor->first_name . '-' . $doctor->last_name),
+                    'today',
+                    Str::lower(Str::random(3)),
+                ])),
+            ]);
+
+            $appointment->assignQueueNumber();
+
+            $this->createPayment($appointment, 1, 'paid');
+
+            if ($spec['status'] === 'completed') {
+                $prescData = $prescriptionData[array_rand($prescriptionData)];
+                $this->createPrescription($appointment, $prescData, 0);
+                PrescriptionService::generatePdf($appointment->id);
+
+                $reportData = $reportTypes[array_rand($reportTypes)];
+                $this->createMedicalReport($appointment, $reportData, Carbon::today());
+            }
+
+            $created++;
+        }
+
         $this->command->info("{$created} appointments seeded successfully!");
     }
 
-    private function resolveAvailability(Doctor $doctor, string $consultationType, ?string $opdType): ?DoctorAvailability
+    private function resolveAvailability(Doctor $doctor, string $consultationType, ?string $opdType, ?Carbon $date = null): ?DoctorAvailability
     {
-        $availability = $this->findAvailability($consultationType, $opdType);
+        $availability = $this->findAvailability($consultationType, $opdType, $date);
 
         if ($availability) {
             return $availability;
         }
 
-        return $this->createAvailability($doctor, $consultationType, $opdType);
+        return $this->createAvailability($doctor, $consultationType, $opdType, $date);
     }
 
-    private function findAvailability(string $consultationType, ?string $opdType): ?DoctorAvailability
+    private function findAvailability(string $consultationType, ?string $opdType, ?Carbon $date = null): ?DoctorAvailability
     {
         $query = DoctorAvailability::query()
             ->where('consultation_type', $consultationType)
             ->where('is_available', true);
+
+        if ($date) {
+            $query->where(function ($q) use ($date) {
+                $q->whereDate('date', $date)
+                  ->orWhere(function ($sub) use ($date) {
+                      $sub->whereNull('date')
+                          ->where('is_recurring', true)
+                          ->whereDate('recurring_start_date', '<=', $date)
+                          ->whereDate('recurring_end_date', '>=', $date);
+                  });
+            });
+        }
 
         if ($consultationType === 'in-person' && $opdType) {
             $query->where('opd_type', $opdType);
@@ -129,15 +205,15 @@ class AppointmentSeeder extends Seeder
         return $query->inRandomOrder()->first();
     }
 
-    private function createAvailability(Doctor $doctor, string $consultationType, ?string $opdType): DoctorAvailability
+    private function createAvailability(Doctor $doctor, string $consultationType, ?string $opdType, ?Carbon $date = null): DoctorAvailability
     {
         $isVideo = $consultationType === 'video';
-        $futureDate = Carbon::tomorrow();
+        $targetDate = $date ?? Carbon::tomorrow();
 
         return DoctorAvailability::create([
             'doctor_id' => $doctor->id,
-            'date' => $isVideo ? null : $futureDate->format('Y-m-d'),
-            'day_of_week' => $isVideo ? null : strtolower($futureDate->format('l')),
+            'date' => $isVideo ? null : $targetDate->format('Y-m-d'),
+            'day_of_week' => $isVideo ? null : strtolower($targetDate->format('l')),
             'start_time' => $isVideo ? '09:00' : '14:00',
             'end_time' => $isVideo ? '12:00' : '16:00',
             'capacity' => 10,

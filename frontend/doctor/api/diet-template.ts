@@ -17,6 +17,7 @@ export const assignDietTemplate = async (payload: {
     start_date: string;
     duration_days: number;
     special_instructions?: string;
+    doctor_remark?: string;
 }) => {
     const response = await axiosInstance.post(
         "/doctor/diet/assign",

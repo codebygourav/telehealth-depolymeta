@@ -17,7 +17,7 @@ class SendAppointmentReminders extends Command
 
     public function handle()
     {
-        $intervals = [15, 30, 45, 60, 1440];
+        $intervals = [20, 15, 30, 45, 60, 1440];
         $now = Carbon::now();
         $count = 0;
 

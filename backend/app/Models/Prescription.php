@@ -76,6 +76,16 @@ class Prescription extends Model
             }
         });
 
+        static::created(function (Prescription $prescription) {
+            if ($prescription->appointment) {
+                try {
+                    \App\Services\NotificationService::notifyPrescriptionAdded($prescription->appointment);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to send prescription notification: " . $e->getMessage());
+                }
+            }
+        });
+
         static::updating(function ($model) {
             if (Auth::check()) {
                 $model->updated_by = Auth::id();

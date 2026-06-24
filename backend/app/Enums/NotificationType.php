@@ -37,4 +37,8 @@ enum NotificationType: string
     case VACCINATION_OVERDUE = 'vaccination_overdue';
     case VACCINATION_COMPLETED = 'vaccination_completed';
     case VACCINATION_MISSED = 'vaccination_missed';
+
+    case CONSULTATION_STARTED = 'consultation_started';
+    case PATIENT_CHECKED_IN = 'patient_checked_in';
+    case DIET_PLAN_ASSIGNED = 'diet_plan_assigned';
 }

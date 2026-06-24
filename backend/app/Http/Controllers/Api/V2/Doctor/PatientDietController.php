@@ -31,6 +31,7 @@ class PatientDietController extends Controller
             'start_date' => ['required', 'date'],
             'duration_days' => ['nullable', 'integer', 'min:1', 'max:180'],
             'special_instructions' => ['nullable', 'string'],
+            'doctor_remark' => ['nullable', 'string'],
         ]);
 
         $patient = $this->patientOrFail($data['patient_id']);
@@ -61,6 +62,17 @@ class PatientDietController extends Controller
                 'end_date' => $endDate->toDateString(),
                 'status' => 'active',
                 'special_instructions' => $data['special_instructions'] ?? null,
+                'diet_category' => $template->diet_category,
+                'patient_type' => $template->patient_type,
+                'daily_calories' => $template->daily_calories,
+                'protein_target' => $template->protein_target,
+                'carbs_limit' => $template->carbs_limit,
+                'salt_limit' => $template->salt_limit,
+                'doctor_remark' => $data['doctor_remark'] ?? $template->doctor_remark ?? null,
+                'allowed_food_notes' => $template->allowed_food_notes,
+                'hydration_advice' => $template->hydration_advice,
+                'exercise_advice' => $template->exercise_advice,
+                'features' => $template->features,
             ]);
 
             foreach ($template->days as $day) {
@@ -93,8 +105,14 @@ class PatientDietController extends Controller
             return $plan;
         });
 
+        try {
+            \App\Services\NotificationService::notifyDietPlanAssigned($plan);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to trigger diet plan assignment notification: " . $e->getMessage());
+        }
+
         return ApiResponseService::created(
-            data: $this->planData($plan->load(['days.meals']))
+            data: $this->planData($plan->load(['days.meals', 'doctor.user']))
         );
     }
 
@@ -107,7 +125,7 @@ class PatientDietController extends Controller
 
         $this->patientOrFail($patientId);
 
-        $plan = PatientDietPlan::with(['days.meals'])
+        $plan = PatientDietPlan::with(['days.meals', 'doctor.user'])
             ->where('patient_id', $patientId)
             ->where('doctor_id', $doctor->id)
             ->latest()
@@ -177,7 +195,7 @@ class PatientDietController extends Controller
             $this->patientOrFail($patientId); // Throws if not a valid patient
         }
 
-        $plan = PatientDietPlan::with(['days.meals'])
+        $plan = PatientDietPlan::with(['days.meals', 'doctor.user'])
             ->where('patient_id', $patientId)
             ->whereIn('status', ['active', 'paused'])
             ->latest()
@@ -280,25 +298,40 @@ class PatientDietController extends Controller
 
     private function planData(PatientDietPlan $plan): array
     {
-        return [
-            'id' => $plan->id,
-            'patient_id' => $plan->patient_id,
-            'doctor_id' => $plan->doctor_id,
-            'template_id' => $plan->diet_template_id,
-            'template_name' => $plan->template_name,
-            'template_description' => $plan->template_description,
-            'duration_days' => $plan->duration_days,
-            'start_date' => optional($plan->start_date)?->format('Y-m-d'),
-            'end_date' => optional($plan->end_date)?->format('Y-m-d'),
-            'status' => $plan->status,
-            'special_instructions' => $plan->special_instructions,
-            'days' => $plan->days->map(function (PatientDietPlanDay $day) {
-                return [
-                    'id' => $day->id,
-                    'day_number' => $day->day_number,
-                    'week_day' => $day->week_day,
-                    'date' => optional($day->date)?->format('Y-m-d'),
-                    'meals' => $day->meals->map(function (PatientDietPlanMeal $meal) {
+        $doctorName = '—';
+        if ($plan->doctor) {
+            $doctorName = trim("{$plan->doctor->first_name} {$plan->doctor->last_name}") ?: ($plan->doctor->name ?: ($plan->doctor->user?->name ?? '—'));
+        }
+
+        // Reference days as "template days" (e.g., a 7-day template)
+        $templateDays = $plan->days->sortBy('day_number')->values();
+        $templateDaysCount = $templateDays->count();
+
+        $startDate = optional($plan->start_date)?->copy()->startOfDay();
+        $endDate = optional($plan->end_date)?->copy()->startOfDay();
+
+        $duration = 0;
+        if ($startDate && $endDate) {
+            // Inclusive days, add 1
+            $duration = $startDate->diffInDays($endDate) + 1;
+        } elseif ($plan->duration_days) {
+            $duration = $plan->duration_days;
+        } else {
+            $duration = $templateDaysCount;
+        }
+
+        $planDays = [];
+        if ($templateDaysCount > 0 && $startDate && $duration > 0) {
+            for ($i = 0; $i < $duration; $i++) {
+                $cloneDay = $templateDays[$i % $templateDaysCount];
+                $currentDate = $startDate->copy()->addDays($i);
+                $weekDay = strtoupper($currentDate->format('l'));
+                $planDays[] = [
+                    'id' => $cloneDay->id, // Could alternatively use: $cloneDay->id . "_repeat_" . ($i + 1)
+                    'day_number' => $i + 1,
+                    'week_day' => $weekDay,
+                    'date' => $currentDate->format('Y-m-d'),
+                    'meals' => $cloneDay->meals->map(function (PatientDietPlanMeal $meal) {
                         return [
                             'id' => $meal->id,
                             'meal_type' => $meal->meal_type,
@@ -316,7 +349,34 @@ class PatientDietController extends Controller
                         ];
                     })->values(),
                 ];
-            })->values(),
+            }
+        }
+
+        return [
+            'id' => $plan->id,
+            'patient_id' => $plan->patient_id,
+            'doctor_id' => $plan->doctor_id,
+            'doctor_name' => $doctorName,
+            'template_id' => $plan->diet_template_id,
+            'template_name' => $plan->template_name,
+            'template_description' => $plan->template_description,
+            'duration_days' => $duration,
+            'start_date' => optional($plan->start_date)?->format('Y-m-d'),
+            'end_date' => optional($plan->end_date)?->format('Y-m-d'),
+            'status' => $plan->status,
+            'special_instructions' => $plan->special_instructions,
+            'diet_category' => $plan->diet_category,
+            'patient_type' => $plan->patient_type,
+            'daily_calories' => $plan->daily_calories,
+            'protein_target' => $plan->protein_target,
+            'carbs_limit' => $plan->carbs_limit,
+            'salt_limit' => $plan->salt_limit,
+            'doctor_remark' => $plan->doctor_remark,
+            'allowed_food_notes' => $plan->allowed_food_notes,
+            'hydration_advice' => $plan->hydration_advice,
+            'exercise_advice' => $plan->exercise_advice,
+            'features' => $plan->features,
+            'days' => collect($planDays),
             'created_at' => optional($plan->created_at)?->toIso8601String(),
             'updated_at' => optional($plan->updated_at)?->toIso8601String(),
         ];

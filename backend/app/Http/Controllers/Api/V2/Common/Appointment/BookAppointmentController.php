@@ -272,6 +272,7 @@ class BookAppointmentController extends Controller
 
                         if ($adminSkipPayment) {
                             $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
+                            $appointment->assignQueueNumber();
                             NotificationService::notifyAppointmentConfirmed($appointment);
                             $appointment->load(['doctor.user', 'patient.user', 'availability', 'doctor.departments']);
 
@@ -326,6 +327,7 @@ class BookAppointmentController extends Controller
 
                     if ($consultationFee <= 0 || $adminSkipPayment) {
                         $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
+                        $appointment->assignQueueNumber();
                         NotificationService::notifyAppointmentConfirmed($appointment);
 
                         if ($appointment->consultation_type === 'video') {
@@ -972,6 +974,7 @@ class BookAppointmentController extends Controller
         $appointment->update([
             'status' => AppointmentStatus::CONFIRMED->value,
         ]);
+        $appointment->assignQueueNumber();
 
         if ($forceNotification || ! AppointmentStatus::equals($appointment->status, AppointmentStatus::CONFIRMED)) {
             NotificationService::notifyAppointmentConfirmed($appointment);

@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Clock,
   CheckCheck,
+  Shield,
 } from "lucide-react";
 
 const getIcon = (group: string) => {
@@ -50,6 +51,18 @@ const getIcon = (group: string) => {
         icon: CreditCard,
         color: "text-primary",
         bg: "bg-emerald-50 dark:bg-emerald-950/30",
+      };
+    case "system":
+      return {
+        icon: Bell,
+        color: "text-red-500",
+        bg: "bg-red-50 dark:bg-red-950/30",
+      };
+    case "vaccination":
+      return {
+        icon: Shield,
+        color: "text-rose-500",
+        bg: "bg-rose-50 dark:bg-rose-950/30",
       };
     default:
       return {

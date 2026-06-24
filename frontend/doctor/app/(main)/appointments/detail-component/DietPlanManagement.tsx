@@ -45,6 +45,7 @@ export function DietPlanManagement({
     const [specialInstructions, setSpecialInstructions] = useState(
         "Avoid sugar and fried snacks. Keep dinner before 8 PM."
     );
+    const [doctorRemark, setDoctorRemark] = useState("");
 
     const completeMealMutation = useCompleteDietMeal();
     const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -120,6 +121,7 @@ export function DietPlanManagement({
                 start_date: startDate,
                 duration_days: durationDays,
                 special_instructions: specialInstructions,
+                doctor_remark: doctorRemark,
             });
 
             setAssignedDietPlan(response?.data);
@@ -127,6 +129,7 @@ export function DietPlanManagement({
             setAssignDialogOpen(false);
             setIsTemplateModalOpen(false);
             setPreviewTemplate(null);
+            setDoctorRemark("");
 
             setApiDialogType("success");
             setApiDialogTitle("Success");
@@ -703,6 +706,7 @@ export function DietPlanManagement({
                                                     setSpecialInstructions(
                                                         "Avoid sugar and fried snacks. Keep dinner before 8 PM."
                                                     );
+                                                    setDoctorRemark(previewTemplate?.doctor_remark || "");
 
                                                     setAssignDialogOpen(true);
                                                 }}
@@ -765,6 +769,7 @@ export function DietPlanManagement({
                                                         setStartDate(new Date().toISOString().split("T")[0]);
                                                         setDurationDays(template.duration_days || 7);
                                                         setSpecialInstructions("Avoid sugar and fried snacks. Keep dinner before 8 PM.");
+                                                        setDoctorRemark(template.doctor_remark || "");
                                                         setAssignDialogOpen(true);
                                                     }}
                                                     disabled={assignDietMutation.isPending}
@@ -821,12 +826,25 @@ export function DietPlanManagement({
 
                     <div>
                         <label className="text-xs font-semibold text-[#4D4D4D]">
+                            Doctor Remark
+                        </label>
+                        <textarea
+                            value={doctorRemark}
+                            onChange={(e) => setDoctorRemark(e.target.value)}
+                            rows={3}
+                            placeholder="Example: Patient should follow this diet with regular sugar monitoring..."
+                            className="mt-1 w-full resize-none rounded-md border px-3 py-2 text-sm outline-none focus:border-primary"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-semibold text-[#4D4D4D]">
                             Special Instructions
                         </label>
                         <textarea
                             value={specialInstructions}
                             onChange={(e) => setSpecialInstructions(e.target.value)}
-                            rows={4}
+                            rows={3}
                             className="mt-1 w-full resize-none rounded-md border px-3 py-2 text-sm outline-none focus:border-primary"
                         />
                     </div>

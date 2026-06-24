@@ -2542,3 +2542,155 @@ input[type="checkbox"]:checked::after {
         pointer-events: auto !important;
     }
 }
+
+/* ==========================================================================
+   Diet Template Builder Custom Styles
+   ========================================================================== */
+
+/* Diet template builder styles */
+.diet-template-chart.fi-section {
+    border-color: #afcfffc1 !important;
+    overflow: visible;
+}
+
+.diet-template-chart>.fi-section-header {
+    background: linear-gradient(90deg, #eef7f3dc 0%, #055bd9 72%) !important;
+    border-bottom: 1px solid #afcfffc1;
+}
+
+.diet-template-chart .fi-section-content-ctn {
+    background: #fbfcfb;
+}
+
+/* Diet chart step helper */
+.diet-chart-helper {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #b3d1ff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(5, 91, 217, 0.04);
+}
+
+.diet-chart-helper__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.diet-chart-helper__step {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(5, 91, 217, 0.08);
+    color: var(--app-primary-hex, #055bd9);
+    font-size: 0.85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.diet-chart-helper__title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #17231f;
+    line-height: 1.2;
+}
+
+.diet-chart-helper__text {
+    font-size: 0.75rem;
+    color: #647067;
+    margin-top: 4px;
+    line-height: 1.3;
+}
+
+/* Days Repeater */
+.diet-day-repeater>.fi-fo-repeater-items {
+    gap: 20px !important;
+}
+
+.diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item {
+    border: 1px solid #b3d1ff !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    box-shadow: 0 10px 28px rgba(5, 91, 217, 0.04) !important;
+    overflow: visible;
+}
+
+.diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header {
+    min-height: 52px;
+    background: rgba(5, 91, 217, 0.08) !important;
+    border-bottom: 1px solid #b3d1ff !important;
+    padding-inline: 16px !important;
+    border-radius: 12px;
+}
+
+.diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
+    color: var(--app-primary-hex, #055bd9) !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+}
+
+.diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content {
+    padding: 16px !important;
+}
+
+/* Meals Repeater nested inside Days */
+.diet-meal-repeater {
+    margin-top: 12px;
+    border-top: 1px dashed #055bd9;
+    padding-top: 16px;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items {
+    gap: 12px !important;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item {
+    border: 1px solid #dce7e2 !important;
+    border-radius: 8px !important;
+    background: #fbfcfb !important;
+    box-shadow: none !important;
+    overflow: visible;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header {
+    min-height: 42px;
+    background: #f6faf8 !important;
+    border-bottom: 1px solid #edf2ef !important;
+    padding-inline: 12px !important;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
+    color: var(--primary, #055bd9) !important;
+    font-size: 0.86rem !important;
+    font-weight: 700 !important;
+}
+
+.diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-content {
+    padding: 12px !important;
+}
+
+.diet-meal-repeater .fi-fo-field-wrp-label label {
+    color: #34443e !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+}
+
+.diet-day-repeater .fi-fo-repeater-add,
+.diet-meal-repeater .fi-fo-repeater-add {
+    justify-content: flex-end !important;
+    padding-top: 10px;
+}
+
+@media (max-width: 768px) {
+    .diet-chart-helper {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}

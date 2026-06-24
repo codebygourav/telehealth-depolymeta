@@ -8,3 +8,20 @@ export const getDietPlan = async (): Promise<DietPlanResponse> => {
     );
     return response.data;
 };
+
+export const completeDietMeal = async ({
+    mealId,
+    notes,
+}: {
+    mealId: string;
+    notes?: string | null;
+}) => {
+    const response = await axiosInstance.post(
+        `/patient/diet/meal/${mealId}/complete`,
+        {
+            notes: notes || null,
+        }
+    );
+
+    return response.data;
+};

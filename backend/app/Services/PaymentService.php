@@ -325,6 +325,7 @@ class PaymentService
             $appointment = Appointment::find($validated['appointment_id']);
             if ($appointment) {
                 $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
+                $appointment->assignQueueNumber();
             }
         }
 
@@ -394,7 +395,8 @@ class PaymentService
                 if ($event === 'payment.captured' || $isPaid) {
                     if (! AppointmentStatus::equals($appointment->status, AppointmentStatus::CONFIRMED)) {
                         $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
-
+                        $appointment->assignQueueNumber();
+ 
                         // Send notifications as backup for webhook flow
                         NotificationService::notifyAppointmentConfirmed($appointment);
                     }

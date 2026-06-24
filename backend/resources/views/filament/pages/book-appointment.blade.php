@@ -381,24 +381,24 @@
         }
 
         .admin-booking-page .patient-type-radio .fi-fo-radio-label:hover {
-            border-color: rgb(7 56 39);
-            color: rgb(7 56 39);
+            border-color: var(--app-primary-hex);
+            color: var(--app-primary-hex);
         }
 
         .admin-booking-page .patient-type-radio .fi-fo-radio-label:has(.fi-radio-input:checked) {
-            border-color: rgb(7 56 39);
-            background: rgb(236 253 245);
-            color: rgb(7 56 39);
-            box-shadow: inset 0 0 0 1px rgb(7 56 39);
+            border-color: var(--app-primary-hex);
+            background: #055bd91c;
+            color: var(--app-primary-hex);
+            box-shadow: inset 0 0 0 1px var(--app-primary-hex);
         }
 
         .admin-booking-page .patient-type-radio .fi-radio-input {
-            accent-color: rgb(7 56 39);
+            accent-color: var(--app-primary-hex);
         }
 
         .admin-booking-page .patient-type-radio .fi-radio-input:checked {
-            border-color: rgb(7 56 39);
-            background-color: rgb(7 56 39);
+            border-color: var(--app-primary-hex);
+            background-color: var(--app-primary-hex);
         }
 
         @media (max-width: 640px) {

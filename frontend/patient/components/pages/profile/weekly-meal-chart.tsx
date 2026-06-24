@@ -1,402 +1,571 @@
-import { useDietPlan } from '@/queries/useDietPlan';
-import { addWeeks, endOfWeek, format, startOfWeek } from 'date-fns';
-import { ChevronDown, ChevronLeft, ChevronRight, CloudSun, Moon, Sun, Zap } from 'lucide-react';
-import { useMemo, useState } from 'react';
+'use client';
 
-const WeeklyMealChart = () => {
+import { useCompleteDietMeal, useDietPlan } from '@/queries/useDietPlan';
+import { DietPlanDay, Meal } from '@/types/meal-chart';
+import { useQueryClient } from '@tanstack/react-query';
+import { addDays, format, parseISO } from 'date-fns';
+import {
+    AlertTriangle,
+    Apple,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    Clock3,
+    Droplet,
+    Dumbbell,
+    Info,
+    Leaf,
+    Moon,
+    Sun,
+    Utensils,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 
+const DAYS_PER_PAGE = 7;
+
+const getMealTypeLabel = (mealType: string) => {
+    const labels: Record<string, string> = {
+        MORNING: 'Morning',
+        BREAKFAST: 'Breakfast',
+        MID_MEAL: 'Mid Meal',
+        LUNCH: 'Lunch',
+        EVENING_SNACK: 'Evening Snack',
+        EVENING: 'Evening',
+        DINNER: 'Dinner',
+        NIGHT: 'Night',
+    };
+
+    return labels[mealType?.toUpperCase()] || mealType || 'Meal';
+};
+
+const getMealIcon = (mealType: string) => {
+    switch (mealType?.toUpperCase()) {
+        case 'MORNING':
+        case 'BREAKFAST':
+            return Sun;
+        case 'MID_MEAL':
+            return Apple;
+        case 'EVENING':
+        case 'EVENING_SNACK':
+        case 'NIGHT':
+            return Moon;
+        default:
+            return Utensils;
+    }
+};
+
+const formatMealTime = (time?: string | null) => {
+    if (!time) return '';
+
+    const [hours, minutes] = time.split(':');
+    const hour = Number(hours);
+
+    if (Number.isNaN(hour) || !minutes) return time;
+
+    return `${String(hour % 12 || 12).padStart(2, '0')}:${minutes} ${hour >= 12 ? 'PM' : 'AM'}`;
+};
+
+const getMealItems = (mealName: string) =>
+    mealName
+        .split(/,| with | and /i)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+const normalizePlanDays = (
+    days: DietPlanDay[],
+    startDate: string,
+    durationDays: number,
+): DietPlanDay[] => {
+    const byDayNumber = new Map(days.map((day) => [Number(day.day_number), day]));
+    const byDate = new Map(days.filter((day) => day.date).map((day) => [day.date, day]));
+    const parsedStartDate = startDate ? parseISO(startDate) : null;
+    const totalDays = Math.max(durationDays || 0, days.length);
+
+    return Array.from({ length: totalDays }, (_, index) => {
+        const dayNumber = index + 1;
+        const date = parsedStartDate ? format(addDays(parsedStartDate, index), 'yyyy-MM-dd') : '';
+        const sourceDay = byDayNumber.get(dayNumber) || (date ? byDate.get(date) : undefined);
+
+        return {
+            id: sourceDay?.id || `plan-day-${dayNumber}`,
+            day_number: dayNumber,
+            week_day: sourceDay?.week_day || (date ? format(parseISO(date), 'EEEE').toUpperCase() : ''),
+            date: sourceDay?.date || date,
+            meals: sourceDay?.meals || [],
+        };
+    });
+};
+
+export default function WeeklyMealChart() {
+    const queryClient = useQueryClient();
     const { data, isLoading } = useDietPlan();
-    const [currentWeek, setCurrentWeek] = useState(new Date())
-    const [openMealRow, setOpenMealRow] = useState<string | null>("MORNING");
-    const [mobileBaseDate, setMobileBaseDate] = useState(new Date());
+    const completeMealMutation = useCompleteDietMeal();
+    const activePlan = data?.data;
 
-    console.log("patient deit plan" , data);
-    
+    const [pageIndex, setPageIndex] = useState(0);
+    const [selectedDayNumber, setSelectedDayNumber] = useState<number | null>(null);
+    const [activeMeal, setActiveMeal] = useState<Meal | null>(null);
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [isLogOpen, setIsLogOpen] = useState(false);
+    const [logNotes, setLogNotes] = useState('');
+    const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
 
-    const mobileDays = useMemo(() => {
-        return Array.from({ length: 1 }).map((_, index) => {
-            const date = new Date(mobileBaseDate);
-            date.setDate(mobileBaseDate.getDate() + index);
+    const planDays = useMemo(() => {
+        if (!activePlan?.days?.length) return [];
 
-            return {
-                day: format(date, "EEE").toUpperCase(),
-                date: format(date, "dd MMM"),
-                fullDate: format(date, "yyyy-MM-dd"),
-            };
-        });
-    }, [mobileBaseDate]);
+        return normalizePlanDays(
+            [...activePlan.days].sort((a, b) => Number(a.day_number) - Number(b.day_number)),
+            activePlan.start_date,
+            activePlan.duration_days,
+        );
+    }, [activePlan]);
 
-    const handleMobilePrev = () => {
-        setMobileBaseDate((prev) => {
-            const date = new Date(prev);
-            date.setDate(prev.getDate() - 1);
-            return date;
-        });
+    const pageCount = Math.max(1, Math.ceil(planDays.length / DAYS_PER_PAGE));
+    const visibleDays = planDays.slice(
+        pageIndex * DAYS_PER_PAGE,
+        pageIndex * DAYS_PER_PAGE + DAYS_PER_PAGE,
+    );
+
+    // Only set initial selected day and page index on initial mount or when plan ID changes
+    useEffect(() => {
+        if (!activePlan?.id || !planDays.length) return;
+
+        if (loadedPlanId !== activePlan.id) {
+            setLoadedPlanId(activePlan.id);
+            const today = format(new Date(), 'yyyy-MM-dd');
+            const todayIndex = planDays.findIndex((day) => day.date === today);
+            const initialIndex = todayIndex >= 0 ? todayIndex : 0;
+
+            setPageIndex(Math.floor(initialIndex / DAYS_PER_PAGE));
+            setSelectedDayNumber(planDays[initialIndex].day_number);
+        }
+    }, [activePlan?.id, planDays, loadedPlanId]);
+
+    const handlePrevPage = () => {
+        const newIndex = Math.max(0, pageIndex - 1);
+        setPageIndex(newIndex);
+        setSelectedDayNumber(planDays[newIndex * DAYS_PER_PAGE].day_number);
     };
 
-    const handleMobileNext = () => {
-        setMobileBaseDate((prev) => {
-            const date = new Date(prev);
-            date.setDate(prev.getDate() + 1);
-            return date;
-        });
+    const handleNextPage = () => {
+        const newIndex = Math.min(pageCount - 1, pageIndex + 1);
+        setPageIndex(newIndex);
+        setSelectedDayNumber(planDays[newIndex * DAYS_PER_PAGE].day_number);
     };
 
-    const weekStart = startOfWeek(currentWeek, {
-        weekStartsOn: 1,
-    })
-    const weekEnd = endOfWeek(currentWeek, {
-        weekStartsOn: 1,
-    })
+    const selectedDay = useMemo(
+        () => planDays.find((day) => day.day_number === selectedDayNumber) || visibleDays[0] || planDays[0],
+        [planDays, selectedDayNumber, visibleDays],
+    );
 
-    const days = useMemo(() => {
-        return Array.from({ length: 7 }).map((_, index) => {
-            const date = new Date(weekStart)
-            date.setDate(weekStart.getDate() + index)
-            return {
-                day: format(date, 'EEE').toUpperCase(),
-                date: format(date, 'dd MMM'),
-                fullDate: format(date, 'yyyy-MM-dd'),
-            }
-        })
-    }, [weekStart])
+    const selectedDayMeals = selectedDay?.meals || [];
+    const completedMeals = selectedDayMeals.filter((meal) => meal.status === 'completed').length;
+    const totalCalories = selectedDayMeals.reduce(
+        (total, meal) => total + Number(meal.calories || 0),
+        0,
+    );
 
-    const formatMealTime = (timeString: string) => {
-        if (!timeString) return '';
-        const [hours, minutes] = timeString.split(':');
-        const h = parseInt(hours, 10);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const formattedHours = h % 12 || 12;
-        return `${formattedHours < 10 ? '0' + formattedHours : formattedHours}:${minutes} ${ampm}`;
-    };
+    const visibleStart = visibleDays[0]?.date;
+    const visibleEnd = visibleDays[visibleDays.length - 1]?.date;
 
-    const rows = useMemo(() => {
-        const categories = [
-            { id: 'BREAKFAST', label: 'MORNING', icon: <Sun color='#055BD9' /> },
-            { id: 'LUNCH', label: 'AFTERNOON', icon: <CloudSun color='#055BD9' /> },
-            { id: 'SNACK', label: 'EVENING', icon: <Moon color='#055BD9' /> },
-            { id: 'DINNER', label: 'NIGHT', icon: <Zap color='#055BD9' /> },
-        ];
+    const handleLogMeal = async () => {
+        if (!activeMeal) return;
 
-        return categories.map((category) => {
-            const rowMeals = days.map((dayItem) => {
-                if (!data?.data?.days) return null;
-
-                const apiDay = data.data.days.find((d: DietPlanDay) => d.date === dayItem.fullDate);
-                if (!apiDay) return null;
-                const meal = apiDay.meals.find((m: Meal) => m.meal_type === category.id);
-                if (!meal) return null;
-
-                return {
-                    title: meal.meal_name,
-                    time: meal.meal_time ? formatMealTime(meal.meal_time) : null,
-                    variant: meal.status === 'completed' ? 'default' : meal.status === 'pending' ? 'active' : 'default',
-                    action: meal.status === 'pending' ? 'LOG NOW' : null,
-                };
-            });
-
-            return {
-                label: category.label,
-                icon: category.icon,
-                meals: rowMeals,
-            };
+        await completeMealMutation.mutateAsync({
+            mealId: activeMeal.id,
+            notes: logNotes,
         });
-    }, [data, days]);
 
+        setIsLogOpen(false);
+        setIsDetailsOpen(false);
+        setLogNotes('');
+        await queryClient.invalidateQueries({ queryKey: ['diet-plan'] });
+    };
 
     if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <div className="h-14 w-14 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-
-                <p className="text-sm font-semibold text-[#4D4D4D]">
-                    Loading templates...
-                </p>
+            <div className="flex min-h-80 flex-col items-center justify-center gap-3">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/15 border-t-primary" />
+                <p className="text-sm font-semibold text-[#4D4D4D]">Loading your diet plan...</p>
             </div>
         );
     }
 
-    const hasDietPlan = Array.isArray(data?.data?.days) && data?.data?.days.length > 0;
-
-    if (!hasDietPlan) {
+    if (!activePlan?.days?.length) {
         return (
-            <div className="flex min-h-[320px] flex-col items-center justify-center rounded-3xl border border-dashed border-[#E7E8EB] bg-[#F9FAFB] p-10 text-center">
-                <div className="mb-4 rounded-full bg-primary/10 p-4 text-primary">
-                    <Sun className="w-6 h-6" />
-                </div>
-                <h2 className="text-xl font-semibold text-[#1F1E1E]">No diet plan assigned yet</h2>
+            <div className="flex min-h-80 flex-col items-center justify-center border border-dashed border-[#E7E8EB] bg-[#FAFAFA] p-8 text-center global-radius">
+                <Utensils className="mb-3 h-8 w-8 text-primary" />
+                <h2 className="text-lg font-bold text-[#1F1E1E]">No active diet plan assigned</h2>
                 <p className="mt-2 max-w-md text-sm text-[#4D4D4D]">
-                    Your personalized meal chart will appear here once your doctor assigns a diet plan.
+                    Your meal chart will appear here after your doctor assigns a diet plan.
                 </p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen">
-            <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center justify-between gap-3">
-                    <h1 className="text-xl sm:text-2xl font-semibold text-black">
-                        Weekly Meal Chart
-                    </h1>
-                    <div className="hidden items-center gap-2 md:hidden">
-                        <button
-                            onClick={() => setCurrentWeek(addWeeks(currentWeek, -1))}
-                            className="p-2 rounded-full border-light-gray"
-                        >
-                            <ChevronLeft color="#4D4D4D" />
-                        </button>
-
-                        <button
-                            onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-                            className="p-2 rounded-full border-light-gray"
-                        >
-                            <ChevronRight color="#4D4D4D" />
-                        </button>
+        <div className="space-y-4">
+            {/* Elegant Compact Header Banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-[#E7E8EB] bg-white p-4 global-radius shadow-sm">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Leaf className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h1 className="text-base font-bold text-[#1F1E1E]">
+                            {activePlan.template_name || 'General Diet Plan'}
+                        </h1>
+                        <p className="text-xs text-[#6B6B6B]">
+                            {activePlan.template_description || 'Personalized meal and wellness recommendations'}
+                        </p>
                     </div>
                 </div>
-
-                <div className="hidden md:flex items-center gap-4">
-                    <button
-                        onClick={() => setCurrentWeek(addWeeks(currentWeek, -1))}
-                        className="p-2 rounded-full border-light-gray hover:bg-surface-variant/50 transition-colors"
-                    >
-                        <ChevronLeft color="#4D4D4D" />
-                    </button>
-
-                    <div className="px-5 py-2.5 bg-[#e5eeff] rounded-md font-bold text-primary text-sm">
-                        {format(weekStart, "MMM dd")} - {format(weekEnd, "MMM dd")}
-                    </div>
-
-                    <button
-                        onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-                        className="p-2 rounded-full border-light-gray hover:bg-surface-variant/50 transition-colors"
-                    >
-                        <ChevronRight color="#4D4D4D" />
-                    </button>
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-800">
+                        ⏱️ {activePlan.duration_days} Days
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-800">
+                        🧑‍⚕️ Dr. {activePlan.doctor_name || 'Doctor'}
+                    </span>
                 </div>
-
-
             </div>
 
-            <div className="overflow-x-auto">
-                <div>
-                    <div className="hidden md:grid grid-cols-[140px_repeat(7,1fr)] gap-5 pb-5">
-                        <div />
-
-                        {days.map((item) => (
-                            <div
-                                key={item.day}
-                                className="flex flex-col items-center justify-center bg-[#F5F6F8] py-4 rounded-md"
-                            >
-                                <span className="text-base font-bold text-[#4D4D4D]">
-                                    {item.day}
-                                </span>
-                                <span className="text-xs text-[#4D4D4D] font-semibold tracking-wide uppercase pt-1">
-                                    {item.date}
-                                </span>
-                            </div>
-                        ))}
+            {/* Day Selector Calendar */}
+            <section className="border border-[#E7E8EB] bg-white p-3.5 global-radius shadow-sm space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 className="text-sm font-bold text-[#1F1E1E]">Meal Calendar</h2>
                     </div>
 
-                    <div className="md:hidden pb-5">
-                        <div className="flex items-center justify-between rounded-md bg-[#F5F6F8] px-3 py-3">
+                    <div className="flex h-8 items-center border border-[#E7E8EB] bg-white rounded-md">
+                        <button
+                            type="button"
+                            aria-label="Previous seven days"
+                            disabled={pageIndex === 0}
+                            onClick={handlePrevPage}
+                            className="flex h-full w-8 items-center justify-center text-[#4D4D4D] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 border-r border-[#E7E8EB]"
+                        >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="px-3 text-center text-xs font-bold text-[#4D4D4D] min-w-28">
+                            {visibleStart && visibleEnd
+                                ? `${format(parseISO(visibleStart), 'dd MMM')} - ${format(parseISO(visibleEnd), 'dd MMM')}`
+                                : `Days ${pageIndex * DAYS_PER_PAGE + 1}-${Math.min((pageIndex + 1) * DAYS_PER_PAGE, planDays.length)}`}
+                        </span>
+                        <button
+                            type="button"
+                            aria-label="Next seven days"
+                            disabled={pageIndex >= pageCount - 1}
+                            onClick={handleNextPage}
+                            className="flex h-full w-8 items-center justify-center text-[#4D4D4D] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 border-l border-[#E7E8EB]"
+                        >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+                    {visibleDays.map((day) => {
+                        const isSelected = day.day_number === selectedDay?.day_number;
+                        const date = day.date ? parseISO(day.date) : null;
+
+                        return (
                             <button
-                                onClick={handleMobilePrev}
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white border border-[#E7E8EB]"
+                                key={day.id}
+                                type="button"
+                                onClick={() => setSelectedDayNumber(day.day_number)}
+                                className={`relative flex flex-col items-center justify-center py-2 px-1 text-center transition-all duration-200 rounded-md border ${
+                                    isSelected
+                                        ? 'border-primary bg-primary text-white shadow-sm shadow-primary/20'
+                                        : 'border-[#E7E8EB] bg-slate-50/50 text-[#1F1E1E] hover:border-primary/35 hover:bg-primary/5'
+                                }`}
                             >
-                                <ChevronLeft color="#4D4D4D" />
+                                <span className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/80' : 'text-[#7A7A7A]'}`}>
+                                    {date ? format(date, 'EEE') : day.week_day.slice(0, 3)}
+                                </span>
+                                <span className="text-sm font-extrabold mt-0.5 leading-none">
+                                    {date ? format(date, 'dd') : day.day_number}
+                                </span>
+                                <span className={`text-[8px] font-medium mt-0.5 ${isSelected ? 'text-white/70' : 'text-[#7A7A7A]'}`}>
+                                    Day {day.day_number}
+                                </span>
+                                {day.meals.length > 0 && !isSelected && (
+                                    <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+                                )}
                             </button>
+                        );
+                    })}
+                </div>
+            </section>
 
-                            <div className="flex-1 text-center">
-                                <span className="block text-base font-bold text-[#1F1E1E]">
-                                    {mobileDays[0]?.day}
+            {/* Layout Columns */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+                {/* Left Side: Day Summary & Instructions */}
+                <aside className="space-y-3">
+                    {/* Day Progress Card */}
+                    <div className="border border-[#E7E8EB] bg-white p-4 global-radius shadow-sm">
+                        <p className="text-xs font-bold text-[#1F1E1E]">Day {selectedDay?.day_number} Progress</p>
+                        <div className="mt-2.5 flex items-center justify-between">
+                            <span className="text-sm font-semibold text-[#4D4D4D]">
+                                {completedMeals} / {selectedDayMeals.length} Completed
+                            </span>
+                            {totalCalories > 0 && (
+                                <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                                    🔥 {totalCalories} kcal
                                 </span>
-
-                                <span className="block pt-1 text-xs font-semibold text-[#4D4D4D]">
-                                    {mobileDays[0]?.date}
-                                </span>
+                            )}
+                        </div>
+                        {selectedDayMeals.length > 0 && (
+                            <div className="mt-3 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                                <div 
+                                    className="h-full bg-primary transition-all duration-300"
+                                    style={{ width: `${(completedMeals / selectedDayMeals.length) * 100}%` }}
+                                />
                             </div>
+                        )}
+                    </div>
 
-                            <button
-                                onClick={handleMobileNext}
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white border border-[#E7E8EB]"
-                            >
-                                <ChevronRight color="#4D4D4D" />
-                            </button>
+                    {/* Doctor's Remarks */}
+                    {activePlan.doctor_remark && (
+                        <div className="flex items-start gap-2.5 border border-[#F5D38A] bg-[#FFF9EC] p-3.5 global-radius shadow-sm">
+                            <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#A86600]" />
+                            <div>
+                                <p className="text-xs font-bold text-[#7A4A00]">Doctor&apos;s Remarks</p>
+                                <p className="mt-1 text-xs leading-relaxed text-[#5F4A25]">{activePlan.doctor_remark}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Hydration / Water Advice */}
+                    <div className="flex items-start gap-2.5 border border-[#BFD4F5] bg-[#F4F8FF] p-3.5 global-radius shadow-sm">
+                        <Droplet className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        <div>
+                            <p className="text-xs font-bold text-primary">Water & Hydration</p>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-700">
+                                {activePlan.hydration_advice || 'Drink 8-10 glasses (2-2.5L) of water daily.'}
+                            </p>
                         </div>
                     </div>
 
-                    <div className="space-y-6">
-                        {rows.map((row) => {
-                            const isOpen = openMealRow === row.label;
+                    {/* Food Restrictions */}
+                    {activePlan.restrictions && (
+                        <div className="flex items-start gap-2.5 border border-red-200 bg-red-50 p-3.5 global-radius shadow-sm">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-650" />
+                            <div>
+                                <p className="text-xs font-bold text-red-800">Avoid / Restrictions</p>
+                                <p className="mt-1 text-xs leading-relaxed text-red-700">{activePlan.restrictions}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Allowed Food Notes */}
+                    {activePlan.allowed_food_notes && (
+                        <div className="flex items-start gap-2.5 border border-green-200 bg-green-50 p-3.5 global-radius shadow-sm">
+                            <Leaf className="mt-0.5 h-4 w-4 shrink-0 text-green-700" />
+                            <div>
+                                <p className="text-xs font-bold text-green-800">Allowed Foods</p>
+                                <p className="mt-1 text-xs leading-relaxed text-green-700">{activePlan.allowed_food_notes}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Exercise & Lifestyle */}
+                    {activePlan.exercise_advice && (
+                        <div className="flex items-start gap-2.5 border border-blue-200 bg-blue-50 p-3.5 global-radius shadow-sm">
+                            <Dumbbell className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
+                            <div>
+                                <p className="text-xs font-bold text-blue-800">Lifestyle & Exercise</p>
+                                <p className="mt-1 text-xs leading-relaxed text-blue-700">{activePlan.exercise_advice}</p>
+                            </div>
+                        </div>
+                    )}
+                </aside>
+
+                {/* Right Side: High-Density Timeline of Meals */}
+                <div className="space-y-3">
+                    {selectedDayMeals.length ? (
+                        selectedDayMeals.map((meal) => {
+                            const MealIcon = getMealIcon(meal.meal_type);
+                            const isCompleted = meal.status === 'completed';
 
                             return (
-                                <section key={row.label}>
-                                    <div
-                                        className="hidden md:grid grid-cols-[140px_repeat(7,1fr)] gap-5"
-                                    >
-                                        <div className="h-auto flex flex-col items-center justify-center glass-card rounded-2xl text-center p-4">
-                                            <span className="mb-4 text-3xl">{row.icon}</span>
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                                                {row.label}
-                                            </span>
-                                        </div>
-
-                                        {Array.from({ length: 7 }).map((_, index) => {
-                                            const meal = row.meals[index]
-
-                                            if (!meal) {
-                                                return (
-                                                    <div
-                                                        key={index}
-                                                        className="h-auto rounded-[28px] bg-[#EEF2FB] opacity-70"
-                                                    />
-                                                )
-                                            }
-
-                                            if (meal.variant === 'dashed') {
-                                                return (
-                                                    <div
-                                                        key={index}
-                                                        className="flex h-auto cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-[#BFD3FF] bg-[#F8FBFF] transition hover:border-[#0B5ED7]"
-                                                    >
-                                                        <span className="mb-3 text-4xl font-light text-[#0B5ED7]">
-                                                            +
-                                                        </span>
-                                                        <span className="text-sm font-bold tracking-[2px] text-[#0B5ED7]">
-                                                            {meal.title}
-                                                        </span>
-                                                    </div>
-                                                )
-                                            }
-
-                                            return (
-                                                <div
-                                                    key={index}
-                                                    className={`group relative flex h-auto flex-col justify-between rounded-md p-3 border ${meal.variant === 'active'
-                                                        ? 'border-primary bg-primary'
-                                                        : meal.variant === 'upcoming'
-                                                            ? 'border-[#E7E8EB] bg-white'
-                                                            : 'border-[#E7E8EB]'
-                                                        }`}
-                                                >
-                                                    <div>
-                                                        <h3
-                                                            className={`font-bold text-sm leading-tight ${meal.variant === 'active' ? 'text-white' : 'text-[#1F1E1E]'}`}
-                                                        >
-                                                            {meal.title}
-                                                        </h3>
-                                                    </div>
-
-                                                    {meal.time && (
-                                                        <div className="flex w-fit items-center gap-2 rounded-full bg-[#EEF4FF] px-3 py-2 text-xs font-semibold text-primary mt-5">
-                                                            {meal.time}
-                                                        </div>
-                                                    )}
-
-                                                </div>
-                                            )
-                                        })}
-
-                                    </div>
-
-                                    <div className="md:hidden border border-[#E7E8EB] rounded-md overflow-hidden">
+                                <article
+                                    key={meal.id}
+                                    className={`border bg-white p-3.5 global-radius shadow-sm transition-all duration-200 ${
+                                        isCompleted 
+                                            ? 'border-green-150 bg-green-50/10' 
+                                            : 'border-[#E7E8EB] hover:border-primary/25 hover:shadow-md'
+                                    }`}
+                                >
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
                                         <button
                                             type="button"
-                                            onClick={() =>
-                                                setOpenMealRow(isOpen ? null : row.label)
-                                            }
-                                            className="w-full flex items-center justify-between p-4 bg-[#F5F6F8] border-b border-[#E7E8EB]"
+                                            onClick={() => {
+                                                setActiveMeal(meal);
+                                                setIsDetailsOpen(true);
+                                            }}
+                                            className="flex items-start gap-3 flex-1 min-w-0 text-left"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-2xl">
-                                                    {row.icon}
-                                                </span>
-
-                                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                                                    {row.label}
-                                                </span>
+                                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+                                                isCompleted 
+                                                    ? 'border-green-200 bg-green-50 text-green-600' 
+                                                    : 'border-primary/10 bg-primary/5 text-primary'
+                                            }`}>
+                                                <MealIcon className="h-4.5 w-4.5" />
                                             </div>
-
-                                            <ChevronDown
-                                                className={`w-5 h-5 text-[#4D4D4D] transition-transform duration-300 ${isOpen ? "rotate-180" : ""
-                                                    }`}
-                                            />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                                                        {getMealTypeLabel(meal.meal_type)}
+                                                    </span>
+                                                    {meal.meal_time && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#6B6B6B]">
+                                                            <Clock3 className="h-3 w-3" />
+                                                            {formatMealTime(meal.meal_time)}
+                                                        </span>
+                                                    )}
+                                                    {meal.calories && (
+                                                        <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                                                            🔥 {meal.calories} kcal
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <h3 className="text-sm font-bold text-[#1F1E1E] mt-0.5 hover:text-primary transition-colors">
+                                                    {meal.meal_name}
+                                                </h3>
+                                                {meal.instructions && (
+                                                    <p className="mt-1 text-xs text-[#5F4A25] leading-relaxed bg-[#FFF9EC] border-l-2 border-[#F5A623] px-2 py-1 rounded-r-sm">
+                                                        {meal.instructions}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </button>
 
-                                        <div
-                                            className={`grid transition-all duration-300 ease-in-out ${isOpen
-                                                ? "grid-rows-[1fr]"
-                                                : "grid-rows-[0fr]"
-                                                }`}
-                                        >
-                                            <div className="overflow-hidden divide-y divide-[#E7E8EB]">
-                                                {mobileDays.map((dayItem, index) => {
-                                                    const meal = row.meals[index];
-
-                                                    return (
-                                                        <div
-                                                            key={dayItem.fullDate}
-                                                            className="grid grid-cols-[70px_1fr]"
-                                                        >
-                                                            {/* Day */}
-                                                            <div className="flex flex-col items-center justify-center border-r border-[#E7E8EB] bg-[#FAFAFA] p-3">
-                                                                <span className="text-sm font-bold text-[#1F1E1E]">
-                                                                    {dayItem.day}
-                                                                </span>
-
-                                                                <span className="text-[10px] font-medium text-[#4D4D4D] mt-1">
-                                                                    {dayItem.date}
-                                                                </span>
-                                                            </div>
-
-                                                            {/* Meal */}
-                                                            <div className="p-3">
-                                                                {!meal ? (
-                                                                    <p className="text-sm text-[#4D4D4D]">
-                                                                        No meal
-                                                                    </p>
-                                                                ) : (
-                                                                    <div
-                                                                        className={`rounded-md border p-3 ${meal.variant === "active"
-                                                                            ? "border-primary bg-primary"
-                                                                            : "border-[#E7E8EB] bg-white"
-                                                                            }`}
-                                                                    >
-                                                                        <h3
-                                                                            className={`font-bold text-sm leading-tight ${meal.variant === "active"
-                                                                                ? "text-white"
-                                                                                : "text-[#1F1E1E]"
-                                                                                }`}
-                                                                        >
-                                                                            {meal.title}
-                                                                        </h3>
-
-                                                                        {meal.time && (
-                                                                            <div className="mt-3 inline-flex rounded-full bg-[#EEF4FF] px-2 py-1 text-[10px] font-semibold text-primary">
-                                                                                {meal.time}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                                        <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 border-t border-slate-100 pt-2 sm:border-0 sm:pt-0 shrink-0">
+                                            {isCompleted ? (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-700">
+                                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                                    Done
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveMeal(meal);
+                                                        setIsLogOpen(true);
+                                                    }}
+                                                    className="btn-primary-cta !h-8 !px-3 !text-xs !py-1"
+                                                >
+                                                    Log Meal
+                                                </button>
+                                            )}
                                         </div>
-
                                     </div>
-                                </section>
+                                </article>
                             );
-                        })}
-                    </div>
+                        })
+                    ) : (
+                        <div className="border border-dashed border-[#E7E8EB] bg-[#FAFAFA] p-8 text-center global-radius">
+                            <Utensils className="mx-auto h-7 w-7 text-[#B0B0B0]" />
+                            <p className="mt-2 text-xs font-semibold text-[#6D6D6D]">No meals scheduled for Day {selectedDay?.day_number}.</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
+            {/* Details Dialog */}
+            <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+                <DialogContent className="max-w-md bg-white global-radius">
+                    <DialogHeader>
+                        <DialogTitle>{activeMeal?.meal_name}</DialogTitle>
+                        <DialogDescription>
+                            {activeMeal ? getMealTypeLabel(activeMeal.meal_type) : ''} meal details
+                        </DialogDescription>
+                    </DialogHeader>
+                    {activeMeal && (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="border border-[#E7E8EB] bg-[#FAFAFA] p-3 global-radius">
+                                    <p className="text-[10px] font-bold uppercase text-[#7A7A7A]">Meal Time</p>
+                                    <p className="mt-1 text-sm font-bold text-[#1F1E1E]">
+                                        {formatMealTime(activeMeal.meal_time) || 'Not specified'}
+                                    </p>
+                                </div>
+                                <div className="border border-[#E7E8EB] bg-[#FAFAFA] p-3 global-radius">
+                                    <p className="text-[10px] font-bold uppercase text-[#7A7A7A]">Calories</p>
+                                    <p className="mt-1 text-sm font-bold text-[#1F1E1E]">
+                                        {activeMeal.calories || 0} kcal
+                                    </p>
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold text-[#4D4D4D]">Food Items</p>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {getMealItems(activeMeal.meal_name).map((item) => (
+                                        <span key={item} className="border border-[#E7E8EB] bg-[#FAFAFA] px-2 py-1 text-xs text-[#4D4D4D] global-radius">
+                                            {item}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                            {activeMeal.instructions && (
+                                <div className="border-l-2 border-[#F5A623] bg-[#FFF9EC] p-3 text-sm text-[#6A4A12]">
+                                    {activeMeal.instructions}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <button type="button" onClick={() => setIsDetailsOpen(false)} className="btn-primary-cta-outline !h-9 !px-4 !py-2 !text-xs">
+                            Close
+                        </button>
+                        {activeMeal?.status !== 'completed' && (
+                            <button type="button" onClick={() => setIsLogOpen(true)} className="btn-primary-cta !h-9 !px-4 !py-2 !text-xs">
+                                Log Meal
+                            </button>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Log Meal Dialog */}
+            <Dialog open={isLogOpen} onOpenChange={setIsLogOpen}>
+                <DialogContent className="max-w-sm bg-white global-radius">
+                    <DialogHeader>
+                        <DialogTitle>Log Meal</DialogTitle>
+                        <DialogDescription>Optionally add a note before marking this meal complete.</DialogDescription>
+                    </DialogHeader>
+                    <textarea
+                        value={logNotes}
+                        onChange={(event) => setLogNotes(event.target.value)}
+                        rows={4}
+                        placeholder="Add notes..."
+                        className="w-full resize-none border border-[#E7E8EB] bg-white p-3 text-sm outline-none focus:border-primary global-radius"
+                    />
+                    <DialogFooter>
+                        <button type="button" onClick={() => setIsLogOpen(false)} className="btn-primary-cta-outline !h-9 !px-4 !py-2 !text-xs">
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleLogMeal}
+                            disabled={completeMealMutation.isPending}
+                            className="btn-primary-cta !h-9 !px-4 !py-2 !text-xs disabled:opacity-60"
+                        >
+                            {completeMealMutation.isPending ? 'Saving...' : 'Mark Complete'}
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
-    )
+    );
 }
 
-export default WeeklyMealChart

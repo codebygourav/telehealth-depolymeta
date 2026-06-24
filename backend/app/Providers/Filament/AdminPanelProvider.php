@@ -4,7 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login as CustomLogin;
 use Filament\Enums\DatabaseNotificationsPosition;
-use App\Filament\Pages\{BookAppointment, Dashboard, DoctorReport, ManageVideoLinks, OPDCalendar, RolePermissionMatrix, Settings};
+use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, Dashboard, DoctorReport, ManageVideoLinks, OPDCalendar, RolePermissionMatrix, Settings};
 use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\EmailLogs\EmailLogResource;
 use App\Filament\Resources\{Appointments\AppointmentResource, DoctorDepartments\DoctorDepartmentResource, DoctorReplacements\DoctorReplacementResource, DoctorReviews\DoctorReviewResource, Doctors\DoctorAvailabilityResource, Doctors\DoctorResource, ContactUs\ContactUsResource, ExternalBookings\ExternalBookingResource, Leaves\LeaveResource, MedicalReports\MedicalReportResource, Medicines\MedicineResource, ModuleDocuments\ModuleDocumentResource, Patients\PatientResource, Payments\PaymentResource, Symptoms\SymptomResource, Users\UserResource, Vendors\VendorResource};
@@ -63,6 +63,7 @@ class AdminPanelProvider extends PanelProvider
                 BookAppointment::class,
                 DoctorReport::class,
                 ManageVideoLinks::class,
+                AppointmentQueueDashboard::class,
             ])
             ->resources([
                 AppointmentResource::class,

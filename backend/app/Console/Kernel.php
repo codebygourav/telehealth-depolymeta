@@ -21,6 +21,16 @@ class Kernel extends ConsoleKernel
         $schedule->command('vaccinations:send-reminders')
             ->dailyAt('08:00')
             ->withoutOverlapping();
+
+        // Send pre-queue/appointment reminders every minute
+        $schedule->command('appointments:send-reminders')
+            ->everyMinute()
+            ->withoutOverlapping();
+
+        // Send medicine intake reminders every minute
+        $schedule->command('prescriptions:send-reminders')
+            ->everyMinute()
+            ->withoutOverlapping();
     }
 
     /**
