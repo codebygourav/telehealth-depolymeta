@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class PatientDietPlanMeal extends Model
@@ -20,6 +21,8 @@ class PatientDietPlanMeal extends Model
         'meal_type',
         'meal_name',
         'instructions',
+        'meal_image',
+        'helpful_links',
         'calories',
         'protein_grams',
         'carbs_grams',
@@ -32,6 +35,7 @@ class PatientDietPlanMeal extends Model
     ];
 
     protected $casts = [
+        'helpful_links' => 'array',
         'calories' => 'integer',
         'protein_grams' => 'integer',
         'carbs_grams' => 'integer',
@@ -52,5 +56,10 @@ class PatientDietPlanMeal extends Model
     public function planDay(): BelongsTo
     {
         return $this->belongsTo(PatientDietPlanDay::class, 'patient_diet_plan_day_id');
+    }
+
+    public function completions(): HasMany
+    {
+        return $this->hasMany(PatientDietPlanMealCompletion::class, 'patient_diet_plan_meal_id');
     }
 }

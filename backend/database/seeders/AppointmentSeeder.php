@@ -28,9 +28,9 @@ class AppointmentSeeder extends Seeder
      */
     private const TODAY_APPOINTMENT_SPECS = [
         ['label' => 'Today Video Completed', 'consultation_type' => 'video', 'opd_type' => null, 'status' => 'completed', 'queue_status' => 'completed'],
-        ['label' => 'Today In-Person Running', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'running'],
-        ['label' => 'Today In-Person Waiting 1', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'waiting'],
-        ['label' => 'Today In-Person Waiting 2', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'waiting'],
+        ['label' => 'Today In-Person Running', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'started'],
+        ['label' => 'Today In-Person Waiting 1', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'checkin'],
+        ['label' => 'Today In-Person Waiting 2', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'checkin'],
         ['label' => 'Today In-Person Skipped', 'consultation_type' => 'in-person', 'opd_type' => 'general', 'status' => 'confirmed', 'queue_status' => 'skipped'],
     ];
 

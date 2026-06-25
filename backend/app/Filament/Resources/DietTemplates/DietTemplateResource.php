@@ -17,11 +17,10 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
@@ -93,323 +92,163 @@ class DietTemplateResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Grid::make(['default' => 1, 'xl' => 12])
-                ->columnSpanFull()
+            Section::make('Template Details')
+                ->description('Create a clear diet plan template and assign it to a doctor.')
                 ->schema([
-                    // Left Column (8 cols)
-                    Grid::make(1)
+                    Grid::make(2)
                         ->schema([
-                            Section::make('Template Details')
-                                ->description('Basic information for this diet plan.')
-                                ->schema([
-                                    Grid::make(2)
-                                        ->schema([
-                                            Select::make('doctor_id')
-                                                ->label('Doctor / Department')
-                                                ->options(fn() => Doctor::query()
-                                                    ->orderBy('first_name')
-                                                    ->orderBy('last_name')
-                                                    ->get()
-                                                    ->mapWithKeys(function (Doctor $doctor) {
-                                                        $name = trim($doctor->first_name . ' ' . $doctor->last_name);
-                                                        if (!$name || $name === '') {
-                                                            $name = $doctor->name ?? '';
-                                                        }
-                                                        if (!$name) {
-                                                            $name = 'Doctor #' . $doctor->id;
-                                                        }
+                            Select::make('doctor_id')
+                                ->label('Doctor')
+                                ->options(fn() => Doctor::query()
+                                    ->orderBy('first_name')
+                                    ->orderBy('last_name')
+                                    ->get()
+                                    ->mapWithKeys(function (Doctor $doctor) {
+                                        $name = trim($doctor->first_name . ' ' . $doctor->last_name);
+                                        if (!$name || $name === '') {
+                                            $name = $doctor->name ?? '';
+                                        }
+                                        if (!$name) {
+                                            $name = 'Doctor #' . $doctor->id;
+                                        }
 
-                                                        return [$doctor->id => $name];
-                                                    }))
-                                                ->searchable()
-                                                ->required()
-                                                ->default(fn() => Auth::user()?->doctor?->id)
-                                                ->disabled(function () {
-                                                    $role = Auth::user()?->role;
-                                                    $isDoctor = $role === 'doctor';
-                                                    $isPrivileged = in_array($role, ['super_admin', 'doctor_manager', 'receptionist'], true);
+                                        return [$doctor->id => $name];
+                                    }))
+                                ->searchable()
+                                ->required()
+                                ->default(fn() => Auth::user()?->doctor?->id)
+                                ->disabled(function () {
+                                    $role = Auth::user()?->role;
+                                    $isDoctor = $role === 'doctor';
+                                    $isPrivileged = in_array($role, ['super_admin', 'doctor_manager', 'receptionist'], true);
 
-                                                    return $isDoctor && ! $isPrivileged;
-                                                })
-                                                ->dehydrated(),
-                                            TextInput::make('name')
-                                                ->label('Template Name')
-                                                ->placeholder('Pregnancy Balanced Diet / Diabetes Diet Plan')
-                                                ->required()
-                                                ->maxLength(255),
-                                            Select::make('diet_category')
-                                                ->label('Diet Category')
-                                                ->options([
-                                                    'General Wellness' => 'General Wellness',
-                                                    'Pregnancy' => 'Pregnancy',
-                                                    'Diabetes' => 'Diabetes',
-                                                    'Weight Loss' => 'Weight Loss',
-                                                    'Cardiac' => 'Cardiac',
-                                                    'Kidney' => 'Kidney',
-                                                ])
-                                                ->default('General Wellness')
-                                                ->required(),
-                                            TextInput::make('duration_days')
-                                                ->label('Duration Days')
-                                                ->integer()
-                                                ->minValue(1)
-                                                ->maxValue(180)
-                                                ->default(7)
-                                                ->required(),
-                                            Select::make('patient_type')
-                                                ->label('Patient Type')
-                                                ->options([
-                                                    'Adult' => 'Adult',
-                                                    'Child' => 'Child',
-                                                    'Pregnant' => 'Pregnant',
-                                                    'Elder' => 'Elder',
-                                                ])
-                                                ->default('Adult')
-                                                ->required(),
-                                            Toggle::make('is_active')
-                                                ->label('Template Status')
-                                                ->onColor('success')
-                                                ->offColor('danger')
-                                                ->default(true),
-                                        ]),
-                                    Textarea::make('description')
-                                        ->label('Short Description')
-                                        ->rows(3)
-                                        ->placeholder('Example: Balanced 7-day diet plan for diabetic patients with controlled carbohydrates and meal timing.'),
-                                ]),
+                                    return $isDoctor && ! $isPrivileged;
+                                })
+                                ->dehydrated(),
+                            TextInput::make('name')
+                                ->label('Template Name')
+                                ->placeholder('Pregnancy Balanced Diet / Diabetes Diet Plan')
+                                ->required()
+                                ->maxLength(255),
+                            Select::make('duration_preset')
+                                ->label('Duration Preset')
+                                ->options(static::durationPresetOptions())
+                                ->default('1_week')
+                                ->live()
+                                ->afterStateHydrated(function ($component, $state, $record): void {
+                                    $component->state(static::durationPresetForDays((int) ($record?->duration_days ?? 7)));
+                                })
+                                ->afterStateUpdated(function ($state, callable $set): void {
+                                    $days = static::durationDaysForPreset((string) $state);
 
-                            Section::make('Diet Rules & Remarks')
-                                ->description('These notes help doctors, staff and patients understand the plan clearly.')
-                                ->schema([
-                                    Textarea::make('doctor_remark')
-                                        ->label('Doctor Remark')
-                                        ->rows(3)
-                                        ->placeholder('Example: Patient should follow this diet with regular sugar monitoring. Avoid skipping meals.'),
-                                    Grid::make(2)
-                                        ->schema([
-                                            Textarea::make('restrictions')
-                                                ->label('Food Restrictions')
-                                                ->rows(3)
-                                                ->placeholder('Avoid sugar, fried food, soft drinks, high salt items...'),
-                                            Textarea::make('allowed_food_notes')
-                                                ->label('Allowed Food Notes')
-                                                ->rows(3)
-                                                ->placeholder('Allowed: fruits in limited portion, high fiber food, boiled vegetables...'),
-                                        ]),
-                                    Grid::make(2)
-                                        ->schema([
-                                            TextInput::make('hydration_advice')
-                                                ->label('Hydration Advice')
-                                                ->placeholder('Example: 2.5 - 3 liters water daily'),
-                                            TextInput::make('exercise_advice')
-                                                ->label('Exercise / Lifestyle Advice')
-                                                ->placeholder('Example: 20 min walking after dinner'),
-                                        ]),
-                                ]),
-
-                            Section::make('Weekly Meal Chart')
-                                ->description('Add daily meals. Each meal can include timing, food items, quantity and special instruction.')
-                                ->extraAttributes(['class' => 'diet-template-chart'])
-                                ->schema([
-                                    View::make('filament.diet-templates.weekly-meal-chart-helper'),
-                                    Repeater::make('days')
-                                        ->label('Days')
-                                        ->relationship('days')
-                                        ->minItems(1)
-                                        ->defaultItems(1)
-                                        ->collapsible()
-                                        ->cloneable()
-                                        ->addActionLabel('Add New Day')
-                                        ->extraAttributes(['class' => 'diet-day-repeater'])
-                                        ->itemLabel(fn(array $state): ?string => static::dietDayItemLabel($state))
-                                        ->schema([
-                                            Grid::make(['default' => 1, 'md' => 2])
-                                                ->schema([
-                                                    TextInput::make('day_number')
-                                                        ->label('Day Number')
-                                                        ->integer()
-                                                        ->minValue(1)
-                                                        ->maxValue(31)
-                                                        ->required(),
-                                                    Select::make('week_day')
-                                                        ->label('Week Day')
-                                                        ->options(self::weekDayOptions())
-                                                        ->searchable()
-                                                        ->preload()
-                                                        ->required(),
-                                                ]),
-                                            Repeater::make('meals')
-                                                ->label('Meals')
-                                                ->relationship('meals')
-                                                ->minItems(1)
-                                                ->defaultItems(1)
-                                                ->reorderable()
-                                                ->orderColumn('sort_order')
-                                                ->collapsible()
-                                                ->cloneable()
-                                                ->addActionLabel('Add Meal To This Day')
-                                                ->extraAttributes(['class' => 'diet-meal-repeater'])
-                                                ->itemLabel(fn(array $state): ?string => static::dietMealItemLabel($state))
-                                                ->schema([
-                                                    Grid::make(['default' => 1, 'md' => 2])
-                                                        ->schema([
-                                                            Select::make('meal_type')
-                                                                ->label('Meal Type')
-                                                                ->options(self::mealTypeOptions())
-                                                                ->searchable()
-                                                                ->preload()
-                                                                ->live()
-                                                                ->afterStateUpdated(function ($state, callable $set): void {
-                                                                    $presetKey = static::defaultMealPresetKeyForType((string) $state);
-                                                                    $set('meal_preset', $presetKey);
-
-                                                                    $preset = static::mealPreset($presetKey);
-
-                                                                    if ($preset) {
-                                                                        static::applyMealPreset($set, $preset);
-                                                                    }
-                                                                })
-                                                                ->required(),
-                                                            Select::make('meal_preset')
-                                                                ->label('Meal Name / Food Items')
-                                                                ->options(fn(callable $get): array => static::mealPresetOptions((string) $get('meal_type')))
-                                                                ->placeholder('Select a suggested meal')
-                                                                ->searchable()
-                                                                ->preload()
-                                                                ->live()
-                                                                ->helperText('Selecting an option autofills details below. Admin can still edit everything.')
-                                                                ->afterStateUpdated(function ($state, callable $set): void {
-                                                                    $preset = static::mealPreset((string) $state);
-
-                                                                    if ($preset) {
-                                                                        static::applyMealPreset($set, $preset);
-                                                                    }
-                                                                })
-                                                                ->dehydrated(false),
-                                                            TextInput::make('meal_name')
-                                                                ->label('Editable Meal Name / Food Items')
-                                                                ->placeholder('Oats with fruit and milk')
-                                                                ->required()
-                                                                ->maxLength(255)
-                                                                ->columnSpanFull(),
-                                                        ]),
-                                                    Textarea::make('instructions')
-                                                        ->label('Instructions / Remark')
-                                                        ->rows(2)
-                                                        ->helperText('Optional meal preparation or portion guidance.')
-                                                        ->columnSpanFull(),
-                                                    Grid::make(['default' => 1, 'sm' => 2, 'xl' => 5])
-                                                        ->schema([
-                                                            TextInput::make('calories')
-                                                                ->label('Calories')
-                                                                ->numeric()
-                                                                ->minValue(0),
-                                                            TextInput::make('protein_grams')
-                                                                ->label('Protein (g)')
-                                                                ->numeric()
-                                                                ->minValue(0),
-                                                            TextInput::make('carbs_grams')
-                                                                ->label('Carbs (g)')
-                                                                ->numeric()
-                                                                ->minValue(0),
-                                                            TextInput::make('fat_grams')
-                                                                ->label('Fat (g)')
-                                                                ->numeric()
-                                                                ->minValue(0),
-                                                            TimePicker::make('start_time')
-                                                                ->label('Start Time'),
-                                                        ]),
-                                                ]),
-                                        ]),
-                                ]),
-                        ])
-                        ->columnSpan(9),
-
-                    // Right Column (4 cols)
-                    Grid::make(1)
-                        ->schema([
-                            Section::make('Nutrition Target')
-                                ->description('Optional values for better diet tracking.')
-                                ->schema([
-                                    TextInput::make('daily_calories')
-                                        ->label('Daily Calories')
-                                        ->placeholder('Example: 1600 kcal'),
-                                    TextInput::make('protein_target')
-                                        ->label('Protein Target')
-                                        ->placeholder('Example: 70g'),
-                                    TextInput::make('carbs_limit')
-                                        ->label('Carbs Limit')
-                                        ->placeholder('Example: 180g'),
-                                    TextInput::make('salt_limit')
-                                        ->label('Salt Limit')
-                                        ->placeholder('Example: Low salt'),
-                                ]),
-
-                            Section::make('Features To Add')
-                                ->schema([
-                                    Select::make('features')
-                                        ->label('')
-                                        ->multiple()
-                                        ->options([
-                                            'meal_timing' => 'Meal Timing',
-                                            'food_quantity' => 'Food Quantity',
-                                            'calories' => 'Calories',
-                                            'doctor_remark' => 'Doctor Remark',
-                                            'patient_instructions' => 'Patient Instructions',
-                                            'restrictions' => 'Restrictions',
-                                            'alternative_foods' => 'Alternative Foods',
-                                            'water_intake' => 'Water Intake',
-                                            'exercise_advice' => 'Exercise Advice',
-                                            'condition_based_diet' => 'Condition Based Diet',
-                                        ])
-                                        ->placeholder('Select features...'),
-                                ]),
-
-                            Section::make('Template Summary')
-                                ->schema([
-                                    \Filament\Forms\Components\Placeholder::make('summary_total_days')
-                                        ->label('Total Days')
-                                        ->content(fn ($get) => count($get('days') ?? [])),
-                                    \Filament\Forms\Components\Placeholder::make('summary_total_meals')
-                                        ->label('Total Meals')
-                                        ->content(function ($get) {
-                                            $days = $get('days') ?? [];
-                                            $totalMeals = 0;
-                                            foreach ($days as $day) {
-                                                $totalMeals += count($day['meals'] ?? []);
-                                            }
-                                            return $totalMeals;
-                                        }),
-                                    \Filament\Forms\Components\Placeholder::make('summary_assigned_doctor')
-                                        ->label('Assigned Doctor')
-                                        ->content(function ($get) {
-                                            $doctorId = $get('doctor_id');
-                                            if (! $doctorId) {
-                                                return 'Optional';
-                                            }
-                                            $doctor = Doctor::find($doctorId);
-                                            if (! $doctor) {
-                                                return 'Optional';
-                                            }
-                                            return 'Dr. ' . trim("{$doctor->first_name} {$doctor->last_name}");
-                                        }),
-                                    \Filament\Forms\Components\Placeholder::make('summary_status')
-                                        ->label('Status')
-                                        ->content(fn ($get) => $get('is_active') ? 'Active' : 'Inactive'),
-                                ]),
-
-                            \Filament\Forms\Components\Placeholder::make('summary_remark')
-                                ->label('')
-                                ->content(new \Illuminate\Support\HtmlString('
-                                    <div style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; padding: 1rem; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
-                                        <p style="font-size: 0.875rem; color: #78350F; font-weight: 500; margin: 0; line-height: 1.25rem;">
-                                            <strong>Remark:</strong> Diet template should be reusable. Admin can create standard diet plans like diabetes, pregnancy, weight loss, cardiac diet, kidney diet and assign them to doctors or patients.
-                                        </p>
-                                    </div>
-                                ')),
-                        ])
-                        ->columnSpan(3),
+                                    if ($days !== null) {
+                                        $set('duration_days', $days);
+                                    }
+                                })
+                                ->dehydrated(false),
+                            TextInput::make('duration_days')
+                                ->label('Duration Days')
+                                ->integer()
+                                ->minValue(1)
+                                ->maxValue(180)
+                                ->default(7)
+                                ->helperText('Select a common preset above or enter a custom number of days.')
+                                ->required(),
+                            Toggle::make('is_active')
+                                ->label('Active')
+                                ->onColor('success')
+                                ->offColor('danger')
+                                ->default(true),
+                        ]),
+                    Textarea::make('description')
+                        ->label('Short Description')
+                        ->rows(3)
+                        ->helperText('Optional details to describe the diet plan.'),
+                    Textarea::make('restrictions')
+                        ->label('Diet Restrictions')
+                        ->rows(3)
+                        ->helperText('Optional restrictions or food avoidances for this plan.'),
+                    Textarea::make('notes')
+                        ->label('Notes')
+                        ->rows(3)
+                        ->helperText('Optional doctor notes for the patient.'),
                 ])
+                ->columnSpanFull(),
+
+            Section::make('Meal Schedule Rule')
+                ->description('Choose recurring or one-time mode. Weekly chart behavior updates automatically based on this rule.')
+                ->schema([
+                    Hidden::make('features.schedule.recurrence_mode')
+                        ->default('recurring')
+                        ->afterStateHydrated(function ($component, $state): void {
+                            if (! filled($state)) {
+                                $component->state('recurring');
+                            }
+                        })
+                        ->live(),
+                    Hidden::make('features.schedule.pattern_type')
+                        ->default('weekly')
+                        ->afterStateHydrated(function ($component, $state): void {
+                            if (! filled($state)) {
+                                $component->state('weekly');
+                            }
+                        })
+                        ->live(),
+                    Hidden::make('features.schedule.cycle_length_days')
+                        ->default(7)
+                        ->afterStateHydrated(function ($component, $state): void {
+                            if (! filled($state)) {
+                                $component->state(7);
+                            }
+                        }),
+                    Hidden::make('features.schedule.follow_same_meal_all_days')
+                        ->default(false)
+                        ->live(),
+                    View::make('filament.diet-templates.meal-schedule-rule-helper'),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('Weekly Meal Chart')
+                ->description('Manage week tabs, day tabs, and meals in one editor.')
+                ->collapsible()
+                ->extraAttributes(['class' => 'diet-template-chart'])
+                ->schema([
+                    Hidden::make('diet_chart_payload')
+                        ->default(fn(): string => json_encode(static::normalizeDietChartData([])))
+                        ->dehydrated()
+                        ->live(),
+                    View::make('filament.diet-templates.weekly-meal-chart-context'),
+                ])
+                ->columnSpanFull(),
+
+            Section::make('Sync Updates to Patients')
+                ->description('If you updated meals, video links, or recipes, select the active patients you want to apply these updates to.')
+                ->schema([
+                    Select::make('sync_patient_plans')
+                        ->label('Patients currently on this diet plan')
+                        ->multiple()
+                        ->options(function ($record) {
+                            if (!$record) {
+                                return [];
+                            }
+                            return \App\Models\PatientDietPlan::query()
+                                ->where('diet_template_id', $record->id)
+                                ->where('status', 'active')
+                                ->with('patient.user')
+                                ->get()
+                                ->mapWithKeys(function (\App\Models\PatientDietPlan $plan) {
+                                    $patientName = $plan->patient?->user?->name ?? ('Patient #' . $plan->patient_id);
+                                    $startDate = $plan->start_date ? \Carbon\Carbon::parse($plan->start_date)->format('d M Y') : 'N/A';
+                                    return [$plan->id => "{$patientName} (Started: {$startDate})"];
+                                })
+                                ->toArray();
+                        })
+                        ->searchable()
+                        ->placeholder('Choose patients to update (leave empty to only update the template)')
+                        ->dehydrated(false),
+                ])
+                ->visible(fn ($operation) => $operation === 'edit')
+                ->columnSpanFull(),
         ]);
     }
 
@@ -544,6 +383,244 @@ class DietTemplateResource extends Resource
         ];
     }
 
+    private static function durationPresetOptions(): array
+    {
+        return [
+            '1_week' => '1 week (7 days)',
+            '2_weeks' => '2 weeks (14 days)',
+            '3_weeks' => '3 weeks (21 days)',
+            '1_month' => '1 month (30 days)',
+            '2_months' => '2 months (60 days)',
+            'custom' => 'Custom duration',
+        ];
+    }
+
+    private static function durationDaysForPreset(?string $preset): ?int
+    {
+        return match ($preset) {
+            '1_week' => 7,
+            '2_weeks' => 14,
+            '3_weeks' => 21,
+            '1_month' => 30,
+            '2_months' => 60,
+            default => null,
+        };
+    }
+
+    private static function durationPresetForDays(int $days): string
+    {
+        return match ($days) {
+            7 => '1_week',
+            14 => '2_weeks',
+            21 => '3_weeks',
+            30 => '1_month',
+            60 => '2_months',
+            default => 'custom',
+        };
+    }
+
+    private static function scheduleRecurrenceOptions(): array
+    {
+        return [
+            'recurring' => 'Recurring template',
+            'one_time' => 'One-time template (no repeat)',
+        ];
+    }
+
+    private static function schedulePatternOptions(): array
+    {
+        return [
+            'weekly' => 'Weekly repeat (Monday-Sunday)',
+            'cycle' => 'Cycle repeat (7/14/21/28/30 days)',
+        ];
+    }
+
+    private static function scheduleRepeatLogicOptions(): array
+    {
+        return [
+            'repeat_cycle_until_duration' => 'Repeat cycle until duration ends',
+        ];
+    }
+
+    private static function scheduleCycleLengthOptions(): array
+    {
+        return [
+            7 => '1 week cycle (7 days)',
+            14 => '2 weeks cycle (14 days)',
+            21 => '3 weeks cycle (21 days)',
+            28 => '4 weeks cycle (28 days)',
+            30 => '1 month cycle (30 days)',
+        ];
+    }
+
+    private static function scheduleValue(callable $get, string $field, mixed $default = null): mixed
+    {
+        return $get("features.schedule.{$field}")
+            ?? $get("../features.schedule.{$field}")
+            ?? $get("../../features.schedule.{$field}")
+            ?? $default;
+    }
+
+    public static function dietChartDataForForm(DietTemplate $record): array
+    {
+        return $record->days()
+            ->with('meals')
+            ->orderBy('day_number')
+            ->get()
+            ->map(fn($day): array => [
+                'day_number' => (int) $day->day_number,
+                'week_day' => (string) $day->week_day,
+                'meals' => $day->meals
+                    ->sortBy('sort_order')
+                    ->values()
+                    ->map(fn($meal): array => [
+                        'meal_type' => (string) $meal->meal_type,
+                        'meal_name' => (string) $meal->meal_name,
+                        'instructions' => (string) ($meal->instructions ?? ''),
+                        'meal_image' => (string) ($meal->meal_image ?? ''),
+                        'helpful_links' => collect($meal->helpful_links ?? [])->map(fn($link): array => [
+                            'type' => (string) ($link['type'] ?? ''),
+                            'title' => (string) ($link['title'] ?? ''),
+                            'url' => (string) ($link['url'] ?? ''),
+                        ])->all(),
+                        'calories' => $meal->calories,
+                        'protein_grams' => $meal->protein_grams,
+                        'carbs_grams' => $meal->carbs_grams,
+                        'fat_grams' => $meal->fat_grams,
+                        'start_time' => $meal->start_time ? substr((string) $meal->start_time, 0, 5) : '',
+                        'sort_order' => (int) $meal->sort_order,
+                    ])
+                    ->all(),
+            ])
+            ->all();
+    }
+
+    public static function normalizeDietChartData(?array $days): array
+    {
+        $weekDays = array_keys(static::weekDayOptions());
+
+        $normalized = collect($days ?: [])
+            ->values()
+            ->map(function (array $day, int $index) use ($weekDays): array {
+                $dayNumber = max(1, (int) ($day['day_number'] ?? ($index + 1)));
+                $weekDay = (string) ($day['week_day'] ?? $weekDays[($dayNumber - 1) % count($weekDays)]);
+
+                if (! array_key_exists($weekDay, static::weekDayOptions())) {
+                    $weekDay = $weekDays[($dayNumber - 1) % count($weekDays)];
+                }
+
+                $meals = collect($day['meals'] ?? [])
+                    ->values()
+                    ->filter(fn($meal): bool => filled($meal['meal_name'] ?? null) || filled($meal['meal_type'] ?? null))
+                    ->map(fn(array $meal, int $mealIndex): array => [
+                        'meal_type' => (string) ($meal['meal_type'] ?? 'MORNING'),
+                        'meal_name' => (string) ($meal['meal_name'] ?? 'New meal'),
+                        'instructions' => filled($meal['instructions'] ?? null) ? (string) $meal['instructions'] : null,
+                        'meal_image' => filled($meal['meal_image'] ?? null) ? (string) $meal['meal_image'] : null,
+                        'helpful_links' => collect($meal['helpful_links'] ?? [])
+                            ->filter(fn($link): bool => filled($link['url'] ?? null))
+                            ->map(fn($link): array => [
+                                'type' => filled($link['type'] ?? null) ? (string) $link['type'] : 'recipe',
+                                'title' => filled($link['title'] ?? null) ? (string) $link['title'] : null,
+                                'url' => (string) $link['url'],
+                            ])
+                            ->values()
+                            ->all(),
+                        'calories' => filled($meal['calories'] ?? null) ? (int) $meal['calories'] : null,
+                        'protein_grams' => filled($meal['protein_grams'] ?? null) ? (int) $meal['protein_grams'] : null,
+                        'carbs_grams' => filled($meal['carbs_grams'] ?? null) ? (int) $meal['carbs_grams'] : null,
+                        'fat_grams' => filled($meal['fat_grams'] ?? null) ? (int) $meal['fat_grams'] : null,
+                        'start_time' => filled($meal['start_time'] ?? null) ? (string) $meal['start_time'] : null,
+                        'sort_order' => $mealIndex,
+                    ])
+                    ->all();
+
+                return [
+                    'day_number' => $dayNumber,
+                    'week_day' => $weekDay,
+                    'meals' => $meals,
+                ];
+            })
+            ->all();
+
+        return $normalized ?: [
+            [
+                'day_number' => 1,
+                'week_day' => 'MONDAY',
+                'meals' => [],
+            ],
+        ];
+    }
+
+    public static function decodeDietChartPayload(mixed $payload): array
+    {
+        if (is_array($payload)) {
+            return static::normalizeDietChartData($payload);
+        }
+
+        if (! is_string($payload) || trim($payload) === '') {
+            return static::normalizeDietChartData([]);
+        }
+
+        $decoded = json_decode($payload, true);
+
+        return static::normalizeDietChartData(is_array($decoded) ? $decoded : []);
+    }
+
+    public static function syncDietChart(DietTemplate $record, ?array $days): void
+    {
+        $record->days()->delete();
+
+        foreach (static::normalizeDietChartData($days) as $dayData) {
+            $day = $record->days()->create([
+                'day_number' => $dayData['day_number'],
+                'week_day' => $dayData['week_day'],
+            ]);
+
+            foreach ($dayData['meals'] as $mealData) {
+                $day->meals()->create($mealData);
+            }
+        }
+    }
+
+    private static function canAddTemplateDay(callable $get): bool
+    {
+        $days = $get('days') ?? [];
+        $dayCount = is_countable($days) ? count($days) : 0;
+
+        $recurrenceMode = (string) static::scheduleValue($get, 'recurrence_mode', 'recurring');
+        $patternType = (string) static::scheduleValue($get, 'pattern_type', 'weekly');
+        $cycleLength = max(1, (int) static::scheduleValue($get, 'cycle_length_days', 7));
+        $durationDays = max(1, (int) ($get('duration_days') ?? 7));
+
+        if ($recurrenceMode === 'one_time') {
+            return $dayCount < $durationDays;
+        }
+
+        if ($patternType === 'cycle') {
+            return $dayCount < $cycleLength;
+        }
+
+        return $dayCount < $durationDays;
+    }
+
+    private static function dayRepeaterHelperText(callable $get): string
+    {
+        $recurrenceMode = (string) static::scheduleValue($get, 'recurrence_mode', 'recurring');
+        $patternType = (string) static::scheduleValue($get, 'pattern_type', 'weekly');
+        $cycleLength = max(1, (int) static::scheduleValue($get, 'cycle_length_days', 7));
+
+        if ($recurrenceMode === 'one_time') {
+            return 'One-time mode: add exact days needed. Patient plan will not repeat beyond configured days.';
+        }
+
+        if ($patternType === 'weekly') {
+            return 'Weekly mode: add day entries up to the selected duration. Use the week and day tabs above to edit one day at a time.';
+        }
+
+        return "Cycle mode: add up to {$cycleLength} days. After that, the cycle repeats automatically for patient duration.";
+    }
+
     private static function dietDayItemLabel(array $state): ?string
     {
         $dayNumber = $state['day_number'] ?? null;
@@ -617,22 +694,24 @@ class DietTemplateResource extends Resource
 
     private static function applyMealPreset(callable $set, array $preset): void
     {
-        foreach ([
-            'meal_name',
-            'instructions',
-            'calories',
-            'protein_grams',
-            'carbs_grams',
-            'fat_grams',
-            'start_time',
-        ] as $field) {
+        foreach (
+            [
+                'meal_name',
+                'instructions',
+                'calories',
+                'protein_grams',
+                'carbs_grams',
+                'fat_grams',
+                'start_time',
+            ] as $field
+        ) {
             if (array_key_exists($field, $preset)) {
                 $set($field, $preset[$field]);
             }
         }
     }
 
-    private static function mealPresets(): array
+    public static function mealPresets(): array
     {
         return [
             'MORNING' => [

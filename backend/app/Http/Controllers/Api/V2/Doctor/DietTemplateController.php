@@ -20,13 +20,13 @@ class DietTemplateController extends Controller
         }
 
         $templates = DietTemplate::with(['days.meals'])
-            ->when($doctor, fn ($query) => $query->where('doctor_id', $doctor->id))
-            ->when($request->boolean('active_only'), fn ($query) => $query->where('is_active', true))
-            ->when($request->filled('search'), fn ($query) => $query->where('name', 'like', '%' . $request->string('search')->toString() . '%'))
+            ->when($doctor, fn($query) => $query->where('doctor_id', $doctor->id))
+            ->when($request->boolean('active_only'), fn($query) => $query->where('is_active', true))
+            ->when($request->filled('search'), fn($query) => $query->where('name', 'like', '%' . $request->string('search')->toString() . '%'))
             ->latest()
             ->paginate($request->integer('per_page', 10));
 
-        return ApiResponseService::paginated($templates->through(fn ($template) => $this->templateData($template)));
+        return ApiResponseService::paginated($templates->through(fn($template) => $this->templateData($template)));
     }
 
     public function store(Request $request)
@@ -135,6 +135,11 @@ class DietTemplateController extends Controller
             'days.*.meals.*.meal_type' => ['required', 'string', 'in:MORNING,BREAKFAST,MID_MEAL,LUNCH,EVENING_SNACK,DINNER,NIGHT'],
             'days.*.meals.*.meal_name' => ['required', 'string', 'max:255'],
             'days.*.meals.*.instructions' => ['nullable', 'string'],
+            'days.*.meals.*.meal_image' => ['nullable', 'string'],
+            'days.*.meals.*.helpful_links' => ['nullable', 'array'],
+            'days.*.meals.*.helpful_links.*.type' => ['nullable', 'string', 'max:50'],
+            'days.*.meals.*.helpful_links.*.title' => ['nullable', 'string', 'max:255'],
+            'days.*.meals.*.helpful_links.*.url' => ['nullable', 'url', 'max:2000'],
             'days.*.meals.*.calories' => ['nullable', 'integer', 'min:0'],
             'days.*.meals.*.protein_grams' => ['nullable', 'integer', 'min:0'],
             'days.*.meals.*.carbs_grams' => ['nullable', 'integer', 'min:0'],
@@ -159,6 +164,8 @@ class DietTemplateController extends Controller
                     'meal_type' => strtoupper($mealData['meal_type']),
                     'meal_name' => $mealData['meal_name'],
                     'instructions' => $mealData['instructions'] ?? null,
+                    'meal_image' => $mealData['meal_image'] ?? null,
+                    'helpful_links' => $mealData['helpful_links'] ?? null,
                     'calories' => $mealData['calories'] ?? null,
                     'protein_grams' => $mealData['protein_grams'] ?? null,
                     'carbs_grams' => $mealData['carbs_grams'] ?? null,
@@ -203,6 +210,7 @@ class DietTemplateController extends Controller
             'restrictions' => $template->restrictions,
             'notes' => $template->notes,
             'is_active' => $template->is_active,
+            'features' => $template->features,
             'days' => $template->days->map(function (DietTemplateDay $day) {
                 return [
                     'id' => $day->id,
@@ -214,6 +222,8 @@ class DietTemplateController extends Controller
                             'meal_type' => $meal->meal_type,
                             'meal_name' => $meal->meal_name,
                             'instructions' => $meal->instructions,
+                            'meal_image' => $meal->meal_image,
+                            'helpful_links' => $meal->helpful_links ?? [],
                             'calories' => $meal->calories,
                             'protein_grams' => $meal->protein_grams,
                             'carbs_grams' => $meal->carbs_grams,

@@ -13,9 +13,12 @@ import {
     Clock3,
     Droplet,
     Dumbbell,
+    Eye,
     Info,
     Leaf,
+    Link as LinkIcon,
     Moon,
+    PlayCircle,
     Sun,
     Utensils,
 } from 'lucide-react';
@@ -108,15 +111,60 @@ export default function WeeklyMealChart() {
     const queryClient = useQueryClient();
     const { data, isLoading } = useDietPlan();
     const completeMealMutation = useCompleteDietMeal();
-    const activePlan = data?.data;
+    const planPayload = data?.data;
 
     const [pageIndex, setPageIndex] = useState(0);
     const [selectedDayNumber, setSelectedDayNumber] = useState<number | null>(null);
     const [activeMeal, setActiveMeal] = useState<Meal | null>(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isLogOpen, setIsLogOpen] = useState(false);
+    const [mealTab, setMealTab] = useState<'all' | 'pending' | 'completed' | 'past'>('all');
     const [logNotes, setLogNotes] = useState('');
     const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
+    const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+    const [sidebarMediaIndex, setSidebarMediaIndex] = useState(0);
+
+    const allPlans = useMemo(() => {
+        if (!planPayload) {
+            return [];
+        }
+
+        const plans = Array.isArray((planPayload as any)?.plans)
+            ? (planPayload as any).plans
+            : ((planPayload as any)?.id ? [planPayload as any] : []);
+
+        return [...plans].sort((a: any, b: any) => String(a.start_date || '').localeCompare(String(b.start_date || '')));
+    }, [planPayload]);
+
+    const activePlan = useMemo(() => {
+        if (!allPlans.length) {
+            return null;
+        }
+
+        if (selectedPlanId) {
+            const selected = allPlans.find((plan: any) => plan.id === selectedPlanId);
+            if (selected) {
+                return selected;
+            }
+        }
+
+        return allPlans[allPlans.length - 1];
+    }, [allPlans, selectedPlanId]);
+
+    useEffect(() => {
+        if (!allPlans.length) {
+            setSelectedPlanId(null);
+            return;
+        }
+
+        setSelectedPlanId((current) => {
+            if (current && allPlans.some((plan: any) => plan.id === current)) {
+                return current;
+            }
+
+            return allPlans[allPlans.length - 1]?.id || null;
+        });
+    }, [allPlans]);
 
     const planDays = useMemo(() => {
         if (!activePlan?.days?.length) return [];
@@ -133,6 +181,8 @@ export default function WeeklyMealChart() {
         pageIndex * DAYS_PER_PAGE,
         pageIndex * DAYS_PER_PAGE + DAYS_PER_PAGE,
     );
+    const todayDate = format(new Date(), 'yyyy-MM-dd');
+    const isToday = (date?: string | null) => date === todayDate;
 
     // Only set initial selected day and page index on initial mount or when plan ID changes
     useEffect(() => {
@@ -167,20 +217,63 @@ export default function WeeklyMealChart() {
     );
 
     const selectedDayMeals = selectedDay?.meals || [];
+    const filteredDayMeals = useMemo(() => {
+        const today = format(new Date(), 'yyyy-MM-dd');
+
+        return selectedDayMeals.filter((meal) => {
+            if (mealTab === 'completed') return meal.status === 'completed';
+            if (mealTab === 'pending') return meal.status !== 'completed';
+            if (mealTab === 'past') return Boolean(selectedDay?.date && selectedDay.date < today);
+            return true;
+        });
+    }, [mealTab, selectedDay?.date, selectedDayMeals]);
+
     const completedMeals = selectedDayMeals.filter((meal) => meal.status === 'completed').length;
     const totalCalories = selectedDayMeals.reduce(
         (total, meal) => total + Number(meal.calories || 0),
         0,
     );
+    const sidebarMediaItems = useMemo(() => {
+        return selectedDayMeals
+            .map((meal) => {
+                const links = Array.isArray(meal.helpful_links) ? meal.helpful_links : [];
+                const validLinks = links
+                    .filter((link) => Boolean(link?.url))
+                    .map((link) => ({
+                        url: link.url,
+                        title: link.title || 'Open link',
+                        type: String(link.type || 'link').toLowerCase(),
+                    }));
+
+                return {
+                    mealId: meal.id,
+                    mealName: meal.meal_name,
+                    mealType: meal.meal_type,
+                    links: validLinks,
+                };
+            })
+            .filter((entry) => entry.links.length > 0)
+            .map((entry) => ({
+                ...entry,
+                summary: `${entry.links.length} link${entry.links.length > 1 ? 's' : ''}`,
+            }));
+    }, [selectedDayMeals]);
 
     const visibleStart = visibleDays[0]?.date;
     const visibleEnd = visibleDays[visibleDays.length - 1]?.date;
 
+    useEffect(() => {
+        setSidebarMediaIndex(0);
+    }, [selectedDay?.day_number]);
+
     const handleLogMeal = async () => {
         if (!activeMeal) return;
+        const occurrenceDate = activeMeal.occurrence_date || selectedDay?.date || '';
+        if (!isToday(occurrenceDate)) return;
 
         await completeMealMutation.mutateAsync({
             mealId: activeMeal.id,
+            occurrenceDate,
             notes: logNotes,
         });
 
@@ -199,9 +292,9 @@ export default function WeeklyMealChart() {
         );
     }
 
-    if (!activePlan?.days?.length) {
+    if (!allPlans.length || !activePlan?.days?.length) {
         return (
-            <div className="flex min-h-80 flex-col items-center justify-center border border-dashed border-[#E7E8EB] bg-[#FAFAFA] p-8 text-center global-radius">
+            <div className="flex min-h-80 flex-col items-center justify-center border border-dashed border-[#BFD4F5] bg-[#FAFAFA] p-8 text-center global-radius">
                 <Utensils className="mb-3 h-8 w-8 text-primary" />
                 <h2 className="text-lg font-bold text-[#1F1E1E]">No active diet plan assigned</h2>
                 <p className="mt-2 max-w-md text-sm text-[#4D4D4D]">
@@ -213,8 +306,33 @@ export default function WeeklyMealChart() {
 
     return (
         <div className="space-y-4">
+            <section className="border border-[#BFD4F5] bg-white p-3.5 global-radius shadow-sm space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                    {allPlans.map((plan: any, index: number) => {
+                        const isActive = plan.id === activePlan?.id;
+                        const assignedLabel = plan.start_date ? format(parseISO(plan.start_date), 'dd MMM yyyy') : `Plan ${index + 1}`;
+
+                        return (
+                            <button
+                                key={`plan-toggle-${plan.id}`}
+                                type="button"
+                                onClick={() => setSelectedPlanId(plan.id)}
+                                className={`rounded-md border px-3 py-1.5 text-left transition-all ${
+                                    isActive
+                                        ? 'border-primary bg-primary/10 text-primary'
+                                        : 'border-[#BFD4F5] bg-white text-[#1F1E1E] hover:border-primary/35 hover:bg-primary/5'
+                                }`}
+                            >
+                                <span className="block text-[11px] font-bold leading-tight">{plan.template_name || `Diet Plan ${index + 1}`}</span>
+                                <span className="block text-[10px] font-semibold opacity-75">Assigned: {assignedLabel}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </section>
+
             {/* Elegant Compact Header Banner */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-[#E7E8EB] bg-white p-4 global-radius shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-[#BFD4F5] bg-white p-4 global-radius shadow-sm">
                 <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <Leaf className="h-5 w-5" />
@@ -239,19 +357,32 @@ export default function WeeklyMealChart() {
             </div>
 
             {/* Day Selector Calendar */}
-            <section className="border border-[#E7E8EB] bg-white p-3.5 global-radius shadow-sm space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                    <div>
-                        <h2 className="text-sm font-bold text-[#1F1E1E]">Meal Calendar</h2>
+            <section className="border border-[#BFD4F5] bg-white p-3.5 global-radius shadow-sm space-y-3">
+                <div className="flex flex-col gap-2 rounded-md border border-[#BFD4F5] bg-[#F7FAFF] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap gap-2">
+                        {(['all', 'pending', 'completed', 'past'] as const).map((tab) => (
+                            <button
+                                key={tab}
+                                type="button"
+                                onClick={() => setMealTab(tab)}
+                                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+                                    mealTab === tab
+                                        ? 'border-primary bg-primary/10 text-primary'
+                                        : 'border-[#BFD4F5] bg-white text-[#4D4D4D] hover:border-primary/35 hover:text-primary'
+                                }`}
+                            >
+                                {tab[0].toUpperCase() + tab.slice(1)}
+                            </button>
+                        ))}
                     </div>
 
-                    <div className="flex h-8 items-center border border-[#E7E8EB] bg-white rounded-md">
+                    <div className="flex h-8 items-center rounded-md border border-[#BFD4F5] bg-white overflow-hidden">
                         <button
                             type="button"
                             aria-label="Previous seven days"
                             disabled={pageIndex === 0}
                             onClick={handlePrevPage}
-                            className="flex h-full w-8 items-center justify-center text-[#4D4D4D] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 border-r border-[#E7E8EB]"
+                            className="flex h-full w-8 items-center justify-center text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-30 border-r border-[#BFD4F5]"
                         >
                             <ChevronLeft className="h-3.5 w-3.5" />
                         </button>
@@ -265,27 +396,27 @@ export default function WeeklyMealChart() {
                             aria-label="Next seven days"
                             disabled={pageIndex >= pageCount - 1}
                             onClick={handleNextPage}
-                            className="flex h-full w-8 items-center justify-center text-[#4D4D4D] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 border-l border-[#E7E8EB]"
+                            className="flex h-full w-8 items-center justify-center text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-30 border-l border-[#BFD4F5]"
                         >
                             <ChevronRight className="h-3.5 w-3.5" />
                         </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                     {visibleDays.map((day) => {
                         const isSelected = day.day_number === selectedDay?.day_number;
                         const date = day.date ? parseISO(day.date) : null;
 
                         return (
                             <button
-                                key={day.id}
+                                key={`${day.date || day.day_number}-${day.id}`}
                                 type="button"
                                 onClick={() => setSelectedDayNumber(day.day_number)}
-                                className={`relative flex flex-col items-center justify-center py-2 px-1 text-center transition-all duration-200 rounded-md border ${
+                                className={`relative min-w-20 rounded-md border px-3 py-2.5 text-center transition-all duration-200 ${
                                     isSelected
                                         ? 'border-primary bg-primary text-white shadow-sm shadow-primary/20'
-                                        : 'border-[#E7E8EB] bg-slate-50/50 text-[#1F1E1E] hover:border-primary/35 hover:bg-primary/5'
+                                        : 'border-[#BFD4F5] bg-[#F7FAFF] text-[#1F1E1E] hover:border-primary/35 hover:bg-primary/5'
                                 }`}
                             >
                                 <span className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/80' : 'text-[#7A7A7A]'}`}>
@@ -311,7 +442,7 @@ export default function WeeklyMealChart() {
                 {/* Left Side: Day Summary & Instructions */}
                 <aside className="space-y-3">
                     {/* Day Progress Card */}
-                    <div className="border border-[#E7E8EB] bg-white p-4 global-radius shadow-sm">
+                    <div className="border border-[#BFD4F5] bg-white p-4 global-radius shadow-sm">
                         <p className="text-xs font-bold text-[#1F1E1E]">Day {selectedDay?.day_number} Progress</p>
                         <div className="mt-2.5 flex items-center justify-between">
                             <span className="text-sm font-semibold text-[#4D4D4D]">
@@ -333,13 +464,78 @@ export default function WeeklyMealChart() {
                         )}
                     </div>
 
+                    <div className="border border-[#BFD4F5] bg-white p-4 global-radius shadow-sm">
+                        <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-bold text-[#1F1E1E]">Recipe & Video Links</p>
+                            {sidebarMediaItems.length > 1 && (
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        aria-label="Previous media"
+                                        onClick={() => setSidebarMediaIndex((prev) => (prev - 1 + sidebarMediaItems.length) % sidebarMediaItems.length)}
+                                        className="h-7 w-7 rounded-full border border-[#BFD4F5] bg-white text-primary hover:bg-primary/5"
+                                    >
+                                        <ChevronLeft className="mx-auto h-4 w-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-label="Next media"
+                                        onClick={() => setSidebarMediaIndex((prev) => (prev + 1) % sidebarMediaItems.length)}
+                                        className="h-7 w-7 rounded-full border border-[#BFD4F5] bg-white text-primary hover:bg-primary/5"
+                                    >
+                                        <ChevronRight className="mx-auto h-4 w-4" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {sidebarMediaItems.length ? (
+                            <div className="mt-3 rounded-lg border border-[#BFD4F5] bg-[#F7FAFF] p-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-primary">
+                                    {(sidebarMediaItems[sidebarMediaIndex]?.mealType || 'Meal').toString().replaceAll('_', ' ')}
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-[#1F1E1E] line-clamp-2">
+                                    {sidebarMediaItems[sidebarMediaIndex]?.mealName}
+                                </p>
+                                <p className="mt-1 text-[11px] font-semibold text-[#4D4D4D]">
+                                    {sidebarMediaItems[sidebarMediaIndex]?.summary}
+                                </p>
+                                <div className="mt-3 space-y-2">
+                                    {(sidebarMediaItems[sidebarMediaIndex]?.links || []).map((link, index) => (
+                                        <a
+                                            key={`patient-sidebar-link-${sidebarMediaIndex}-${index}`}
+                                            href={link.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex w-full items-center justify-between gap-2 rounded-lg border border-[#BFD4F5] bg-white px-2.5 py-1.5 text-xs font-semibold text-primary"
+                                        >
+                                            <span className="truncate">
+                                                {link.type === 'youtube' ? 'YouTube' : link.type}: {link.title}
+                                            </span>
+                                            {link.type === 'youtube' ? <PlayCircle className="h-3.5 w-3.5 shrink-0" /> : <LinkIcon className="h-3.5 w-3.5 shrink-0" />}
+                                        </a>
+                                    ))}
+                                </div>
+                                {sidebarMediaItems.length > 1 && (
+                                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-[#6B6B6B]">
+                                        {sidebarMediaIndex + 1} / {sidebarMediaItems.length}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="mt-3 rounded-lg border border-dashed border-[#BFD4F5] bg-[#FAFCFF] p-4 text-center text-xs font-semibold text-[#6B6B6B]">
+                                No media links available for this day.
+                            </div>
+                        )}
+                    </div>
+
                     {/* Doctor's Remarks */}
                     {activePlan.doctor_remark && (
-                        <div className="flex items-start gap-2.5 border border-[#F5D38A] bg-[#FFF9EC] p-3.5 global-radius shadow-sm">
-                            <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#A86600]" />
+                        <div className="flex items-start gap-2.5 border border-[#CFE0F8] bg-[#F4F8FF] p-3.5 global-radius shadow-sm">
+                            <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
                             <div>
-                                <p className="text-xs font-bold text-[#7A4A00]">Doctor&apos;s Remarks</p>
-                                <p className="mt-1 text-xs leading-relaxed text-[#5F4A25]">{activePlan.doctor_remark}</p>
+                                <p className="text-xs font-bold text-blue-800">Doctor&apos;s Remarks</p>
+                                <p className="mt-1 text-xs leading-relaxed text-blue-700">{activePlan.doctor_remark}</p>
                             </div>
                         </div>
                     )}
@@ -357,7 +553,7 @@ export default function WeeklyMealChart() {
 
                     {/* Food Restrictions */}
                     {activePlan.restrictions && (
-                        <div className="flex items-start gap-2.5 border border-red-200 bg-red-50 p-3.5 global-radius shadow-sm">
+                        <div className="flex items-start gap-2.5 border border-[#F7CACA] bg-[#FFF5F5] p-3.5 global-radius shadow-sm">
                             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-650" />
                             <div>
                                 <p className="text-xs font-bold text-red-800">Avoid / Restrictions</p>
@@ -368,7 +564,7 @@ export default function WeeklyMealChart() {
 
                     {/* Allowed Food Notes */}
                     {activePlan.allowed_food_notes && (
-                        <div className="flex items-start gap-2.5 border border-green-200 bg-green-50 p-3.5 global-radius shadow-sm">
+                        <div className="flex items-start gap-2.5 border border-[#CFE8D7] bg-[#F2FBF5] p-3.5 global-radius shadow-sm">
                             <Leaf className="mt-0.5 h-4 w-4 shrink-0 text-green-700" />
                             <div>
                                 <p className="text-xs font-bold text-green-800">Allowed Foods</p>
@@ -379,7 +575,7 @@ export default function WeeklyMealChart() {
 
                     {/* Exercise & Lifestyle */}
                     {activePlan.exercise_advice && (
-                        <div className="flex items-start gap-2.5 border border-blue-200 bg-blue-50 p-3.5 global-radius shadow-sm">
+                        <div className="flex items-start gap-2.5 border border-[#CFE0F8] bg-[#F4F8FF] p-3.5 global-radius shadow-sm">
                             <Dumbbell className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
                             <div>
                                 <p className="text-xs font-bold text-blue-800">Lifestyle & Exercise</p>
@@ -391,18 +587,28 @@ export default function WeeklyMealChart() {
 
                 {/* Right Side: High-Density Timeline of Meals */}
                 <div className="space-y-3">
-                    {selectedDayMeals.length ? (
-                        selectedDayMeals.map((meal) => {
+                    <div className="flex items-center justify-between rounded-md border border-[#BFD4F5] bg-[#F7FAFF] px-3 py-2">
+                        <div className="text-xs font-bold text-[#1F1E1E]">
+                            {selectedDay?.week_day ? selectedDay.week_day.charAt(0) + selectedDay.week_day.slice(1).toLowerCase() : `Day ${selectedDay?.day_number}`} Meals
+                        </div>
+                        <div className="text-[11px] font-semibold text-[#4D4D4D]">
+                            {filteredDayMeals.length} shown
+                        </div>
+                    </div>
+
+                    {filteredDayMeals.length ? (
+                        filteredDayMeals.map((meal) => {
                             const MealIcon = getMealIcon(meal.meal_type);
                             const isCompleted = meal.status === 'completed';
+                            const canMarkComplete = isToday(meal.occurrence_date || selectedDay?.date);
 
                             return (
                                 <article
-                                    key={meal.id}
+                                    key={`${meal.occurrence_date || selectedDay?.date || 'day'}-${meal.id}`}
                                     className={`border bg-white p-3.5 global-radius shadow-sm transition-all duration-200 ${
                                         isCompleted 
-                                            ? 'border-green-150 bg-green-50/10' 
-                                            : 'border-[#E7E8EB] hover:border-primary/25 hover:shadow-md'
+                                            ? 'border-[#CFE8D7] bg-[#F2FBF5]' 
+                                            : 'border-[#BFD4F5] hover:border-primary/25 hover:shadow-md'
                                     }`}
                                 >
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
@@ -414,10 +620,10 @@ export default function WeeklyMealChart() {
                                             }}
                                             className="flex items-start gap-3 flex-1 min-w-0 text-left"
                                         >
-                                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+                                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
                                                 isCompleted 
-                                                    ? 'border-green-200 bg-green-50 text-green-600' 
-                                                    : 'border-primary/10 bg-primary/5 text-primary'
+                                                    ? 'border-[#CFE8D7] bg-[#F2FBF5] text-green-700' 
+                                                    : 'border-[#BFD4F5] bg-primary/5 text-primary'
                                             }`}>
                                                 <MealIcon className="h-4.5 w-4.5" />
                                             </div>
@@ -442,30 +648,64 @@ export default function WeeklyMealChart() {
                                                     {meal.meal_name}
                                                 </h3>
                                                 {meal.instructions && (
-                                                    <p className="mt-1 text-xs text-[#5F4A25] leading-relaxed bg-[#FFF9EC] border-l-2 border-[#F5A623] px-2 py-1 rounded-r-sm">
+                                                    <p className="mt-1 text-xs text-[#2D466B] leading-relaxed bg-[#F1F6FF] border-l-2 border-[#BFD4F5] px-2 py-1 rounded-r-sm">
                                                         {meal.instructions}
                                                     </p>
                                                 )}
+
+                                                            {(meal.meal_image || (meal.helpful_links || []).length > 0) && (
+                                                                <div className="mt-2 overflow-x-auto pb-1">
+                                                                    <div className="flex items-center gap-2 min-w-max">
+                                                                        {meal.meal_image && (
+                                                                            <a href={meal.meal_image} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-[#BFD4F5] bg-[#F4F8FF] px-2.5 py-1 text-[10px] font-semibold text-primary">
+                                                                                <Eye className="h-3 w-3" /> Meal image
+                                                                            </a>
+                                                                        )}
+                                                                        {(meal.helpful_links || []).map((link, idx) => (
+                                                                            <a
+                                                                                key={`plink-${meal.id}-${idx}`}
+                                                                                href={link.url}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="inline-flex items-center gap-1 rounded-full border border-[#CFE8D7] bg-[#F2FBF5] px-2.5 py-1 text-[10px] font-semibold text-green-700"
+                                                                            >
+                                                                                {String(link.type || 'link').toLowerCase() === 'youtube' ? 'YouTube' : (link.type || 'Link')}: {link.title || 'Open'}
+                                                                            </a>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                             </div>
                                         </button>
 
-                                        <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 border-t border-slate-100 pt-2 sm:border-0 sm:pt-0 shrink-0">
+                                        <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 border-t border-[#BFD4F5] pt-2 sm:border-0 sm:pt-0 shrink-0">
                                             {isCompleted ? (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-700">
-                                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                                    Done
-                                                </span>
-                                            ) : (
+                                                <div className="flex flex-col items-end gap-1 text-right">
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#F2FBF5] px-2.5 py-1 text-xs font-bold text-green-700 border border-[#CFE8D7]">
+                                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                                        Done
+                                                    </span>
+                                                    {(meal.completed_by_name || meal.completed_by_role) && (
+                                                        <span className="text-[10px] font-semibold text-[#4D4D4D]">
+                                                            Marked by {meal.completed_by_name || meal.completed_by_role}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : canMarkComplete ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => {
                                                         setActiveMeal(meal);
                                                         setIsLogOpen(true);
                                                     }}
-                                                    className="btn-primary-cta !h-8 !px-3 !text-xs !py-1"
+                                                    className="btn-primary-cta h-8! px-3! text-xs! py-1!"
                                                 >
-                                                    Log Meal
+                                                    Mark Complete
                                                 </button>
+                                            ) : (
+                                                <span className="rounded-full border border-[#E7E8EB] bg-[#FAFAFA] px-2.5 py-1 text-xs font-bold text-[#6B6B6B]">
+                                                    Available today only
+                                                </span>
                                             )}
                                         </div>
                                     </div>
@@ -473,7 +713,7 @@ export default function WeeklyMealChart() {
                             );
                         })
                     ) : (
-                        <div className="border border-dashed border-[#E7E8EB] bg-[#FAFAFA] p-8 text-center global-radius">
+                        <div className="border border-dashed border-[#BFD4F5] bg-[#FAFAFA] p-8 text-center global-radius">
                             <Utensils className="mx-auto h-7 w-7 text-[#B0B0B0]" />
                             <p className="mt-2 text-xs font-semibold text-[#6D6D6D]">No meals scheduled for Day {selectedDay?.day_number}.</p>
                         </div>
@@ -483,53 +723,102 @@ export default function WeeklyMealChart() {
 
             {/* Details Dialog */}
             <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-                <DialogContent className="max-w-md bg-white global-radius">
-                    <DialogHeader>
-                        <DialogTitle>{activeMeal?.meal_name}</DialogTitle>
-                        <DialogDescription>
-                            {activeMeal ? getMealTypeLabel(activeMeal.meal_type) : ''} meal details
+                <DialogContent className="max-w-lg bg-white global-radius border border-[#BFD4F5]">
+                    <DialogHeader className="space-y-2 text-left">
+                        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#BFD4F5] bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
+                            <Utensils className="h-3.5 w-3.5" />
+                            Meal details
+                        </div>
+                        <DialogTitle className="text-2xl font-bold text-[#1F1E1E]">
+                            {activeMeal?.meal_name}
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-[#4D4D4D]">
+                            {activeMeal ? getMealTypeLabel(activeMeal.meal_type) : ''}
+                            {activeMeal?.meal_time ? ` • ${formatMealTime(activeMeal.meal_time)}` : ''}
+                            {activeMeal?.occurrence_date ? ` • ${activeMeal.occurrence_date}` : ''}
                         </DialogDescription>
                     </DialogHeader>
+
                     {activeMeal && (
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="border border-[#E7E8EB] bg-[#FAFAFA] p-3 global-radius">
-                                    <p className="text-[10px] font-bold uppercase text-[#7A7A7A]">Meal Time</p>
-                                    <p className="mt-1 text-sm font-bold text-[#1F1E1E]">
-                                        {formatMealTime(activeMeal.meal_time) || 'Not specified'}
+                                <div className="rounded-xl border border-[#BFD4F5] bg-[#FAFAFA] p-4">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7A7A7A]">Status</p>
+                                    <p className="mt-1 text-sm font-bold capitalize text-[#1F1E1E]">
+                                        {activeMeal.status || 'pending'}
                                     </p>
                                 </div>
-                                <div className="border border-[#E7E8EB] bg-[#FAFAFA] p-3 global-radius">
-                                    <p className="text-[10px] font-bold uppercase text-[#7A7A7A]">Calories</p>
+                                <div className="rounded-xl border border-[#BFD4F5] bg-[#FAFAFA] p-4">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7A7A7A]">Calories</p>
                                     <p className="mt-1 text-sm font-bold text-[#1F1E1E]">
                                         {activeMeal.calories || 0} kcal
                                     </p>
                                 </div>
                             </div>
-                            <div>
-                                <p className="text-xs font-bold text-[#4D4D4D]">Food Items</p>
-                                <div className="mt-2 flex flex-wrap gap-2">
+
+                            <div className="rounded-xl border border-[#BFD4F5] bg-white p-4 shadow-sm">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7A7A7A]">Food items</p>
+                                <div className="mt-3 flex flex-wrap gap-2">
                                     {getMealItems(activeMeal.meal_name).map((item) => (
-                                        <span key={item} className="border border-[#E7E8EB] bg-[#FAFAFA] px-2 py-1 text-xs text-[#4D4D4D] global-radius">
+                                        <span key={item} className="rounded-full border border-[#BFD4F5] bg-[#FAFAFA] px-3 py-1 text-xs font-medium text-[#4D4D4D]">
                                             {item}
                                         </span>
                                     ))}
                                 </div>
                             </div>
+
                             {activeMeal.instructions && (
-                                <div className="border-l-2 border-[#F5A623] bg-[#FFF9EC] p-3 text-sm text-[#6A4A12]">
-                                    {activeMeal.instructions}
+                                <div className="rounded-xl border border-[#CFE0F8] bg-[#F4F8FF] p-4 text-sm leading-relaxed text-[#2D466B]">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-800">Instructions</p>
+                                    <p className="mt-1">{activeMeal.instructions}</p>
+                                </div>
+                            )}
+
+                            {(activeMeal.meal_image || (activeMeal.helpful_links || []).length > 0) && (
+                                <div className="rounded-xl border border-[#BFD4F5] bg-[#F4F8FF] p-4 space-y-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Recipe Media</p>
+                                    {activeMeal.meal_image && (
+                                        <img src={activeMeal.meal_image} alt="Meal" className="max-h-56 w-full rounded-lg object-cover border border-[#BFD4F5]" />
+                                    )}
+                                    {(activeMeal.helpful_links || []).length > 0 && (
+                                        <div className="overflow-x-auto pb-1">
+                                            <div className="flex min-w-max gap-2">
+                                                {(activeMeal.helpful_links || []).map((link, idx) => (
+                                                    <a
+                                                        key={`pdlg-link-${idx}`}
+                                                        href={link.url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="rounded-full border border-[#BFD4F5] bg-white px-3 py-1 text-xs font-semibold text-primary"
+                                                    >
+                                                        {link.type || 'Link'}: {link.title || 'Open'}
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeMeal.completed_at && (
+                                <div className="rounded-xl border border-[#CFE8D7] bg-[#F2FBF5] p-4 text-sm text-green-800">
+                                    <p className="font-semibold">Completed at {activeMeal.completed_at}</p>
+                                    {(activeMeal.completed_by_name || activeMeal.completed_by_role) && (
+                                        <p className="mt-1 text-xs text-[#4D4D4D]">
+                                            Marked by {activeMeal.completed_by_name || activeMeal.completed_by_role}
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </div>
                     )}
-                    <DialogFooter>
-                        <button type="button" onClick={() => setIsDetailsOpen(false)} className="btn-primary-cta-outline !h-9 !px-4 !py-2 !text-xs">
+                    <DialogFooter className="flex flex-wrap justify-end gap-2">
+                        <button type="button" onClick={() => setIsDetailsOpen(false)} className="btn-primary-cta-outline h-10! px-4! py-2! text-xs!">
                             Close
                         </button>
-                        {activeMeal?.status !== 'completed' && (
-                            <button type="button" onClick={() => setIsLogOpen(true)} className="btn-primary-cta !h-9 !px-4 !py-2 !text-xs">
-                                Log Meal
+                        {activeMeal?.status !== 'completed' && isToday(activeMeal?.occurrence_date || selectedDay?.date) && (
+                            <button type="button" onClick={() => setIsLogOpen(true)} className="btn-primary-cta h-10! px-4! py-2! text-xs!">
+                                Mark complete
                             </button>
                         )}
                     </DialogFooter>
@@ -538,27 +827,29 @@ export default function WeeklyMealChart() {
 
             {/* Log Meal Dialog */}
             <Dialog open={isLogOpen} onOpenChange={setIsLogOpen}>
-                <DialogContent className="max-w-sm bg-white global-radius">
+                <DialogContent className="max-w-sm bg-white global-radius border border-[#BFD4F5]">
                     <DialogHeader>
-                        <DialogTitle>Log Meal</DialogTitle>
-                        <DialogDescription>Optionally add a note before marking this meal complete.</DialogDescription>
+                        <DialogTitle>Complete Meal</DialogTitle>
+                        <DialogDescription>
+                            Optionally add a note before marking this occurrence complete.
+                        </DialogDescription>
                     </DialogHeader>
                     <textarea
                         value={logNotes}
                         onChange={(event) => setLogNotes(event.target.value)}
                         rows={4}
                         placeholder="Add notes..."
-                        className="w-full resize-none border border-[#E7E8EB] bg-white p-3 text-sm outline-none focus:border-primary global-radius"
+                        className="w-full resize-none border border-[#BFD4F5] bg-white p-3 text-sm outline-none focus:border-primary global-radius"
                     />
                     <DialogFooter>
-                        <button type="button" onClick={() => setIsLogOpen(false)} className="btn-primary-cta-outline !h-9 !px-4 !py-2 !text-xs">
+                        <button type="button" onClick={() => setIsLogOpen(false)} className="btn-primary-cta-outline h-9! px-4! py-2! text-xs!">
                             Cancel
                         </button>
                         <button
                             type="button"
                             onClick={handleLogMeal}
-                            disabled={completeMealMutation.isPending}
-                            className="btn-primary-cta !h-9 !px-4 !py-2 !text-xs disabled:opacity-60"
+                            disabled={completeMealMutation.isPending || !isToday(activeMeal?.occurrence_date || selectedDay?.date)}
+                            className="btn-primary-cta h-9! px-4! py-2! text-xs! disabled:opacity-60"
                         >
                             {completeMealMutation.isPending ? 'Saving...' : 'Mark Complete'}
                         </button>
@@ -568,4 +859,3 @@ export default function WeeklyMealChart() {
         </div>
     );
 }
-

@@ -15,6 +15,7 @@ class AppointmentQueueLog extends Model
         'started_at',
         'ended_at',
         'duration_seconds',
+        'remarks',
         'created_by',
     ];
 

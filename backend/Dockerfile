@@ -11,7 +11,11 @@ RUN apt-get update && apt-get install -y \
 RUN curl -sS https://getcomposer.org/installer | php \
     -- --install-dir=/usr/local/bin --filename=composer
 
+COPY docker/entrypoint.sh /usr/local/bin/app-entrypoint
+RUN chmod +x /usr/local/bin/app-entrypoint
+
 RUN chown -R www-data:www-data /var/www/html
 
 EXPOSE 9000
+ENTRYPOINT ["app-entrypoint"]
 CMD ["php-fpm"]

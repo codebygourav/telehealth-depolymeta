@@ -899,6 +899,33 @@ class NotificationService
     }
 
     /**
+     * Notify patient when they are skipped.
+     */
+    public static function notifyPatientSkipped(Appointment $appointment, string $remarks = '')
+    {
+        $queueNo = $appointment->queue_number ?: '—';
+        $doctorName = $appointment->doctor ? "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}" : 'Doctor';
+
+        // Notify Patient
+        if ($appointment->patient && $appointment->patient->user) {
+            self::send(
+                user: $appointment->patient->user,
+                type: 'patient_skipped',
+                title: 'Queue Skipped',
+                message: "You have been skipped in the queue for your appointment with {$doctorName}." . ($remarks ? " Note: {$remarks}" : ""),
+                category: 'appointment',
+                entityType: 'appointment',
+                entityId: $appointment->id,
+                meta: [
+                    'queue_number' => $queueNo,
+                    'doctor_name' => $doctorName,
+                    'remarks' => $remarks,
+                ]
+            );
+        }
+    }
+
+    /**
      * Notify patient when a vaccination is assigned to them.
      */
     public static function notifyVaccinationAssigned(PatientVaccination $vaccination)

@@ -11,14 +11,17 @@ export const getDietPlan = async (): Promise<DietPlanResponse> => {
 
 export const completeDietMeal = async ({
     mealId,
+    occurrenceDate,
     notes,
 }: {
     mealId: string;
+    occurrenceDate: string;
     notes?: string | null;
 }) => {
     const response = await axiosInstance.post(
         `/patient/diet/meal/${mealId}/complete`,
         {
+            date: occurrenceDate,
             notes: notes || null,
         }
     );

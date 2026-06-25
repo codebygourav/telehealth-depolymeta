@@ -20,12 +20,12 @@ class DatabaseSeeder extends Seeder
             MedicineTypeSeeder::class,
             MedicineSeeder::class,
             DoctorSeeder::class,
-            // DoctorAvailabilitySeeder::class,
+            DoctorAvailabilitySeeder::class,
             RolesSeeder::class,
             PatientSeeder::class,
-            // AppointmentSeeder::class,
-            // VideoConsultationSeeder::class,
-            // DoctorReviewSeeder::class,
+            AppointmentSeeder::class,
+            VideoConsultationSeeder::class,
+            DoctorReviewSeeder::class,
             AdvertisementSeeder::class,
             SettingsSeeder::class,
 
@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             DietTemplateSeeder::class,
             MedicalReportSeeder::class,
             MedicineTemplateSeeder::class,
+            QueueLogsSeeder::class,
         ]);
     }
 }

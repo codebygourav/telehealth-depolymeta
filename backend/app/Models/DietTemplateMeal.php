@@ -20,6 +20,8 @@ class DietTemplateMeal extends Model
         'meal_type',
         'meal_name',
         'instructions',
+        'meal_image',
+        'helpful_links',
         'calories',
         'protein_grams',
         'carbs_grams',
@@ -29,6 +31,7 @@ class DietTemplateMeal extends Model
     ];
 
     protected $casts = [
+        'helpful_links' => 'array',
         'calories' => 'integer',
         'protein_grams' => 'integer',
         'carbs_grams' => 'integer',

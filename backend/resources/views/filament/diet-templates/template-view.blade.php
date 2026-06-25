@@ -3,193 +3,287 @@
     $record->loadMissing(['doctor.user', 'days.meals']);
 
     $days = $record->days()->orderBy('day_number')->get();
+    $durationDays = max(1, (int) ($record->duration_days ?? 7));
+
+    $schedule = (array) data_get($record->features, 'schedule', []);
+    $recurrenceMode = (string) ($schedule['recurrence_mode'] ?? 'recurring');
+    $patternType = (string) ($schedule['pattern_type'] ?? 'weekly');
+    $cycleLength = max(1, (int) ($schedule['cycle_length_days'] ?? 7));
+    $sameMeal = (bool) ($schedule['follow_same_meal_all_days'] ?? false);
+
+    $tabsCount = max(1, (int) ceil($durationDays / 7));
+    $visibleTabs = $tabsCount;
+
+    $chartDays = $days->map(fn ($day): array => [
+        'day_number' => (int) $day->day_number,
+        'week_day' => (string) ($day->week_day ?? ''),
+        'meals' => $day->meals
+            ->sortBy('sort_order')
+            ->values()
+            ->map(fn ($meal): array => [
+                'meal_type' => (string) $meal->meal_type,
+                'meal_name' => (string) $meal->meal_name,
+                'instructions' => (string) ($meal->instructions ?? ''),
+                'meal_image' => (string) ($meal->meal_image ?? ''),
+                'helpful_links' => collect($meal->helpful_links ?? [])->map(fn ($link): array => [
+                    'type' => (string) ($link['type'] ?? 'link'),
+                    'title' => (string) ($link['title'] ?? ''),
+                    'url' => (string) ($link['url'] ?? ''),
+                ])->filter(fn (array $link): bool => filled($link['url']))->values()->all(),
+                'start_time' => $meal->start_time ? \Carbon\Carbon::parse($meal->start_time)->format('h:i A') : 'No time',
+                'sort_order' => (int) $meal->sort_order,
+            ])
+            ->all(),
+    ])->values()->all();
+
+    $weekGroups = $days->groupBy(fn ($day) => (int) floor(((int) $day->day_number - 1) / 7) + 1);
+    $weekOne = $weekGroups->get(1, collect())->values();
+
+    $daysOnCurrentTab = $recurrenceMode === 'one_time'
+        ? min($durationDays, $days->count())
+        : min(7, $days->count());
+
+    if ($recurrenceMode === 'one_time') {
+        $patternHeading = 'One-time Meal Pattern';
+    } else {
+        $patternHeading = 'Week 1 Meal Pattern';
+    }
 @endphp
 
-<div class="space-y-6">
-    <!-- Header Summary Card -->
-    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden">
-        <div class="p-6 bg-gradient-to-r from-primary-50/50 to-transparent dark:from-primary-950/20">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-primary-600 dark:bg-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/10 shrink-0 mt-0.5">
-                        <x-heroicon-o-clipboard-document-list class="w-7 h-7 text-white" />
-                    </div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $record->name }}</h2>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ $record->description ?: 'No description provided for this template.' }}</p>
-                        
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-gray-500 dark:text-gray-400">
-                            @if($record->doctor)
-                                <div class="flex items-center gap-1">
-                                    <x-heroicon-m-user class="w-4 h-4 text-gray-400" />
-                                    <span>Doctor: <strong class="text-gray-700 dark:text-gray-300">Dr. {{ $record->doctor->first_name }} {{ $record->doctor->last_name }}</strong></span>
-                                </div>
-                            @endif
-                            <div class="flex items-center gap-1">
-                                <x-heroicon-m-calendar class="w-4 h-4 text-gray-400" />
-                                <span>Duration: <strong class="text-gray-700 dark:text-gray-300">{{ $record->duration_days }} Days</strong></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 shrink-0">
-                    <span class="text-xs font-semibold px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg border border-gray-200 dark:border-gray-700">
-                        {{ $days->count() }} Configured Days
-                    </span>
-                    @if($record->is_active)
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500"></span>
-                            Active Template
-                        </span>
+<div class="diet-admin-shell space-y-4">
+    <div class="diet-admin-card">
+        <div class="diet-admin-card-title">Template Details</div>
+        <div class="diet-admin-grid-2">
+            <div>
+                <div class="diet-admin-label">Doctor</div>
+                <div class="diet-admin-readonly-value">
+                    @if($record->doctor)
+                        Dr. {{ trim(($record->doctor->first_name ?? '').' '.($record->doctor->last_name ?? '')) }}
                     @else
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700 rounded-full">
-                            <span class="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500"></span>
-                            Inactive
-                        </span>
+                        Not assigned
                     @endif
                 </div>
+            </div>
+            <div>
+                <div class="diet-admin-label">Template Name</div>
+                <div class="diet-admin-readonly-value">{{ $record->name }}</div>
+            </div>
+            <div>
+                <div class="diet-admin-label">Duration Days</div>
+                <div class="diet-admin-readonly-value">{{ $durationDays }}</div>
+            </div>
+            <div>
+                <div class="diet-admin-label">Status</div>
+                <div class="diet-admin-readonly-value">{{ $record->is_active ? 'Active' : 'Inactive' }}</div>
+            </div>
+        </div>
+        @if($record->description)
+            <div class="diet-admin-description">{{ $record->description }}</div>
+        @endif
+    </div>
+
+    <div class="diet-admin-card">
+        <div class="diet-admin-card-title">Meal Schedule Rule</div>
+        <div class="diet-schedule-preview">
+            <div class="diet-schedule-grid">
+                <div class="diet-schedule-card {{ $recurrenceMode === 'recurring' && $patternType === 'weekly' ? 'is-active' : '' }}">
+                    <div class="diet-schedule-title">Weekly tabs repeat until duration ends</div>
+                    <div class="diet-schedule-text">Best for 1 month plans. Create week-wise pattern and system repeats automatically.</div>
+                </div>
+                <div class="diet-schedule-card {{ $recurrenceMode === 'one_time' ? 'is-active' : '' }}">
+                    <div class="diet-schedule-title">Exact days only, no repeat</div>
+                    <div class="diet-schedule-text">Configured duration: {{ $durationDays }} day(s).</div>
+                </div>
+                <div class="diet-schedule-card {{ $sameMeal ? 'is-active' : '' }}">
+                    <div class="diet-schedule-title">Same meal every day</div>
+                    <div class="diet-schedule-text">Reuse Day 1 meal set for all days in patient duration.</div>
+                </div>
+            </div>
+            <div class="diet-schedule-note {{ $recurrenceMode === 'one_time' ? 'is-one-time' : '' }}">
+                @if($recurrenceMode === 'one_time')
+                    One-time mode: no repeat; patient gets only configured days.
+                @else
+                    Duration decides total patient days. Weekly or cycle meal pattern repeats until duration ends.
+                @endif
             </div>
         </div>
     </div>
 
-    <!-- Restrictions and Notes -->
-    @if($record->restrictions || $record->notes)
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            @if($record->restrictions)
-                <div class="bg-rose-50/10 dark:bg-rose-950/5 border border-rose-100 dark:border-rose-900/20 rounded-xl p-5">
-                    <h4 class="text-sm font-bold text-rose-800 dark:text-rose-400 flex items-center gap-2">
-                        <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-rose-500" />
-                        <span>Dietary Restrictions & Allergens</span>
-                    </h4>
-                    <p class="text-xs text-rose-700 dark:text-rose-300 mt-2 leading-relaxed">
-                        {{ $record->restrictions }}
-                    </p>
-                </div>
-            @endif
+    <div
+        class="diet-admin-card diet-weekly-context"
+        x-data="{
+            days: @js($chartDays),
+            selectedWeek: 1,
+            selectedDayIndex: 0,
+            weekTabs: Array.from({ length: {{ $visibleTabs }} }, (_, index) => index + 1),
+            visibleDays() {
+                const start = (this.selectedWeek - 1) * 7;
+                return this.days.slice(start, start + 7).map((day, offset) => ({
+                    day,
+                    index: start + offset,
+                }));
+            },
+            selectedDay() {
+                return this.days[this.selectedDayIndex] || this.visibleDays()[0]?.day || null;
+            },
+            selectedMeals() {
+                return this.selectedDay()?.meals || [];
+            },
+            dayLabel(day) {
+                if (!day) return 'Day';
+                const value = day.week_day || `Day ${day.day_number}`;
+                return String(value).toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+            },
+            mealTypeLabel(type) {
+                return String(type || 'Meal').toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+            },
+            linkLabel(link) {
+                const type = String(link?.type || 'Link').toLowerCase();
+                const title = String(link?.title || '').trim();
+                const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
 
-            @if($record->notes)
-                <div class="bg-gray-50 dark:bg-gray-900/40 border border-gray-150 dark:border-gray-800/80 rounded-xl p-5">
-                    <h4 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <x-heroicon-o-information-circle class="w-5 h-5 text-gray-500" />
-                        <span>Clinical Notes & Guidelines</span>
-                    </h4>
-                    <p class="text-xs text-gray-650 dark:text-gray-400 mt-2 leading-relaxed">
-                        {{ $record->notes }}
-                    </p>
-                </div>
-            @endif
+                if (title.length) {
+                    return `${typeLabel}: ${title}`;
+                }
+
+                return `${typeLabel} link`;
+            },
+            selectWeek(week) {
+                this.selectedWeek = week;
+                this.selectedDayIndex = Math.min(this.days.length - 1, (week - 1) * 7);
+            },
+            selectDay(index) {
+                this.selectedDayIndex = index;
+            },
+        }"
+    >
+        <div>
+            <div class="diet-admin-card-title">Weekly Meal Chart</div>
+            <div class="diet-week-chart-subtitle">Only one week opens at a time. Days stay as tabs on the left and selected day meals show on the right.</div>
         </div>
-    @endif
 
-    <!-- Meal Plan Grid by Days -->
-    <div class="space-y-6">
-        <h3 class="text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider">Daily Meal Plan Grid</h3>
+        <div class="diet-week-tabs" role="list" aria-label="Week tabs preview">
+            <template x-for="week in weekTabs" :key="week">
+                <button
+                    type="button"
+                    class="diet-week-tab"
+                    :class="{ 'is-active': selectedWeek === week }"
+                    x-text="`Week ${week}`"
+                    x-on:click="selectWeek(week)"
+                ></button>
+            </template>
+        </div>
 
-        @if($days->isEmpty())
-            <div class="p-8 text-center text-sm text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
-                No days or meals configured for this template. Edit the template to add them.
+        <div class="diet-week-stats">
+            <div class="diet-week-stat">
+                <div class="diet-week-stat-value">{{ $durationDays }}</div>
+                <div class="diet-week-stat-label">Duration days</div>
+            </div>
+            <div class="diet-week-stat">
+                <div class="diet-week-stat-value">{{ $visibleTabs }}</div>
+                <div class="diet-week-stat-label">Weeks tab created</div>
+            </div>
+            <div class="diet-week-stat">
+                <div class="diet-week-stat-value">{{ $daysOnCurrentTab }}</div>
+                <div class="diet-week-stat-label">Days shown in current tab</div>
+            </div>
+            <div class="diet-week-stat">
+                <div class="diet-week-stat-value">No scroll</div>
+                <div class="diet-week-stat-label">Only selected week visible</div>
+            </div>
+        </div>
+
+        <div class="diet-week-pattern-title" x-text="selectedWeek === 1 ? @js($patternHeading) : `Week ${selectedWeek} Meal Pattern`"></div>
+        <div class="diet-week-pattern-subtitle">Select a week, then select a day to view its meals.</div>
+
+        @if($days->isNotEmpty())
+            <div class="diet-week-pattern-shell">
+                <div class="diet-week-day-list">
+                    <template x-for="entry in visibleDays()" :key="entry.index">
+                        <button
+                            type="button"
+                            class="diet-week-day-item"
+                            :class="{ 'is-active': selectedDayIndex === entry.index }"
+                            x-on:click="selectDay(entry.index)"
+                        >
+                            <span x-text="dayLabel(entry.day)"></span>
+                            <span x-text="`${entry.day.meals.length} meals`"></span>
+                        </button>
+                    </template>
+                </div>
+
+                <div class="diet-week-day-meals">
+                    <div class="diet-week-day-title-row">
+                        <div class="diet-week-day-title">
+                            <span x-text="`${dayLabel(selectedDay())} Meals - Week ${selectedWeek}`"></span>
+                        </div>
+                        <div class="diet-week-meals-count" x-text="`${selectedMeals().length} meals`"></div>
+                    </div>
+
+                    <template x-if="selectedMeals().length === 0">
+                        <div class="diet-week-empty">No meals configured for this day.</div>
+                    </template>
+
+                    <template x-for="(meal, mealIndex) in selectedMeals()" :key="`${selectedDayIndex}-${mealIndex}`">
+                        <div class="diet-week-meal-row" :class="{ 'is-open': mealIndex === 0 }">
+                            <div class="diet-week-meal-summary">
+                                <strong x-text="`${mealTypeLabel(meal.meal_type)}: ${meal.meal_name}`"></strong>
+                                <span x-text="meal.start_time"></span>
+                            </div>
+
+                            <div>
+                                <div class="diet-week-meal-detail-grid">
+                                    <div>
+                                        <div class="diet-week-meal-label">Meal Type</div>
+                                        <div class="diet-week-meal-display" x-text="mealTypeLabel(meal.meal_type)"></div>
+                                    </div>
+                                    <div>
+                                        <div class="diet-week-meal-label">Meal Name / Food Items</div>
+                                        <div class="diet-week-meal-display" x-text="meal.meal_name"></div>
+                                    </div>
+                                    <div>
+                                        <div class="diet-week-meal-label">Start Time</div>
+                                        <div class="diet-week-meal-display" x-text="meal.start_time"></div>
+                                    </div>
+                                </div>
+
+                                <div class="diet-week-meal-instructions">
+                                    <div class="diet-week-meal-label">Instructions</div>
+                                    <div class="diet-week-meal-display-note" x-text="meal.instructions || 'No instructions added.'"></div>
+                                </div>
+
+                                <template x-if="meal.meal_image || (Array.isArray(meal.helpful_links) && meal.helpful_links.length)">
+                                    <div class="mt-3 space-y-2">
+                                        <div class="diet-week-meal-label">Recipe Media</div>
+
+                                        <template x-if="meal.meal_image">
+                                            <a :href="meal.meal_image" target="_blank" rel="noreferrer" class="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-primary-600 hover:bg-slate-50">
+                                                View meal image
+                                            </a>
+                                        </template>
+
+                                        <template x-if="Array.isArray(meal.helpful_links) && meal.helpful_links.length">
+                                            <div class="flex flex-wrap gap-2">
+                                                <template x-for="(link, linkIndex) in meal.helpful_links" :key="`${selectedDayIndex}-${mealIndex}-link-${linkIndex}`">
+                                                    <a
+                                                        :href="link.url"
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-white"
+                                                        x-text="linkLabel(link)"
+                                                    ></a>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
         @else
-            <div class="relative border-l border-gray-200 dark:border-gray-800 ml-4 md:ml-6 space-y-8 pb-4">
-                @foreach($days as $dayIndex => $day)
-                    <!-- Day Block -->
-                    <div class="relative pl-6 md:pl-8 group">
-                        <!-- Timeline Dot -->
-                        <div class="absolute -left-[13px] top-1.5 w-6 h-6 rounded-full bg-white dark:bg-gray-950 border-2 border-primary-600 dark:border-primary-500 flex items-center justify-center shadow-sm z-10">
-                            <span class="text-[10px] font-black text-primary-700 dark:text-primary-400">{{ $day->day_number }}</span>
-                        </div>
-
-                        <!-- Day Header Card -->
-                        <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-4 border border-gray-150 dark:border-gray-800/80 mb-4">
-                            <div class="flex items-center justify-between gap-4">
-                                <h4 class="text-base font-bold text-gray-900 dark:text-white leading-snug">
-                                    Day {{ $day->day_number }} @if($day->week_day) <span class="text-xs font-normal text-gray-550 dark:text-gray-400 ml-1">({{ ucfirst(strtolower($day->week_day)) }})</span> @endif
-                                </h4>
-                            </div>
-                        </div>
-
-                        <!-- Meals Cards inside the Day -->
-                        @php
-                            $meals = $day->meals()->orderBy('sort_order')->get();
-                        @endphp
-                        @if($meals->isEmpty())
-                            <div class="p-4 text-xs italic text-gray-450 dark:text-gray-500 bg-gray-50/30 dark:bg-gray-900/20 rounded-xl border border-dashed border-gray-200 dark:border-gray-800">
-                                No meals configured for this day.
-                            </div>
-                        @else
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                @foreach($meals as $meal)
-                                    <div class="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow transition relative overflow-hidden group">
-                                        <div class="absolute right-0 top-0 w-24 h-24 bg-primary-50/50 dark:bg-primary-950/10 rounded-full translate-x-8 -translate-y-8 -z-10 group-hover:scale-110 transition duration-300"></div>
-                                        
-                                        <div class="flex items-start justify-between gap-2">
-                                            <div>
-                                                <div class="flex items-center gap-1.5">
-                                                    @php
-                                                        $mealTypeLabel = match(strtoupper($meal->meal_type)) {
-                                                            'MORNING' => 'Morning',
-                                                            'BREAKFAST' => 'Breakfast',
-                                                            'MID_MEAL' => 'Mid Meal',
-                                                            'LUNCH' => 'Lunch',
-                                                            'EVENING_SNACK' => 'Evening Snack',
-                                                            'DINNER' => 'Dinner',
-                                                            'NIGHT' => 'Night',
-                                                            default => ucfirst(strtolower($meal->meal_type)),
-                                                        };
-                                                        
-                                                        $typeColor = match(strtoupper($meal->meal_type)) {
-                                                            'BREAKFAST', 'MORNING' => 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50',
-                                                            'LUNCH', 'MID_MEAL' => 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-amber-900/50',
-                                                            'DINNER', 'NIGHT', 'EVENING_SNACK' => 'bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50',
-                                                            default => 'bg-gray-50 dark:bg-gray-950/20 text-gray-700 dark:text-gray-400 border border-gray-100 dark:border-gray-900/50',
-                                                        };
-                                                    @endphp
-                                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $typeColor }}">
-                                                        {{ $mealTypeLabel }}
-                                                    </span>
-                                                    @if($meal->start_time)
-                                                        <span class="text-[9px] text-gray-400 dark:text-gray-500 font-medium">
-                                                            {{ \Carbon\Carbon::parse($meal->start_time)->format('h:i A') }}
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                                <h5 class="text-sm font-bold text-gray-900 dark:text-white mt-1.5">
-                                                    {{ $meal->meal_name }}
-                                                </h5>
-                                            </div>
-                                        </div>
-
-                                        @if($meal->instructions)
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed italic">
-                                                {{ $meal->instructions }}
-                                            </p>
-                                        @endif
-
-                                        <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/60 grid grid-cols-4 gap-1 text-[10px] text-center">
-                                            <div class="bg-gray-50 dark:bg-gray-850 p-1.5 rounded">
-                                                <div class="text-gray-400 dark:text-gray-500">Calories</div>
-                                                <div class="font-bold text-gray-800 dark:text-gray-300 mt-0.5">{{ $meal->calories ?? 0 }}</div>
-                                            </div>
-                                            <div class="bg-gray-50 dark:bg-gray-850 p-1.5 rounded">
-                                                <div class="text-gray-400 dark:text-gray-500">Protein</div>
-                                                <div class="font-bold text-gray-800 dark:text-gray-300 mt-0.5">{{ $meal->protein_grams ?? 0 }}g</div>
-                                            </div>
-                                            <div class="bg-gray-50 dark:bg-gray-850 p-1.5 rounded">
-                                                <div class="text-gray-400 dark:text-gray-500">Carbs</div>
-                                                <div class="font-bold text-gray-800 dark:text-gray-300 mt-0.5">{{ $meal->carbs_grams ?? 0 }}g</div>
-                                            </div>
-                                            <div class="bg-gray-50 dark:bg-gray-850 p-1.5 rounded">
-                                                <div class="text-gray-400 dark:text-gray-500">Fat</div>
-                                                <div class="font-bold text-gray-800 dark:text-gray-300 mt-0.5">{{ $meal->fat_grams ?? 0 }}g</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-                @endforeach
-            </div>
+            <div class="diet-week-empty">No days configured in this template.</div>
         @endif
     </div>
 </div>

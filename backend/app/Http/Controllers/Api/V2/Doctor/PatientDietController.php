@@ -7,6 +7,7 @@ use App\Models\DietTemplate;
 use App\Models\DietTemplateDay;
 use App\Models\DietTemplateMeal;
 use App\Models\Patient;
+use App\Models\PatientDietPlanMealCompletion;
 use App\Models\PatientDietPlan;
 use App\Models\PatientDietPlanDay;
 use App\Models\PatientDietPlanMeal;
@@ -35,6 +36,19 @@ class PatientDietController extends Controller
         ]);
 
         $patient = $this->patientOrFail($data['patient_id']);
+
+        // Check if there is already an active plan with the same template_id for this patient
+        $existingActivePlan = PatientDietPlan::where('patient_id', $patient->id)
+            ->where('diet_template_id', $data['template_id'])
+            ->where('status', 'active')
+            ->first();
+
+        if ($existingActivePlan) {
+            return ApiResponseService::validationError([
+                'template_id' => 'This diet template is already actively assigned to this patient.'
+            ]);
+        }
+
         $templateQuery = DietTemplate::query()
             ->with(['days.meals'])
             ->where('is_active', true);
@@ -45,9 +59,16 @@ class PatientDietController extends Controller
 
         $template = $templateQuery->findOrFail($data['template_id']);
         $planDoctorId = $doctor?->id ?? $template->doctor_id;
+        $schedule = (array) data_get($template->features, 'schedule', []);
+        $recurrenceMode = (string) ($schedule['recurrence_mode'] ?? 'recurring');
 
         $startDate = Carbon::parse($data['start_date'])->startOfDay();
         $durationDays = (int) ($data['duration_days'] ?? $template->duration_days ?? 7);
+
+        if ($recurrenceMode === 'one_time' && $template->days->count() > 0) {
+            $durationDays = min($durationDays, $template->days->count());
+        }
+
         $endDate = $startDate->copy()->addDays(max(0, $durationDays - 1));
 
         $plan = DB::transaction(function () use ($planDoctorId, $patient, $template, $data, $startDate, $endDate, $durationDays): PatientDietPlan {
@@ -91,6 +112,8 @@ class PatientDietController extends Controller
                         'meal_type' => $meal->meal_type,
                         'meal_name' => $meal->meal_name,
                         'instructions' => $meal->instructions,
+                        'meal_image' => $meal->meal_image,
+                        'helpful_links' => $meal->helpful_links,
                         'calories' => $meal->calories,
                         'protein_grams' => $meal->protein_grams,
                         'carbs_grams' => $meal->carbs_grams,
@@ -125,18 +148,29 @@ class PatientDietController extends Controller
 
         $this->patientOrFail($patientId);
 
-        $plan = PatientDietPlan::with(['days.meals', 'doctor.user'])
+        $plans = PatientDietPlan::with(['days.meals', 'doctor.user'])
             ->where('patient_id', $patientId)
             ->where('doctor_id', $doctor->id)
-            ->latest()
-            ->first();
+            ->orderBy('start_date')
+            ->orderBy('created_at')
+            ->get();
 
-        if (! $plan) {
-            return ApiResponseService::notFound('Diet plan not found');
+        if ($plans->isEmpty()) {
+            return ApiResponseService::success(
+                data: [
+                    'patient_id' => $patientId,
+                    'plans' => [],
+                ]
+            );
         }
 
+        $formattedPlans = $plans->map(fn(PatientDietPlan $plan): array => $this->planData($plan))->values();
+
         return ApiResponseService::success(
-            data: $this->planData($plan)
+            data: [
+                'patient_id' => $patientId,
+                'plans' => $formattedPlans,
+            ]
         );
     }
 
@@ -195,35 +229,28 @@ class PatientDietController extends Controller
             $this->patientOrFail($patientId); // Throws if not a valid patient
         }
 
-        $plan = PatientDietPlan::with(['days.meals', 'doctor.user'])
+        $plans = PatientDietPlan::with(['days.meals', 'doctor.user'])
             ->where('patient_id', $patientId)
-            ->whereIn('status', ['active', 'paused'])
-            ->latest()
-            ->first();
+            ->orderBy('start_date')
+            ->orderBy('created_at')
+            ->get();
 
-        if (! $plan) {
+        if ($plans->isEmpty()) {
             return ApiResponseService::success(
                 data: [
-                    'id' => '',
                     'patient_id' => $patientId,
-                    'doctor_id' => '',
-                    'template_id' => '',
-                    'template_name' => '',
-                    'template_description' => '',
-                    'duration_days' => 0,
-                    'start_date' => '',
-                    'end_date' => '',
-                    'status' => 'none',
-                    'special_instructions' => '',
-                    'days' => [],
-                    'created_at' => '',
-                    'updated_at' => '',
+                    'plans' => [],
                 ]
             );
         }
 
+        $formattedPlans = $plans->map(fn(PatientDietPlan $plan): array => $this->planData($plan))->values();
+
         return ApiResponseService::success(
-            data: $this->planData($plan)
+            data: [
+                'patient_id' => $patientId,
+                'plans' => $formattedPlans,
+            ]
         );
     }
 
@@ -238,6 +265,7 @@ class PatientDietController extends Controller
 
         $data = $request->validate([
             'status' => ['nullable', Rule::in(['completed', 'missed', 'skipped'])],
+            'date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -255,24 +283,34 @@ class PatientDietController extends Controller
             })
             ->firstOrFail();
 
+        $occurrenceDate = Carbon::parse($data['date'])->toDateString();
         $status = $data['status'] ?? 'completed';
-        $updates = [
-            'status' => $status,
-            'completed_at' => $status === 'completed' ? now() : null,
-        ];
-
-        if ($request->has('notes')) {
-            $updates['notes'] = $data['notes'];
-        }
-
-        $meal->update($updates);
+        $actor = $patient ? $request->user() : $request->user();
+        $completedByRole = $patient ? 'patient' : 'doctor';
+        $completedByName = trim((string) ($actor?->name ?? '')) ?: trim(($actor?->first_name ?? '') . ' ' . ($actor?->last_name ?? ''));
+        $completion = PatientDietPlanMealCompletion::updateOrCreate(
+            [
+                'patient_diet_plan_meal_id' => $meal->id,
+                'occurrence_date' => $occurrenceDate,
+            ],
+            [
+                'status' => $status,
+                'completed_by_role' => $completedByRole,
+                'completed_by_name' => $completedByName ?: null,
+                'notes' => $data['notes'] ?? null,
+                'completed_at' => $status === 'completed' ? now() : null,
+            ]
+        );
 
         return ApiResponseService::success(
             data: [
                 'id' => $meal->id,
-                'status' => $meal->status,
-                'notes' => $meal->notes,
-                'completed_at' => optional($meal->completed_at)?->toIso8601String(),
+                'status' => $completion->status,
+                'completed_by_role' => $completion->completed_by_role,
+                'completed_by_name' => $completion->completed_by_name,
+                'notes' => $completion->notes,
+                'completed_at' => optional($completion->completed_at)?->toIso8601String(),
+                'date' => $occurrenceDate,
             ]
         );
     }
@@ -322,29 +360,69 @@ class PatientDietController extends Controller
 
         $planDays = [];
         if ($templateDaysCount > 0 && $startDate && $duration > 0) {
+            $schedule = (array) data_get($plan->features, 'schedule', []);
+            $recurrenceMode = (string) ($schedule['recurrence_mode'] ?? 'recurring');
+            $patternType = (string) ($schedule['pattern_type'] ?? 'cycle');
+            $followSameMealAllDays = (bool) ($schedule['follow_same_meal_all_days'] ?? false);
+            $cycleLengthDays = max(1, (int) ($schedule['cycle_length_days'] ?? $templateDaysCount));
+            $templateDayByNumber = $templateDays->keyBy(fn(PatientDietPlanDay $day) => (int) $day->day_number);
+            $templateDayByWeekday = $templateDays->keyBy(fn(PatientDietPlanDay $day) => strtoupper((string) $day->week_day));
+            $firstTemplateDay = $templateDays->first();
+
+            if ($recurrenceMode === 'one_time') {
+                $duration = min($duration, $templateDaysCount);
+            }
+
+            $mealIds = $templateDays->flatMap(fn(PatientDietPlanDay $day) => $day->meals->pluck('id'))->values();
+            $completionMap = PatientDietPlanMealCompletion::query()
+                ->whereIn('patient_diet_plan_meal_id', $mealIds)
+                ->whereBetween('occurrence_date', [$startDate->toDateString(), $endDate?->toDateString() ?? $startDate->toDateString()])
+                ->get()
+                ->mapWithKeys(fn(PatientDietPlanMealCompletion $completion): array => [
+                    $completion->patient_diet_plan_meal_id . '|' . $completion->occurrence_date->toDateString() => $completion,
+                ]);
+
             for ($i = 0; $i < $duration; $i++) {
-                $cloneDay = $templateDays[$i % $templateDaysCount];
                 $currentDate = $startDate->copy()->addDays($i);
                 $weekDay = strtoupper($currentDate->format('l'));
+
+                if ($followSameMealAllDays && $firstTemplateDay) {
+                    $cloneDay = $firstTemplateDay;
+                } elseif ($patternType === 'weekly') {
+                    $cloneDay = $templateDaysCount > 7
+                        ? ($templateDayByNumber->get($i + 1) ?? $templateDays[$i % $templateDaysCount])
+                        : ($templateDayByWeekday->get($weekDay) ?? $templateDays[$i % $templateDaysCount]);
+                } else {
+                    $cycleDayNumber = ($i % $cycleLengthDays) + 1;
+                    $cloneDay = $templateDayByNumber->get($cycleDayNumber) ?? $templateDays[$i % $templateDaysCount];
+                }
+
                 $planDays[] = [
                     'id' => $cloneDay->id, // Could alternatively use: $cloneDay->id . "_repeat_" . ($i + 1)
                     'day_number' => $i + 1,
                     'week_day' => $weekDay,
                     'date' => $currentDate->format('Y-m-d'),
-                    'meals' => $cloneDay->meals->map(function (PatientDietPlanMeal $meal) {
+                    'meals' => $cloneDay->meals->map(function (PatientDietPlanMeal $meal) use ($completionMap, $currentDate) {
+                        $completion = $completionMap[$meal->id . '|' . $currentDate->toDateString()] ?? null;
+
                         return [
                             'id' => $meal->id,
                             'meal_type' => $meal->meal_type,
                             'meal_name' => $meal->meal_name,
                             'instructions' => $meal->instructions,
+                            'meal_image' => $meal->meal_image,
+                            'helpful_links' => $meal->helpful_links ?? [],
                             'calories' => $meal->calories,
                             'protein_grams' => $meal->protein_grams,
                             'carbs_grams' => $meal->carbs_grams,
                             'fat_grams' => $meal->fat_grams,
                             'meal_time' => $meal->meal_time,
-                            'status' => $meal->status,
-                            'notes' => $meal->notes,
-                            'completed_at' => optional($meal->completed_at)?->toIso8601String(),
+                            'status' => $completion?->status ?? $meal->status,
+                            'completed_by_role' => $completion?->completed_by_role,
+                            'completed_by_name' => $completion?->completed_by_name,
+                            'notes' => $completion?->notes ?? $meal->notes,
+                            'completed_at' => optional($completion?->completed_at)?->toIso8601String(),
+                            'occurrence_date' => $currentDate->toDateString(),
                             'sort_order' => $meal->sort_order,
                         ];
                     })->values(),

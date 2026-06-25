@@ -13,6 +13,8 @@ class Appointment extends Model
 {
     use SoftDeletes, InteractsWithModuleDocuments;
 
+    public ?string $temp_remarks = null;
+
     protected $moduleDocumentKeys = ['prescription_pdf'];
 
     protected $fillable = [
@@ -118,7 +120,7 @@ class Appointment extends Model
             }
 
             if (empty($model->queue_status)) {
-                $model->queue_status = 'waiting';
+                $model->queue_status = 'no_show';
             }
 
             if (Auth::check()) {
@@ -132,11 +134,13 @@ class Appointment extends Model
                 $newVal = $model->queue_status;
                 if ($newVal === 'completed') {
                     $model->status = \App\Enums\AppointmentStatus::COMPLETED;
-                } elseif ($newVal === 'not_completed') {
+                } elseif ($newVal === 'no_show') {
                     $model->status = \App\Enums\AppointmentStatus::NO_SHOW;
-                } elseif ($newVal === 'running') {
-                    // No other fields to update on the appointments table
-                } elseif ($newVal === 'waiting') {
+                } elseif ($newVal === 'started') {
+                    $model->status = \App\Enums\AppointmentStatus::CONFIRMED;
+                } elseif ($newVal === 'checkin') {
+                    $model->status = \App\Enums\AppointmentStatus::CONFIRMED;
+                } elseif ($newVal === 'skipped') {
                     $model->status = \App\Enums\AppointmentStatus::CONFIRMED;
                 }
             }
@@ -152,7 +156,7 @@ class Appointment extends Model
                 $newStatus = $model->queue_status;
                 $user = \Illuminate\Support\Facades\Auth::user();
 
-                if ($newStatus === 'waiting') {
+                if ($newStatus === 'checkin') {
                     // Send check-in notification to patient & doctor
                     try {
                         \App\Services\NotificationService::notifyPatientCheckedIn($model);
@@ -164,11 +168,12 @@ class Appointment extends Model
                     \App\Models\AppointmentQueueLog::create([
                         'doctor_id' => $model->doctor_id,
                         'appointment_id' => $model->id,
-                        'action' => 'revert',
-                        'queue_status' => 'waiting',
+                        'action' => 'revert', // keep action as revert or change to checkin
+                        'queue_status' => 'checkin',
                         'created_by' => $user?->id,
+                        'remarks' => $model->temp_remarks ?? null,
                     ]);
-                } elseif ($newStatus === 'running') {
+                } elseif ($newStatus === 'started') {
                     // Send notification to patient
                     try {
                         \App\Services\NotificationService::notifyConsultationStarted($model);
@@ -181,12 +186,12 @@ class Appointment extends Model
                         'doctor_id' => $model->doctor_id,
                         'appointment_id' => $model->id,
                         'action' => 'start',
-                        'queue_status' => 'running',
+                        'queue_status' => 'started',
                         'started_at' => now(),
                         'created_by' => $user?->id,
                     ]);
                 } else {
-                    // Completed, Skipped, Not Completed
+                    // Completed, Skipped, No Show
                     // Find active start log to calculate duration
                     $runningLog = \App\Models\AppointmentQueueLog::where('appointment_id', $model->id)
                         ->where('action', 'start')
@@ -211,7 +216,7 @@ class Appointment extends Model
                         'action' => match ($newStatus) {
                             'completed' => 'complete',
                             'skipped' => 'skip',
-                            'not_completed' => 'not_complete',
+                            'no_show' => 'not_complete',
                             default => $newStatus,
                         },
                         'queue_status' => $newStatus,
@@ -219,6 +224,7 @@ class Appointment extends Model
                         'ended_at' => $endedAt,
                         'duration_seconds' => $duration,
                         'created_by' => $user?->id,
+                        'remarks' => $model->temp_remarks ?? null,
                     ]);
 
                     if ($newStatus === 'completed') {
@@ -226,6 +232,12 @@ class Appointment extends Model
                             \App\Services\NotificationService::notifyAppointmentCompleted($model);
                         } catch (\Exception $e) {
                             \Illuminate\Support\Facades\Log::error("Failed to notify completion: " . $e->getMessage());
+                        }
+                    } elseif ($newStatus === 'skipped') {
+                        try {
+                            \App\Services\NotificationService::notifyPatientSkipped($model, $model->temp_remarks ?? '');
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error("Failed to notify skip: " . $e->getMessage());
                         }
                     }
                 }

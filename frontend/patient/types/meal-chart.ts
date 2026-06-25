@@ -3,6 +3,12 @@ export interface Meal {
   meal_type: string;
   meal_name: string;
   instructions: string | null;
+  meal_image?: string | null;
+  helpful_links?: Array<{
+    type?: string | null;
+    title?: string | null;
+    url: string;
+  }>;
   calories: number | null;
   protein_grams: number | null;
   carbs_grams: number | null;
@@ -10,7 +16,10 @@ export interface Meal {
   meal_time: string;
   status: string;
   patient_notes: string | null;
+  completed_by_role?: string | null;
+  completed_by_name?: string | null;
   completed_at: string | null;
+  occurrence_date?: string;
   sort_order: number;
 }
 
@@ -57,5 +66,8 @@ export interface DietPlanResponse {
   message: string;
   path: string;
   timestamp: string;
-  data: DietPlanData;
+  data: {
+    patient_id?: string;
+    plans?: DietPlanData[];
+  } | DietPlanData;
 }
