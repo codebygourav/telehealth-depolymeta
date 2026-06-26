@@ -8,12 +8,15 @@ use App\Models\Appointment;
 use App\Models\AppointmentQueueLog;
 use App\Traits\HasCustomSidebar;
 use Carbon\Carbon;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
+use Livewire\WithPagination;
 
 class AppointmentQueueDashboard extends Page
 {
     use HasCustomSidebar;
+    use WithPagination;
 
     protected string $view = 'filament.pages.appointment-queue-dashboard';
     protected static ?string $title = 'Appointments & Queue';
@@ -29,6 +32,9 @@ class AppointmentQueueDashboard extends Page
 
     // Doctor search in Screen 1
     public string $doctorSearchQuery = '';
+
+    // Inline queue logs view state
+    public bool $showLogs = false;
 
     // Modal state properties
     public ?string $modalAppointmentId = null;
@@ -64,15 +70,31 @@ class AppointmentQueueDashboard extends Page
         );
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('back_to_doctors_list')
+                ->label('Back to Doctors List')
+                ->icon('heroicon-o-arrow-left')
+                ->color('primary')
+                ->visible(fn (): bool => filled($this->selectedDoctorId))
+                ->action('deselectDoctor'),
+        ];
+    }
+
     public function selectDoctor(string $doctorId): void
     {
         $this->selectedDoctorId = $doctorId;
+        $this->showLogs = false;
+        $this->resetPage();
         $this->resetFilters();
     }
 
     public function deselectDoctor(): void
     {
         $this->selectedDoctorId = null;
+        $this->showLogs = false;
+        $this->resetPage();
         $this->resetFilters();
     }
 
@@ -81,6 +103,22 @@ class AppointmentQueueDashboard extends Page
         $this->searchQuery = '';
         $this->statusFilter = 'all';
         $this->visitTypeFilter = 'all';
+        $this->resetPage();
+    }
+
+    public function updatedSearchQuery(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedVisitTypeFilter(): void
+    {
+        $this->resetPage();
     }
 
     public function mount(): void
@@ -91,6 +129,15 @@ class AppointmentQueueDashboard extends Page
                 $this->selectedDoctorId = $doc->id;
             }
         }
+    }
+
+    public function toggleLogsView(): void
+    {
+        if (!$this->selectedDoctorId) {
+            return;
+        }
+
+        $this->showLogs = !$this->showLogs;
     }
 
     // Check In Doctor
@@ -418,6 +465,19 @@ class AppointmentQueueDashboard extends Page
         return Doctor::with('departments')->find($this->selectedDoctorId);
     }
 
+    public function getSelectedDoctorQueueLogs()
+    {
+        if (!$this->selectedDoctorId) {
+            return collect([]);
+        }
+
+        return AppointmentQueueLog::query()
+            ->with(['appointment.patient', 'creator', 'doctor'])
+            ->where('doctor_id', $this->selectedDoctorId)
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
     // Get stats for Screen 2
     public function getDoctorStats(): array
     {
@@ -438,10 +498,11 @@ class AppointmentQueueDashboard extends Page
         ];
     }
 
-    // Get appointments list for Screen 2
-    public function getAppointments()
+    protected function getAppointmentsQuery()
     {
-        if (!$this->selectedDoctorId) return collect([]);
+        if (!$this->selectedDoctorId) {
+            return Appointment::query()->whereRaw('1 = 0');
+        }
 
         $today = Carbon::today()->toDateString();
         $query = Appointment::where('doctor_id', $this->selectedDoctorId)
@@ -465,11 +526,17 @@ class AppointmentQueueDashboard extends Page
             });
         }
 
-        // Sort by queue number numeric part
-        return $query->get()->sortBy(function ($app) {
-            $parts = explode('-', $app->queue_number);
-            return (int) end($parts);
-        });
+        return $query->orderBy('queue_number');
+    }
+
+    public function getAppointments()
+    {
+        return $this->getAppointmentsQuery()->paginate(10);
+    }
+
+    public function getAllAppointmentsForQueue()
+    {
+        return $this->getAppointmentsQuery()->get();
     }
 
     // Get Next In Queue text

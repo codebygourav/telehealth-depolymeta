@@ -1,4 +1,19 @@
 <x-filament-panels::page>
+    <style>
+     
+
+        .queue-sticky-legend-inner {
+            min-height: 3rem;
+        }
+        .queue-sticky-head{
+            position: sticky;
+            top:0px;
+            background: #fff !important;
+        }
+
+     
+
+    </style>
     <div class="space-y-6" x-data="{ 
         confirmOpen: false, 
         confirmTitle: 'Confirm Action', 
@@ -30,7 +45,7 @@
                             wire:model.live="doctorSearchQuery" 
                             type="text" 
                             placeholder="Search doctors..." 
-                            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
                         />
                     </div>
                 </div>
@@ -58,7 +73,7 @@
                                 </div>
 
                                 <!-- Middle Row: Stats Grid -->
-                                <div class="grid grid-cols-3 gap-2 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 text-center">
+                                <div class="grid grid-cols-3 gap-2 py-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 text-center">
                                     <div>
                                         <div class="text-lg font-bold text-amber-500">{{ $doctor['waiting'] }}</div>
                                         <div class="text-[10px] uppercase font-semibold text-gray-400 dark:text-gray-500">Waiting</div>
@@ -126,107 +141,349 @@
                 $doctor = $this->getSelectedDoctor();
                 $stats = $this->getDoctorStats();
                 $appointments = $this->getAppointments();
+                $allAppointments = $this->getAllAppointmentsForQueue();
+                $queueStatusStyles = [
+                    'no_show' => [
+                        'label' => 'No Show',
+                        'badge' => 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400',
+                        'legend_text' => 'Booked, not arrived',
+                        'legend_card' => 'bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800',
+                        'row' => 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
+                    ],
+                    'checkin' => [
+                        'label' => 'Checked-in',
+                        'badge' => 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400',
+                        'legend_text' => 'Arrived & waiting',
+                        'legend_card' => 'bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800',
+                        'row' => 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
+                    ],
+                    'started' => [
+                        'label' => 'Started',
+                        'badge' => 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 ring-1 ring-indigo-300',
+                        'legend_text' => 'Current with Doctor (Active)',
+                        'legend_card' => 'bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800 ring-1 ring-indigo-400/40',
+                        'row' => 'bg-indigo-50/40 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 dark:ring-indigo-500/30 shadow-xs border-l-4 border-l-indigo-600',
+                    ],
+                    'completed' => [
+                        'label' => 'Completed',
+                        'badge' => 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400',
+                        'legend_text' => 'Consultation finished',
+                        'legend_card' => 'bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800',
+                        'row' => 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
+                    ],
+                    'skipped' => [
+                        'label' => 'Skipped',
+                        'badge' => 'bg-gray-150 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+                        'legend_text' => 'Missed turn / Put on hold',
+                        'legend_card' => 'bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800',
+                        'row' => 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
+                    ],
+                ];
+                $actionButtonBaseClass = 'inline-flex items-center justify-center min-h-[30px] px-4 py-2 text-[10px] font-semibold tracking-[0.01em] border rounded-full transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-offset-1';
+                $actionButtonStyles = [
+                    'mark_checkin' => 'bg-emerald-50/95 text-emerald-700 hover:bg-emerald-100 border-emerald-200/90 focus:ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/80',
+                    'start' => 'bg-amber-50/95 text-amber-700 hover:bg-amber-100 border-amber-200/90 focus:ring-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/80',
+                    'skip' => 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200 focus:ring-red-200 dark:bg-red-800 dark:text-red-300 dark:hover:bg-red-700 dark:border-gray-700',
+                    'complete' => 'bg-green-50/95 text-green-700 hover:bg-green-100 border-green-200/90 focus:ring-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900/80',
+                    'recheckin' => 'bg-violet-50/95 text-violet-700 hover:bg-violet-100 border-violet-200/90 focus:ring-violet-200 dark:bg-violet-950/30 dark:text-violet-400 dark:border-violet-900/80',
+                    'send_note' => 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200 focus:ring-red-200 dark:bg-red-800 dark:text-red-300 dark:hover:bg-red-700 dark:border-gray-700',
+                    'revert' => 'bg-orange-50/95 text-orange-700 hover:bg-orange-100 border-orange-200/90 focus:ring-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900/80',
+                    'view_details' => 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200 focus:ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:border-slate-700',
+                ];
+                $queueActionsByStatus = [
+                    'no_show' => ['mark_checkin'],
+                    'checkin' => ['start', 'skip'],
+                    'started' => ['complete'],
+                    'skipped' => ['recheckin'],
+                    'completed' => ['revert'],
+                ];
             @endphp
 
             <div class="space-y-6">
-                <!-- Navigation & Action Headers -->
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <button 
-                        wire:click="deselectDoctor" 
-                        class="flex items-center gap-2 px-4 py-3 bg-primary hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-white dark:text-gray-300 rounded-md text-xs font-bold transition "
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                        Back to Doctors List
-                    </button>
-                </div>
-
                 <!-- Doctor Details & Status Panel -->
-                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div class="flex items-center gap-4">
-                        <div class="h-14 w-14 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-xl">
+                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="h-14 w-14 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-xl shrink-0">
                             {{ strtoupper(substr($doctor->first_name, 0, 1) . substr($doctor->last_name, 0, 1)) }}
                         </div>
-                        <div>
-                            <h2 class="text-xl font-bold text-gray-900 dark:text-white">Dr. {{ $doctor->first_name }} {{ $doctor->last_name }} - Queue Management</h2>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-3">
+                        <div class="min-w-0">
+                            <h2 class="text-xl font-bold text-gray-900 dark:text-white truncate">Dr. {{ $doctor->first_name }} {{ $doctor->last_name }} - Queue Management</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                                 <span>Room: <strong>{{ $doctor->address_line2 ?: 'Room 204' }}</strong></span>
-                                <span>•</span>
+                                <span class="hidden sm:inline">•</span>
                                 <span>Department: <strong>{{ $doctor->departments->first()?->name ?? 'General Practice' }}</strong></span>
                             </p>
                         </div>
                     </div>
 
-                    <!-- Doctor Check-in & Break Control Buttons -->
-                    <div class="flex flex-wrap items-center gap-4 border-t md:border-t-0 pt-4 md:pt-0 border-gray-100 dark:border-gray-800">
-                        <!-- Check In / Out Buttons -->
-                        <div class="flex items-center gap-2 border-r border-gray-150 dark:border-gray-800 pr-4">
-                            <!-- Check-In Button -->
-                            <button 
-                                @if($doctor->is_checked_in) disabled @endif
-                                x-on:click.prevent="triggerConfirm('Doctor Check-In', 'Are you sure you want to check in this doctor?', () => { $wire.checkInDoctor('{{ $doctor->id }}') })"
-                                class="px-4 py-2 text-xs font-bold rounded-xl border transition-all duration-200 {{ $doctor->is_checked_in ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:border-green-900/60 dark:text-green-400' }}"
-                            >
-                                Check-In
-                            </button>
-                            <!-- Check-Out Button -->
-                            <button 
-                                @if(!$doctor->is_checked_in) disabled @endif
-                                x-on:click.prevent="triggerConfirm('Doctor Check-Out', 'Are you sure you want to check out this doctor?', () => { $wire.checkOutDoctor('{{ $doctor->id }}') })"
-                                class="px-4 py-2 text-xs font-bold rounded-xl border transition-all duration-200 {{ !$doctor->is_checked_in ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:border-red-900/60 dark:text-red-400' }}"
-                            >
-                                Check-Out
-                            </button>
-                        </div>
+                    <div class="flex flex-wrap xl:flex-nowrap items-center gap-3 xl:justify-end border-t xl:border-t-0 pt-4 xl:pt-0 border-gray-100 dark:border-gray-800">
+                        @if($showLogs)
+                        <button
+                            wire:click="toggleLogsView"
+                            class="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-500 text-white rounded-md text-xs font-bold transition shrink-0"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                            Back to Queue Board
+                        </button>
+                        @else
+                        <button
+                            wire:click="toggleLogsView"
+                            class="flex items-center justify-center gap-2 px-4 py-2.5 bg-transparent hover:bg-primary dark:bg-gray-800 dark:hover:bg-gray-700 text-primary dark:text-primary rounded-md text-xs font-bold transition border border-primary shrink-0"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            View Queue Logs / Audit
+                        </button>
+                        @endif
 
-                        <!-- Break On / Off Buttons -->
-                        <div class="flex items-center gap-2">
-                            <!-- On Break Button -->
-                            <button 
-                                @if(!$doctor->is_checked_in || $doctor->is_on_break) disabled @endif
-                                x-on:click.prevent="triggerConfirm('Doctor Break Status', 'Are you sure you want to start break for this doctor?', () => { $wire.startDoctorBreak('{{ $doctor->id }}') })"
-                                class="px-4 py-2 text-xs font-bold rounded-xl border transition-all duration-200 {{ !$doctor->is_checked_in || $doctor->is_on_break ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/20 dark:border-amber-900/60 dark:text-amber-400' }}"
-                            >
-                                On Break
-                            </button>
-                            <!-- Off Break Button -->
-                            <button 
-                                @if(!$doctor->is_checked_in || !$doctor->is_on_break) disabled @endif
-                                x-on:click.prevent="triggerConfirm('Doctor Break Status', 'Are you sure you want to end break for this doctor?', () => { $wire.endDoctorBreak('{{ $doctor->id }}') })"
-                                class="px-4 py-2 text-xs font-bold rounded-xl border transition-all duration-200 {{ !$doctor->is_checked_in || !$doctor->is_on_break ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:border-green-900/60 dark:text-green-400' }}"
-                            >
-                                Off Break
-                            </button>
+                        <!-- Doctor Check-in & Break Control Buttons -->
+                        <div class="flex flex-wrap xl:flex-nowrap items-center gap-3 xl:border-l xl:border-gray-150 xl:dark:border-gray-800 xl:pl-3">
+                            <!-- Check In / Out Buttons -->
+                            <div class="flex items-center gap-2">
+                                <button
+                                    @if($doctor->is_checked_in) disabled @endif
+                                    x-on:click.prevent="triggerConfirm('Doctor Check-In', 'Are you sure you want to check in this doctor?', () => { $wire.checkInDoctor('{{ $doctor->id }}') })"
+                                    class="px-4 py-2.5 text-xs font-bold rounded-md border transition-all duration-200 {{ $doctor->is_checked_in ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:border-green-900/60 dark:text-green-400' }}"
+                                >
+                                    Check-In
+                                </button>
+                                <button
+                                    @if(!$doctor->is_checked_in) disabled @endif
+                                    x-on:click.prevent="triggerConfirm('Doctor Check-Out', 'Are you sure you want to check out this doctor?', () => { $wire.checkOutDoctor('{{ $doctor->id }}') })"
+                                    class="px-4 py-2.5 text-xs font-bold rounded-md border transition-all duration-200 {{ !$doctor->is_checked_in ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:border-red-900/60 dark:text-red-400' }}"
+                                >
+                                    Check-Out
+                                </button>
+                            </div>
+
+                            <!-- Break On / Off Buttons -->
+                            <div class="flex items-center gap-2">
+                                <button
+                                    @if(!$doctor->is_checked_in || $doctor->is_on_break) disabled @endif
+                                    x-on:click.prevent="triggerConfirm('Doctor Break Status', 'Are you sure you want to start break for this doctor?', () => { $wire.startDoctorBreak('{{ $doctor->id }}') })"
+                                    class="px-4 py-2.5 text-xs font-bold rounded-md border transition-all duration-200 {{ !$doctor->is_checked_in || $doctor->is_on_break ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/20 dark:border-amber-900/60 dark:text-amber-400' }}"
+                                >
+                                    On Break
+                                </button>
+                                <button
+                                    @if(!$doctor->is_checked_in || !$doctor->is_on_break) disabled @endif
+                                    x-on:click.prevent="triggerConfirm('Doctor Break Status', 'Are you sure you want to end break for this doctor?', () => { $wire.endDoctorBreak('{{ $doctor->id }}') })"
+                                    class="px-4 py-2.5 text-xs font-bold rounded-md border transition-all duration-200 {{ !$doctor->is_checked_in || !$doctor->is_on_break ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:border-green-900/60 dark:text-green-400' }}"
+                                >
+                                    Off Break
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                @if($showLogs)
+                    @php
+                        $logs = $this->getSelectedDoctorQueueLogs();
+                    @endphp
+
+                    <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Queue Audit Logs</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Single doctor audit trail for Dr. {{ $doctor->first_name }} {{ $doctor->last_name }}.</p>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
+                        <div class="relative pl-11">
+                            <div class="absolute left-[15px] top-0 bottom-0 w-px bg-gray-300 dark:bg-gray-700"></div>
+
+                            <div class="space-y-6">
+                                @forelse($logs as $log)
+                                    @php
+                                        $patientName = trim(($log->appointment?->patient?->first_name ?? '') . ' ' . ($log->appointment?->patient?->last_name ?? ''));
+                                        $doctorName = trim(($log->doctor?->first_name ?? $doctor->first_name ?? '') . ' ' . ($log->doctor?->last_name ?? $doctor->last_name ?? ''));
+                                        $queueNumber = $log->appointment?->queue_number;
+                                        $remarks = $log->remarks;
+
+                                        $detailsMap = [
+                                            'check_in' => [
+                                                'title' => 'Checked In',
+                                                'desc' => 'Doctor checked in and is available for queue management.',
+                                                'color' => 'green',
+                                                'icon' => 'checkin.png',
+                                            ],
+                                            'check_out' => [
+                                                'title' => 'Checked Out',
+                                                'desc' => 'Doctor checked out from queue management.',
+                                                'color' => 'gray',
+                                                'icon' => 'no-show.png',
+                                            ],
+                                            'break_start' => [
+                                                'title' => 'Break Started',
+                                                'desc' => 'Doctor started a break and is temporarily unavailable.',
+                                                'color' => 'amber',
+                                                'icon' => 'skip.png',
+                                            ],
+                                            'break_end' => [
+                                                'title' => 'Break Ended',
+                                                'desc' => 'Doctor returned from break and is available again.',
+                                                'color' => 'green',
+                                                'icon' => 'checkin.png',
+                                            ],
+                                            'revert' => [
+                                                'title' => 'Patient Checked In',
+                                                'desc' => ($patientName !== '' ? $patientName : 'Patient') . ($queueNumber ? " ({$queueNumber})" : '') . ' checked in.',
+                                                'color' => 'green',
+                                                'icon' => 'checkin.png',
+                                            ],
+                                            'start' => [
+                                                'title' => 'Consultation Started',
+                                                'desc' => 'Consultation started for ' . ($patientName !== '' ? $patientName : 'patient') . ($queueNumber ? " ({$queueNumber})" : '') . '.',
+                                                'color' => 'indigo',
+                                                'icon' => 'start.png',
+                                            ],
+                                            'complete' => [
+                                                'title' => 'Consultation Completed',
+                                                'desc' => 'Consultation completed for ' . ($patientName !== '' ? $patientName : 'patient') . ($queueNumber ? " ({$queueNumber})" : '') . '.',
+                                                'color' => 'green',
+                                                'icon' => 'completed.png',
+                                            ],
+                                            'skip' => [
+                                                'title' => 'Patient Skipped',
+                                                'desc' => ($patientName !== '' ? $patientName : 'Patient') . ($queueNumber ? " ({$queueNumber})" : '') . ' was skipped in the queue.',
+                                                'color' => 'gray',
+                                                'icon' => 'skip.png',
+                                            ],
+                                            'not_complete' => [
+                                                'title' => 'Marked No Show',
+                                                'desc' => ($patientName !== '' ? $patientName : 'Patient') . ($queueNumber ? " ({$queueNumber})" : '') . ' was marked as no show.',
+                                                'color' => 'red',
+                                                'icon' => 'no-show.png',
+                                            ],
+                                        ];
+
+                                        $colorMap = [
+                                            'green' => [
+                                                'badge' => 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900/60',
+                                            ],
+                                            'amber' => [
+                                                'badge' => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/60',
+                                            ],
+                                            'indigo' => [
+                                                'badge' => 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-900/60',
+                                            ],
+                                            'red' => [
+                                                'badge' => 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/60',
+                                            ],
+                                            'gray' => [
+                                                'badge' => 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+                                            ],
+                                        ];
+
+                                        $details = $detailsMap[$log->action] ?? [
+                                            'title' => ucwords(str_replace('_', ' ', $log->action ?? 'Unknown')),
+                                            'desc' => 'Queue action recorded.',
+                                            'color' => 'gray',
+                                            'icon' => 'checkin.png',
+                                        ];
+
+                                        $style = $colorMap[$details['color']] ?? $colorMap['gray'];
+                                        $timeLabel = $log->created_at?->format('H:i') ?? 'N/A';
+                                        $dateLabel = $log->created_at?->format('d/m/Y') ?? 'N/A';
+                                    @endphp
+
+                                    <div class="relative">
+                                        <span class="absolute -left-[45px] top-1 flex h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 z-10">
+                                            <img src="/images/queue-images/{{ $details['icon'] }}" class="h-4.5 w-4.5 object-contain" alt="{{ $log->action }}" />
+                                        </span>
+
+                                        <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-850 rounded-md p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-all duration-300">
+                                            <div class="space-y-1.5 min-w-0 flex-1">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border {{ $style['badge'] }}">
+                                                        {{ $details['title'] }}
+                                                    </span>
+
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-50 text-primary dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/60">
+                                                        Dr. {{ $doctorName !== '' ? $doctorName : 'N/A' }}
+                                                    </span>
+
+                                                    <span class="text-[11px] font-semibold text-gray-450 dark:text-gray-500">
+                                                        {{ $dateLabel }}
+                                                    </span>
+                                                </div>
+
+                                                <p class="text-sm font-medium text-gray-700 dark:text-gray-350 leading-relaxed">
+                                                    {{ $details['desc'] }}
+                                                </p>
+
+                                                @if($remarks)
+                                                    <div class="mt-2 text-xs bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5 border border-gray-150 dark:border-gray-850 text-gray-600 dark:text-gray-450">
+                                                        <span class="font-bold text-gray-500 dark:text-gray-400">Note:</span> {{ $remarks }}
+                                                    </div>
+                                                @endif
+                                            </div>
+
+                                            <div class="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800 text-xs shrink-0">
+                                                <div class="text-xs font-extrabold text-gray-900 dark:text-white">
+                                                    {{ $timeLabel }}
+                                                </div>
+                                                <div class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                                                    By {{ $log->creator?->name ?? 'System' }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="py-12 text-center text-gray-500 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl">
+                                        <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                                        <h3 class="font-semibold text-gray-700 dark:text-gray-300">No events logged yet</h3>
+                                        <p class="text-sm text-gray-450 mt-1">Activities will show up here as actions are performed.</p>
+                                    </div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+                @else
                 <!-- Statistics Widgets Grid -->
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm border-l-4 border-l-gray-400">
-                        <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Total Booked</div>
-                        <div class="text-2xl font-extrabold text-gray-950 dark:text-white mt-1">{{ $stats['total'] }}</div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm border-l-4 border-l-amber-500">
-                        <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Checked-In / Waiting</div>
-                        <div class="text-2xl font-extrabold text-amber-500 mt-1">{{ $stats['waiting'] }}</div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm border-l-4 border-l-indigo-500">
-                        <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Started</div>
-                        <div class="text-2xl font-extrabold text-indigo-500 mt-1">{{ $stats['started'] }}</div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm border-l-4 border-l-green-500">
-                        <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Completed</div>
-                        <div class="text-2xl font-extrabold text-green-500 mt-1">{{ $stats['completed'] }}</div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm border-l-4 border-l-gray-500">
-                        <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Skipped</div>
-                        <div class="text-2xl font-extrabold text-gray-500 mt-1">{{ $stats['skipped'] }}</div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm border-l-4 border-l-red-500">
-                        <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">No Show</div>
-                        <div class="text-2xl font-extrabold text-red-500 mt-1">{{ $stats['no_show'] }}</div>
+                <div x-data="{ open: false }" class="mb-4">
+                    <button
+                        type="button"
+                        @click="open = !open"
+                        class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-900 rounded-md shadow-sm border border-gray-200 dark:border-gray-800 text-xs font-bold transition select-none w-full text-left"
+                    >
+                        <span>
+                            <svg :class="{'rotate-90': open}" class="inline mr-2 w-4 h-4 text-gray-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </span>
+                        <span class="uppercase tracking-wide">Show Statistics</span>
+                        <span x-show="!open" class="ml-auto text-gray-400 text-[11px]">(click to expand)</span>
+                        <span x-show="open" class="ml-auto text-gray-400 text-[11px]">(click to collapse)</span>
+                    </button>
+                    <div x-show="open" x-collapse class="mt-2">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                            <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-gray-400">
+                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Total Booked</div>
+                                <div class="text-2xl font-extrabold text-gray-950 dark:text-white mt-1">{{ $stats['total'] }}</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-amber-500">
+                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Checked-In / Waiting</div>
+                                <div class="text-2xl font-extrabold text-amber-500 mt-1">{{ $stats['waiting'] }}</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-indigo-500">
+                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Started</div>
+                                <div class="text-2xl font-extrabold text-indigo-500 mt-1">{{ $stats['started'] }}</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-green-500">
+                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Completed</div>
+                                <div class="text-2xl font-extrabold text-green-500 mt-1">{{ $stats['completed'] }}</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-gray-500">
+                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Skipped</div>
+                                <div class="text-2xl font-extrabold text-gray-500 mt-1">{{ $stats['skipped'] }}</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-red-500">
+                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">No Show</div>
+                                <div class="text-2xl font-extrabold text-red-500 mt-1">{{ $stats['no_show'] }}</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+           
 
                 <!-- Filters Panel -->
                 <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
@@ -237,14 +494,14 @@
                                 wire:model.live="searchQuery" 
                                 type="text" 
                                 placeholder="Search by name or phone..." 
-                                class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
+                                class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
                             />
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Queue Status</label>
                             <select 
                                 wire:model.live="statusFilter" 
-                                class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
+                                class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
                             >
                                 <option value="all">All Statuses</option>
                                 <option value="checkin">Checked-In</option>
@@ -258,7 +515,7 @@
                             <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Visit Type</label>
                             <select 
                                 wire:model.live="visitTypeFilter" 
-                                class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
+                                class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
                             >
                                 <option value="all">All Visit Types</option>
                                 <option value="in-person">In-Person</option>
@@ -268,7 +525,7 @@
                         <div class="flex items-end gap-2">
                             <button 
                                 wire:click="resetFilters" 
-                                class="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 py-2 rounded-xl text-xs font-bold transition shadow-sm border border-gray-200/50"
+                                class="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 py-2 rounded-md text-xs font-bold transition shadow-sm border border-gray-200/50"
                             >
                                 Reset Filters
                             </button>
@@ -277,109 +534,62 @@
                 </div>
 
                 <!-- Appointments Queue Table -->
-                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm"                    <!-- Legend Bar (Statuses and Actions) -->
-                    <div class="bg-gray-50/60 dark:bg-gray-800/40 border-b border-gray-100 dark:border-gray-800 px-6 py-4 space-y-4">
-                        <!-- Status Meaning Legend -->
-                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                            <div class="flex items-center gap-2">
+                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="queue-sticky-legend bg-gray-50/90 dark:bg-gray-800/90 border-b border-gray-100 dark:border-gray-800 px-6 py-4">
+                        <div class="queue-sticky-legend-inner flex items-center gap-4">
+                            <div class="flex items-center gap-2 shrink-0">
                                 <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                                 <span class="text-xs font-bold text-gray-700 dark:text-white">Status Meanings:</span>
                             </div>
-                            <div class="flex flex-wrap items-center gap-4 text-xs text-gray-550 dark:text-gray-400">
-                                <div class="flex items-center gap-1.5 bg-white dark:bg-gray-850 px-2 py-1 rounded-xl shadow-xs border border-gray-100 dark:border-gray-800">
-                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400">
-                                        
-                                        <span>No Show</span>
-                                    </span>
-                                    <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Booked, not arrived</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 bg-white dark:bg-gray-850 px-2 py-1 rounded-xl shadow-xs border border-gray-100 dark:border-gray-800">
-                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                                       
-                                        <span>Checked-in</span>
-                                    </span>
-                                    <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Arrived & waiting</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 bg-white dark:bg-gray-850 px-2 py-1 rounded-xl shadow-xs border border-gray-100 dark:border-gray-800 ring-1 ring-indigo-400/40">
-                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400">
-                                        <div class="relative flex h-1.5 w-1.5 shrink-0">
-                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-605"></span>
-                                        </div>
-                                       
-                                        <span>Started</span>
-                                    </span>
-                                    <span class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 animate-pulse">Current with Doctor (Active)</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 bg-white dark:bg-gray-850 px-2 py-1 rounded-xl shadow-xs border border-gray-100 dark:border-gray-800">
-                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400">
-                                       
-                                        <span>Completed</span>
-                                    </span>
-                                    <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Consultation finished</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 bg-white dark:bg-gray-850 px-2 py-1 rounded-xl shadow-xs border border-gray-100 dark:border-gray-800">
-                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-150 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                                       
-                                        <span>Skipped</span>
-                                    </span>
-                                    <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Missed turn / Put on hold</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="h-px bg-gray-100 dark:bg-gray-800"></div>
-
-                        <!-- Actions Meaning Bar -->
-                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span class="text-xs font-bold text-gray-700 dark:text-white">Actions Legend:</span>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-6 text-xs text-gray-500 dark:text-gray-400">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="p-1 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg shrink-0">
-                                        <img src="/images/queue-images/checkin.png" class="w-3.5 h-3.5 object-contain" alt="check-in" />
-                                    </span>
-                                    <span class="font-semibold text-gray-700 dark:text-gray-300 text-[11px]">Re-Queue / Revert</span>
-                                </div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="p-1 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900 rounded-lg shrink-0">
-                                        <img src="/images/queue-images/start.png" class="w-3.5 h-3.5 object-contain" alt="start" />
-                                    </span>
-                                    <span class="font-semibold text-gray-700 dark:text-gray-300 text-[11px]">Start Consultation</span>
-                                </div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="p-1 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg shrink-0">
-                                        <img src="/images/queue-images/completed.png" class="w-3.5 h-3.5 object-contain" alt="completed" />
-                                    </span>
-                                    <span class="font-semibold text-gray-700 dark:text-gray-300 text-[11px]">Complete Consultation</span>
-                                </div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="p-1 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg shrink-0">
-                                        <img src="/images/queue-images/no-show.png" class="w-3.5 h-3.5 object-contain" alt="no-show" />
-                                    </span>
-                                    <span class="font-semibold text-gray-700 dark:text-gray-300 text-[11px]">No Show / Not Completed</span>
-                                </div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="p-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shrink-0">
-                                        <img src="/images/queue-images/skip.png" class="w-3.5 h-3.5 object-contain" alt="skip" />
-                                    </span>
-                                    <span class="font-semibold text-gray-700 dark:text-gray-300 text-[11px]">Skip Patient</span>
-                                </div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="p-1 text-gray-650 bg-gray-50 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-lg shrink-0">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                    </span>
-                                    <span class="font-semibold text-gray-700 dark:text-gray-300 text-[11px]">View Details</span>
-                                </div>
+                            <div class="flex items-center gap-3 text-xs text-gray-550 dark:text-gray-400 overflow-x-auto pb-1 min-w-0 flex-1">
+                                @foreach(['no_show', 'checkin', 'started', 'completed', 'skipped'] as $legendStatus)
+                                    @php
+                                        $legend = $queueStatusStyles[$legendStatus];
+                                    @endphp
+                                    <div class="flex items-center gap-1.5 px-2 py-1 rounded-xl shadow-xs whitespace-nowrap shrink-0 {{ $legend['legend_card'] }}">
+                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold {{ $legend['badge'] }}">
+                                            @if($legendStatus === 'started')
+                                                <div class="relative flex h-1.5 w-1.5 shrink-0">
+                                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                                    <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-600"></span>
+                                                </div>
+                                            @endif
+                                            <span>{{ $legend['label'] }}</span>
+                                        </span>
+                                        <span class="text-[10px] font-semibold {{ $legendStatus === 'started' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400' }} {{ $legendStatus === 'started' ? 'animate-pulse' : '' }}">{{ $legend['legend_text'] }}</span>
+                                    </div>
+                                @endforeach
                             </div>
                         </div>
                     </div>
-                    <div class="overflow-x-auto">
+
+                    <div 
+                        class="overflow-x-auto"
+                        style="height: auto; min-height: 0; max-height: none;"
+                        x-data
+                        x-init="
+                            $nextTick(() => {
+                                let el = $el;
+                                const MIN_HEIGHT = 500;
+                                function adjustHeight() {
+                                    if (el.scrollHeight > MIN_HEIGHT) {
+                                        el.style.height = MIN_HEIGHT + 'px';
+                                        el.style.overflowY = 'auto';
+                                    } else {
+                                        el.style.height = 'auto';
+                                        el.style.overflowY = 'visible';
+                                    }
+                                }
+                                adjustHeight();
+                                const resizeObserver = new ResizeObserver(adjustHeight);
+                                resizeObserver.observe(el);
+                            });
+                        "
+                    >
+               
                         <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-gray-50 dark:bg-gray-800/70 border-b border-gray-100 dark:border-gray-800 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                            <thead class="queue-sticky-head">
+                                <tr class="bg-gray-50/95 dark:bg-gray-800/95 border-b border-gray-100 dark:border-gray-800 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                                     <th class="px-6 py-4">Queue No.</th>
                                     <th class="px-6 py-4">Patient</th>
                                     <!-- <th class="px-6 py-4">Phone</th> -->
@@ -394,8 +604,14 @@
                                 @forelse($appointments as $app)
                                     @php
                                         $queueStatus = $app->queue_status ?: 'waiting';
+                                        $statusMeta = $queueStatusStyles[$queueStatus] ?? [
+                                            'label' => ucfirst($queueStatus),
+                                            'badge' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+                                            'row' => 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
+                                        ];
+                                        $rowActions = $queueActionsByStatus[$queueStatus] ?? [];
                                     @endphp
-                                    <tr class="text-sm transition duration-150 {{ $queueStatus === 'started' ? 'bg-indigo-50/40 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 dark:ring-indigo-500/30 shadow-xs border-l-4 border-l-indigo-600' : 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30' }}">
+                                    <tr class="text-sm transition duration-150 {{ $statusMeta['row'] }}">
                                         <!-- Queue No -->
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="inline-flex items-center px-3 py-1 bg-primary-50 dark:bg-primary-950/20 text-primary-700 dark:text-primary-400 font-bold rounded-lg text-xs">
@@ -437,105 +653,88 @@
                                          <!-- Status Badge / Icon -->
                                          <td class="px-6 py-4 whitespace-nowrap">
                                              <div class="flex items-center gap-2">
-                                                 <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold 
-                                                     {{ $queueStatus === 'completed' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : '' }}
-                                                     {{ $queueStatus === 'started' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 ring-1 ring-indigo-300' : '' }}
-                                                     {{ $queueStatus === 'checkin' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400' : '' }}
-                                                     {{ $queueStatus === 'skipped' ? 'bg-gray-150 text-gray-700 dark:bg-gray-800 dark:text-gray-400' : '' }}
-                                                     {{ $queueStatus === 'no_show' ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400' : '' }}
-                                                 ">
-                                                     {{ $queueStatus === 'no_show' ? 'No Show' : ($queueStatus === 'checkin' ? 'Checked-in' : ($queueStatus === 'started' ? 'Started' : ucfirst($queueStatus))) }}
+                                                 <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold {{ $statusMeta['badge'] }}">
+                                                     {{ $statusMeta['label'] }}
                                                  </span>
                                              </div>
                                          </td>
 
                                          <!-- Next in Queue Info -->
                                          <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 font-semibold font-mono">
-                                             {{ $this->getNextInQueueText($app, $appointments) }}
+                                             {{ $this->getNextInQueueText($app, $allAppointments) }}
                                          </td>
 
                                          <!-- Actions Grid -->
                                          <td class="px-6 py-4 whitespace-nowrap text-center">
                                              <div class="flex items-center justify-center gap-2">
-                                                 @if($queueStatus === 'no_show')
-                                                     <!-- Mark Check-in Button -->
-                                                     <button 
-                                                         x-on:click.prevent="triggerConfirm('Mark Patient Checked-in', 'Are you sure you want to mark this patient as checked in?', () => { $wire.markCheckIn('{{ $app->id }}') })"
-                                                         title="Mark Check-in"
-                                                         class="p-1.5 bg-green-50 hover:bg-green-100 border border-green-200 dark:bg-green-950/20 dark:border-green-900 rounded-xl transition shadow-sm"
-                                                     >
-                                                         <img src="/images/queue-images/checkin.png" class="w-4 h-4 object-contain" alt="Mark Check-in" />
-                                                     </button>
-                                                 @elseif($queueStatus === 'checkin')
-                                                     <!-- Start Button -->
-                                                     <button 
-                                                         x-on:click.prevent="triggerConfirm('Start Consultation', 'Are you sure you want to start this consultation?', () => { $wire.startAppointment('{{ $app->id }}') })"
-                                                         title="Start Consultation"
-                                                         class="p-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900 rounded-xl transition shadow-sm"
-                                                     >
-                                                         <img src="/images/queue-images/start.png" class="w-4 h-4 object-contain" alt="Start" />
-                                                     </button>
-                                                     <!-- Skip Button -->
-                                                     <button 
-                                                         wire:click="openSkipModal('{{ $app->id }}')"
-                                                         title="Skip Patient"
-                                                         class="p-1.5 bg-gray-50 hover:bg-gray-150 border border-gray-250 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition shadow-sm"
-                                                     >
-                                                         <img src="/images/queue-images/skip.png" class="w-4 h-4 object-contain" alt="Skip" />
-                                                     </button>
-                                                 @elseif($queueStatus === 'started')
-                                                     <!-- Complete Button -->
-                                                     <button 
-                                                         wire:click="openCompleteModal('{{ $app->id }}')"
-                                                         title="Complete Consultation"
-                                                         class="p-1.5 bg-green-50 hover:bg-green-100 border border-green-200 dark:bg-green-950/20 dark:border-green-900 rounded-xl transition shadow-sm"
-                                                     >
-                                                         <img src="/images/queue-images/completed.png" class="w-4 h-4 object-contain" alt="Complete" />
-                                                     </button>
-                                                     <!-- Skip Button -->
-                                                     <button 
-                                                         wire:click="openSkipModal('{{ $app->id }}')"
-                                                         title="Skip Patient"
-                                                         class="p-1.5 bg-gray-50 hover:bg-gray-150 border border-gray-250 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition shadow-sm"
-                                                     >
-                                                         <img src="/images/queue-images/skip.png" class="w-4 h-4 object-contain" alt="Skip" />
-                                                     </button>
-                                                 @elseif($queueStatus === 'skipped')
-                                                     <!-- Re-checkin Button -->
-                                                     <button 
-                                                         x-on:click.prevent="triggerConfirm('Re-check-in Patient', 'Are you sure you want to recheck-in this patient?', () => { $wire.markCheckIn('{{ $app->id }}') })"
-                                                         title="Re-checkin"
-                                                         class="p-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 rounded-xl transition shadow-sm"
-                                                     >
-                                                         <img src="/images/queue-images/checkin.png" class="w-4 h-4 object-contain" alt="Re-checkin" />
-                                                     </button>
-                                                     <!-- Send Note Button -->
-                                                     <button 
-                                                         wire:click="openSkipModal('{{ $app->id }}')"
-                                                         title="Send Note"
-                                                         class="p-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-900 rounded-xl transition shadow-sm"
-                                                     >
-                                                         <img src="/images/queue-images/skip.png" class="w-4 h-4 object-contain" alt="Send Note" />
-                                                     </button>
-                                                 @else
-                                                     <!-- Revert / Recheck-in Action -->
-                                                     <button 
-                                                         x-on:click.prevent="triggerConfirm('Re-check-in Patient', 'Are you sure you want to check-in this patient again?', () => { $wire.revertAppointment('{{ $app->id }}') })"
-                                                         title="Re-checkin"
-                                                         class="p-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 rounded-xl transition shadow-sm"
-                                                     >
-                                                         <img src="/images/queue-images/checkin.png" class="w-4 h-4 object-contain" alt="Re-checkin" />
-                                                     </button>
-                                                 @endif
+                                                 @foreach($rowActions as $actionKey)
+                                                     @if($actionKey === 'mark_checkin')
+                                                         <button
+                                                             x-on:click.prevent="triggerConfirm('Mark Patient Checked-in', 'Are you sure you want to mark this patient as checked in?', () => { $wire.markCheckIn('{{ $app->id }}') })"
+                                                             title="Mark Check-in"
+                                                             class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['mark_checkin'] }}"
+                                                         >
+                                                             Check-in
+                                                         </button>
+                                                     @elseif($actionKey === 'start')
+                                                         <button
+                                                             x-on:click.prevent="triggerConfirm('Start Consultation', 'Are you sure you want to start this consultation?', () => { $wire.startAppointment('{{ $app->id }}') })"
+                                                             title="Start Consultation"
+                                                             class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['start'] }}"
+                                                         >
+                                                             Start
+                                                         </button>
+                                                     @elseif($actionKey === 'skip')
+                                                         <button
+                                                             wire:click="openSkipModal('{{ $app->id }}')"
+                                                             title="Skip / Notify Patient"
+                                                             class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['skip'] }}"
+                                                         >
+                                                             Skip / Notify
+                                                         </button>
+                                                     @elseif($actionKey === 'complete')
+                                                         <button
+                                                             wire:click="openCompleteModal('{{ $app->id }}')"
+                                                             title="Complete Consultation"
+                                                             class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['complete'] }}"
+                                                         >
+                                                            Mark Complete
+                                                         </button>
+                                                     @elseif($actionKey === 'recheckin')
+                                                         <button
+                                                             x-on:click.prevent="triggerConfirm('Re-check-in Patient', 'Are you sure you want to recheck-in this patient?', () => { $wire.markCheckIn('{{ $app->id }}') })"
+                                                             title="Re-checkin"
+                                                             class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['recheckin'] }}"
+                                                         >
+                                                             Re-check-in
+                                                         </button>
+                                                     @elseif($actionKey === 'send_note')
+                                                         <button
+                                                             wire:click="openSkipModal('{{ $app->id }}')"
+                                                             title="Skip / Notify Patient"
+                                                             class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['send_note'] }}"
+                                                         >
+                                                             Skip / Notify
+                                                         </button>
+                                                     @elseif($actionKey === 'revert')
+                                                         <button
+                                                             x-on:click.prevent="triggerConfirm('Re-check-in Patient', 'Are you sure you want to check-in this patient again?', () => { $wire.revertAppointment('{{ $app->id }}') })"
+                                                             title="Re-checkin"
+                                                             class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['revert'] }}"
+                                                         >
+                                                             Re-check-in
+                                                         </button>
+                                                     @endif
+                                                 @endforeach
 
                                                  <!-- View Patient Details Eye Action -->
                                                  <a 
                                                      href="/admin/appointments/{{ $app->slug }}" 
                                                      target="_blank"
                                                      title="View Details"
-                                                     class="p-1.5 bg-gray-50 hover:bg-gray-150 border border-gray-250 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition shadow-sm text-gray-500 dark:text-gray-400"
+                                                     class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['view_details'] }}"
                                                  >
-                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                                     View Details
                                                  </a>
                                              </div>
                                          </td>
@@ -550,7 +749,14 @@
                             </tbody>
                         </table>
                     </div>
+
+                    @if($appointments->hasPages())
+                        <div class="border-t border-gray-100 dark:border-gray-800 px-6 py-4">
+                            {{ $appointments->links('livewire::tailwind') }}
+                        </div>
+                    @endif
                 </div>
+                @endif
         @endif
 
         <!-- Remarks Input Modal Overlay -->
@@ -587,20 +793,20 @@
                         wire:model="modalRemarks"
                         rows="3"
                         placeholder="Type remarks here..."
-                        class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                        class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                     ></textarea>
                 </div>
                 
                 <div class="flex justify-end gap-3 pt-2">
                     <button 
                         wire:click="closeModal" 
-                        class="px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition duration-200"
+                        class="px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-xs font-bold transition duration-200"
                     >
                         Cancel
                     </button>
                     <button 
                         wire:click="{{ $activeModal === 'complete' ? 'submitComplete' : 'submitSkip' }}" 
-                        class="px-4 py-2 bg-primary hover:bg-primary-500 text-white rounded-xl text-xs font-bold transition duration-200 shadow-sm"
+                        class="px-4 py-2 bg-primary hover:bg-primary-500 text-white rounded-md text-xs font-bold transition duration-200 shadow-sm"
                     >
                         Confirm
                     </button>
@@ -646,13 +852,13 @@
                 <div class="flex justify-end gap-3 pt-2">
                     <button 
                         x-on:click="confirmOpen = false" 
-                        class="px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition duration-200"
+                        class="px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-xs font-bold transition duration-200"
                     >
                         Cancel
                     </button>
                     <button 
                         x-on:click="executeConfirm()" 
-                        class="px-4 py-2 bg-primary hover:bg-primary-500 text-white rounded-xl text-xs font-bold transition duration-200 shadow-sm"
+                        class="px-4 py-2 bg-primary hover:bg-primary-500 text-white rounded-md text-xs font-bold transition duration-200 shadow-sm"
                     >
                         Confirm
                     </button>

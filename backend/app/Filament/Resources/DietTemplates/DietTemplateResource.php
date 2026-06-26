@@ -17,7 +17,9 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -222,32 +224,37 @@ class DietTemplateResource extends Resource
                 ->columnSpanFull(),
 
             Section::make('Sync Updates to Patients')
-                ->description('If you updated meals, video links, or recipes, select the active patients you want to apply these updates to.')
+                ->description('This template is assigned to active patient diet plans. Choose whether the saved meals, dates, days, and plan details should also update those patients.')
                 ->schema([
-                    Select::make('sync_patient_plans')
-                        ->label('Patients currently on this diet plan')
-                        ->multiple()
-                        ->options(function ($record) {
-                            if (!$record) {
-                                return [];
-                            }
-                            return \App\Models\PatientDietPlan::query()
-                                ->where('diet_template_id', $record->id)
-                                ->where('status', 'active')
-                                ->with('patient.user')
-                                ->get()
-                                ->mapWithKeys(function (\App\Models\PatientDietPlan $plan) {
-                                    $patientName = $plan->patient?->user?->name ?? ('Patient #' . $plan->patient_id);
-                                    $startDate = $plan->start_date ? \Carbon\Carbon::parse($plan->start_date)->format('d M Y') : 'N/A';
-                                    return [$plan->id => "{$patientName} (Started: {$startDate})"];
-                                })
-                                ->toArray();
-                        })
-                        ->searchable()
-                        ->placeholder('Choose patients to update (leave empty to only update the template)')
+                    Radio::make('patient_sync_mode')
+                        ->label('Patient update choice')
+                        ->options([
+                            'template_only' => 'Update template only. Do not change any assigned patient diet plans.',
+                            'selected_patients' => 'Update selected patient diet plans with the same meals, dates, and days.',
+                        ])
+                        ->descriptions([
+                            'template_only' => 'Patient and doctor frontend plans keep their current assigned data.',
+                            'selected_patients' => 'Only checked patients below receive the updated plan details.',
+                        ])
+                        ->required()
+                        ->live()
+                        ->dehydrated(false),
+                    CheckboxList::make('sync_patient_plans')
+                        ->label('Assigned active patients')
+                        ->options(fn ($record): array => static::assignedPatientPlanOptions($record))
+                        ->descriptions(fn ($record): array => static::assignedPatientPlanDescriptions($record))
+                        ->bulkToggleable()
+                        ->columns(2)
+                        ->required(fn (callable $get): bool => $get('patient_sync_mode') === 'selected_patients')
+                        ->visible(fn (callable $get): bool => $get('patient_sync_mode') === 'selected_patients')
                         ->dehydrated(false),
                 ])
-                ->visible(fn ($operation) => $operation === 'edit')
+                ->visible(function ($operation, $record, $livewire): bool {
+                    return $operation === 'edit'
+                        && (bool) ($livewire->showPatientSyncSection ?? false)
+                        && static::assignedPatientPlansQuery($record)->exists();
+                })
+                ->extraAttributes(['id' => 'diet-template-patient-sync'])
                 ->columnSpanFull(),
         ]);
     }
@@ -581,6 +588,53 @@ class DietTemplateResource extends Resource
                 $day->meals()->create($mealData);
             }
         }
+    }
+
+    public static function assignedPatientPlanOptions(?DietTemplate $record): array
+    {
+        return static::assignedPatientPlansQuery($record)
+            ->get()
+            ->mapWithKeys(function (\App\Models\PatientDietPlan $plan): array {
+                return [$plan->id => static::patientPlanDisplayName($plan)];
+            })
+            ->all();
+    }
+
+    public static function assignedPatientPlanDescriptions(?DietTemplate $record): array
+    {
+        return static::assignedPatientPlansQuery($record)
+            ->get()
+            ->mapWithKeys(function (\App\Models\PatientDietPlan $plan): array {
+                $startDate = $plan->start_date ? \Carbon\Carbon::parse($plan->start_date)->format('d M Y') : 'No start date';
+                $contact = $plan->patient?->mobile_no ?: $plan->patient?->email;
+                $parts = array_filter([
+                    "Started {$startDate}",
+                    $contact,
+                    $plan->doctor ? 'Dr. ' . static::doctorDisplayName($plan->doctor) : null,
+                ]);
+
+                return [$plan->id => implode(' | ', $parts)];
+            })
+            ->all();
+    }
+
+    public static function assignedPatientPlansQuery(?DietTemplate $record): Builder
+    {
+        return \App\Models\PatientDietPlan::query()
+            ->when($record?->id, fn (Builder $query, string $templateId): Builder => $query->where('diet_template_id', $templateId))
+            ->when(! $record?->id, fn (Builder $query): Builder => $query->whereRaw('1 = 0'))
+            ->where('status', 'active')
+            ->with(['patient', 'doctor'])
+            ->orderBy('start_date')
+            ->orderBy('created_at');
+    }
+
+    private static function patientPlanDisplayName(\App\Models\PatientDietPlan $plan): string
+    {
+        $patient = $plan->patient;
+        $name = trim(($patient?->first_name ?? '') . ' ' . ($patient?->last_name ?? ''));
+
+        return $name ?: (string) ($patient?->email ?: $patient?->mobile_no ?: "Patient #{$plan->patient_id}");
     }
 
     private static function canAddTemplateDay(callable $get): bool
