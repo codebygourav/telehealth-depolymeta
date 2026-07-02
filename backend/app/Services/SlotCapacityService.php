@@ -112,6 +112,7 @@ class SlotCapacityService
             ->when($excludeAppointmentId, fn (Builder $query) => $query->where('id', '!=', $excludeAppointmentId))
             ->whereIn('status', [
                 AppointmentStatus::CONFIRMED->value,
+                AppointmentStatus::COMPLETED->value,
                 AppointmentStatus::RESCHEDULED->value,
             ])
             ->where(function (Builder $query): void {

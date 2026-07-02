@@ -29,7 +29,9 @@ storage
 /opencode.json
 /boost.json
 boost.json
+<<<<<<< Updated upstream
 
+/preview-ads
 storage/app/google/service-account.json
 *google/service-account.json
 google/service-account.json
@@ -39,3 +41,7 @@ docker-compose.prod.yml
 storage/app/google/service-account.json
 *google/service-account.json
 google/service-account.json
+=======
+docker-compose.yml
+docker-compose.prod.yml
+>>>>>>> Stashed changes

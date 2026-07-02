@@ -85,7 +85,7 @@ class SendBookingEmailJob implements ShouldQueue
 
         // ── 1. Patient confirmation ──────────────────────────────────────────
         if ($patientEmail && ! Cache::has("{$dedupBase}:patient")) {
-            $subject = 'Booking Confirmation — CMC Telehealth';
+            $subject = 'Booking Confirmation — Telehealth Deploymeta';
             $mailable = new PatientBookingConfirmationMail($appointment, $payment);
             $htmlBody = null;
 
@@ -157,7 +157,7 @@ class SendBookingEmailJob implements ShouldQueue
 
         // ── 2. Admin booking alert ───────────────────────────────────────────
         if ($adminEmail && ! Cache::has("{$dedupBase}:admin")) {
-            $subject = 'New Booking Alert — CMC Telehealth';
+            $subject = 'New Booking Alert — Telehealth Deploymeta';
             $mailable = new AdminBookingAlertMail($appointment, $payment);
             $htmlBody = null;
 
@@ -227,7 +227,7 @@ class SendBookingEmailJob implements ShouldQueue
         if ($isPaid && $transactionEmail && ! Cache::has("{$dedupBase}:transaction")) {
             $this->pauseBetweenEmails();
 
-            $subject = 'Payment Received — CMC Telehealth';
+            $subject = 'Payment Received — Telehealth Deploymeta';
             $mailable = new TransactionPaidNotificationMail($appointment, $payment);
             $htmlBody = null;
 

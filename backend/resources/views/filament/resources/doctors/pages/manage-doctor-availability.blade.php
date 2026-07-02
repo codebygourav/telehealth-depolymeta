@@ -1066,7 +1066,10 @@
                 <div class="availability-bulkbar__meta">
                     {{ count($selectedRows) }} selected
                 </div>
-                <div class="availability-bulkbar__actions">
+                <div class="availability-bulkbar__actions" style="display: flex; gap: 8px;">
+                    <button type="button" wire:click="mountAction('editParentSeries')" class="availability-bulk-trigger">
+                        Edit Series
+                    </button>
                     <details class="availability-bulk-menu">
                         <summary class="availability-bulk-trigger">Bulk Actions</summary>
                         <div class="availability-bulk-dropdown">
@@ -1191,6 +1194,11 @@
 
                                     <div class="availability-sub 13">
                                         {{ $row['is_recurring'] ? 'Recurring' : 'One-time' }} | {{ $row['label'] }}
+                                        @if ($row['is_ending_soon'])
+                                            <span class="availability-badge availability-badge--deleted" style="margin-left: 8px; font-size: 10px; padding: 3px 6px;">
+                                                Ends soon: {{ $row['ending_soon_date'] }}
+                                            </span>
+                                        @endif
                                     </div>
                                 </div>
                                 <div>
@@ -1256,6 +1264,23 @@
                                                 data-tooltip="Edit" aria-label="Edit">
                                                 <x-heroicon-o-pencil-square class="w-5 h-5" />
                                             </button>
+                                            @if ($row['is_recurring'])
+                                                <button type="button"
+                                                    wire:click="mountAction('editParentAvailability', { availability: '{{ $row['availability_id'] }}', date: '{{ $row['date'] }}' })"
+                                                    class="availability-action availability-action--success iconbtn"
+                                                    data-tooltip="Edit Weekly Series" aria-label="Edit Weekly Series">
+                                                    <x-heroicon-o-cog-6-tooth class="w-5 h-5" />
+                                                </button>
+                                            @endif
+                                            @if ($row['is_ending_soon'])
+                                                <button type="button"
+                                                    wire:click="mountAction('extendSeries', { availability: '{{ $row['availability_id'] }}' })"
+                                                    class="availability-action availability-action--primary iconbtn"
+                                                    data-tooltip="Extend Recurrence" aria-label="Extend Recurrence"
+                                                    style="border-color: #2563eb; color: #2563eb;">
+                                                    <x-heroicon-o-arrow-path class="w-5 h-5" />
+                                                </button>
+                                            @endif
                                             @if ($row['status'] === 'active')
                                                 <button type="button"
                                                     wire:click="mountAction('blockOccurrence', { availability: '{{ $row['availability_id'] }}', date: '{{ $row['date'] }}' })"

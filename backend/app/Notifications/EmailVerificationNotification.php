@@ -26,7 +26,7 @@ class EmailVerificationNotification extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->subject('Verify Your Email - CMC Telehealth')
+            ->subject('Verify Your Email - Telehealth Deploymeta')
             ->view('emails.email_verification', ['token' => $this->token]);
     }
 
@@ -65,7 +65,7 @@ class EmailVerificationNotification extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->subject('Verify Your Email - CMC Telehealth')
+            ->subject('Verify Your Email - Telehealth Deploymeta')
             ->view('emails.email_verification', ['token' => $this->token]);
     }
 

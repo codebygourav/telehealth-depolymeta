@@ -27,8 +27,9 @@ class DatabaseSeeder extends Seeder
             VideoConsultationSeeder::class,
             DoctorReviewSeeder::class,
             AdvertisementSeeder::class,
+            DisplayScreenSettingSeeder::class,
+            DisplayEventSeeder::class,
             SettingsSeeder::class,
-
             VaccinationModuleSeeder::class,
             DietTemplateSeeder::class,
             MedicalReportSeeder::class,

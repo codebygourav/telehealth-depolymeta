@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ $board['display']['page_title'] ?? 'Opt Token Display' }}</title>
+    @vite(['resources/css/app.css'])
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    @include('components.display.queue-display.styles')
+</head>
+<body>
+    @php
+        $board = $board ?? [];
+        $refreshSeconds = max(10, (int) ($board['refresh_seconds'] ?? 30));
+        $displayMode = (string) ($board['display_mode'] ?? 'events_only');
+        $boardJson = json_encode(
+            $board,
+            JSON_THROW_ON_ERROR
+            | JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_SLASHES
+            | JSON_HEX_TAG
+            | JSON_HEX_AMP
+            | JSON_HEX_APOS
+            | JSON_HEX_QUOT
+        );
+    @endphp
+    <div class="display-shell">
+        @if (! $authenticated)
+            <div class="auth-shell">
+                <div class="auth-card">
+                    <div class="brand" style="color: var(--display-blue);">
+                       <img src="{{ asset('images/white-logo.png')}}" alt="logo" class=" inline-block">
+                    </div>
+                    <h1 class="auth-title mt-5">{{ $board['display']['page_title'] ?? 'Opt Token Display' }}</h1>
+                    <p class="auth-copy">{{ $board['display']['page_subtitle'] ?? 'Please keep your token ready and be seated.' }}</p>
+
+                    <form class="auth-row" method="POST" action="{{ route('opt-token.authenticate') }}">
+                        @csrf
+                        <div>
+                            <input
+                                type="password"
+                                name="password"
+                                class="auth-input"
+                                placeholder="Enter display password"
+                                autocomplete="current-password"
+                            >
+                            @if (!empty($passwordError))
+                                <div class="error-text mt-2">{{ $passwordError }}</div>
+                            @endif
+                        </div>
+
+                        <button type="submit" class="auth-button">
+                            Unlock Display
+                        </button>
+                    </form>
+
+                    <div class="screen-note mt-5">
+                        This screen is password protected and can be configured from the admin settings.
+                    </div>
+                </div>
+            </div>
+        @else
+            <script type="application/json" id="opt-token-board-data">{!! $boardJson !!}</script>
+            @if($displayMode === 'split_ads')
+            <div
+                x-data="optTokenBoard()"
+                x-init="init()"
+                class="h-screen max-h-screen flex flex-col overflow-hidden"
+            >
+
+                <div class="layout single-ads-layout">
+                    <aside class="left-column">
+                        <!-- Redesigned Clock/Date Topbar inside Left Column -->
+                        <div class="left-column-topbar">
+                            <div style="width:100%; display: flex; align-items: center;justify-content:space-between; gap: clamp(8px, 0.8vw, 16px); font-weight: 800; font-size: clamp(14px, 1vw, 20px); letter-spacing: 0.02em;">
+                                <!-- Clock SVG Icon -->
+                                 <div style="display:flex;justify-content:space-between; align-items: center;gap:5px;">
+                                <svg style="width: 22px; height: 22px; opacity: 0.9;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span x-text="timeText"></span>
+                                </div>
+
+                                <span style="opacity: 0.4; font-weight: 300;">|</span>
+                                <span x-text="dateText" style="text-transform: uppercase; opacity: 0.9;"></span>
+                            </div>
+
+                        </div>
+                        <div class="left_column_body">
+                            <!-- Redesigned Standalone Doctor Card -->
+                            <x-display.queue-display.doctor-card
+                                class="fade-enter"
+                                :alpine="true"
+                                variant="split"
+                                :show-queue="true"
+                                :show-footer="true"
+                            />
+
+                            <div class="no-doctor-state fade-enter" x-show="!currentDoctor()" x-cloak>
+                                <div class="pill accent" style="width:max-content;" x-text="displayCopy.bottom_content_label || 'Hospital Updates'"></div>
+                                <h2 x-text="displayCopy.empty_state_title || 'No active doctor assigned'"></h2>
+                                <p x-text="displayCopy.empty_state_text || 'Please wait while we show hospital updates and the next available content.'"></p>
+                            </div>
+                        </div>
+                    </aside>
+                    <main class="panel media-panel" style="position: relative; background: #000; overflow: hidden; border-radius: 0; box-shadow: none; border: none;">
+                        <!-- Full-bleed Slide Container -->
+                        <div style="width: 100%; height: 100%; position: relative;">
+                            <template x-if="currentSlide()">
+                                <div style="width: 100%; height: 100%;">
+                                    <!-- Image Slide -->
+                                    <template x-if="currentSlide().image && !currentSlide().video_url && !isIframeSlide(currentSlide())">
+                                        <img :src="currentSlide().image" style="width: 100%; height: 100%; object-fit: cover; display: block;" :alt="currentSlide().title">
+                                    </template>
+
+                                    <!-- Video Slide -->
+                                    <template x-if="currentSlide().video_url && !isIframeSlide(currentSlide())">
+                                        <video
+                                            :src="currentSlide().video_url"
+                                            :autoplay="currentSlide()?.autoplay ?? true"
+                                            :muted="currentSlide()?.muted ?? true"
+                                            :loop="false"
+                                            playsinline
+                                            style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                                            @ended="advanceSlide()"
+                                        ></video>
+                                    </template>
+
+                                    <!-- Iframe/YouTube Slide -->
+                                    <template x-if="isIframeSlide(currentSlide())">
+                                        <iframe
+                                            :src="currentSlide().embed_url"
+                                            style="width: 100%; height: 100%; border: none; display: block;"
+                                            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                                            @load="bindMediaFrame($el, currentSlide())"
+                                        ></iframe>
+                                    </template>
+
+                                    <!-- Fallback slide (Notice/Text Only) -->
+                                    <template x-if="!currentSlide().image && !currentSlide().video_url && !isIframeSlide(currentSlide())">
+                                        <div style="display:grid;place-items:center;width:100%;height:100%;padding:40px;text-align:center;background:linear-gradient(135deg,#fff4ec,#fde7d8);color:#7d4754;font-weight:800;">
+                                            <div>
+                                                <div style="font-size: clamp(30px, 2.7vw, 58px); line-height: 1.04; color:#9d3749; font-family: Georgia, serif;" x-text="spotlightText(currentSlide()?.title || 'Doctor Spotlight')"></div>
+                                                <div style="margin-top: 14px; font-size: clamp(16px, 1.15vw, 26px); line-height:1.55;" x-text="spotlightText(currentSlide()?.description || displayCopy.empty_slide_text)"></div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <template x-if="!currentSlide()">
+                                <div style="display:grid;place-items:center;width:100%;height:100%;padding:40px;text-align:center;background:linear-gradient(135deg,#fff4ec,#fde7d8);color:#7d4754;font-weight:800;">
+                                    <div>
+                                        <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">No Ads Available</h3>
+                                        <p>Active advertisements for this doctor will be shown here.</p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Premium Glassmorphic Slide Dots Indicators Overlay -->
+                        <div class="slide-dots-overlay" x-show="slidesForCurrentDoctor().length > 1">
+                            <template x-for="(slide, idx) in slidesForCurrentDoctor()" :key="slide.id + '-stage-' + idx">
+                                <span class="dot" :class="{ 'active': idx === slideIndex }" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; transition: all 0.3s;" :style="idx === slideIndex ? 'background: #ffffff; width: 24px; border-radius: 4px;' : 'background: rgba(255,255,255,0.5);'"></span>
+                            </template>
+                        </div>
+                    </main>
+                </div>
+
+                <!-- Next Patient Popup -->
+                <div class="patient-popup-backdrop"
+                     x-show="activePopup && activePopup.kind === 'patient'"
+                     x-transition.opacity.duration.400ms
+                     x-cloak
+                >
+                    <div class="patient-popup-card"
+                         x-show="activePopup && activePopup.kind === 'patient'"
+                         x-transition.scale.90.duration.400ms
+                    >
+                        <div class="patient-popup-label" x-text="displayCopy.next_patient_label || 'NEXT PATIENT TURN'"></div>
+                        <div class="patient-popup-token" x-text="activePopup?.current_token || 'Pending'"></div>
+                        <h2 x-text="activePopup?.current_patient || 'No next patient'"></h2>
+                        <p x-text="activePopup?.room_number ? ('Please proceed to Room ' + activePopup.room_number) : 'Please proceed when called'"></p>
+                    </div>
+                </div>
+            </div>
+            @elseif($displayMode === 'grid_modal_ads')
+            <div x-data="optTokenBoard()" x-init="initStatic()" class="h-screen max-h-screen flex flex-col overflow-hidden">
+                <div class="topbar">
+                    <div class="brand">
+                       <img src="{{ asset('images/white-logo.png') }}" alt="logo" class="brand-logo">
+                    </div>
+                    <div class="topbar-actions">
+                        <button
+                            type="button"
+                            class="control-button icon-control"
+                            @click="prevDoctor()"
+                            aria-label="Previous doctor"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            class="control-button icon-control"
+                            @click="nextDoctor()"
+                            aria-label="Next doctor"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            class="control-button"
+                            :class="{ 'is-paused': adsPaused }"
+                            @click="toggleAds()"
+                            x-text="adsPaused ? 'Restart Ads' : 'Pause Ads'"
+                        ></button>
+                        <div class="clock">
+                            <div x-text="timeText"></div>
+                            <div x-text="dateText"></div>
+                        </div>
+                    </div>
+                </div>
+
+                @php($doctorGridColumns = max(2, min(3, (int) ($board['same_time_card_columns'] ?? 2))))
+                <div class="layout">
+                    <div class="multi-board"
+                         x-data="{
+                             gridPageIndex: 0,
+                             gridPageSize: 2,
+                             init() {
+                                 setInterval(() => {
+                                     const totalDoctors = {{ count($board['doctors'] ?? []) }};
+                                     const totalPages = Math.max(1, totalDoctors - this.gridPageSize + 1);
+                                     this.gridPageIndex = (this.gridPageIndex + 1) % totalPages;
+                                 }, 12000);
+                             }
+                         }"
+                    >
+                    <main class="panel multi-main-panel">
+                        <div class="section-head">
+                            <div>
+                                <div>{{ $board['screen_name'] ?? 'Main OPD Waiting Hall' }}</div>
+                                <small>{{ $board['screen_location'] ?? 'Ground Floor OPD' }}</small>
+                            </div>
+                            <div class="text-right">
+                                <div>{{ count($board['doctors'] ?? []) }} Doctors Live</div>
+                                <small>{{ $board['display']['queue_subtitle'] ?? 'Current token, next patient and queue position' }}</small>
+                            </div>
+                        </div>
+
+                        <div class="doctor-grid-container" style="position: relative; width: 100%; flex: 1; min-height: 0; overflow: hidden; padding: 0 clamp(10px, 0.8vw, 18px) clamp(10px, 0.8vw, 18px);">
+                            <div class="doctor-grid-track"
+                                 :style="'transform: translateX(calc(-100% / gridPageSize * gridPageIndex - (var(--display-gap) * gridPageIndex / gridPageSize)))'"
+                                 style="display: flex; gap: var(--display-gap); width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);"
+                            >
+                                @foreach(($board['doctors'] ?? []) as $idx => $doctor)
+                                    <div class="doctor-card-slide-wrapper"
+                                         style="flex: 0 0 calc(50% - (var(--display-gap) / 2)); width: calc(50% - (var(--display-gap) / 2)); height: 100%; display: flex; flex-direction: column;"
+                                    >
+                                        <x-display.queue-display.doctor-card
+                                            :doctor="$doctor"
+                                            variant="grid"
+                                            :show-queue="true"
+                                            :show-footer="false"
+                                        />
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Page-level Bottom Bar/Footer for Grid Display -->
+                        <div class="queue-display-footer" style="margin-top: 14px; border-radius: 12px; border: 1px solid #eef2f7; flex-shrink: 0;">
+                            <div class="footer-brand">
+                                <span style="opacity: 0.6; font-size: 13px;">Powered by</span>
+                                <img src="{{ asset('images/deploymeta.png') }}" alt="Deploy Meta Logo">
+                            </div>
+                            <div class="footer-alert-pill">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                                </svg>
+                                <span>{{ $board['default_notice'] ?? 'Please keep your token ready and be seated. Thank you!' }}</span>
+                            </div>
+                        </div>
+                    </main>
+                    </div>
+
+                @include('components.display.queue-display.spotlight-slider')
+
+                <!-- Next Patient Popup -->
+                <div class="patient-popup-backdrop"
+                     x-show="activePopup && activePopup.kind === 'patient'"
+                     x-transition.opacity.duration.400ms
+                     x-cloak
+                >
+                    <div class="patient-popup-card"
+                         x-show="activePopup && activePopup.kind === 'patient'"
+                         x-transition.scale.90.duration.400ms
+                    >
+                        <div class="patient-popup-label" x-text="displayCopy.next_patient_label || 'NEXT PATIENT TURN'"></div>
+                        <div class="patient-popup-token" x-text="activePopup?.current_token || 'Pending'"></div>
+                        <h2 x-text="activePopup?.current_patient || 'No next patient'"></h2>
+                        <p x-text="activePopup?.room_number ? ('Please proceed to Room ' + activePopup.room_number) : 'Please proceed when called'"></p>
+                    </div>
+                </div>
+            </div>
+            @elseif($displayMode === 'events_only')
+            <div x-data="optTokenBoard()" x-init="initStatic()" class="h-screen max-h-screen flex flex-col overflow-hidden">
+                <div class="topbar">
+                    <div class="brand">
+                       <img src="{{ asset('images/white-logo.png') }}" alt="logo" class="brand-logo">
+                    </div>
+                    <div class="topbar-actions">
+                        <button
+                            type="button"
+                            class="control-button icon-control"
+                            @click="prevGlobalSlide()"
+                            aria-label="Previous event"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            class="control-button icon-control"
+                            @click="nextGlobalSlide()"
+                            aria-label="Next event"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            class="control-button"
+                            :class="{ 'is-paused': adsPaused }"
+                            @click="toggleAds()"
+                            x-text="adsPaused ? 'Restart' : 'Pause'"
+                        ></button>
+                        <div class="clock">
+                            <div x-text="timeText"></div>
+                            <div x-text="dateText"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="layout events-layout">
+                    <main class="panel" style="padding:16px;">
+                        <div class="section-head">
+                            <div>
+                                <div>{{ $board['screen_name'] ?? 'Main OPD Waiting Hall' }}</div>
+                                <small>{{ $board['display']['bottom_content_label'] ?? 'Health Updates' }}</small>
+                            </div>
+                            <div class="text-right">
+                                <div>{{ count($board['global_slides'] ?? []) }} Live Events</div>
+                                <small>{{ $board['default_notice'] ?? 'Announcements, ads, and video content play here.' }}</small>
+                            </div>
+                        </div>
+
+                        <div class="events-stage">
+                            <div class="events-stage-media">
+                                <template x-if="currentGlobalSlide() && currentGlobalSlide().embed_url && currentGlobalSlide().embed_type === 'iframe'">
+                                    <iframe
+                                        :src="currentGlobalSlide().embed_url"
+                                        title="Event content"
+                                        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                                        referrerpolicy="strict-origin-when-cross-origin"
+                                        @load="bindGlobalMediaFrame($el, currentGlobalSlide())"
+                                    ></iframe>
+                                </template>
+                                <template x-if="currentGlobalSlide() && currentGlobalSlide().video_url && !(currentGlobalSlide().embed_url && currentGlobalSlide().embed_type === 'iframe')">
+                                    <video
+                                        :src="currentGlobalSlide().video_url"
+                                        :autoplay="currentGlobalSlide()?.autoplay ?? true"
+                                        :muted="currentGlobalSlide()?.muted ?? true"
+                                        :loop="false"
+                                        playsinline
+                                        controls
+                                        @ended="advanceGlobalSlide()"
+                                    ></video>
+                                </template>
+                                <template x-if="currentGlobalSlide() && currentGlobalSlide().image && !(currentGlobalSlide().embed_url && currentGlobalSlide().embed_type === 'iframe') && !currentGlobalSlide().video_url">
+                                    <img :src="currentGlobalSlide().image" :alt="currentGlobalSlide()?.title || 'Event content'">
+                                </template>
+                                <template x-if="currentGlobalSlide() && !currentGlobalSlide().image && !currentGlobalSlide().video_url && !(currentGlobalSlide().embed_url && currentGlobalSlide().embed_type === 'iframe')">
+                                    <div style="display:grid;place-items:center;height:100%;padding:24px;text-align:left;background:linear-gradient(135deg,#07245a,#0b74ff);color:#fff;font-weight:800;">
+                                        <div style="max-width:min(900px,86%);">
+                                            <div class="pill accent" style="width:max-content;background:rgba(255,255,255,0.14);color:#fff;border-color:rgba(255,255,255,0.18);" x-text="currentGlobalSlide()?.category_label || 'Content'"></div>
+                                            <div class="events-stage-title" x-text="spotlightText(currentGlobalSlide()?.title || 'Live Announcements')"></div>
+                                            <div class="events-stage-desc" x-text="spotlightText(currentGlobalSlide()?.description || displayCopy.default_notice || 'Announcements, ads, and events are displayed here.')"></div>
+                                            <template x-if="currentGlobalSlide()?.link">
+                                                <a
+                                                    :href="currentGlobalSlide().link"
+                                                    :target="currentGlobalSlide()?.open_in_new_tab ? '_blank' : '_self'"
+                                                    rel="noopener noreferrer"
+                                                    class="control-button"
+                                                    style="margin-top:18px;width:max-content;background:#fff;color:var(--display-blue);border:none;text-decoration:none;display:inline-flex;"
+                                                >
+                                                    Open Link
+                                                </a>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="events-stage-overlay"></div>
+                            <div class="events-stage-copy">
+                                <div class="pill accent" style="width:max-content;background:rgba(255,255,255,0.14);color:#fff;border-color:rgba(255,255,255,0.18);" x-text="currentGlobalSlide()?.category_label || 'Content'"></div>
+                                <div class="events-stage-title" x-text="spotlightText(currentGlobalSlide()?.title || 'Live Announcements')"></div>
+                                <div class="events-stage-desc" x-text="spotlightText(currentGlobalSlide()?.description || displayCopy.default_notice || 'Announcements, ads, and events are displayed here.')"></div>
+                            </div>
+                        </div>
+
+                        <div class="events-rail">
+                            <div class="bottom-grid" style="padding:0; grid-template-columns: repeat(3, minmax(0, 1fr));">
+                                <template x-for="slide in previewGlobalSlides(3)" :key="slide.id">
+                                    <div class="mini-card" style="padding:0; overflow:hidden; min-height:240px; background:#fff;">
+                                        <template x-if="slide.image">
+                                            <img :src="slide.image" :alt="slide.title || 'Display content'" style="width:100%;height:140px;object-fit:cover;display:block;">
+                                        </template>
+                                        <template x-if="!slide.image">
+                                            <div style="width:100%;height:140px;display:grid;place-items:center;background:#eef5ff;color:var(--display-blue);font-weight:1000;">
+                                                <span x-text="slide.category_label || displayCopy.bottom_content_label"></span>
+                                            </div>
+                                        </template>
+                                        <div style="padding:16px 18px;">
+                                            <div class="pill accent" style="margin-bottom:10px;" x-text="slide.category_label || 'Content'"></div>
+                                            <div class="bottom-slider-title" style="font-size:clamp(18px,1.35vw,28px);" x-text="spotlightText(slide.title || 'Display content')"></div>
+                                            <div class="bottom-slider-text" style="font-size:clamp(13px,0.95vw,18px);" x-text="spotlightText(slide.description || '')"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+            @elseif($displayMode === 'emergency')
+            <div x-data="optTokenBoard()" x-init="initStatic()" class="h-screen max-h-screen flex flex-col overflow-hidden">
+                <div class="topbar">
+                    <div class="brand">
+                       <img src="{{ asset('images/white-logo.png') }}" alt="logo" class="w-100 h-10  inline-block">
+                    </div>
+                    <div class="clock">
+                        <div x-text="timeText"></div>
+                        <div x-text="dateText"></div>
+                    </div>
+                </div>
+                <div style="flex:1;display:grid;place-items:center;padding:24px;">
+                    <div style="width:100%;min-height:70vh;border-radius:24px;background:#b91c1c;color:#fff;display:grid;place-items:center;text-align:center;padding:40px;">
+                        <div>
+                            <div style="font-size:68px;font-weight:900;line-height:1.05;">Emergency Notice</div>
+                            <p style="margin:18px auto 0;max-width:900px;font-size:28px;font-weight:800;line-height:1.35;">
+                                {{ $board['default_notice'] ?: 'Please wait for staff instructions. This screen is temporarily showing an urgent message.' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @else
+                @include('livewire.opt-token-display-split-ads', ['board' => $board, 'boardJson' => $boardJson, 'refreshSeconds' => $refreshSeconds])
+            @endif
+        @endif
+    </div>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('optTokenBoard', () => ({
+                doctors: [],
+                displayCopy: {},
+                doctorRotationSeconds: 12,
+                slideSeconds: 8,
+                adPopupIntervalSeconds: 180,
+                adPopupDurationSeconds: 12,
+                adsPaused: false,
+                doctorIndex: 0,
+                slideIndex: 0,
+                spotlightIndex: 0,
+                globalSlideIndex: 0,
+                timeText: '',
+                dateText: '',
+                clockTimer: null,
+                doctorTimer: null,
+                slideAdvanceTimer: null,
+                popupSyncTimer: null,
+                reloadTimer: null,
+                popupTimer: null,
+                mediaFrameHandler: null,
+                activeFrameSlideId: null,
+                activeFrameScope: 'doctor',
+                youtubePlayers: {},
+                youtubeApiPromise: null,
+                payload: null,
+                activePopup: null,
+                initialized: false,
+                init() {
+                    this.initialize(true);
+                },
+                initStatic() {
+                    this.initialize(false);
+                },
+                initialize(rotateSlides) {
+                    if (this.initialized) {
+                        return;
+                    }
+
+                    this.initialized = true;
+                    this.payload = this.readPayload();
+                    this.doctors = this.payload.doctors || [];
+                    this.displayCopy = this.payload.display || {};
+                    this.doctorRotationSeconds = Number(this.payload.doctor_rotation_seconds || 12);
+                    this.slideSeconds = Number(this.payload.slide_seconds || 8);
+                    this.adPopupIntervalSeconds = Math.max(30, Number(this.payload.ad_popup_interval_seconds || 180));
+                    this.adPopupDurationSeconds = Math.max(5, Number(this.payload.ad_popup_duration_seconds || 12));
+
+                    const seed = this.payload.now ? new Date(this.payload.now) : new Date();
+                    this.setClock(seed);
+                    this.clockTimer = setInterval(() => {
+                        this.setClock(new Date());
+                    }, 1000);
+
+                    this.startReloadTimer();
+
+                    if (this.doctors.length) {
+                        this.doctorTimer = setInterval(() => {
+                            this.doctorIndex = (this.doctorIndex + 1) % this.doctors.length;
+                            this.slideIndex = 0;
+                            this.scheduleSlideAdvance();
+                            this.syncPopupState();
+                        }, Math.max(5, this.doctorRotationSeconds) * 1000);
+                    }
+
+                    this.globalSlideTimer = setInterval(() => {
+                        if (this.adsPaused) {
+                            return;
+                        }
+
+                        const slide = this.currentGlobalSlide();
+                        const globalSlides = this.globalSlides();
+                        if (globalSlides.length && !this.isVideoSlide(slide)) {
+                            this.globalSlideIndex = (this.globalSlideIndex + 1) % globalSlides.length;
+                        }
+                    }, Math.max(4, this.slideSeconds) * 1000);
+
+                    this.mediaFrameHandler = (event) => {
+                        const data = event?.data;
+                        if (!data) {
+                            return;
+                        }
+
+                        let payload = data;
+                        if (typeof data === 'string') {
+                            try {
+                                payload = JSON.parse(data);
+                            } catch (error) {
+                                return;
+                            }
+                        }
+
+                        if (payload?.event === 'onStateChange' && Number(payload?.info) === 0) {
+                            if (this.activePopup?.kind === 'ad') {
+                                this.spotlightNextSlide();
+                                return;
+                            }
+
+                            this.advanceSlide(this.activeFrameScope || 'doctor');
+                        }
+                    };
+
+                    window.addEventListener('message', this.mediaFrameHandler);
+
+                    this.popupSyncTimer = setInterval(() => {
+                        this.syncPopupState();
+                    }, 3000);
+
+                    this.syncPopupState(true);
+                    this.scheduleSlideAdvance();
+                },
+                readPayload() {
+                    const raw = document.getElementById('opt-token-board-data')?.textContent || '{}';
+
+                    try {
+                        return JSON.parse(raw);
+                    } catch (error) {
+                        return {};
+                    }
+                },
+                startReloadTimer() {
+                    const refreshSeconds = Number(this.payload?.refresh_seconds || 30);
+                    this.reloadTimer = setTimeout(() => {
+                        window.location.reload();
+                    }, Math.max(10, refreshSeconds) * 1000);
+                },
+                setClock(date) {
+                    this.timeText = date.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        second: '2-digit',
+                    });
+
+                    this.dateText = date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                    });
+                },
+                currentDoctor() {
+                    return this.doctors[this.doctorIndex] || null;
+                },
+                spotlightText(value) {
+                    return String(value ?? '')
+                        .replace(/<[^>]*>/g, ' ')
+                        .replace(/&nbsp;/gi, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                },
+                formatQual(qual) {
+                    if (!qual) return '';
+                    const parts = qual.split(' - ');
+                    if (parts.length > 1) {
+                        return `<strong>${parts[0]}</strong> - ${parts.slice(1).join(' - ')}`;
+                    }
+                    return qual;
+                },
+                doctorById(doctorId) {
+                    if (doctorId === null || doctorId === undefined) {
+                        return null;
+                    }
+
+                    return this.doctors.find((doctor) => String(doctor.id) === String(doctorId)) || null;
+                },
+                spotlightDoctor() {
+                    return this.doctorById(this.activePopup?.doctor_id) || this.currentDoctor();
+                },
+                spotlightSlides() {
+                    const doctor = this.spotlightDoctor();
+
+                    if (doctor?.slides?.length) {
+                        return doctor.slides;
+                    }
+
+                    return this.payload?.fallback_slides || [];
+                },
+                spotlightSlideIndex() {
+                    const slides = this.spotlightSlides();
+
+                    if (!slides.length) {
+                        return 0;
+                    }
+
+                    return this.spotlightIndex % slides.length;
+                },
+                spotlightCurrentSlide() {
+                    const slides = this.spotlightSlides();
+
+                    if (!slides.length) {
+                        return null;
+                    }
+
+                    return slides[this.spotlightSlideIndex()] || null;
+                },
+                spotlightSlideAt(offset = 0) {
+                    const slides = this.spotlightSlides();
+
+                    if (!slides.length) {
+                        return null;
+                    }
+
+                    const index = (this.spotlightSlideIndex() + offset + slides.length) % slides.length;
+
+                    return slides[index] || null;
+                },
+                spotlightPrevSlide() {
+                    const slides = this.spotlightSlides();
+
+                    if (!slides.length) {
+                        return;
+                    }
+
+                    this.spotlightIndex = (this.spotlightIndex - 1 + slides.length) % slides.length;
+                    this.syncSpotlightPopup();
+                },
+                spotlightNextSlide() {
+                    const slides = this.spotlightSlides();
+
+                    if (!slides.length) {
+                        return;
+                    }
+
+                    this.spotlightIndex = (this.spotlightIndex + 1) % slides.length;
+                    this.syncSpotlightPopup();
+                },
+                prevDoctor() {
+                    if (!this.doctors.length) {
+                        return;
+                    }
+
+                    this.doctorIndex = (this.doctorIndex - 1 + this.doctors.length) % this.doctors.length;
+                    this.slideIndex = 0;
+                    this.scheduleSlideAdvance();
+                    this.syncPopupState(true);
+                },
+                nextDoctor() {
+                    if (!this.doctors.length) {
+                        return;
+                    }
+
+                    this.doctorIndex = (this.doctorIndex + 1) % this.doctors.length;
+                    this.slideIndex = 0;
+                    this.scheduleSlideAdvance();
+                    this.syncPopupState(true);
+                },
+                prevSlide() {
+                    this.advanceSlide('doctor', -1);
+                },
+                nextSlide() {
+                    this.advanceSlide('doctor', 1);
+                },
+                prevGlobalSlide() {
+                    this.advanceSlide('global', -1);
+                },
+                nextGlobalSlide() {
+                    this.advanceSlide('global', 1);
+                },
+                isIframeSlide(slide) {
+                    return Boolean(slide?.embed_url && slide?.embed_type === 'iframe');
+                },
+                isYoutubeSlide(slide) {
+                    const embedUrl = String(slide?.embed_url || '').toLowerCase();
+                    return this.isIframeSlide(slide) && embedUrl.includes('youtube.com/embed');
+                },
+                isVideoSlide(slide) {
+                    return Boolean(slide?.video_url) || this.isYoutubeSlide(slide);
+                },
+                loadYoutubeApi() {
+                    if (window.YT && window.YT.Player) {
+                        return Promise.resolve();
+                    }
+
+                    if (this.youtubeApiPromise) {
+                        return this.youtubeApiPromise;
+                    }
+
+                    this.youtubeApiPromise = new Promise((resolve) => {
+                        const previousReady = window.onYouTubeIframeAPIReady;
+
+                        window.onYouTubeIframeAPIReady = () => {
+                            if (typeof previousReady === 'function') {
+                                previousReady();
+                            }
+
+                            resolve();
+                        };
+
+                        if (!document.querySelector('script[data-opt-token-youtube-api]')) {
+                            const script = document.createElement('script');
+                            script.src = 'https://www.youtube.com/iframe_api';
+                            script.async = true;
+                            script.defer = true;
+                            script.dataset.optTokenYoutubeApi = 'true';
+                            document.head.appendChild(script);
+                        }
+                    });
+
+                    return this.youtubeApiPromise;
+                },
+                clearSlideAdvanceTimer() {
+                    if (this.slideAdvanceTimer) {
+                        clearTimeout(this.slideAdvanceTimer);
+                        this.slideAdvanceTimer = null;
+                    }
+                },
+                destroyYoutubePlayer(slideId) {
+                    if (!slideId || !this.youtubePlayers[slideId]) {
+                        return;
+                    }
+
+                    try {
+                        this.youtubePlayers[slideId].destroy();
+                    } catch (error) {
+                        // Ignore player teardown errors during rerender.
+                    }
+
+                    delete this.youtubePlayers[slideId];
+                },
+                scheduleSlideAdvance() {
+                    this.clearSlideAdvanceTimer();
+
+                    if (this.adsPaused) {
+                        return;
+                    }
+
+                    if (this.activePopup?.kind === 'ad') {
+                        const slide = this.spotlightCurrentSlide();
+
+                        if (!slide) {
+                            return;
+                        }
+
+                        if (this.isVideoSlide(slide)) {
+                            // Safety 30-second timeout for video slides
+                            this.slideAdvanceTimer = setTimeout(() => {
+                                this.spotlightNextSlide();
+                            }, 30000);
+                            return;
+                        }
+
+                        this.slideAdvanceTimer = setTimeout(() => {
+                            this.spotlightNextSlide();
+                        }, Math.max(4, this.slideSeconds) * 1000);
+
+                        return;
+                    }
+
+                    const slide = this.currentSlide();
+                    if (!slide) {
+                        return;
+                    }
+
+                    if (this.isVideoSlide(slide)) {
+                        // Safety 30-second timeout for video slides
+                        this.slideAdvanceTimer = setTimeout(() => {
+                            this.advanceSlide();
+                        }, 30000);
+                        return;
+                    }
+
+                    this.slideAdvanceTimer = setTimeout(() => {
+                        this.advanceSlide();
+                    }, Math.max(4, this.slideSeconds) * 1000);
+                },
+                bindMediaFrame(el, slide, scope = 'doctor') {
+                    const slideId = slide?.id || slide?.slide_id || null;
+                    this.activeFrameSlideId = slideId;
+                    this.activeFrameScope = scope;
+
+                    if (!el || !this.isIframeSlide(slide)) {
+                        return;
+                    }
+
+                    if (!this.isYoutubeSlide(slide) || !slideId) {
+                        return;
+                    }
+
+                    if (this.youtubePlayers[slideId]) {
+                        return;
+                    }
+
+                    this.loadYoutubeApi().then(() => {
+                        if (!window.YT?.Player || this.youtubePlayers[slideId]) {
+                            return;
+                        }
+
+                        if (this.currentSlide()?.id !== slideId && this.activePopup?.slide_id !== slideId) {
+                            return;
+                        }
+
+                        try {
+                            this.youtubePlayers[slideId] = new window.YT.Player(el, {
+                                events: {
+                                    onStateChange: (event) => {
+                                        if (event?.data === window.YT.PlayerState.ENDED) {
+                                            this.destroyYoutubePlayer(slideId);
+                                            this.advanceSlide(scope);
+                                        }
+                                    },
+                                },
+                            });
+                        } catch (error) {
+                            this.destroyYoutubePlayer(slideId);
+                        }
+                    });
+                },
+                bindGlobalMediaFrame(el, slide) {
+                    this.bindMediaFrame(el, slide, 'global');
+                },
+                syncPopupState(force = false) {
+                    if (!this.doctors.length) {
+                        return;
+                    }
+
+                    const storageKey = 'opt-token-popup-state';
+                    let previous = {};
+                    try {
+                        previous = JSON.parse(window.localStorage.getItem(storageKey) || '{}');
+                    } catch (error) {
+                        previous = {};
+                    }
+                    const nextState = {};
+                    let changedDoctor = null;
+
+                    this.doctors.forEach((doctor) => {
+                        const summary = doctor.queue_summary || {};
+                        const currentToken = summary.current_token || null;
+                        nextState[doctor.id] = currentToken;
+
+                        if (!changedDoctor && currentToken && previous[doctor.id] && previous[doctor.id] !== currentToken) {
+                            changedDoctor = doctor;
+                        }
+
+                        if (!changedDoctor && force && currentToken && !previous[doctor.id]) {
+                            changedDoctor = doctor;
+                        }
+                    });
+
+                    window.localStorage.setItem(storageKey, JSON.stringify(nextState));
+
+                    if (changedDoctor) {
+                        this.showPopup(this.buildPatientPopup(changedDoctor));
+                        return;
+                    }
+
+                    if (this.activePopup?.kind === 'patient' && !force) {
+                        return;
+                    }
+
+                    const doctor = this.currentDoctor();
+                    if (!this.payload?.ad_popup_enabled || this.adsPaused || !this.payload?.popup_enabled) {
+                        return;
+                    }
+
+                    const adPopup = this.buildAdPopup(doctor);
+                    if (!adPopup) {
+                        return;
+                    }
+
+                    const adStateKey = 'opt-token-ad-popup-state';
+                    let adState = {};
+                    try {
+                        adState = JSON.parse(window.localStorage.getItem(adStateKey) || '{}');
+                    } catch (error) {
+                        adState = {};
+                    }
+                    const lastShownAt = Number(adState[doctor.id] || 0);
+                    const now = Date.now();
+
+                    if (!lastShownAt) {
+                        adState[doctor.id] = now;
+                        window.localStorage.setItem(adStateKey, JSON.stringify(adState));
+                        return;
+                    }
+
+                    if (now - lastShownAt >= this.adPopupIntervalSeconds * 1000) {
+                        this.showPopup(adPopup);
+                        adState[doctor.id] = now;
+                        window.localStorage.setItem(adStateKey, JSON.stringify(adState));
+                    }
+                },
+                buildPatientPopup(doctor) {
+                    const summary = doctor.queue_summary || {};
+
+                    return {
+                        kind: 'patient',
+                        doctor_id: doctor.id,
+                        doctor_name: doctor.name || 'Doctor',
+                        current_token: summary.current_token || 'TOK-000',
+                        current_patient: summary.current_patient || 'Waiting for next patient',
+                        current_time_slot: summary.current_time_slot || null,
+                        next_token: summary.next_token || 'Pending',
+                        next_patient: summary.next_patient || 'No next patient',
+                        next_time_slot: summary.next_time_slot || null,
+                        room_number: summary.room_number || doctor.room || null,
+                    };
+                },
+                buildAdPopup(doctor, slide = null) {
+                    if (!doctor) {
+                        return null;
+                    }
+
+                    const selectedSlide = slide || this.currentDoctorSlide(doctor);
+
+                    if (!selectedSlide) {
+                        return null;
+                    }
+
+                    return {
+                        kind: 'ad',
+                        doctor_id: doctor.id,
+                        doctor_name: doctor.name || 'Doctor',
+                        slide_id: selectedSlide.id || null,
+                        title: selectedSlide.title || this.displayCopy.ad_popup_title || 'Doctor Spotlight',
+                        description: selectedSlide.description || this.displayCopy.empty_slide_text || '',
+                        image: selectedSlide.image || null,
+                        video_url: selectedSlide.video_url || null,
+                        embed_url: selectedSlide.embed_url || null,
+                        embed_type: selectedSlide.embed_type || null,
+                        category_label: selectedSlide.category_label || selectedSlide.type_label || 'Advertisement',
+                        type_label: selectedSlide.type_label || 'Advertisement',
+                        room_number: doctor.room || null,
+                    };
+                },
+                showPopup(popup) {
+                    if (!popup) {
+                        return;
+                    }
+
+                    if (this.popupTimer) {
+                        clearTimeout(this.popupTimer);
+                        this.popupTimer = null;
+                    }
+
+                    this.activePopup = popup;
+
+                    if (popup.kind === 'ad') {
+                        const slides = this.spotlightSlides();
+                        const matchedIndex = popup.slide_id
+                            ? slides.findIndex((slide) => String(slide.id) === String(popup.slide_id))
+                            : 0;
+                        this.spotlightIndex = matchedIndex >= 0 ? matchedIndex : 0;
+                    }
+
+                    if (popup.kind === 'patient' && this.payload?.voice_enabled) {
+                        this.announce(popup);
+                    }
+
+                    if (popup.kind === 'ad') {
+                        this.scheduleSlideAdvance();
+                        return;
+                    }
+
+                    const durationSeconds = Number(this.payload?.popup_duration_seconds || 8);
+
+                    if (durationSeconds) {
+                        this.popupTimer = setTimeout(() => {
+                            this.activePopup = null;
+                        }, Math.max(3, durationSeconds) * 1000);
+                    }
+                },
+                announce(popup) {
+                    if (!('speechSynthesis' in window) || !popup) {
+                        return;
+                    }
+
+                    const template = this.payload?.announcement_template || 'Token {token_number}, please proceed to Room {room_number}, Dr. {doctor_name}.';
+                    const message = template
+                        .replaceAll('{token_number}', popup.current_token || '')
+                        .replaceAll('{doctor_name}', popup.doctor_name || '')
+                        .replaceAll('{room_number}', popup.room_number || '');
+
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(message);
+                    utterance.lang = this.payload?.voice_language || 'en-US';
+                    window.speechSynthesis.speak(utterance);
+                },
+                currentDoctorSlide(doctor = null) {
+                    const slides = doctor?.slides || this.slidesForCurrentDoctor();
+
+                    if (!slides.length) {
+                        return null;
+                    }
+
+                    const index = doctor && doctor.id === this.currentDoctor()?.id
+                        ? this.slideIndex % slides.length
+                        : 0;
+
+                    return slides[index] || null;
+                },
+                syncSpotlightPopup() {
+                    const doctor = this.spotlightDoctor();
+
+                    if (!doctor) {
+                        return;
+                    }
+
+                    const slide = this.spotlightCurrentSlide();
+
+                    if (!slide) {
+                        return;
+                    }
+
+                    this.showPopup(this.buildAdPopup(doctor, slide));
+                },
+                slidesForCurrentDoctor() {
+                    const doctor = this.currentDoctor();
+
+                    if (doctor?.slides?.length) {
+                        return doctor.slides;
+                    }
+
+                    return this.payload?.fallback_slides || [];
+                },
+                currentSlide() {
+                    const slides = this.slidesForCurrentDoctor();
+
+                    if (!slides.length) {
+                        return null;
+                    }
+
+                    return slides[this.slideIndex % slides.length] || null;
+                },
+                globalSlides() {
+                    return this.payload?.global_slides || this.payload?.fallback_slides || [];
+                },
+                currentGlobalSlide() {
+                    const slides = this.globalSlides();
+
+                    if (!slides.length) {
+                        return null;
+                    }
+
+                    return slides[this.globalSlideIndex % slides.length] || null;
+                },
+                previewGlobalSlides(limit = 3) {
+                    const slides = this.globalSlides();
+
+                    if (!slides.length) {
+                        return [];
+                    }
+
+                    const count = Math.min(limit, slides.length);
+
+                    return Array.from({ length: count }, (_, offset) => {
+                        return slides[(this.globalSlideIndex + 1 + offset) % slides.length];
+                    });
+                },
+                doctorCounterLabel() {
+                    if (!this.doctors.length) {
+                        return '0 / 0';
+                    }
+
+                    return `${this.doctorIndex + 1} / ${this.doctors.length}`;
+                },
+                toggleAds() {
+                    this.adsPaused = !this.adsPaused;
+                    if (this.adsPaused) {
+                        this.clearSlideAdvanceTimer();
+                    } else {
+                        this.scheduleSlideAdvance();
+                    }
+                },
+                advanceSlide(scope = 'doctor', delta = 1) {
+                    const slides = scope === 'global'
+                        ? this.globalSlides()
+                        : this.slidesForCurrentDoctor();
+
+                    if (!slides.length) {
+                        return;
+                    }
+
+                    const currentSlide = scope === 'global' ? this.currentGlobalSlide() : this.currentSlide();
+
+                    this.destroyYoutubePlayer(currentSlide?.id || this.activePopup?.slide_id || null);
+
+                    if (scope === 'global') {
+                        this.globalSlideIndex = (this.globalSlideIndex + delta + slides.length) % slides.length;
+                    } else {
+                        this.slideIndex = (this.slideIndex + delta + slides.length) % slides.length;
+                        if (this.activePopup?.kind === 'ad') {
+                            this.destroyYoutubePlayer(this.activePopup?.slide_id || null);
+                            this.activePopup = null;
+                        }
+                    }
+
+                    this.scheduleSlideAdvance();
+                },
+                advanceGlobalSlide(delta = 1) {
+                    this.advanceSlide('global', delta);
+                },
+                formattedQuote(title) {
+                    if (!title) {
+                        return 'Doctor advertisement';
+                    }
+
+                    return `"${title}"`;
+                },
+                destroy() {
+                    if (this.clockTimer) clearInterval(this.clockTimer);
+                    if (this.doctorTimer) clearInterval(this.doctorTimer);
+                    if (this.globalSlideTimer) clearInterval(this.globalSlideTimer);
+                    this.clearSlideAdvanceTimer();
+                    if (this.popupSyncTimer) clearInterval(this.popupSyncTimer);
+                    if (this.reloadTimer) clearTimeout(this.reloadTimer);
+                    if (this.popupTimer) clearTimeout(this.popupTimer);
+                    if (this.mediaFrameHandler) {
+                        window.removeEventListener('message', this.mediaFrameHandler);
+                    }
+                    Object.keys(this.youtubePlayers).forEach((slideId) => this.destroyYoutubePlayer(slideId));
+                },
+            }));
+        });
+    </script>
+</body>
+</html>

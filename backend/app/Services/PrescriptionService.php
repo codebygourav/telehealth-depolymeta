@@ -163,7 +163,7 @@ class PrescriptionService
             'show_dept' => $show_department_stamp,
             'show_global' => $show_global_stamp,
             'hospital_logo_url' => $hospital_logo_base64,
-            'hospital_name' => SettingService::getAppName() ?? 'CMC Telehealth',
+            'hospital_name' => SettingService::getAppName() ?? 'Telehealth Deploymeta',
             'hospital_address' => $contact['address'] ?? '123 Medical Plaza, Health City',
             'hospital_phone' => $contact['phone'] ?? '+1 (555) 001-2233',
             'hospital_email' => $contact['email'] ?? 'contact@cmctelehealth.com',

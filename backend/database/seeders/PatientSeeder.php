@@ -22,7 +22,7 @@ class PatientSeeder extends Seeder
         $states = ['Maharashtra', 'Delhi', 'Karnataka', 'Telangana', 'Gujarat', 'Tamil Nadu', 'West Bengal', 'Gujarat', 'Maharashtra', 'Uttar Pradesh'];
         $nationalities = ['Indian'];
 
-        $count = 1;
+        $count = 12;
 
         for ($i = 0; $i < $count; $i++) {
             $gender = GenderOption::cases()[$i % count(GenderOption::cases())]->value;
@@ -56,43 +56,38 @@ class PatientSeeder extends Seeder
                 }
             }
 
-            Patient::create([
-                'id' => Str::uuid(),
-                'user_id' => $user->id ?? null,
-
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'gender' => $gender,
-                'date_of_birth' => $dob,
-                'age' => $age,
-
-                'father_name' => 'Father ' . $firstName,
-                'wife_name' => $gender === 'male' ? 'Wife ' . $firstName : null,
-                'husband_name' => $gender === 'female' ? 'Husband ' . $firstName : null,
-
-                'mobile_no' => '99999' . rand(10000, 99999),
-                'alternate_no' => null,
-                'email' => $user->email,
-
-                'address' => 'Sample Address, ' . $city,
-                'pincode' => str_pad(strval(rand(100000, 999999)), 6, '0', STR_PAD_LEFT),
-                'area' => 'Area ' . ($i + 1),
-                'city' => $city,
-                'state' => $state,
-                'nationality' => $nationality,
-
-                'marital_status' => $maritalStatus,
-                'blood_group' => $bloodGroup,
-
-                'is_existing_patient' => false,
-                'existing_patient_id' => null,
-                'source' => 'app', // Changed to 'app' for mobile app patients
-                'create_user_account' => true, // Enable user account creation
-
-                'created_by' => $admin?->id ?? null,
-                'updated_by' => $admin?->id ?? null,
-                'deleted_by' => null,
-            ]);
+            Patient::updateOrCreate(
+                ['email' => $user->email],
+                [
+                    'id' => Patient::where('email', $user->email)->value('id') ?? Str::uuid(),
+                    'user_id' => $user->id ?? null,
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'gender' => $gender,
+                    'date_of_birth' => $dob,
+                    'age' => $age,
+                    'father_name' => 'Father ' . $firstName,
+                    'wife_name' => $gender === 'male' ? 'Wife ' . $firstName : null,
+                    'husband_name' => $gender === 'female' ? 'Husband ' . $firstName : null,
+                    'mobile_no' => '99999' . rand(10000, 99999),
+                    'alternate_no' => null,
+                    'address' => 'Sample Address, ' . $city,
+                    'pincode' => str_pad(strval(rand(100000, 999999)), 6, '0', STR_PAD_LEFT),
+                    'area' => 'Area ' . ($i + 1),
+                    'city' => $city,
+                    'state' => $state,
+                    'nationality' => $nationality,
+                    'marital_status' => $maritalStatus,
+                    'blood_group' => $bloodGroup,
+                    'is_existing_patient' => false,
+                    'existing_patient_id' => null,
+                    'source' => 'app',
+                    'create_user_account' => true,
+                    'created_by' => $admin?->id ?? null,
+                    'updated_by' => $admin?->id ?? null,
+                    'deleted_by' => null,
+                ]
+            );
         }
     }
 }

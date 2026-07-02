@@ -64,11 +64,11 @@ return [
         ],
 
         'paid_appointments' => [
-            'driver' => 'mysql',
+            'driver' => env('DB_CONNECTION') === 'sqlite' ? 'sqlite' : 'mysql',
             'url' => env('PAID_APPOINTMENT_DB_URL'),
             'host' => env('PAID_APPOINTMENT_DB_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('PAID_APPOINTMENT_DB_PORT', env('DB_PORT', '3306')),
-            'database' => env('PAID_APPOINTMENT_DB_DATABASE'),
+            'database' => env('DB_CONNECTION') === 'sqlite' ? ':memory:' : env('PAID_APPOINTMENT_DB_DATABASE'),
             'username' => env('PAID_APPOINTMENT_DB_USERNAME', env('DB_USERNAME', 'root')),
             'password' => env('PAID_APPOINTMENT_DB_PASSWORD', env('DB_PASSWORD', '')),
             'unix_socket' => env('PAID_APPOINTMENT_DB_SOCKET', env('DB_SOCKET', '')),

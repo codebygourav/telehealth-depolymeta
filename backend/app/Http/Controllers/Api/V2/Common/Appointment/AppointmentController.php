@@ -37,11 +37,7 @@ class AppointmentController extends Controller
         if ($isPatient) {
             $query->where('appointments.patient_id', $user->patient->id);
         } else {
-            $appPatientIds = Patient::where('source', 'app')
-                ->where('create_user_account', true)
-                ->pluck('id');
-            $query->where('appointments.doctor_id', $user->doctor->id)
-                ->whereIn('appointments.patient_id', $appPatientIds);
+            $query->where('appointments.doctor_id', $user->doctor->id);
         }
 
         $query->with([
@@ -56,8 +52,9 @@ class AppointmentController extends Controller
         ]);
 
         $today = Carbon::today();
-        $query->join('availabilities', 'appointments.availability_id', '=', 'availabilities.id')
-            ->select('appointments.*');
+        $dateTimeExpression = \Illuminate\Support\Facades\DB::getDriverName() === 'sqlite'
+            ? "datetime(appointments.appointment_date || ' ' || appointments.appointment_end_time)"
+            : "STR_TO_DATE(CONCAT(appointments.appointment_date,' ',appointments.appointment_end_time), '%Y-%m-%d %H:%i:%s')";
 
         switch ($filter) {
             case 'today':
@@ -69,15 +66,15 @@ class AppointmentController extends Controller
                         AppointmentStatus::COMPLETED->value,
                     ])
                     ->whereRaw(
-                        "STR_TO_DATE(CONCAT(appointments.appointment_date,' ',availabilities.end_time), '%Y-%m-%d %H:%i:%s') >= ?",
+                        "{$dateTimeExpression} >= ?",
                         [Carbon::now()->format('Y-m-d H:i:s')]
                     )
-                    ->orderBy('availabilities.start_time', 'asc');
+                    ->orderBy('appointments.appointment_time', 'asc');
                 break;
 
             case 'upcoming':
                 $query->whereRaw(
-                    "STR_TO_DATE(CONCAT(appointments.appointment_date,' ',availabilities.end_time), '%Y-%m-%d %H:%i:%s') > ?",
+                    "{$dateTimeExpression} > ?",
                     [Carbon::now()->format('Y-m-d H:i:s')]
                 )
                     ->whereIn('appointments.status', [
@@ -87,12 +84,12 @@ class AppointmentController extends Controller
                         AppointmentStatus::COMPLETED->value,
                     ])
                     ->orderBy('appointments.appointment_date', 'asc')
-                    ->orderBy('availabilities.start_time', 'asc');
+                    ->orderBy('appointments.appointment_time', 'asc');
                 break;
 
             case 'past':
                 $query->whereRaw(
-                    "STR_TO_DATE(CONCAT(appointments.appointment_date,' ',availabilities.end_time), '%Y-%m-%d %H:%i:%s') < ?",
+                    "{$dateTimeExpression} < ?",
                     [Carbon::now()->format('Y-m-d H:i:s')]
                 )
                     ->whereIn('appointments.status', [
@@ -105,6 +102,8 @@ class AppointmentController extends Controller
                     ->orderBy('appointments.appointment_date', 'desc')
                     ->orderBy('appointments.appointment_time', 'desc')
                     ->distinct('appointments.id');
+                break;
+
             case 'all':
                 $query->whereIn('appointments.status', [
                     AppointmentStatus::COMPLETED->value,

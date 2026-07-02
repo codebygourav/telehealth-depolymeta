@@ -166,7 +166,161 @@ class AppointmentSeeder extends Seeder
             $created++;
         }
 
+        $created += $this->seedDisplayQueueScenarios($doctors, $patients);
+        $created += $this->seedTodayLoadForEachDoctor($doctors, $patients);
+
         $this->command->info("{$created} appointments seeded successfully!");
+    }
+
+    private function seedTodayLoadForEachDoctor($doctors, $patients): int
+    {
+        if ($doctors->isEmpty() || $patients->isEmpty()) {
+            return 0;
+        }
+
+        $today = Carbon::today();
+        $totalPatients = max(1, $patients->count());
+        $created = 0;
+
+        $queuePattern = [
+            ['queue_status' => 'started', 'status' => AppointmentStatus::CONFIRMED->value],
+            ['queue_status' => 'checkin', 'status' => AppointmentStatus::CONFIRMED->value],
+            ['queue_status' => 'checkin', 'status' => AppointmentStatus::CONFIRMED->value],
+            ['queue_status' => 'scheduled', 'status' => AppointmentStatus::CONFIRMED->value],
+            ['queue_status' => 'scheduled', 'status' => AppointmentStatus::CONFIRMED->value],
+            ['queue_status' => 'scheduled', 'status' => AppointmentStatus::CONFIRMED->value],
+            ['queue_status' => 'skipped', 'status' => AppointmentStatus::CONFIRMED->value],
+            ['queue_status' => 'no_show', 'status' => AppointmentStatus::NO_SHOW->value],
+            ['queue_status' => 'scheduled', 'status' => AppointmentStatus::CONFIRMED->value],
+            ['queue_status' => 'completed', 'status' => AppointmentStatus::COMPLETED->value],
+        ];
+
+        foreach ($doctors->values() as $doctorIndex => $doctor) {
+            $room = $doctor->address_line2 ?: 'Room ' . str_pad((string) (101 + ($doctorIndex % 20)), 3, '0', STR_PAD_LEFT);
+            $availability = $this->upsertScenarioAvailability($doctor, '09:00', '18:00', 'general', $room);
+            $startRaw = (string) ($availability->start_time ?? '09:00:00');
+            $endRaw = (string) ($availability->end_time ?? '18:00:00');
+
+            $availabilityStart = preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $startRaw)
+                ? Carbon::parse($today->toDateString() . ' ' . $startRaw)
+                : Carbon::parse($startRaw)->copy()->setDate($today->year, $today->month, $today->day);
+
+            $availabilityEnd = preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $endRaw)
+                ? Carbon::parse($today->toDateString() . ' ' . $endRaw)
+                : Carbon::parse($endRaw)->copy()->setDate($today->year, $today->month, $today->day);
+
+            if ($availabilityEnd->lessThanOrEqualTo($availabilityStart)) {
+                $availabilityEnd = $availabilityStart->copy()->addHours(8);
+            }
+            $maxStartOffset = max(0, $availabilityEnd->diffInMinutes($availabilityStart) - 15);
+
+            foreach ($queuePattern as $slotIndex => $slot) {
+                $patient = $patients[$slotIndex % $totalPatients];
+                $offset = min($slotIndex * 15, $maxStartOffset);
+                $startAt = $availabilityStart->copy()->addMinutes($offset);
+                $endAt = $startAt->copy()->addMinutes(15);
+                $slug = 'opd-load-' . $doctor->id . '-' . $today->format('Ymd') . '-' . str_pad((string) ($slotIndex + 1), 2, '0', STR_PAD_LEFT);
+
+                $appointment = Appointment::firstOrNew(['slug' => $slug]);
+                if (! $appointment->exists) {
+                    $appointment->id = (string) Str::uuid();
+                }
+
+                $appointment->fill([
+                    'patient_id' => $patient->id,
+                    'doctor_id' => $doctor->id,
+                    'availability_id' => $availability->id,
+                    'appointment_date' => $today,
+                    'appointment_time' => $startAt->format('H:i:s'),
+                    'appointment_end_time' => $endAt->format('H:i:s'),
+                    'consultation_type' => 'in-person',
+                    'status' => $slot['status'],
+                    'queue_status' => $slot['queue_status'],
+                    'fee_amount' => 1,
+                    'visit_reason' => ['OPD Display Load Test'],
+                ]);
+                $appointment->save();
+
+                if (blank($appointment->queue_number)) {
+                    $appointment->assignQueueNumber();
+                }
+
+                $this->createPaymentIfMissing($appointment);
+                $created++;
+            }
+        }
+
+        return $created;
+    }
+
+    private function seedDisplayQueueScenarios($doctors, $patients): int
+    {
+        $scenarioDoctors = $doctors->take(4)->values();
+        $scenarioPatients = $patients->take(12)->values();
+
+        if ($scenarioDoctors->count() < 4 || $scenarioPatients->count() < 8) {
+            $this->command?->warn('Scenario queue seeding skipped: need at least 4 doctors and 8 patients.');
+            return 0;
+        }
+
+        $availabilities = [
+            0 => $this->upsertScenarioAvailability($scenarioDoctors[0], '09:00', '12:00', 'general', 'Room 204'),
+            1 => $this->upsertScenarioAvailability($scenarioDoctors[1], '09:30', '12:30', 'general', 'Room 108'),
+            2 => $this->upsertScenarioAvailability($scenarioDoctors[2], '10:00', '13:00', 'general', 'Room 310'),
+            3 => $this->upsertScenarioAvailability($scenarioDoctors[3], '10:30', '13:30', 'general', 'Room 112'),
+        ];
+
+        $scenarios = [
+            ['doctor' => 0, 'patient' => 0, 'queue_status' => 'started', 'status' => AppointmentStatus::CONFIRMED->value, 'suffix' => 'current-1'],
+            ['doctor' => 0, 'patient' => 1, 'queue_status' => 'checkin', 'status' => AppointmentStatus::CONFIRMED->value, 'suffix' => 'waiting-1'],
+            ['doctor' => 0, 'patient' => 2, 'queue_status' => 'checkin', 'status' => AppointmentStatus::CONFIRMED->value, 'suffix' => 'waiting-2'],
+            ['doctor' => 1, 'patient' => 3, 'queue_status' => 'started', 'status' => AppointmentStatus::CONFIRMED->value, 'suffix' => 'current-1'],
+            ['doctor' => 1, 'patient' => 4, 'queue_status' => 'checkin', 'status' => AppointmentStatus::CONFIRMED->value, 'suffix' => 'waiting-1'],
+            ['doctor' => 2, 'patient' => 5, 'queue_status' => 'checkin', 'status' => AppointmentStatus::CONFIRMED->value, 'suffix' => 'waiting-1'],
+            ['doctor' => 2, 'patient' => 6, 'queue_status' => 'checkin', 'status' => AppointmentStatus::CONFIRMED->value, 'suffix' => 'waiting-2'],
+            ['doctor' => 3, 'patient' => 7, 'queue_status' => 'started', 'status' => AppointmentStatus::CONFIRMED->value, 'suffix' => 'current-1'],
+            ['doctor' => 3, 'patient' => 8, 'queue_status' => 'skipped', 'status' => AppointmentStatus::CONFIRMED->value, 'suffix' => 'skipped-1'],
+            ['doctor' => 3, 'patient' => 9, 'queue_status' => 'completed', 'status' => AppointmentStatus::COMPLETED->value, 'suffix' => 'completed-1'],
+        ];
+
+        $created = 0;
+
+        foreach ($scenarios as $scenario) {
+            $doctor = $scenarioDoctors[$scenario['doctor']];
+            $patient = $scenarioPatients[$scenario['patient']];
+            $availability = $availabilities[$scenario['doctor']];
+            $slug = Str::slug($doctor->first_name . '-' . $doctor->last_name) . '-display-' . $scenario['suffix'];
+
+            $appointment = Appointment::firstOrNew(['slug' => $slug]);
+
+            if (! $appointment->exists) {
+                $appointment->id = (string) Str::uuid();
+            }
+
+            $appointment->fill([
+                'patient_id' => $patient->id,
+                'doctor_id' => $doctor->id,
+                'availability_id' => $availability->id,
+                'appointment_date' => Carbon::today(),
+                'appointment_time' => $availability->start_time,
+                'appointment_end_time' => $availability->end_time,
+                'consultation_type' => $availability->consultation_type,
+                'status' => $scenario['status'],
+                'queue_status' => $scenario['queue_status'],
+                'fee_amount' => 1,
+                'visit_reason' => ['Display Scenario Queue'],
+            ]);
+            $appointment->save();
+
+            if (blank($appointment->queue_number)) {
+                $appointment->assignQueueNumber();
+            }
+
+            $this->createPaymentIfMissing($appointment);
+            $created++;
+        }
+
+        return $created;
     }
 
     private function resolveAvailability(Doctor $doctor, string $consultationType, ?string $opdType, ?Carbon $date = null): ?DoctorAvailability
@@ -189,12 +343,12 @@ class AppointmentSeeder extends Seeder
         if ($date) {
             $query->where(function ($q) use ($date) {
                 $q->whereDate('date', $date)
-                  ->orWhere(function ($sub) use ($date) {
-                      $sub->whereNull('date')
-                          ->where('is_recurring', true)
-                          ->whereDate('recurring_start_date', '<=', $date)
-                          ->whereDate('recurring_end_date', '>=', $date);
-                  });
+                    ->orWhere(function ($sub) use ($date) {
+                        $sub->whereNull('date')
+                            ->where('is_recurring', true)
+                            ->whereDate('recurring_start_date', '<=', $date)
+                            ->whereDate('recurring_end_date', '>=', $date);
+                    });
             });
         }
 
@@ -227,6 +381,50 @@ class AppointmentSeeder extends Seeder
         ]);
     }
 
+    private function upsertScenarioAvailability(Doctor $doctor, string $startTime, string $endTime, string $opdType, string $room): DoctorAvailability
+    {
+        $today = Carbon::today()->format('Y-m-d');
+
+        // Reuse existing in-person availability for today to avoid overlap validation failures.
+        $existingToday = DoctorAvailability::query()
+            ->where('doctor_id', $doctor->id)
+            ->whereDate('date', $today)
+            ->where('consultation_type', 'in-person')
+            ->where('is_available', true)
+            ->orderBy('start_time')
+            ->first();
+
+        if ($existingToday) {
+            if (blank($existingToday->doctor_room) && !blank($room)) {
+                $existingToday->doctor_room = $room;
+                $existingToday->save();
+            }
+
+            return $existingToday;
+        }
+
+        $availability = DoctorAvailability::firstOrNew([
+            'doctor_id' => $doctor->id,
+            'date' => $today,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'consultation_type' => 'in-person',
+            'opd_type' => $opdType,
+        ]);
+
+        $availability->fill([
+            'capacity' => 12,
+            'is_available' => true,
+            'is_recurring' => false,
+            'day_of_week' => strtolower(Carbon::today()->format('l')),
+            'consultation_fee' => 1,
+            'doctor_room' => $room,
+        ]);
+        $availability->save();
+
+        return $availability;
+    }
+
     private function createPayment(Appointment $appointment, float $amount, string $status = 'paid'): void
     {
         $paymentMethods = ['card', 'netbanking', 'wallet', 'upi'];
@@ -241,6 +439,15 @@ class AppointmentSeeder extends Seeder
             'razorpay_order_id' => 'order_' . Str::random(14),
             'razorpay_payment_id' => 'pay_' . Str::random(14),
         ]);
+    }
+
+    private function createPaymentIfMissing(Appointment $appointment): void
+    {
+        if ($appointment->payment()->exists()) {
+            return;
+        }
+
+        $this->createPayment($appointment, 1, 'paid');
     }
 
     private function createPrescription(Appointment $appointment, array $data, int $order): void

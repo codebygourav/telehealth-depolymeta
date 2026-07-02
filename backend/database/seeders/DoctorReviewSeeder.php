@@ -18,8 +18,6 @@ class DoctorReviewSeeder extends Seeder
         // Fetch all doctors & patients
         $doctors = Doctor::with('user')->get();
         $patients = Patient::with('user')
-            ->where('source', 'app')
-            ->where('create_user_account', true)
             ->get();
 
         if ($doctors->isEmpty()) {

@@ -48,12 +48,12 @@ class DoctorAvailability extends Model
         'deleted_by',
         'blocked_dates',
         'booking_cutoff_rules',
+        'is_auto_recurring',
         // 'series_id',
         // 'custom_dates',
     ];
 
     protected $casts = [
-        'date' => 'date',
         'start_time' => 'datetime:H:i',
         'end_time' => 'datetime:H:i',
         'is_available' => 'boolean',
@@ -66,6 +66,7 @@ class DoctorAvailability extends Model
         'recurring_months' => 'integer',
         'blocked_dates' => 'array',
         'booking_cutoff_rules' => 'array',
+        'is_auto_recurring' => 'boolean',
         // 'custom_dates' => 'array',
     ];
 
@@ -75,6 +76,7 @@ class DoctorAvailability extends Model
         'capacity' => 1,
         'is_recurring' => false,
         'is_child_only' => false,
+        'is_auto_recurring' => false,
     ];
     /**
      * Get the doctor that owns the availability.
@@ -92,6 +94,8 @@ class DoctorAvailability extends Model
         return $this->hasMany(Appointment::class, 'availability_id');
     }
 
+
+    
     public function overrides()
     {
         return $this->hasMany(DoctorAvailabilityOverride::class, 'doctor_availability_id');

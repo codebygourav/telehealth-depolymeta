@@ -16,20 +16,18 @@ class DoctorSeeder extends Seeder
     {
         $departments = Department::all();
         $departmentsCount = $departments->count() > 0 ? $departments->count() : 1;
+        $doctors = [
+            ['first_name' => 'Aarav', 'last_name' => 'Malhotra', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'speciality' => 'Gynecology'],
+            ['first_name' => 'Neha', 'last_name' => 'Kapoor', 'city' => 'Bengaluru', 'state' => 'Karnataka', 'speciality' => 'Cardiology'],
+            ['first_name' => 'Ravi', 'last_name' => 'Sharma', 'city' => 'New Delhi', 'state' => 'Delhi', 'speciality' => 'Orthopedics'],
+            ['first_name' => 'Meera', 'last_name' => 'Sethi', 'city' => 'Hyderabad', 'state' => 'Telangana', 'speciality' => 'Dermatology'],
+        ];
 
-        $firstNames = ['Amit', 'Priya', 'Rahul', 'Sunita', 'Vikram'];
-        $lastNames = ['Sharma', 'Nair', 'Verma', 'Patel', 'Singh'];
-        $cities = ['Mumbai', 'Bengaluru', 'New Delhi', 'Hyderabad', 'Chennai'];
-        $states = ['Maharashtra', 'Karnataka', 'Delhi', 'Telangana', 'Tamil Nadu'];
-
-        $specialities = ['Cardiology', 'Neurology', 'Paediatrics', 'Dermatology', 'Orthopaedics'];
-
-        for ($i = 0; $i < 1; $i++) {
-            $first_name = $firstNames[$i];
-            $last_name = $lastNames[$i];
+        foreach ($doctors as $i => $entry) {
+            $first_name = $entry['first_name'];
+            $last_name = $entry['last_name'];
             $email = strtolower($first_name) . '.' . strtolower($last_name) . '@deploymeta.test';
 
-            // USER CREATE OR UPDATE
             $user = User::firstOrNew(['email' => $email]);
             $user->name = "{$first_name} {$last_name}";
             $user->slug = Str::slug($user->name);
@@ -44,10 +42,9 @@ class DoctorSeeder extends Seeder
             } catch (\Throwable $e) {
             }
 
-            $speciality = $specialities[$i];
+            $speciality = $entry['speciality'];
             $dob = Carbon::now()->subYears(rand(30, 60))->format('Y-m-d');
 
-            // DOCTOR PROFILE
             $doctor = Doctor::firstOrNew(['user_id' => $user->id]);
             $doctor->fill([
                 'first_name' => $first_name,
@@ -60,17 +57,16 @@ class DoctorSeeder extends Seeder
                 'years_experience' => rand(5, 25),
                 'bio' => "Qualified $speciality expert.",
                 'description' => "Specializes in $speciality.",
-                'address_line1' => "Address Line 1 - $cities[$i]",
+                'address_line1' => "Address Line 1 - {$entry['city']}",
                 'country' => 'India',
-                'state' => $states[$i],
-                'city' => $cities[$i],
+                'state' => $entry['state'],
+                'city' => $entry['city'],
                 'pincode' => str_pad(strval(100000 + ($i * 311)), 6, '0', STR_PAD_LEFT),
                 'languages_known' => 'english,hindi',
                 'status' => \App\Enums\DoctorStatus::ACTIVE->value,
             ]);
             $doctor->save();
 
-            // DEPARTMENTS
             if ($departmentsCount > 0) {
                 $primaryIndex = ($i * 2) % $departmentsCount;
                 $secondaryIndex = ($primaryIndex + 1) % $departmentsCount;

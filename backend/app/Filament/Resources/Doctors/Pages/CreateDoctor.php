@@ -18,14 +18,28 @@ class CreateDoctor extends CreateRecord
 
     protected static string $resource = DoctorResource::class;
 
-    public function getFormActionsAlignment(): Alignment|string
+    protected static bool $canCreateAnother = false;
+
+    protected string $view = 'filament.resources.doctors.pages.doctor-form';
+
+    protected function getCancelFormAction(): \Filament\Actions\Action
     {
-        return Alignment::End;
+        $url = $this->previousUrl ?? $this->getResourceUrl();
+
+        return \Filament\Actions\Action::make('cancel')
+            ->label(__('filament-panels::resources/pages/create-record.form.actions.cancel.label'))
+            ->color('gray')
+            ->requiresConfirmation()
+            ->modalHeading('Confirm Cancellation')
+            ->modalDescription('Are you sure you want to cancel? Any unsaved changes will be lost.')
+            ->modalSubmitActionLabel('Yes, cancel')
+            ->modalCancelActionLabel('No, keep editing')
+            ->action(fn () => $this->redirect($url, navigate: \Filament\Support\Facades\FilamentView::hasSpaMode($url)));
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        return $data;
+        return \App\Filament\Resources\Doctors\Schemas\DoctorForm::mutateFormDataBeforeSave($data);
     }
 
     protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model

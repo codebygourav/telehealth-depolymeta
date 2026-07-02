@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2\Wordpress;
 
 use App\Http\Controllers\Controller;
 use App\Mail\PatientCredentialsMail;
+use App\Models\EmailLog;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -25,7 +26,11 @@ class PatientController extends Controller
             $patient = $this->findPatientByEmail($email);
             $user = $this->findUserByEmail($email);
 
-            if ($patient || $user) {
+            if ($patient && $user) {
+                if (empty($patient->user_id) || $patient->user_id !== $user->id) {
+                    $patient->user_id = $user->id;
+                    $patient->save();
+                }
                 return response()->json([
                     'message' => 'Patient created successfully',
                     'patient' => $patient,
@@ -119,7 +124,11 @@ class PatientController extends Controller
         $patient = $this->findPatientByEmail($validated['email']);
         $user = $this->findUserByEmail($validated['email']);
 
-        if ($patient || $user) {
+        if ($patient && $user) {
+            if (empty($patient->user_id) || $patient->user_id !== $user->id) {
+                $patient->user_id = $user->id;
+                $patient->save();
+            }
             return response()->json([
                 'message' => 'Patient created successfully',
                 'patient' => $patient,
@@ -127,80 +136,117 @@ class PatientController extends Controller
             ]);
         }
 
-        $rawPassword = Str::random(10);
-        $hashedPassword = Hash::make($rawPassword);
+        $rawPassword = null;
 
-        $patientData = [
-            'first_name'          => $validated['first_name'],
-            'last_name'           => $validated['last_name'],
-            'gender'              => $validated['gender'],
-            'age'                 => $validated['age'],
-            'marital_status'      => $validated['marital_status'],
-            'father_name'         => $validated['father_name'] ?? null,
-            'husband_name'        => $validated['husband_name'] ?? null,
-            'mobile_no'           => $validated['mobile'],
-            'email'               => $validated['email'],
-            'password'            => $hashedPassword,
-            'address'             => $validated['address'],
-            'is_existing_patient' => (bool) ($validated['is_existing_patient'] ?? false),
-            'existing_patient_id' => $validated['existing_patient_id'] ?? null,
-            'source'              => $validated['source'] ?? 'website',
-        ];
+        // 1. Create the User if they don't exist
+        if (! $user) {
+            $rawPassword = Str::random(10);
+            $hashedPassword = Hash::make($rawPassword);
 
-        $user = null;
+            $userData = [
+                'name'              => trim($validated['first_name'] . ' ' . $validated['last_name']),
+                'email'             => $validated['email'],
+                'password'          => $hashedPassword,
+                'mobile'            => $validated['mobile'],
+                'phone'             => $validated['mobile'],
+                'email_verified_at' => now(),
+                'status'            => \App\Enums\AuthStatus::registered->value,
+            ];
 
-        $userData = [
-            'name'              => trim($validated['first_name'] . ' ' . $validated['last_name']),
-            'email'             => $validated['email'],
-            'password'          => $hashedPassword,
-            'mobile'            => $validated['mobile'],
-            'phone'             => $validated['mobile'],
-            'email_verified_at' => now(),
-            'status'            => \App\Enums\AuthStatus::registered->value,
-        ];
+            try {
+                $user = User::create($userData);
+            } catch (UniqueConstraintViolationException $e) {
+                return $this->existingPatientResponse($validated['email']);
+            }
 
-        try {
-            $user = User::create($userData);
-        } catch (UniqueConstraintViolationException $e) {
-            return $this->existingPatientResponse($validated['email']);
+            if (method_exists($user, 'assignRole')) {
+                $user->assignRole('patient');
+            }
+
+            if (class_exists('\App\Models\Registration')) {
+                \App\Models\Registration::updateOrCreate(
+                    ['email' => $validated['email']],
+                    [
+                        'email_verified' => true,
+                        'status' => \App\Enums\AuthStatus::registered->value,
+                    ]
+                );
+            }
         }
 
-        if (method_exists($user, 'assignRole')) {
-            $user->assignRole('patient');
+        // 2. Create the Patient if they don't exist, or link to User if they do
+        if (! $patient) {
+            $patientData = [
+                'first_name'          => $validated['first_name'],
+                'last_name'           => $validated['last_name'],
+                'gender'              => $validated['gender'],
+                'age'                 => $validated['age'],
+                'marital_status'      => $validated['marital_status'],
+                'father_name'         => $validated['father_name'] ?? null,
+                'husband_name'        => $validated['husband_name'] ?? null,
+                'mobile_no'           => $validated['mobile'],
+                'email'               => $validated['email'],
+                'address'             => $validated['address'],
+                'is_existing_patient' => (bool) ($validated['is_existing_patient'] ?? false),
+                'existing_patient_id' => $validated['existing_patient_id'] ?? null,
+                'source'              => $validated['source'] ?? 'website',
+            ];
+
+            if (in_array('user_id', (new Patient())->getFillable())) {
+                $patientData['user_id'] = $user->id;
+            }
+
+            try {
+                $patient = Patient::create($patientData);
+            } catch (UniqueConstraintViolationException $e) {
+                return $this->existingPatientResponse($validated['email']);
+            }
+        } else {
+            // Patient already existed, but User was missing and just got created. Link them!
+            $patient->user_id = $user->id;
+            $patient->save();
         }
 
-        if (array_key_exists('user_id', (new Patient())->getFillable())) {
-            $patientData['user_id'] = $user->id;
-        }
-
-        if (class_exists('\App\Models\Registration')) {
-            \App\Models\Registration::updateOrCreate(
-                ['email' => $validated['email']],
-                [
-                    'email_verified' => true,
-                    'status' => \App\Enums\AuthStatus::registered->value,
-                ]
+        // 3. Send email only if a new User account was created
+        if ($rawPassword !== null) {
+            $mailable = new PatientCredentialsMail(
+                trim($validated['first_name'] . ' ' . $validated['last_name']),
+                $validated['email'],
+                $rawPassword
             );
-        }
+            $subject = 'Your Account Credentials - ' . config('app.name');
+            $htmlBody = null;
 
-        try {
-            $patient = Patient::create($patientData);
-        } catch (UniqueConstraintViolationException $e) {
-            return $this->existingPatientResponse($validated['email']);
-        }
+            try {
+                $htmlBody = $mailable->render();
+            } catch (\Throwable $e) {
+                // Ignore render errors for logging
+            }
 
-        try {
-            Mail::to($validated['email'])->send(
-                new PatientCredentialsMail(
-                    trim($validated['first_name'] . ' ' . $validated['last_name']),
-                    $validated['email'],
-                    $rawPassword
-                )
-            );
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error(
-                'Failed to send registration credentials email to patient: ' . $e->getMessage()
-            );
+            try {
+                Mail::to($validated['email'])->send($mailable);
+
+                EmailLog::recordSent(
+                    type: PatientCredentialsMail::class,
+                    toEmail: $validated['email'],
+                    subject: $subject,
+                    patientId: $patient->id ?? null,
+                    htmlBody: $htmlBody
+                );
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error(
+                    'Failed to send registration credentials email to patient: ' . $e->getMessage()
+                );
+
+                EmailLog::recordFailed(
+                    type: PatientCredentialsMail::class,
+                    toEmail: $validated['email'],
+                    subject: $subject,
+                    errorMessage: $e->getMessage(),
+                    patientId: $patient->id ?? null,
+                    htmlBody: $htmlBody
+                );
+            }
         }
 
         return response()->json([

@@ -1,10 +1,10 @@
-# CMC Telehealth
+# Telehealth Deploymeta
 
-![CMC Telehealth](public/images/cmc.png)
+![Telehealth Deploymeta](public/images/cmc.png)
 
 ## Overview
 
-**CMC Telehealth** is a comprehensive telehealth application designed to facilitate remote medical consultations, manage patient records, and handle online payments securely. The platform leverages modern web technologies to provide a seamless experience for doctors, patients, and administrators.
+**Telehealth Deploymeta** is a comprehensive telehealth application designed to facilitate remote medical consultations, manage patient records, and handle online payments securely. The platform leverages modern web technologies to provide a seamless experience for doctors, patients, and administrators.
 
 ## Features
 

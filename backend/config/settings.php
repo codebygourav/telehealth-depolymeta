@@ -16,7 +16,7 @@ return [
                 'label' => 'Basic Information',
                 'description' => 'Application identity',
                 'fields' => [
-                    'name' => ['type' => 'text', 'label' => 'Application Name', 'placeholder' => 'CMC Telehealth', 'required' => true, 'is_public' => true],
+                    'name' => ['type' => 'text', 'label' => 'Application Name', 'placeholder' => 'Telehealth Deploymeta', 'required' => true, 'is_public' => true],
                     'tagline' => ['type' => 'text', 'label' => 'Tagline', 'placeholder' => 'Your trusted healthcare partner', 'is_public' => true],
                     'version' => ['type' => 'text', 'label' => 'App Version', 'placeholder' => '1.0.0', 'is_public' => true],
                 ],
@@ -70,7 +70,7 @@ return [
                         'env_key' => 'MAIL_ENCRYPTION',
                     ],
                     'from_address' => ['type' => 'email', 'label' => 'From Email', 'placeholder' => 'noreply@example.com', 'env_key' => 'MAIL_FROM_ADDRESS'],
-                    'from_name' => ['type' => 'text', 'label' => 'From Name', 'placeholder' => 'CMC Telehealth', 'env_key' => 'MAIL_FROM_NAME'],
+                    'from_name' => ['type' => 'text', 'label' => 'From Name', 'placeholder' => 'Telehealth Deploymeta', 'env_key' => 'MAIL_FROM_NAME'],
                 ],
             ],
         ],
@@ -137,6 +137,399 @@ return [
                 'toggle' => [
                     'enabled' => true,
                     'default_open' => true, // In-Person open by default
+                ],
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Display Screen Settings
+    |--------------------------------------------------------------------------
+    */
+    'display' => [
+        'label' => 'Display Screen',
+        'icon' => 'heroicon-o-tv',
+        'description' => 'Hospital token board and doctor advertisement screen',
+        'sections' => [
+            'general' => [
+                'label' => 'General',
+                'description' => 'Top-level screen configuration.',
+                'fields' => [
+                    'screen_name' => [
+                        'type' => 'text',
+                        'label' => 'Display Name',
+                        'default' => 'Main OPD Waiting Hall',
+                        'is_public' => false,
+                    ],
+                    'screen_location' => [
+                        'type' => 'text',
+                        'label' => 'Screen Location',
+                        'default' => 'Ground Floor OPD',
+                        'is_public' => false,
+                    ],
+                    'default_notice' => [
+                        'type' => 'textarea',
+                        'label' => 'Default Notice',
+                        'rows' => 3,
+                        'default' => 'Please keep your token ready. Wait near your assigned OPD room.',
+                        'is_public' => false,
+                    ],
+                ],
+            ],
+            'access' => [
+                'label' => 'Access Control',
+                'description' => 'Password and doctor targeting rules for the public display.',
+                'fields' => [
+                    'password' => [
+                        'type' => 'password',
+                        'label' => 'Display Password',
+                        'placeholder' => 'Enter a secret password for the screen',
+                        'helper' => 'Leave blank only if you want the screen open to everyone on the network.',
+                        'is_public' => false,
+                    ],
+                    'doctor_mode' => [
+                        'type' => 'select',
+                        'label' => 'Doctor Selection',
+                        'options' => [
+                            'all' => 'Auto from Today’s Appointments',
+                            'single' => 'Single Doctor',
+                            'multiple' => 'Multiple Doctors',
+                        ],
+                        'default' => 'all',
+                        'is_public' => false,
+                    ],
+                    'display_mode' => [
+                        'type' => 'select',
+                        'label' => 'Screen Layout Mode',
+                        'options' => [
+                            'auto' => 'Auto Detect',
+                            'split_ads' => '50/50 Doctor Card + Ads',
+                            'grid_modal_ads' => 'Doctor Grid + Modal Ads',
+                            'events_only' => 'Events / Announcements Only',
+                        ],
+                        'default' => 'auto',
+                        'helper' => 'Choose the exact screen composition for doctors, ads, and fallback events.',
+                        'is_public' => false,
+                    ],
+                    'same_time_card_columns' => [
+                        'type' => 'select',
+                        'label' => 'Maximum Doctor Grid Columns',
+                        'options' => [
+                            '2' => '2 Columns',
+                            '3' => '3 Columns',
+                        ],
+                        'default' => '2',
+                        'helper' => 'Large screens will expand up to this many doctor cards in one row while still adapting automatically on smaller screens.',
+                        'is_public' => false,
+                    ],
+                    'selected_doctors' => [
+                        'type' => 'doctor_select',
+                        'label' => 'Doctors With Appointments Today',
+                        'helper' => 'Only doctors with appointments today are shown here.',
+                        'default' => [],
+                        'is_public' => false,
+                    ],
+                    'refresh_seconds' => [
+                        'type' => 'number',
+                        'label' => 'Live Refresh Seconds',
+                        'default' => 30,
+                        'min' => 10,
+                        'max' => 300,
+                        'is_public' => false,
+                    ],
+                ],
+            ],
+            'copy' => [
+                'label' => 'Screen Copy',
+                'description' => 'All labels and helper text used on the big display.',
+                'fields' => [
+                    'page_title' => [
+                        'type' => 'text',
+                        'label' => 'Page Title',
+                        'default' => 'OPD Token Display',
+                        'is_public' => false,
+                    ],
+                    'page_subtitle' => [
+                        'type' => 'text',
+                        'label' => 'Subtitle',
+                        'default' => 'Please keep your token ready and be seated.',
+                        'is_public' => false,
+                    ],
+                    'queue_label' => [
+                        'type' => 'text',
+                        'label' => 'Queue Label',
+                        'default' => "Today's Queue",
+                        'is_public' => false,
+                    ],
+                    'queue_subtitle' => [
+                        'type' => 'text',
+                        'label' => 'Queue Subtitle',
+                        'default' => 'Current token, next patient and queue position',
+                        'is_public' => false,
+                    ],
+                    'advertisement_badge' => [
+                        'type' => 'text',
+                        'label' => 'Ad Badge',
+                        'default' => 'Doctor Advertisement Slider',
+                        'is_public' => false,
+                    ],
+                    'now_showing_label' => [
+                        'type' => 'text',
+                        'label' => 'Now Showing Label',
+                        'default' => 'Now showing',
+                        'is_public' => false,
+                    ],
+                    'cta_label' => [
+                        'type' => 'text',
+                        'label' => 'CTA Label',
+                        'default' => 'Please keep your token ready',
+                        'is_public' => false,
+                    ],
+                    'empty_state_title' => [
+                        'type' => 'text',
+                        'label' => 'Empty State Title',
+                        'default' => 'No active doctor assigned',
+                        'is_public' => false,
+                    ],
+                    'empty_state_text' => [
+                        'type' => 'textarea',
+                        'label' => 'Empty State Text',
+                        'rows' => 3,
+                        'default' => 'Assign one or more doctors in the display settings to start the live board.',
+                        'is_public' => false,
+                    ],
+                ],
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Display Ads Settings
+    |--------------------------------------------------------------------------
+    */
+    'display_ads' => [
+        'label' => 'Display Ads',
+        'icon' => 'heroicon-o-photo',
+        'description' => 'Automatic media behavior for the public display.',
+        'sections' => [
+            'layout' => [
+                'label' => 'Layout Modes',
+                'description' => 'Layout behavior for doctor cards, ads, and fallback content.',
+                'fields' => [
+                    'randomize_bottom_content' => [
+                        'type' => 'toggle',
+                        'label' => 'Randomize Bottom Content',
+                        'default' => true,
+                        'helper' => 'Shuffle announcements, ads, and event slides before they loop at the bottom of the screen.',
+                        'is_public' => false,
+                    ],
+                ],
+            ],
+            'media' => [
+                'label' => 'Media Rules',
+                'description' => 'How doctor media, ads, and event videos behave on screen.',
+                'fields' => [
+                    'slide_duration_seconds' => [
+                        'type' => 'number',
+                        'label' => 'Slide Duration (seconds)',
+                        'default' => 8,
+                        'min' => 3,
+                        'max' => 60,
+                        'helper' => 'How long a non-video slide stays on screen before moving to the next one.',
+                    ],
+                    'doctor_rotation_seconds' => [
+                        'type' => 'number',
+                        'label' => 'Doctor Rotation (seconds)',
+                        'default' => 12,
+                        'min' => 5,
+                        'max' => 120,
+                        'helper' => 'How often the active doctor card changes when multiple doctors are enabled.',
+                    ],
+                    'refresh_seconds' => [
+                        'type' => 'number',
+                        'label' => 'Live Refresh (seconds)',
+                        'default' => 30,
+                        'min' => 10,
+                        'max' => 300,
+                        'helper' => 'Refresh the board from Livewire on this interval.',
+                    ],
+                    'pause_between_doctors_seconds' => [
+                        'type' => 'number',
+                        'label' => 'Pause Between Doctors (seconds)',
+                        'default' => 2,
+                        'min' => 0,
+                        'max' => 20,
+                        'helper' => 'Optional pause before the screen switches to the next doctor or content panel.',
+                    ],
+                    'popup_enabled' => [
+                        'type' => 'toggle',
+                        'label' => 'Enable Patient Popup',
+                        'default' => true,
+                        'helper' => 'Show the next-patient alert popup automatically when the current turn changes.',
+                        'is_public' => false,
+                    ],
+                    'popup_duration_seconds' => [
+                        'type' => 'number',
+                        'label' => 'Patient Popup Duration (seconds)',
+                        'default' => 8,
+                        'min' => 3,
+                        'max' => 30,
+                        'helper' => 'How long the next-patient popup stays visible.',
+                    ],
+                    'ad_popup_enabled' => [
+                        'type' => 'toggle',
+                        'label' => 'Enable Advertisement Popup',
+                        'default' => true,
+                        'helper' => 'Show a doctor-related ad popup automatically while the board is running.',
+                        'is_public' => false,
+                    ],
+                    'ad_popup_interval_seconds' => [
+                        'type' => 'number',
+                        'label' => 'Ad Popup Interval (seconds)',
+                        'default' => 180,
+                        'min' => 30,
+                        'max' => 600,
+                        'helper' => 'How often doctor-related ad popups should appear.',
+                    ],
+                    'ad_popup_duration_seconds' => [
+                        'type' => 'number',
+                        'label' => 'Ad Popup Duration (seconds)',
+                        'default' => 12,
+                        'min' => 5,
+                        'max' => 60,
+                        'helper' => 'How long the advertisement popup stays open before closing automatically.',
+                    ],
+                    'show_media_images' => [
+                        'type' => 'toggle',
+                        'label' => 'Show Image Content',
+                        'default' => true,
+                        'helper' => 'When off, image banners are hidden from the display slider and popup.',
+                        'is_public' => false,
+                    ],
+                    'show_media_videos' => [
+                        'type' => 'toggle',
+                        'label' => 'Show Video Content',
+                        'default' => true,
+                        'helper' => 'When off, video and embedded media are hidden from the display slider and popup.',
+                        'is_public' => false,
+                    ],
+                    'show_media_links' => [
+                        'type' => 'toggle',
+                        'label' => 'Show Link Content',
+                        'default' => true,
+                        'helper' => 'When off, link-only items are hidden from the display slider and popup.',
+                        'is_public' => false,
+                    ],
+                ],
+            ],
+            'voice' => [
+                'label' => 'Voice',
+                'description' => 'Speech announcement settings.',
+                'fields' => [
+                    'voice_enabled' => [
+                        'type' => 'toggle',
+                        'label' => 'Enable Voice Announcement',
+                        'default' => false,
+                        'is_public' => false,
+                    ],
+                    'voice_language' => [
+                        'type' => 'text',
+                        'label' => 'Voice Language',
+                        'default' => 'en-US',
+                        'is_public' => false,
+                    ],
+                    'announcement_template' => [
+                        'type' => 'textarea',
+                        'label' => 'Announcement Template',
+                        'rows' => 3,
+                        'default' => 'Token {token_number}, please proceed to Room {room_number}, Dr. {doctor_name}.',
+                        'is_public' => false,
+                    ],
+                ],
+            ],
+            'content' => [
+                'label' => 'Ad Content Copy',
+                'description' => 'Default labels and placeholders shown in the media templates.',
+                'fields' => [
+                    'badge_label' => [
+                        'type' => 'text',
+                        'label' => 'Badge Label',
+                        'placeholder' => 'Doctor Advertisement Slider',
+                        'default' => 'Doctor Advertisement Slider',
+                    ],
+                    'now_showing_label' => [
+                        'type' => 'text',
+                        'label' => 'Now Showing Label',
+                        'placeholder' => 'Now showing',
+                        'default' => 'Now showing',
+                    ],
+                    'empty_slide_title' => [
+                        'type' => 'text',
+                        'label' => 'Empty Slide Title',
+                        'placeholder' => 'No advertisement assigned',
+                        'default' => 'No advertisement assigned',
+                    ],
+                    'empty_slide_text' => [
+                        'type' => 'textarea',
+                        'label' => 'Empty Slide Text',
+                        'rows' => 3,
+                        'placeholder' => 'Add at least one active advertisement for this doctor.',
+                        'default' => 'Add at least one active advertisement for this doctor.',
+                    ],
+                    'cta_label' => [
+                        'type' => 'text',
+                        'label' => 'CTA Label',
+                        'placeholder' => 'Please keep your token ready',
+                        'default' => 'Please keep your token ready',
+                    ],
+                    'bottom_content_label' => [
+                        'type' => 'text',
+                        'label' => 'Bottom Content Label',
+                        'placeholder' => 'Health Updates',
+                        'default' => 'Health Updates',
+                    ],
+                    'next_patient_label' => [
+                        'type' => 'text',
+                        'label' => 'Next Patient Label',
+                        'placeholder' => 'Next Patient',
+                        'default' => 'Next Patient',
+                    ],
+                    'popup_title' => [
+                        'type' => 'text',
+                        'label' => 'Popup Title',
+                        'placeholder' => 'Next Patient Alert',
+                        'default' => 'Next Patient Alert',
+                    ],
+                    'show_slide_heading' => [
+                        'type' => 'toggle',
+                        'label' => 'Show Slider Heading',
+                        'default' => false,
+                        'helper' => 'Toggle the header/title above the advertisement slider.',
+                        'is_public' => false,
+                    ],
+                    'show_slide_description' => [
+                        'type' => 'toggle',
+                        'label' => 'Show Slide Description',
+                        'default' => false,
+                        'helper' => 'Toggle textual description/captions on slides and ad popups.',
+                        'is_public' => false,
+                    ],
+                    'show_events_title' => [
+                        'type' => 'toggle',
+                        'label' => 'Show Events Title',
+                        'default' => false,
+                        'helper' => 'Toggle title text in the events/content slider.',
+                        'is_public' => false,
+                    ],
+                    'show_events_description' => [
+                        'type' => 'toggle',
+                        'label' => 'Show Events Description',
+                        'default' => false,
+                        'helper' => 'Toggle description text in the events/content slider.',
+                        'is_public' => false,
+                    ],
                 ],
             ],
         ],

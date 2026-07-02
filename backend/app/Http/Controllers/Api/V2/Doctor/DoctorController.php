@@ -48,17 +48,12 @@ class DoctorController extends Controller
 
         $doctor = $user->doctor;
 
-        $appPatientIds = Patient::where('source', 'app')
-            ->where('create_user_account', true)
-            ->pluck('id');
-
         $appointments = Appointment::with([
             'patient:id,user_id,first_name,last_name,slug,address,pincode,area,city,state,landmark',
             'availability',
         ])
             ->where('doctor_id', $doctor->id)
-            ->whereIn('patient_id', $appPatientIds)
-            ->where('status', '!=', ['pending', 'no_show'])
+            ->whereNotIn('status', ['pending', 'no_show'])
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
             ->paginate(10); // Set pagination count as 2

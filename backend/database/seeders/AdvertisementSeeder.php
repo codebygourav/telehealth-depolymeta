@@ -11,8 +11,6 @@ class AdvertisementSeeder extends Seeder
 {
     public function run(): void
     {
-        Advertisement::truncate();
-
         $sourceDir = public_path('advertisments');
         $targetDir = storage_path('app/public/advertisements');
 
@@ -79,7 +77,22 @@ class AdvertisementSeeder extends Seeder
                 File::copy($sourcePath, $targetPath);
             }
 
-            $advertisement = Advertisement::create($adData);
+            $existingId = Advertisement::withTrashed()
+                ->where('slug', $adData['slug'])
+                ->value('id');
+
+            if ($existingId) {
+                $adData['id'] = $existingId;
+            }
+
+            $advertisement = Advertisement::withTrashed()->updateOrCreate(
+                ['slug' => $adData['slug']],
+                $adData
+            );
+
+            if ($advertisement->trashed()) {
+                $advertisement->restore();
+            }
 
             if ($imageFile && File::exists($targetPath)) {
                 $advertisement->image = 'advertisements/' . $imageFile;

@@ -177,6 +177,7 @@ class CustomSidebarManager
             'Media' => 'heroicon-o-photo',
             'Reports' => 'heroicon-o-chart-bar',
             'System & Settings' => 'heroicon-o-cog-6-tooth',
+            'Token Queue Display' => 'heroicon-o-tv',
             'Vaccination' => 'heroicon-o-shield-check',
             'Diet' => 'heroicon-o-heart',
             'Medicine' => 'heroicon-o-beaker',

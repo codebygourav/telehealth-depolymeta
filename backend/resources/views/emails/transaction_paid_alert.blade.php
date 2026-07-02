@@ -1,6 +1,6 @@
 @php
     $primaryColor = primary_color() ?? '#1e3a8a';
-    $appName = app_name() ?? 'CMC Telehealth';
+    $appName = app_name() ?? 'Telehealth Deploymeta';
     $patientName = trim(($appointment->patient->first_name ?? '') . ' ' . ($appointment->patient->last_name ?? ''));
     $doctorName = trim(($appointment->doctor->first_name ?? '') . ' ' . ($appointment->doctor->last_name ?? ''));
     $dateStr = $appointment->appointment_date instanceof \Carbon\Carbon

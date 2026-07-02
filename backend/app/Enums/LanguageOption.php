@@ -16,6 +16,7 @@ enum LanguageOption: string
     case URDU      = 'Urdu';
     case ODIA      = 'Odia';
     case MALAYALAM = 'Malayalam';
+    case KASHMIRI  = 'Kashmiri';
     case OTHER     = 'Other';
 
     // Return label-value pairs for frontend
@@ -34,6 +35,7 @@ enum LanguageOption: string
             'Urdu'      => self::URDU->value,
             'Odia'      => self::ODIA->value,
             'Malayalam' => self::MALAYALAM->value,
+            'Kashmiri'  => self::KASHMIRI->value,
             'Other'     => self::OTHER->value,
         ];
     }

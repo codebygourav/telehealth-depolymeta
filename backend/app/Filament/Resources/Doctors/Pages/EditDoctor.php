@@ -53,13 +53,31 @@ class EditDoctor extends EditRecord
         }
     }
 
-    public function getFormActionsAlignment(): Alignment|string
+    protected string $view = 'filament.resources.doctors.pages.doctor-form';
+
+    protected function getCancelFormAction(): Action
     {
-        return Alignment::End;
+        $url = $this->previousUrl ?? $this->getResourceUrl();
+
+        return Action::make('cancel')
+            ->label(__('filament-panels::resources/pages/edit-record.form.actions.cancel.label'))
+            ->color('gray')
+            ->requiresConfirmation()
+            ->modalHeading('Confirm Cancellation')
+            ->modalDescription('Are you sure you want to cancel? Any unsaved changes will be lost.')
+            ->modalSubmitActionLabel('Yes, cancel')
+            ->modalCancelActionLabel('No, keep editing')
+            ->action(fn () => $this->redirect($url, navigate: \Filament\Support\Facades\FilamentView::hasSpaMode($url)));
+    }
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        return \App\Filament\Resources\Doctors\Schemas\DoctorForm::mutateFormDataBeforeFill($data);
     }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $data = \App\Filament\Resources\Doctors\Schemas\DoctorForm::mutateFormDataBeforeSave($data);
         $doctor = $this->record;
 
         if ($doctor->user) {

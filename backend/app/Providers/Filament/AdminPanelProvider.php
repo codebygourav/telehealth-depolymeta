@@ -4,9 +4,10 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login as CustomLogin;
 use Filament\Enums\DatabaseNotificationsPosition;
-use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, Dashboard, DoctorReport, ManageVideoLinks, OPDCalendar, QueueLogsDashboard, RolePermissionMatrix, Settings};
+use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, Dashboard, DisplayAdsSettings, DisplayScreenSettings, DoctorReport, ManageVideoLinks, OPDCalendar, QueueLogsDashboard, RolePermissionMatrix, Settings};
 use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\EmailLogs\EmailLogResource;
+use App\Filament\Resources\DoctorAdvertisements\DoctorAdvertisementResource;
 use App\Filament\Resources\{Appointments\AppointmentResource, DoctorDepartments\DoctorDepartmentResource, DoctorReplacements\DoctorReplacementResource, DoctorReviews\DoctorReviewResource, Doctors\DoctorAvailabilityResource, Doctors\DoctorResource, ContactUs\ContactUsResource, ExternalBookings\ExternalBookingResource, Leaves\LeaveResource, MedicalReports\MedicalReportResource, Medicines\MedicineResource, ModuleDocuments\ModuleDocumentResource, Patients\PatientResource, Payments\PaymentResource, Symptoms\SymptomResource, Users\UserResource, Vendors\VendorResource};
 use App\Filament\Resources\DietTemplates\DietTemplateResource;
 use App\Filament\Resources\MedicineTemplates\MedicineTemplateResource;
@@ -60,6 +61,8 @@ class AdminPanelProvider extends PanelProvider
                 OPDCalendar::class,
                 RolePermissionMatrix::class,
                 Settings::class,
+                DisplayScreenSettings::class,
+                DisplayAdsSettings::class,
                 BookAppointment::class,
                 DoctorReport::class,
                 ManageVideoLinks::class,
@@ -81,6 +84,7 @@ class AdminPanelProvider extends PanelProvider
                 VendorResource::class,
                 UserResource::class,
                 AdvertisementResource::class,
+                DoctorAdvertisementResource::class,
                 DoctorReviewResource::class,
                 DoctorReplacementResource::class,
                 PaymentResource::class,
@@ -199,9 +203,9 @@ class AdminPanelProvider extends PanelProvider
     protected function getAppName(): string
     {
         try {
-            return Setting::getValue('app', 'name', config('app.name', 'CMC Telehealth')) ?? 'CMC Telehealth';
+            return Setting::getValue('app', 'name', config('app.name', 'Telehealth Deploymeta')) ?? 'Telehealth Deploymeta';
         } catch (\Exception $e) {
-            return config('app.name', 'CMC Telehealth');
+            return config('app.name', 'Telehealth Deploymeta');
         }
     }
 }

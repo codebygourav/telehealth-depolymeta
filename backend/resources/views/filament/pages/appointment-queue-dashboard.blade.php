@@ -1,6 +1,6 @@
 <x-filament-panels::page>
     <style>
-     
+
 
         .queue-sticky-legend-inner {
             min-height: 3rem;
@@ -11,13 +11,13 @@
             background: #fff !important;
         }
 
-     
+
 
     </style>
-    <div class="space-y-6" x-data="{ 
-        confirmOpen: false, 
-        confirmTitle: 'Confirm Action', 
-        confirmMessage: 'Are you sure you want to perform this action?', 
+    <div class="space-y-6" x-data="{
+        confirmOpen: false,
+        confirmTitle: 'Confirm Action',
+        confirmMessage: 'Are you sure you want to perform this action?',
         confirmAction: null,
         triggerConfirm(title, message, callback) {
             this.confirmTitle = title;
@@ -41,10 +41,10 @@
                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Select a doctor to manage today's appointment queue.</p>
                     </div>
                     <div class="w-full md:w-80">
-                        <input 
-                            wire:model.live="doctorSearchQuery" 
-                            type="text" 
-                            placeholder="Search doctors..." 
+                        <input
+                            wire:model.live="doctorSearchQuery"
+                            type="text"
+                            placeholder="Search doctors..."
                             class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
                         />
                     </div>
@@ -54,7 +54,7 @@
                     @forelse($this->getDoctors() as $doctor)
                         <div
 
-                        wire:click="selectDoctor('{{ $doctor['id'] }}')"  
+                        wire:click="selectDoctor('{{ $doctor['id'] }}')"
                         class="bg-gray-50 cursor-pointer dark:bg-gray-800/50 border border-gray-150 dark:border-gray-700/60 rounded-2xl p-5 hover:shadow-md transition-all duration-300 flex flex-col justify-between">
                             <div class="space-y-4">
                                 <!-- Top Row: Initials & Info -->
@@ -107,7 +107,7 @@
 
                                 <div class="flex gap-1 shrink-0">
                                     <!-- Check-In Action Switcher -->
-                                    <button 
+                                    <button
                                         x-on:click.prevent="triggerConfirm('Doctor Check-In Status', 'Are you sure you want to {{ $doctor['is_checked_in'] ? 'check out' : 'check in' }} this doctor?', () => { $wire.toggleDoctorCheckIn('{{ $doctor['id'] }}') })"
                                         title="{{ $doctor['is_checked_in'] ? 'Check Out' : 'Check In' }}"
                                         class="p-2 rounded-lg border {{ $doctor['is_checked_in'] ? 'border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400' : 'border-green-200 text-green-600 hover:bg-green-50 dark:border-green-900 dark:text-green-400' }} transition-colors"
@@ -116,8 +116,8 @@
                                     </button>
 
                                     <!-- Open Queue Button -->
-                                    <button 
-                                        wire:click="selectDoctor('{{ $doctor['id'] }}')" 
+                                    <button
+                                        wire:click="selectDoctor('{{ $doctor['id'] }}')"
                                         class="px-3 py-1.5 bg-primary hover:bg-primary-500 text-white rounded-lg text-xs font-semibold shadow-sm hover:shadow transition-all"
                                     >
                                         Open Queue
@@ -143,6 +143,13 @@
                 $appointments = $this->getAppointments();
                 $allAppointments = $this->getAllAppointmentsForQueue();
                 $queueStatusStyles = [
+                    'scheduled' => [
+                        'label' => 'Scheduled',
+                        'badge' => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                        'legend_text' => 'Booked for today',
+                        'legend_card' => 'bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800',
+                        'row' => 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
+                    ],
                     'no_show' => [
                         'label' => 'No Show',
                         'badge' => 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400',
@@ -182,6 +189,7 @@
                 $actionButtonBaseClass = 'inline-flex items-center justify-center min-h-[30px] px-4 py-2 text-[10px] font-semibold tracking-[0.01em] border rounded-full transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-offset-1';
                 $actionButtonStyles = [
                     'mark_checkin' => 'bg-emerald-50/95 text-emerald-700 hover:bg-emerald-100 border-emerald-200/90 focus:ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/80',
+                    'no_show' => 'bg-red-50/95 text-red-700 hover:bg-red-100 border-red-200/90 focus:ring-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/80',
                     'start' => 'bg-amber-50/95 text-amber-700 hover:bg-amber-100 border-amber-200/90 focus:ring-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/80',
                     'skip' => 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200 focus:ring-red-200 dark:bg-red-800 dark:text-red-300 dark:hover:bg-red-700 dark:border-gray-700',
                     'complete' => 'bg-green-50/95 text-green-700 hover:bg-green-100 border-green-200/90 focus:ring-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900/80',
@@ -191,9 +199,10 @@
                     'view_details' => 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200 focus:ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:border-slate-700',
                 ];
                 $queueActionsByStatus = [
+                    'scheduled' => [],
                     'no_show' => ['mark_checkin'],
-                    'checkin' => ['start', 'skip'],
-                    'started' => ['complete'],
+                    'checkin' => ['start', 'skip', 'no_show'],
+                    'started' => ['complete', 'skip'],
                     'skipped' => ['recheckin'],
                     'completed' => ['revert'],
                 ];
@@ -236,7 +245,7 @@
                         @endif
 
                         <!-- Doctor Check-in & Break Control Buttons -->
-                        <div class="flex flex-wrap xl:flex-nowrap items-center gap-3 xl:border-l xl:border-gray-150 xl:dark:border-gray-800 xl:pl-3">
+                        <div class="flex flex-wrap xl:flex-nowrap items-center gap-3 xl:border-l xl:border-gray-150 xl:dark:border-gray-800 xl:pl-3" style="border-color: #00000021;">
                             <!-- Check In / Out Buttons -->
                             <div class="flex items-center gap-2">
                                 <button
@@ -450,60 +459,61 @@
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                             </svg>
                         </span>
-                        <span class="uppercase tracking-wide">Show Statistics</span>
+                        <span class="uppercase tracking-wide">Show Today's OPD Statistics</span>
                         <span x-show="!open" class="ml-auto text-gray-400 text-[11px]">(click to expand)</span>
                         <span x-show="open" class="ml-auto text-gray-400 text-[11px]">(click to collapse)</span>
                     </button>
                     <div x-show="open" x-collapse class="mt-2">
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                             <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-gray-400">
-                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Total Booked</div>
+                                <div class="text-[15px] uppercase font-bold text-gray-400 dark:text-gray-500">Total Booked</div>
                                 <div class="text-2xl font-extrabold text-gray-950 dark:text-white mt-1">{{ $stats['total'] }}</div>
                             </div>
                             <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-amber-500">
-                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Checked-In / Waiting</div>
+                                <div class="text-[15px] uppercase font-bold text-gray-400 dark:text-gray-500">Checked-In / Waiting</div>
                                 <div class="text-2xl font-extrabold text-amber-500 mt-1">{{ $stats['waiting'] }}</div>
                             </div>
-                            <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-indigo-500">
+                            <!-- <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-indigo-500">
                                 <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Started</div>
                                 <div class="text-2xl font-extrabold text-indigo-500 mt-1">{{ $stats['started'] }}</div>
-                            </div>
+                            </div> -->
                             <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-green-500">
-                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Completed</div>
+                                <div class="text-[15px] uppercase font-bold text-gray-400 dark:text-gray-500">Completed</div>
                                 <div class="text-2xl font-extrabold text-green-500 mt-1">{{ $stats['completed'] }}</div>
                             </div>
-                            <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-gray-500">
+                            <!-- <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-gray-500">
                                 <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">Skipped</div>
                                 <div class="text-2xl font-extrabold text-gray-500 mt-1">{{ $stats['skipped'] }}</div>
-                            </div>
+                            </div> -->
                             <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-md p-4 shadow-sm border-l-4 border-l-red-500">
-                                <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">No Show</div>
+                                <div class="text-[15px] uppercase font-bold text-gray-400 dark:text-gray-500">No Show</div>
                                 <div class="text-2xl font-extrabold text-red-500 mt-1">{{ $stats['no_show'] }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
-           
+
 
                 <!-- Filters Panel -->
                 <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Search Patient</label>
-                            <input 
-                                wire:model.live="searchQuery" 
-                                type="text" 
-                                placeholder="Search by name or phone..." 
+                            <input
+                                wire:model.live="searchQuery"
+                                type="text"
+                                placeholder="Search by name or phone..."
                                 class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
                             />
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Queue Status</label>
-                            <select 
-                                wire:model.live="statusFilter" 
+                            <select
+                                wire:model.live="statusFilter"
                                 class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
                             >
                                 <option value="all">All Statuses</option>
+                                <option value="scheduled">Scheduled</option>
                                 <option value="checkin">Checked-In</option>
                                 <option value="started">Started</option>
                                 <option value="completed">Completed</option>
@@ -513,8 +523,8 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Visit Type</label>
-                            <select 
-                                wire:model.live="visitTypeFilter" 
+                            <select
+                                wire:model.live="visitTypeFilter"
                                 class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
                             >
                                 <option value="all">All Visit Types</option>
@@ -523,8 +533,8 @@
                             </select>
                         </div>
                         <div class="flex items-end gap-2">
-                            <button 
-                                wire:click="resetFilters" 
+                            <button
+                                wire:click="resetFilters"
                                 class="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 py-2 rounded-md text-xs font-bold transition shadow-sm border border-gray-200/50"
                             >
                                 Reset Filters
@@ -542,7 +552,7 @@
                                 <span class="text-xs font-bold text-gray-700 dark:text-white">Status Meanings:</span>
                             </div>
                             <div class="flex items-center gap-3 text-xs text-gray-550 dark:text-gray-400 overflow-x-auto pb-1 min-w-0 flex-1">
-                                @foreach(['no_show', 'checkin', 'started', 'completed', 'skipped'] as $legendStatus)
+                                @foreach(['scheduled', 'no_show', 'checkin', 'started', 'completed', 'skipped'] as $legendStatus)
                                     @php
                                         $legend = $queueStatusStyles[$legendStatus];
                                     @endphp
@@ -563,7 +573,7 @@
                         </div>
                     </div>
 
-                    <div 
+                    <div
                         class="overflow-x-auto"
                         style="height: auto; min-height: 0; max-height: none;"
                         x-data
@@ -586,7 +596,7 @@
                             });
                         "
                     >
-               
+
                         <table class="w-full text-left border-collapse">
                             <thead class="queue-sticky-head">
                                 <tr class="bg-gray-50/95 dark:bg-gray-800/95 border-b border-gray-100 dark:border-gray-800 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
@@ -603,13 +613,16 @@
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-850">
                                 @forelse($appointments as $app)
                                     @php
-                                        $queueStatus = $app->queue_status ?: 'waiting';
+                                        $queueStatus = $this->resolveQueueStatus($app);
                                         $statusMeta = $queueStatusStyles[$queueStatus] ?? [
                                             'label' => ucfirst($queueStatus),
                                             'badge' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
                                             'row' => 'hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
                                         ];
                                         $rowActions = $queueActionsByStatus[$queueStatus] ?? [];
+                                        if (($queueStatus === 'scheduled') && $this->shouldShowScheduledQueueAction($app)) {
+                                            $rowActions = ['mark_checkin', 'no_show'];
+                                        }
                                     @endphp
                                     <tr class="text-sm transition duration-150 {{ $statusMeta['row'] }}">
                                         <!-- Queue No -->
@@ -618,7 +631,7 @@
                                                 {{ $app->queue_number ?: '—' }}
                                             </span>
                                         </td>
-                                        
+
                                         <!-- Patient Info -->
                                         <td class="px-6 py-4">
                                             <div class="font-bold text-gray-900 dark:text-white">
@@ -684,6 +697,14 @@
                                                          >
                                                              Start
                                                          </button>
+                                                     @elseif($actionKey === 'no_show')
+                                                         <button
+                                                             wire:click="openNoShowModal('{{ $app->id }}')"
+                                                             title="Mark No Show"
+                                                             class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['skip'] }}"
+                                                         >
+                                                             No Show
+                                                         </button>
                                                      @elseif($actionKey === 'skip')
                                                          <button
                                                              wire:click="openSkipModal('{{ $app->id }}')"
@@ -728,8 +749,8 @@
                                                  @endforeach
 
                                                  <!-- View Patient Details Eye Action -->
-                                                 <a 
-                                                     href="/admin/appointments/{{ $app->slug }}" 
+                                                 <a
+                                                     href="/admin/appointments/{{ $app->slug }}"
                                                      target="_blank"
                                                      title="View Details"
                                                      class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['view_details'] }}"
@@ -737,6 +758,11 @@
                                                      View Details
                                                  </a>
                                              </div>
+                                             @if($queueStatus === 'scheduled' && empty($rowActions))
+                                                 <div class="mt-2 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                                     {{ $this->getScheduledActionHint($app) }}
+                                                 </div>
+                                             @endif
                                          </td>
                                     </tr>
                                 @empty
@@ -761,11 +787,11 @@
 
         <!-- Remarks Input Modal Overlay -->
         @if($activeModal)
-        <div 
+        <div
             class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm"
         >
             <!-- Modal Box -->
-            <div 
+            <div
                 class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-150 dark:border-gray-800 shadow-2xl max-w-md w-full overflow-hidden p-6 space-y-4 transform transition-all duration-300"
             >
                 <div class="flex items-start gap-4">
@@ -778,17 +804,25 @@
                     </div>
                     <div class="space-y-1.5 flex-1 min-w-0">
                         <h3 class="text-lg font-bold text-gray-950 dark:text-white">
-                            {{ $activeModal === 'complete' ? 'Complete Consultation' : 'Skip Patient' }}
+                            {{ match($activeModal) {
+                                'complete' => 'Complete Consultation',
+                                'no_show' => 'Mark No Show',
+                                default => 'Skip Patient',
+                            } }}
                         </h3>
                         <p class="text-sm text-gray-500 dark:text-gray-405 font-medium leading-relaxed">
-                            {{ $activeModal === 'complete' ? 'Please add any remarks or notes for this completed consultation.' : 'Please add a reason or remark for skipping this patient. This note will be recorded in the audit trail and sent to the patient.' }}
+                            {{ match($activeModal) {
+                                'complete' => 'Please add any remarks or notes for this completed consultation.',
+                                'no_show' => 'Please add a note for why this patient was marked as no show.',
+                                default => 'Please add a reason or remark for skipping this patient. This note will be recorded in the audit trail and sent to the patient.',
+                            } }}
                         </p>
                     </div>
                 </div>
-                
+
                 <div class="space-y-2">
                     <label for="modalRemarks" class="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Remarks / Notes</label>
-                    <textarea 
+                    <textarea
                         id="modalRemarks"
                         wire:model="modalRemarks"
                         rows="3"
@@ -796,16 +830,16 @@
                         class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                     ></textarea>
                 </div>
-                
+
                 <div class="flex justify-end gap-3 pt-2">
-                    <button 
-                        wire:click="closeModal" 
+                    <button
+                        wire:click="closeModal"
                         class="px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-xs font-bold transition duration-200"
                     >
                         Cancel
                     </button>
-                    <button 
-                        wire:click="{{ $activeModal === 'complete' ? 'submitComplete' : 'submitSkip' }}" 
+                    <button
+                        wire:click="{{ $activeModal === 'complete' ? 'submitComplete' : ($activeModal === 'no_show' ? 'submitNoShow' : 'submitSkip') }}"
                         class="px-4 py-2 bg-primary hover:bg-primary-500 text-white rounded-md text-xs font-bold transition duration-200 shadow-sm"
                     >
                         Confirm
@@ -816,8 +850,8 @@
         @endif
 
         <!-- Custom Confirmation Modal Overlay -->
-        <div 
-            x-show="confirmOpen" 
+        <div
+            x-show="confirmOpen"
             class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm"
             x-transition:enter="transition ease-out duration-300"
             x-transition:enter-start="opacity-0"
@@ -829,7 +863,7 @@
             x-cloak
         >
             <!-- Modal Box -->
-            <div 
+            <div
                 x-show="confirmOpen"
                 x-on:click.away="confirmOpen = false"
                 class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-150 dark:border-gray-800 shadow-2xl max-w-md w-full overflow-hidden p-6 space-y-4 transform transition-all duration-300"
@@ -850,14 +884,14 @@
                     </div>
                 </div>
                 <div class="flex justify-end gap-3 pt-2">
-                    <button 
-                        x-on:click="confirmOpen = false" 
+                    <button
+                        x-on:click="confirmOpen = false"
                         class="px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-xs font-bold transition duration-200"
                     >
                         Cancel
                     </button>
-                    <button 
-                        x-on:click="executeConfirm()" 
+                    <button
+                        x-on:click="executeConfirm()"
                         class="px-4 py-2 bg-primary hover:bg-primary-500 text-white rounded-md text-xs font-bold transition duration-200 shadow-sm"
                     >
                         Confirm

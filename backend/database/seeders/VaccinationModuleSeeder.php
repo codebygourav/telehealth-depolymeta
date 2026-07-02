@@ -147,6 +147,14 @@ class VaccinationModuleSeeder extends Seeder
                 'side_effects' => 'Soreness, mild fever',
                 'dosage_information' => '0.5 ml',
             ],
+            'opv' => [
+                'name' => 'Oral Polio Vaccine',
+                'short_name' => 'OPV',
+                'disease_for' => 'Poliomyelitis',
+                'description' => 'Oral vaccine for polio protection.',
+                'side_effects' => 'Mild fever, fussiness',
+                'dosage_information' => '2 drops',
+            ],
             'tdap' => [
                 'name' => 'Tdap Vaccine',
                 'short_name' => 'Tdap',

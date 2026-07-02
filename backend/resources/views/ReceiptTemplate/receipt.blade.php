@@ -149,7 +149,7 @@
         {{-- Logo --}}
         <img src="{{ asset('images/cmc-telehealth-black.png') }}" class="logo">
         <div class="title">
-            CMC Telehealth
+            Telehealth Deploymeta
         </div>
 
         <div class="subtitle">
@@ -348,7 +348,7 @@
 
     <!-- FOOTER -->
     <div class="footer">
-        Thank you for choosing CMC Telehealth.
+        Thank you for choosing Telehealth Deploymeta.
         <br>
         This is a computer-generated receipt.
     </div>

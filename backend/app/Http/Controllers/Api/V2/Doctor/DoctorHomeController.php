@@ -80,16 +80,10 @@ class DoctorHomeController extends Controller
         // Load doctor with user relationship
         $doctor->load('user');
 
-        // Get app patient IDs once for reuse (optimized: cache this query result)
-        $appPatientIds = Patient::where('source', 'app')
-            ->where('create_user_account', true)
-            ->pluck('id');
-
         // Summary Cards - Optimized: Use whereIn instead of whereHas for better performance
 
         $summary = [
             'todays_appointments' => Appointment::where('doctor_id', $doctorId)
-                ->whereIn('patient_id', $appPatientIds)
                 ->whereIn('status', [
                     AppointmentStatus::CONFIRMED->value,
                     AppointmentStatus::COMPLETED->value,
@@ -119,7 +113,6 @@ class DoctorHomeController extends Controller
                                 });
                         });
                 })
-                ->whereIn('patient_id', $appPatientIds)
                 ->whereIn('status', [
                     AppointmentStatus::CONFIRMED->value,
                     AppointmentStatus::COMPLETED->value,
@@ -128,7 +121,6 @@ class DoctorHomeController extends Controller
                 ->count(),
             'cancelled_appointments' => Appointment::where('doctor_id', $doctorId)
                 ->where('status', 'cancelled')
-                ->whereIn('patient_id', $appPatientIds)
                 ->whereIn('status', [
                     AppointmentStatus::CANCELLED->value,
                 ])
@@ -157,7 +149,6 @@ class DoctorHomeController extends Controller
                             ->whereTime('appointment_time', '>=', $currentTime);
                     });
             })
-            ->whereIn('patient_id', $appPatientIds)
             ->whereIn('status', [
                 AppointmentStatus::CONFIRMED->value,
                 AppointmentStatus::COMPLETED->value,
@@ -222,7 +213,6 @@ class DoctorHomeController extends Controller
         ])
             ->where('doctor_id', $doctorId)
             ->whereDate('appointment_date', '>', $today)
-            ->whereIn('patient_id', $appPatientIds)
             ->whereIn('status', [
                 AppointmentStatus::CONFIRMED->value,
                 AppointmentStatus::COMPLETED->value,

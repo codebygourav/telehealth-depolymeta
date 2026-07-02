@@ -4,8 +4,10 @@ namespace App\Filament\Resources\PatientVaccinations;
 
 use App\Enums\VaccinationStatus;
 use App\Filament\Resources\PatientVaccinations\Pages;
+
 use App\Models\Doctor;
 use App\Models\Patient;
+
 use App\Models\PatientVaccination;
 use App\Models\Vaccination;
 use App\Models\VaccinationTemplate;
@@ -20,6 +22,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -393,8 +396,6 @@ class PatientVaccinationResource extends Resource
         return [
             'index' => Pages\ListPatientVaccinations::route('/'),
             'create' => Pages\CreatePatientVaccination::route('/create'),
-            'view' => Pages\ViewPatientVaccination::route('/{record}'),
-            'edit' => Pages\EditPatientVaccination::route('/{record}/edit'),
         ];
     }
 

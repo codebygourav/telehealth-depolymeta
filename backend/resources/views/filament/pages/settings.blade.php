@@ -167,6 +167,10 @@
 
             <nav>
                 @foreach (config('settings') as $key => $group)
+                    @if (in_array($key, ['display', 'display_ads'], true))
+                        @continue
+                    @endif
+
                     <div wire:click="$set('activeTab', '{{ $key }}')"
                         class="nav-item {{ $activeTab === $key ? 'active' : '' }}">
                         <div class="icon-wrapper">

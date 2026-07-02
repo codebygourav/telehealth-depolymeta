@@ -31,7 +31,7 @@ jobs:
 
       - name: Clone primary CMC repo manually
         run: |
-          git clone --depth 1 --branch "${GITHUB_REF_NAME}" \
+          git clone --branch "${GITHUB_REF_NAME}" \
             "https://x-access-token:${CLEAN_GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
             source
 
@@ -53,20 +53,49 @@ jobs:
 
       - name: Copy primary code into deploymeta backend folder
         run: |
-          mkdir -p target/backend
+          cd source
+          # Determine files changed in the last 1 week (7 days)
+          git log --since="1 week ago" --name-only --pretty=format: | sort -u > ../changed_files.txt
+          cd ..
 
-          rsync -a source/ target/backend/ \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            --exclude='.env' \
-            --exclude='vendor/' \
-            --exclude='node_modules/' \
-            --exclude='storage/logs/' \
-            --exclude='storage/framework/cache/' \
-            --exclude='storage/framework/sessions/' \
-            --exclude='storage/framework/views/' \
-            --exclude='bootstrap/cache/*.php' \
-            --exclude='public/storage/'
+          # Filter the files to exclude deleted files and ignored directories/files
+          touch filtered_files.txt
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            if [ ! -f "source/$file" ]; then
+              continue
+            fi
+            case "$file" in
+              .git|.git/*) continue ;;
+              .github|.github/*) continue ;;
+              .env) continue ;;
+              vendor|vendor/*) continue ;;
+              node_modules|node_modules/*) continue ;;
+              storage/logs|storage/logs/*) continue ;;
+              storage/framework/cache|storage/framework/cache/*) continue ;;
+              storage/framework/sessions|storage/framework/sessions/*) continue ;;
+              storage/framework/views|storage/framework/views/*) continue ;;
+              bootstrap/cache/*.php) continue ;;
+              public/storage|public/storage/*) continue ;;
+            esac
+            echo "$file" >> filtered_files.txt
+          done < changed_files.txt
+
+          if [ -s filtered_files.txt ]; then
+            echo "Found changed files to sync:"
+            cat filtered_files.txt
+            
+            # Create backend directory and clean it completely
+            mkdir -p target/backend
+            rm -rf target/backend/*
+            
+            # Copy only the filtered changed files
+            rsync -a --files-from=filtered_files.txt source/ target/backend/
+          else
+            echo "No relevant changes found."
+            # Ensure target/backend exists but don't delete everything if there are no changes to avoid git status reporting massive deletions
+            mkdir -p target/backend
+          fi
 
       - name: Check changes
         id: changes

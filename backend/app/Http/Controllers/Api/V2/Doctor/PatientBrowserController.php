@@ -30,8 +30,6 @@ class PatientBrowserController extends Controller
 
         // Load patient
         $patient = Patient::where('id', $appointment->patient_id)
-            ->where('source', 'app')
-            ->where('create_user_account', true)
             ->first();
 
         if (! $patient) {

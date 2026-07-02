@@ -46,11 +46,11 @@ class DoctorResource extends JsonResource
             'gender' => $this->gender,
             'years_experience' => $this->years_experience,
             'languages_known' => $this->languages_known,
-            'education_info' => $this->education_info,
-            'awards_info' => $this->awards_info,
-            'certifications_info' => $this->certifications_info,
-            'fellowships_info' => $this->fellowships_info,
-            'professional_experience_info' => $this->professional_experience_info,
+            'education_info' => $this->resolveInfoField($this->education_info),
+            'awards_info' => $this->resolveInfoField($this->awards_info),
+            'certifications_info' => $this->resolveInfoField($this->certifications_info),
+            'fellowships_info' => $this->resolveInfoField($this->fellowships_info),
+            'professional_experience_info' => $this->resolveInfoField($this->professional_experience_info),
             'special_interests' => $this->special_interests,
             'certification_entries' => $this->certification_entries,
             'availability_info' => $this->availability_info,
@@ -95,5 +95,23 @@ class DoctorResource extends JsonResource
                     ->formatSlotsForWordPressApi($slots);
             }),
         ];
+    }
+
+    /**
+     * Resolve an info field that may be stored as free-text HTML or structured repeater data.
+     *
+     * When stored as free-text: [{"is_free_text": true, "html": "<p>...</p>"}]
+     *   → returns the HTML string directly so WordPress can render it.
+     *
+     * When stored as structured repeater data: [{...}, {...}]
+     *   → returns the array as-is.
+     */
+    private function resolveInfoField(mixed $value): mixed
+    {
+        if (is_array($value) && !empty($value) && isset($value[0]['is_free_text']) && $value[0]['is_free_text']) {
+            return $value[0]['html'] ?? '';
+        }
+
+        return $value;
     }
 }

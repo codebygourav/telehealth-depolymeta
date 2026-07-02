@@ -15,7 +15,7 @@ class SettingService
 
     public static function getAppName(): string
     {
-        return Setting::getValue('app', 'name', config('app.name', 'CMC Telehealth'));
+        return Setting::getValue('app', 'name', config('app.name', 'Telehealth Deploymeta'));
     }
 
     public static function getAppVersion(): string
@@ -180,9 +180,8 @@ class SettingService
 
     public static function getMaxLoginAttempts(): int
     {
-
+        // Unlimited login attempts
         return PHP_INT_MAX;
-        return (int) Setting::getValue('security', 'max_login_attempts', 12000);
     }
 
     public static function getLockoutDuration(): int

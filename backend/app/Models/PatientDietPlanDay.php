@@ -41,6 +41,7 @@ class PatientDietPlanDay extends Model
     {
         return $this->belongsTo(PatientDietPlan::class, 'patient_diet_plan_id');
     }
+    
 
     public function meals(): HasMany
     {

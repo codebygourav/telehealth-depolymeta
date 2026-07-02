@@ -25,13 +25,8 @@ class AdvertisementForm
                     ->label('Advertisement Image')
                     ->disk('public')
                     ->directory('advertisements')
-                    ->visibility('public')
                     ->image()
-                    ->maxSize(10240) // 10 MB — matches Livewire temp upload limit
-                    ->fetchFileInformation(false) // avoid flaky exists/mime checks on shared hosting
-                    ->orientImagesFromExif(false) // EXIF extension often disabled on shared hosts
-                    ->openable()
-                    ->downloadable()
+                    ->maxSize(5120)
                     ->columnSpanFull(),
 
                 Toggle::make('is_active')

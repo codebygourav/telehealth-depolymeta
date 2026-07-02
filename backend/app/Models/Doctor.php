@@ -363,6 +363,10 @@ class Doctor extends Model
         return $this->hasMany(DoctorReplacement::class, 'original_doctor_id');
     }
 
+
+
+
+
     public static function canUserAccess(): bool
     {
         /** @var \App\Models\User $user */
@@ -506,4 +510,10 @@ class Doctor extends Model
                 });
         });
     }
+
+    public function displayEvents()
+    {
+        return $this->belongsToMany(DisplayEvent::class, 'display_event_doctor', 'doctor_id', 'display_event_id')->withTimestamps();
+    }
 }
+

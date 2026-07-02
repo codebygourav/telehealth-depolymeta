@@ -16,7 +16,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Hostinger / reverse-proxy: trust forwarded headers so Livewire signed upload URLs use HTTPS.
         $middleware->trustProxies(at: '*');
-
         // Redirect unauthenticated users to login for web, return JSON for API
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
 

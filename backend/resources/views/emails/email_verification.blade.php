@@ -14,16 +14,16 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">Verify Your Email – CMC Telehealth</div>
+        <div class="header">Verify Your Email – Telehealth Deploymeta</div>
         <div class="content">
-            <p>Thank you for registering with CMC Telehealth.</p>
+            <p>Thank you for registering with Telehealth Deploymeta.</p>
             <p>Your verification code is:</p>
             <div class="code">{{ $token }}</div>
             <p>Please use this code to verify your email address and continue with your profile.</p>
             <p>If you did not request this email, you can safely ignore it.</p>
         </div>
         <div class="footer">
-            © {{ date('Y') }} CMC Telehealth. All rights reserved.
+            © {{ date('Y') }} Telehealth Deploymeta. All rights reserved.
         </div>
     </div>
 </body>

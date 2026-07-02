@@ -77,7 +77,7 @@ class AppointmentQueueDashboard extends Page
                 ->label('Back to Doctors List')
                 ->icon('heroicon-o-arrow-left')
                 ->color('primary')
-                ->visible(fn (): bool => filled($this->selectedDoctorId))
+                ->visible(fn(): bool => filled($this->selectedDoctorId))
                 ->action('deselectDoctor'),
         ];
     }
@@ -262,6 +262,13 @@ class AppointmentQueueDashboard extends Page
         $this->activeModal = 'skip';
     }
 
+    public function openNoShowModal(string $appointmentId): void
+    {
+        $this->modalAppointmentId = $appointmentId;
+        $this->modalRemarks = '';
+        $this->activeModal = 'no_show';
+    }
+
     public function submitSkip(): void
     {
         if (!$this->modalAppointmentId) return;
@@ -295,23 +302,13 @@ class AppointmentQueueDashboard extends Page
         $appointment = Appointment::find($this->modalAppointmentId);
         if ($appointment) {
             $appointment->temp_remarks = $this->modalRemarks;
-
-            $doctor = $appointment->doctor ?? Doctor::find($appointment->doctor_id);
-            if (!$doctor || !$doctor->is_checked_in) {
+            if ($appointment->queue_status === 'completed') {
                 Notification::make()
-                    ->title('Blocked')
-                    ->body('Doctor is not checked in.')
-                    ->danger()
+                    ->title('Already Completed')
+                    ->body('This consultation is already marked as completed.')
+                    ->info()
                     ->send();
-                return;
-            }
-
-            if ($doctor->is_on_break) {
-                Notification::make()
-                    ->title('Blocked')
-                    ->body('Doctor is currently on break.')
-                    ->danger()
-                    ->send();
+                $this->closeModal();
                 return;
             }
 
@@ -321,6 +318,25 @@ class AppointmentQueueDashboard extends Page
                 ->title('Consultation Completed')
                 ->body("Consultation marked as completed.")
                 ->success()
+                ->send();
+        }
+
+        $this->closeModal();
+    }
+
+    public function submitNoShow(): void
+    {
+        if (!$this->modalAppointmentId) return;
+
+        $appointment = Appointment::find($this->modalAppointmentId);
+        if ($appointment) {
+            $appointment->temp_remarks = $this->modalRemarks;
+            $appointment->update(['queue_status' => 'no_show']);
+
+            Notification::make()
+                ->title('Marked as No Show')
+                ->body('Patient marked as no show.')
+                ->warning()
                 ->send();
         }
 
@@ -498,6 +514,75 @@ class AppointmentQueueDashboard extends Page
         ];
     }
 
+    protected function getAppointmentDateTime(Appointment $appointment): ?Carbon
+    {
+        if (!$appointment->appointment_date || !$appointment->appointment_time) {
+            return null;
+        }
+
+        $date = $appointment->appointment_date instanceof Carbon
+            ? $appointment->appointment_date->copy()
+            : Carbon::parse($appointment->appointment_date);
+
+        return Carbon::parse($date->toDateString() . ' ' . $appointment->appointment_time);
+    }
+
+    public function resolveQueueStatus(Appointment $appointment): string
+    {
+        $queueStatus = strtolower((string) ($appointment->queue_status ?? ''));
+
+        if (in_array($queueStatus, ['scheduled', 'checkin', 'started', 'completed', 'skipped', 'no_show'], true)) {
+            return $queueStatus;
+        }
+
+        if ($queueStatus === 'waiting' || $queueStatus === '') {
+            return 'scheduled';
+        }
+
+        return 'scheduled';
+    }
+
+    protected function isWithinScheduledActionWindow(Appointment $appointment, int $minutes = 60): bool
+    {
+        $appointmentDateTime = $this->getAppointmentDateTime($appointment);
+
+        if (!$appointmentDateTime) {
+            return false;
+        }
+
+        $now = Carbon::now();
+
+        return $now->isSameDay($appointmentDateTime)
+            && $now->greaterThanOrEqualTo($appointmentDateTime->copy()->subMinutes($minutes));
+    }
+
+    public function shouldShowScheduledQueueAction(Appointment $appointment): bool
+    {
+        return $this->resolveQueueStatus($appointment) === 'scheduled'
+            && $this->isWithinScheduledActionWindow($appointment, 60);
+    }
+
+    public function getScheduledActionHint(Appointment $appointment, int $minutes = 60): string
+    {
+        $appointmentDateTime = $this->getAppointmentDateTime($appointment);
+
+        if (!$appointmentDateTime) {
+            return 'Actions become available 1 hour before appointment time.';
+        }
+
+        $now = Carbon::now();
+        if (!$now->isSameDay($appointmentDateTime)) {
+            return 'Actions are available only on the appointment day.';
+        }
+
+        $opensAt = $appointmentDateTime->copy()->subMinutes($minutes);
+        if ($now->lt($opensAt)) {
+            return 'Actions open at ' . $opensAt->format('h:i A') . '.';
+        }
+
+        return '';
+    }
+
     protected function getAppointmentsQuery()
     {
         if (!$this->selectedDoctorId) {
@@ -511,7 +596,14 @@ class AppointmentQueueDashboard extends Page
 
         // Apply filters
         if ($this->statusFilter !== 'all') {
-            $query->where('queue_status', $this->statusFilter);
+            if ($this->statusFilter === 'scheduled') {
+                $query->where(function ($q) {
+                    $q->whereNull('queue_status')
+                        ->orWhereIn('queue_status', ['scheduled', 'waiting']);
+                });
+            } else {
+                $query->where('queue_status', $this->statusFilter);
+            }
         }
 
         if ($this->visitTypeFilter !== 'all') {
@@ -542,39 +634,69 @@ class AppointmentQueueDashboard extends Page
     // Get Next In Queue text
     public function getNextInQueueText($currentAppointment, $allAppointments): string
     {
-        if ($currentAppointment->queue_status === 'completed') {
+        $currentStatus = $this->resolveQueueStatus($currentAppointment);
+
+        if ($currentStatus === 'completed') {
             // Find next
-            $next = $allAppointments->where('queue_status', 'checkin')->first();
-            return $next ? $next->queue_number : '—';
+            $next = $allAppointments->first(function ($appointment) {
+                return $this->resolveQueueStatus($appointment) === 'checkin';
+            });
+            return $next ? $next->queue_number : '-';
         }
 
-        if ($currentAppointment->queue_status === 'started') {
-            $next = $allAppointments->where('queue_status', 'checkin')->first();
-            return $next ? "Next: " . $next->queue_number : '—';
+        if ($currentStatus === 'started') {
+            $next = $allAppointments->first(function ($appointment) {
+                return $this->resolveQueueStatus($appointment) === 'checkin';
+            });
+            return $next ? "Next: " . $next->queue_number : '-';
         }
 
-        if ($currentAppointment->queue_status === 'checkin') {
+        if ($currentStatus === 'checkin') {
             // Find running
-            $running = $allAppointments->where('queue_status', 'started')->first();
+            $running = $allAppointments->first(function ($appointment) {
+                return $this->resolveQueueStatus($appointment) === 'started';
+            });
             if ($running) {
                 return "After " . $running->queue_number;
             }
             // If none is running, check if they are the first waiting
-            $firstWaiting = $allAppointments->where('queue_status', 'checkin')->first();
+            $firstWaiting = $allAppointments->first(function ($appointment) {
+                return $this->resolveQueueStatus($appointment) === 'checkin';
+            });
             if ($firstWaiting && $firstWaiting->id === $currentAppointment->id) {
                 return "Ready to Start";
             }
             return "In Queue";
         }
 
-        if ($currentAppointment->queue_status === 'skipped') {
+        if ($currentStatus === 'scheduled') {
+            if (!$this->isWithinScheduledActionWindow($currentAppointment, 60)) {
+                return 'Starts 1 hour before time';
+            }
+
+            $ordered = $allAppointments->values();
+            $currentIndex = $ordered->search(fn($appointment) => $appointment->id === $currentAppointment->id);
+
+            if ($currentIndex !== false) {
+                $next = $ordered->slice($currentIndex + 1)->first(function ($appointment) {
+                    $status = $this->resolveQueueStatus($appointment);
+                    return in_array($status, ['scheduled', 'checkin'], true);
+                });
+
+                return $next ? "Next: " . $next->queue_number : '-';
+            }
+
+            return '-';
+        }
+
+        if ($currentStatus === 'skipped') {
             return "Can re-queue after current";
         }
 
-        if ($currentAppointment->queue_status === 'no_show') {
+        if ($currentStatus === 'no_show') {
             return "Booked but not checked-in";
         }
 
-        return '—';
+        return '-';
     }
 }

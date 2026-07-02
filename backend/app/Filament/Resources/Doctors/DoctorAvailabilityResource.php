@@ -88,6 +88,8 @@ class DoctorAvailabilityResource extends Resource
                     ->label('Available'),
                 ToggleColumn::make('is_recurring')
                     ->label('Recurring'),
+                ToggleColumn::make('is_auto_recurring')
+                    ->label('Auto Recur'),
             ])
             ->filters([
                 // Add filters for doctor, date, etc.

@@ -7,6 +7,7 @@ use Carbon\Carbon;
 
 class DoctorAvailabilityValidationService
 {
+    
     private function normalizeModelDateValue($value): ?string
     {
         if ($value instanceof Carbon) {
@@ -68,6 +69,10 @@ class DoctorAvailabilityValidationService
 
     public function normalizeTime($time): ?string
     {
+        if ($time instanceof \DateTimeInterface) {
+            return $time->format('H:i');
+        }
+
         if (is_array($time)) {
             return (isset($time['hour']) && isset($time['minute']))
                 ? sprintf('%02d:%02d', $time['hour'], $time['minute']) : null;
@@ -200,14 +205,22 @@ class DoctorAvailabilityValidationService
         // However, in slotExistsInDatabase we usually have it passed or it's on the record.
         // If we are checking "exists", we need to know WHICH day were are talking about.
 
+        $isSqlite = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'sqlite';
+        $timeFormatRawStart = $isSqlite 
+            ? "strftime('%H:%M', start_time) = ?" 
+            : "TIME_FORMAT(start_time, '%H:%i') = ?";
+        $timeFormatRawEnd = $isSqlite 
+            ? "strftime('%H:%M', end_time) = ?" 
+            : "TIME_FORMAT(end_time, '%H:%i') = ?";
+
         $query = DoctorAvailability::where('doctor_id', $doctorId)
-            ->where(function ($q) use ($normalizedStart, $normalizedEnd) {
+            ->where(function ($q) use ($normalizedStart, $timeFormatRawStart) {
                 $q->where('start_time', $normalizedStart)
-                  ->orWhereRaw("TIME_FORMAT(start_time, '%H:%i') = ?", [$normalizedStart]);
+                  ->orWhereRaw($timeFormatRawStart, [$normalizedStart]);
             })
-            ->where(function ($q) use ($normalizedStart, $normalizedEnd) {
+            ->where(function ($q) use ($normalizedEnd, $timeFormatRawEnd) {
                 $q->where('end_time', $normalizedEnd)
-                  ->orWhereRaw("TIME_FORMAT(end_time, '%H:%i') = ?", [$normalizedEnd]);
+                  ->orWhereRaw($timeFormatRawEnd, [$normalizedEnd]);
             });
 
         if ($normalizedDate) {
@@ -237,13 +250,13 @@ class DoctorAvailabilityValidationService
         return $query->get()->contains(function ($slot) {
             if (!$slot->is_recurring) {
                 return $this->isNonRecurringSlotInFutureWindow(
-                    $this->normalizeModelDateValue($slot->date),
+                    $slot->date?->format('Y-m-d') ?? $slot->date,
                     $slot->end_time
                 );
             }
 
             return !$this->hasRecurringWindowPassed(
-                $this->normalizeModelDateValue($slot->recurring_end_date)
+                $slot->recurring_end_date?->format('Y-m-d') ?? $slot->recurring_end_date
             );
         });
     }

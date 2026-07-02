@@ -25,6 +25,16 @@ class Advertisement extends Model
         'description',
         'image',
         'link',
+        'media_type',
+        'media_url',
+        'placement',
+        'display_order',
+        'starts_at',
+        'ends_at',
+        'autoplay',
+        'loop',
+        'muted',
+        'open_in_new_tab',
         'is_active',
         'published_at',
         'created_by',
@@ -76,7 +86,8 @@ class Advertisement extends Model
     public function scopeVisibleTo(\Illuminate\Database\Eloquent\Builder $query, $user = null): \Illuminate\Database\Eloquent\Builder
     {
         $user = $user ?? Auth::user();
-        if (!$user) return $query->whereRaw('1 = 0');
+        if (!$user)
+            return $query->whereRaw('1 = 0');
 
         // Admins/Managers can see everything
         if ($user->hasRole('super_admin') || $user->hasRole('doctor_manager') || $user->can('advertisements.view_any')) {
@@ -104,6 +115,11 @@ class Advertisement extends Model
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by', 'id');
+    }
+
+    public function doctors()
+    {
+        return $this->belongsToMany(Doctor::class, 'advertisement_doctor', 'advertisement_id', 'doctor_id')->withTimestamps();
     }
 
     /**

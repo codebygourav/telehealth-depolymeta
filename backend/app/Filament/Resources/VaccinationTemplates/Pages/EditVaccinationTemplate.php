@@ -12,7 +12,6 @@ class EditVaccinationTemplate extends EditRecord
     protected static string $resource = VaccinationTemplateResource::class;
 
     protected string $view = 'filament.resources.vaccination-templates.pages.edit-vaccination-template';
-
     public function getFormActionsAlignment(): Alignment|string
     {
         return Alignment::End;

@@ -1,6 +1,6 @@
 @php
     $primaryColor = primary_color() ?? '#1e3a8a';
-    $appName = app_name() ?? 'CMC Telehealth';
+    $appName = app_name() ?? 'Telehealth Deploymeta';
 @endphp
 <!DOCTYPE html>
 <html lang="en">

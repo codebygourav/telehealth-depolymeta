@@ -2,7 +2,9 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Appointment;
 use App\Models\Setting;
+use App\Models\Doctor;
 use Filament\Forms\Components\{
     ColorPicker,
     DatePicker,
@@ -29,6 +31,7 @@ use Illuminate\Support\Facades\{
     File
 };
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 use Livewire\Attributes\Url;
 use App\Traits\HasCustomSidebar;
 
@@ -121,6 +124,10 @@ class Settings extends Page
         $config = config('settings', []);
 
         foreach ($config as $groupKey => $group) {
+            if (in_array($groupKey, ['display', 'display_ads'], true)) {
+                continue;
+            }
+
             // Skip if 'label' key does not exist (prevent undefined key error)
             if (!isset($group['label'])) {
                 continue;
@@ -306,8 +313,49 @@ class Settings extends Page
                 ->label($field['label'])
                 ->default($field['default'] ?? []),
 
+            'doctor_select' => Select::make($key)
+                ->label($field['label'])
+                ->multiple()
+                ->searchable()
+                ->preload()
+                ->options($this->todayDoctorOptions())
+                ->default($field['default'] ?? [])
+                ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
+                ->columnSpanFull(),
+
             default => null,
         };
+    }
+
+    protected function todayDoctorOptions(): array
+    {
+        $doctorIds = Appointment::query()
+            ->whereDate('appointment_date', Carbon::today())
+            ->whereNotNull('doctor_id')
+            ->distinct()
+            ->pluck('doctor_id')
+            ->all();
+
+        if (empty($doctorIds)) {
+            return [];
+        }
+
+        return Doctor::query()
+            ->with('user:id,name')
+            ->whereIn('id', $doctorIds)
+            ->active()
+            ->withoutTestDoctors()
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get()
+            ->mapWithKeys(function (Doctor $doctor): array {
+                $name = trim(($doctor->first_name ?? '') . ' ' . ($doctor->last_name ?? ''));
+                $label = $name !== '' ? $name : ($doctor->user?->name ?? 'Doctor');
+                $suffix = $doctor->doctor_code ? " ({$doctor->doctor_code})" : '';
+
+                return [$doctor->id => "Dr. {$label}{$suffix}"];
+            })
+            ->toArray();
     }
 
     protected function shouldPairField(string $type): bool
