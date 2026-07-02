@@ -364,17 +364,6 @@
                                             <div class="pill accent" style="width:max-content;background:rgba(255,255,255,0.14);color:#fff;border-color:rgba(255,255,255,0.18);" x-text="currentGlobalSlide()?.category_label || 'Content'"></div>
                                             <div class="events-stage-title" x-text="spotlightText(currentGlobalSlide()?.title || 'Live Announcements')"></div>
                                             <div class="events-stage-desc" x-text="spotlightText(currentGlobalSlide()?.description || displayCopy.default_notice || 'Announcements, ads, and events are displayed here.')"></div>
-                                            <template x-if="currentGlobalSlide()?.link">
-                                                <a
-                                                    :href="currentGlobalSlide().link"
-                                                    :target="currentGlobalSlide()?.open_in_new_tab ? '_blank' : '_self'"
-                                                    rel="noopener noreferrer"
-                                                    class="control-button"
-                                                    style="margin-top:18px;width:max-content;background:#fff;color:var(--display-blue);border:none;text-decoration:none;display:inline-flex;"
-                                                >
-                                                    Open Link
-                                                </a>
-                                            </template>
                                         </div>
                                     </div>
                                 </template>

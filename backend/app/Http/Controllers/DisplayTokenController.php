@@ -124,7 +124,6 @@ class DisplayTokenController extends Controller
             'show_events_description' => false,
             'show_media_images' => true,
             'show_media_videos' => true,
-            'show_media_links' => true,
         ];
 
         $screenDisplay = DisplayScreenSetting::getGroup('display');
@@ -153,7 +152,6 @@ class DisplayTokenController extends Controller
                 'show_events_description',
                 'show_media_images',
                 'show_media_videos',
-                'show_media_links',
                 'auto_reload_enabled',
             ] as $boolKey
         ) {
@@ -390,39 +388,38 @@ class DisplayTokenController extends Controller
             $videoUrl = null;
             $embedUrl = null;
             $mediaType = strtolower((string) ($ad->media_type ?? ''));
-            $sourceUrl = trim((string) ($ad->media_url ?: $ad->link));
+            $sourceUrl = trim((string) ($ad->media_url ?? ''));
             $categoryLabel = $ad->category_label ?? 'Advertisement';
 
             if ($mediaType === 'video' || ! empty($sourceUrl)) {
-                $link = $sourceUrl;
                 $isVideo = $mediaType === 'video'
-                    || str_contains($link, 'youtube.com')
-                    || str_contains($link, 'youtu.be')
-                    || str_contains($link, 'vimeo.com')
-                    || str_ends_with(strtolower($link), '.mp4')
-                    || str_ends_with(strtolower($link), '.webm');
+                    || str_contains($sourceUrl, 'youtube.com')
+                    || str_contains($sourceUrl, 'youtu.be')
+                    || str_contains($sourceUrl, 'vimeo.com')
+                    || str_ends_with(strtolower($sourceUrl), '.mp4')
+                    || str_ends_with(strtolower($sourceUrl), '.webm');
 
-                if (str_contains($link, 'youtube.com/watch')) {
-                    parse_str((string) parse_url($link, PHP_URL_QUERY), $query);
+                if (str_contains($sourceUrl, 'youtube.com/watch')) {
+                    parse_str((string) parse_url($sourceUrl, PHP_URL_QUERY), $query);
                     $videoId = $query['v'] ?? null;
                     if ($videoId) {
                         $embedUrl = $this->buildYouTubeEmbedUrl($videoId);
                     }
-                } elseif (str_contains($link, 'youtu.be/')) {
-                    $videoId = basename(parse_url($link, PHP_URL_PATH) ?? '');
+                } elseif (str_contains($sourceUrl, 'youtu.be/')) {
+                    $videoId = basename(parse_url($sourceUrl, PHP_URL_PATH) ?? '');
                     if ($videoId) {
                         $embedUrl = $this->buildYouTubeEmbedUrl($videoId);
                     }
-                } elseif (str_contains($link, 'vimeo.com/')) {
-                    $videoId = basename(parse_url($link, PHP_URL_PATH) ?? '');
+                } elseif (str_contains($sourceUrl, 'vimeo.com/')) {
+                    $videoId = basename(parse_url($sourceUrl, PHP_URL_PATH) ?? '');
                     if ($videoId) {
                         $embedUrl = 'https://player.vimeo.com/video/' . $videoId;
                     }
-                } elseif ($this->isInstagramUrl($link)) {
-                    $embedUrl = $this->buildInstagramEmbedUrl($link);
+                } elseif ($this->isInstagramUrl($sourceUrl)) {
+                    $embedUrl = $this->buildInstagramEmbedUrl($sourceUrl);
                 }
 
-                $videoUrl = $isVideo && $embedUrl === null ? $link : null;
+                $videoUrl = $isVideo && $embedUrl === null ? $sourceUrl : null;
             }
 
             return [
@@ -433,7 +430,6 @@ class DisplayTokenController extends Controller
                 'image' => $ad->image
                     ? storage_url($ad->image)
                     : (($mediaType === 'image' && $sourceUrl !== '') ? $sourceUrl : null),
-                'link' => $ad->link,
                 'category' => $ad->category instanceof \BackedEnum ? $ad->category->value : (string) ($ad->category ?? 'advertisement'),
                 'category_label' => $categoryLabel,
                 'media_type' => $mediaType ?: null,
@@ -447,11 +443,10 @@ class DisplayTokenController extends Controller
                 'autoplay' => (bool) ($ad->autoplay ?? true),
                 'loop' => (bool) ($ad->loop ?? true),
                 'muted' => (bool) ($ad->muted ?? true),
-                'open_in_new_tab' => (bool) ($ad->open_in_new_tab ?? true),
             ];
         })->filter(fn(array $slide): bool => $this->isSlideVisible($slide, $display))->values()->all();
 
-        return $this->withDemoSlides($slides, $doctor->first_name ?: $doctor->user?->name ?: 'Doctor');
+        return array_values($slides);
     }
 
     protected function resolveFallbackSlides(array $display): array
@@ -487,39 +482,38 @@ class DisplayTokenController extends Controller
             $videoUrl = null;
             $embedUrl = null;
             $mediaType = strtolower((string) ($ad->media_type ?? ''));
-            $sourceUrl = trim((string) ($ad->media_url ?: $ad->link));
+            $sourceUrl = trim((string) ($ad->media_url ?? ''));
             $categoryLabel = $ad->category_label ?? 'Display Content';
 
             if ($mediaType === 'video' || ! empty($sourceUrl)) {
-                $link = $sourceUrl;
                 $isVideo = $mediaType === 'video'
-                    || str_contains($link, 'youtube.com')
-                    || str_contains($link, 'youtu.be')
-                    || str_contains($link, 'vimeo.com')
-                    || str_ends_with(strtolower($link), '.mp4')
-                    || str_ends_with(strtolower($link), '.webm');
+                    || str_contains($sourceUrl, 'youtube.com')
+                    || str_contains($sourceUrl, 'youtu.be')
+                    || str_contains($sourceUrl, 'vimeo.com')
+                    || str_ends_with(strtolower($sourceUrl), '.mp4')
+                    || str_ends_with(strtolower($sourceUrl), '.webm');
 
-                if (str_contains($link, 'youtube.com/watch')) {
-                    parse_str((string) parse_url($link, PHP_URL_QUERY), $query);
+                if (str_contains($sourceUrl, 'youtube.com/watch')) {
+                    parse_str((string) parse_url($sourceUrl, PHP_URL_QUERY), $query);
                     $videoId = $query['v'] ?? null;
                     if ($videoId) {
                         $embedUrl = $this->buildYouTubeEmbedUrl($videoId);
                     }
-                } elseif (str_contains($link, 'youtu.be/')) {
-                    $videoId = basename(parse_url($link, PHP_URL_PATH) ?? '');
+                } elseif (str_contains($sourceUrl, 'youtu.be/')) {
+                    $videoId = basename(parse_url($sourceUrl, PHP_URL_PATH) ?? '');
                     if ($videoId) {
                         $embedUrl = $this->buildYouTubeEmbedUrl($videoId);
                     }
-                } elseif (str_contains($link, 'vimeo.com/')) {
-                    $videoId = basename(parse_url($link, PHP_URL_PATH) ?? '');
+                } elseif (str_contains($sourceUrl, 'vimeo.com/')) {
+                    $videoId = basename(parse_url($sourceUrl, PHP_URL_PATH) ?? '');
                     if ($videoId) {
                         $embedUrl = 'https://player.vimeo.com/video/' . $videoId;
                     }
-                } elseif ($this->isInstagramUrl($link)) {
-                    $embedUrl = $this->buildInstagramEmbedUrl($link);
+                } elseif ($this->isInstagramUrl($sourceUrl)) {
+                    $embedUrl = $this->buildInstagramEmbedUrl($sourceUrl);
                 }
 
-                $videoUrl = $isVideo && $embedUrl === null ? $link : null;
+                $videoUrl = $isVideo && $embedUrl === null ? $sourceUrl : null;
             }
 
             return [
@@ -530,7 +524,6 @@ class DisplayTokenController extends Controller
                 'image' => $ad->image
                     ? storage_url($ad->image)
                     : (($mediaType === 'image' && $sourceUrl !== '') ? $sourceUrl : null),
-                'link' => $ad->link,
                 'category' => $ad->category instanceof \BackedEnum ? $ad->category->value : (string) ($ad->category ?? 'advertisement'),
                 'category_label' => $categoryLabel,
                 'media_type' => $mediaType ?: null,
@@ -543,7 +536,6 @@ class DisplayTokenController extends Controller
                     $categoryLabel !== '' => $categoryLabel,
                     $isVideo => 'Video',
                     $mediaType === 'note' => 'Notice',
-                    $mediaType === 'link' => 'Link',
                     $ad->image !== null => 'Banner',
                     default => 'Notice',
                 },
@@ -551,108 +543,10 @@ class DisplayTokenController extends Controller
                 'autoplay' => (bool) ($ad->autoplay ?? true),
                 'loop' => (bool) ($ad->loop ?? true),
                 'muted' => (bool) ($ad->muted ?? true),
-                'open_in_new_tab' => (bool) ($ad->open_in_new_tab ?? true),
             ];
         })->filter(fn(array $slide): bool => $this->isSlideVisible($slide, $display))->values()->all();
 
-        return $this->withDemoSlides($slides, 'Hospital Display');
-    }
-
-    protected function withDemoSlides(array $slides, string $doctorName): array
-    {
-        if (count($slides) >= 3) {
-            return array_values($slides);
-        }
-
-        $existingIds = collect($slides)->pluck('id')->all();
-
-        foreach ($this->demoSlides($doctorName) as $demoSlide) {
-            if (in_array($demoSlide['id'], $existingIds, true)) {
-                continue;
-            }
-
-            $slides[] = $demoSlide;
-
-            if (count($slides) >= 3) {
-                break;
-            }
-        }
-
         return array_values($slides);
-    }
-
-    protected function demoSlides(string $doctorName): array
-    {
-        $youtubeId = 'ysz5S6PUM-U';
-
-        return [
-            [
-                'id' => 'demo-youtube',
-                'index' => 0,
-                'title' => 'Doctor Advice Video',
-                'description' => "Sample YouTube video for {$doctorName}. Replace it anytime from the content manager.",
-                'image' => null,
-                'link' => 'https://www.youtube.com/watch?v=' . $youtubeId,
-                'category' => 'video',
-                'category_label' => 'YouTube Video',
-                'media_type' => 'video',
-                'source_url' => 'https://www.youtube.com/watch?v=' . $youtubeId,
-                'is_video' => true,
-                'video_url' => null,
-                'embed_url' => $this->buildYouTubeEmbedUrl($youtubeId),
-                'embed_type' => 'iframe',
-                'type_label' => 'YouTube',
-                'is_paused' => false,
-                'autoplay' => true,
-                'loop' => true,
-                'muted' => true,
-                'open_in_new_tab' => true,
-            ],
-            [
-                'id' => 'demo-mp4',
-                'index' => 1,
-                'title' => 'Wellness Motion Display',
-                'description' => "Sample running video for {$doctorName}. MP4 playback is enabled in the same player.",
-                'image' => null,
-                'link' => 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-                'category' => 'video',
-                'category_label' => 'Video Loop',
-                'media_type' => 'video',
-                'source_url' => 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-                'is_video' => true,
-                'video_url' => 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-                'embed_url' => null,
-                'embed_type' => null,
-                'type_label' => 'MP4 Video',
-                'is_paused' => false,
-                'autoplay' => true,
-                'loop' => true,
-                'muted' => true,
-                'open_in_new_tab' => true,
-            ],
-            [
-                'id' => 'demo-image',
-                'index' => 2,
-                'title' => 'Healthy Living Reminder',
-                'description' => "Show the full ad first, then keep the doctor name visible under the slider for {$doctorName}.",
-                'image' => 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1600&q=80',
-                'link' => null,
-                'category' => 'advertisement',
-                'category_label' => 'Image Banner',
-                'media_type' => 'image',
-                'source_url' => null,
-                'is_video' => false,
-                'video_url' => null,
-                'embed_url' => null,
-                'embed_type' => null,
-                'type_label' => 'Image',
-                'is_paused' => false,
-                'autoplay' => true,
-                'loop' => true,
-                'muted' => true,
-                'open_in_new_tab' => true,
-            ],
-        ];
     }
 
     protected function resolveDoctorQueue(Doctor $doctor): array
@@ -784,22 +678,16 @@ class DisplayTokenController extends Controller
     {
         $showImages = $this->toBool($display['show_media_images'] ?? true);
         $showVideos = $this->toBool($display['show_media_videos'] ?? true);
-        $showLinks = $this->toBool($display['show_media_links'] ?? true);
 
         $mediaType = strtolower((string) ($slide['media_type'] ?? ''));
         $hasImage = !empty($slide['image']);
         $hasVideo = !empty($slide['video_url']) || !empty($slide['embed_url']);
-        $hasLinkOnly = !empty($slide['link']) && !$hasImage && !$hasVideo;
 
         if (($mediaType === 'video' || $hasVideo) && !$showVideos) {
             return false;
         }
 
         if (($mediaType === 'image' || $hasImage) && !$showImages) {
-            return false;
-        }
-
-        if (($mediaType === 'link' || $hasLinkOnly) && !$showLinks) {
             return false;
         }
 
