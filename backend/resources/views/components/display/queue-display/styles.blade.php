@@ -44,13 +44,13 @@
     }
 
     .topbar {
-        min-height: var(--display-topbar-height);
+        min-height:50px;
         background: var(--display-blue);
         color: #fff;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 clamp(24px, 1.8vw, 44px);
+        padding: 10px 24px;
         box-shadow: 0 6px 24px rgba(5, 91, 217, 0.18);
     }
 
@@ -143,7 +143,6 @@
     .mini-card {
         background: rgba(255, 255, 255, 0.96);
         border: 1px solid rgba(220, 227, 236, 0.95);
-        border-radius: var(--display-panel-radius);
         box-shadow: 0 10px 30px rgba(18, 34, 55, 0.07);
         overflow: hidden;
     }
@@ -209,7 +208,7 @@
     }
 
     .multi-main-panel {
-        padding: clamp(16px, 1.15vw, 28px);
+        padding: 0;
         display: flex;
         flex-direction: column;
         min-height: 0;
@@ -1387,5 +1386,20 @@
         border-radius: 8px;
         border: 8px solid #dbeafe;
         box-shadow: 0 35px 90px rgba(15, 23, 42, 0.35);
+    }
+    .doctor-grid-track {
+        display: flex !important;
+        gap: var(--display-gap) !important;
+        width: 100% !important;
+        height: 100% !important;
+        transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    }
+
+    .doctor-card-slide-wrapper {
+        flex: 0 0 calc(50% - (var(--display-gap) / 2)) !important;
+        width: calc(50% - (var(--display-gap) / 2)) !important;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 </style>

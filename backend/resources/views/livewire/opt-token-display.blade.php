@@ -192,33 +192,7 @@
                        <img src="{{ asset('images/white-logo.png') }}" alt="logo" class="brand-logo">
                     </div>
                     <div class="topbar-actions">
-                        <button
-                            type="button"
-                            class="control-button icon-control"
-                            @click="prevDoctor()"
-                            aria-label="Previous doctor"
-                        >
-                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
-                        <button
-                            type="button"
-                            class="control-button icon-control"
-                            @click="nextDoctor()"
-                            aria-label="Next doctor"
-                        >
-                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
-                        <button
-                            type="button"
-                            class="control-button"
-                            :class="{ 'is-paused': adsPaused }"
-                            @click="toggleAds()"
-                            x-text="adsPaused ? 'Restart Ads' : 'Pause Ads'"
-                        ></button>
+                        
                         <div class="clock">
                             <div x-text="timeText"></div>
                             <div x-text="dateText"></div>
@@ -255,13 +229,10 @@
 
                         <div class="doctor-grid-container" style="position: relative; width: 100%; flex: 1; min-height: 0; overflow: hidden; padding: 0 clamp(10px, 0.8vw, 18px) clamp(10px, 0.8vw, 18px);">
                             <div class="doctor-grid-track"
-                                 :style="'transform: translateX(calc(-100% / gridPageSize * gridPageIndex - (var(--display-gap) * gridPageIndex / gridPageSize)))'"
-                                 style="display: flex; gap: var(--display-gap); width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);"
+                                 :style="'transform: translateX(calc(-100% / ' + gridPageSize + ' * ' + gridPageIndex + ' - (var(--display-gap) * ' + gridPageIndex + ' / ' + gridPageSize + ')))'"
                             >
                                 @foreach(($board['doctors'] ?? []) as $idx => $doctor)
-                                    <div class="doctor-card-slide-wrapper"
-                                         style="flex: 0 0 calc(50% - (var(--display-gap) / 2)); width: calc(50% - (var(--display-gap) / 2)); height: 100%; display: flex; flex-direction: column;"
-                                    >
+                                    <div class="doctor-card-slide-wrapper">
                                         <x-display.queue-display.doctor-card
                                             :doctor="$doctor"
                                             variant="grid"
