@@ -382,39 +382,38 @@ class OptTokenDisplay extends Component
             $videoUrl = null;
             $embedUrl = null;
             $mediaType = strtolower((string) ($ad->media_type ?? ''));
-            $sourceUrl = trim((string) ($ad->media_url ?: $ad->link));
+            $sourceUrl = trim((string) ($ad->media_url ?? ''));
             $categoryLabel = $ad->category_label ?? 'Advertisement';
 
             if ($mediaType === 'video' || ! empty($sourceUrl)) {
-                $link = $sourceUrl;
                 $isVideo = $mediaType === 'video'
-                    || str_contains($link, 'youtube.com')
-                    || str_contains($link, 'youtu.be')
-                    || str_contains($link, 'vimeo.com')
-                    || str_ends_with(strtolower($link), '.mp4')
-                    || str_ends_with(strtolower($link), '.webm');
+                    || str_contains($sourceUrl, 'youtube.com')
+                    || str_contains($sourceUrl, 'youtu.be')
+                    || str_contains($sourceUrl, 'vimeo.com')
+                    || str_ends_with(strtolower($sourceUrl), '.mp4')
+                    || str_ends_with(strtolower($sourceUrl), '.webm');
 
-                if (str_contains($link, 'youtube.com/watch')) {
-                    parse_str((string) parse_url($link, PHP_URL_QUERY), $query);
+                if (str_contains($sourceUrl, 'youtube.com/watch')) {
+                    parse_str((string) parse_url($sourceUrl, PHP_URL_QUERY), $query);
                     $videoId = $query['v'] ?? null;
                     if ($videoId) {
                         $embedUrl = $this->buildYouTubeEmbedUrl($videoId);
                     }
-                } elseif (str_contains($link, 'youtu.be/')) {
-                    $videoId = basename(parse_url($link, PHP_URL_PATH) ?? '');
+                } elseif (str_contains($sourceUrl, 'youtu.be/')) {
+                    $videoId = basename(parse_url($sourceUrl, PHP_URL_PATH) ?? '');
                     if ($videoId) {
                         $embedUrl = $this->buildYouTubeEmbedUrl($videoId);
                     }
-                } elseif (str_contains($link, 'vimeo.com/')) {
-                    $videoId = basename(parse_url($link, PHP_URL_PATH) ?? '');
+                } elseif (str_contains($sourceUrl, 'vimeo.com/')) {
+                    $videoId = basename(parse_url($sourceUrl, PHP_URL_PATH) ?? '');
                     if ($videoId) {
                         $embedUrl = 'https://player.vimeo.com/video/' . $videoId;
                     }
-                } elseif ($this->isInstagramUrl($link)) {
-                    $embedUrl = $this->buildInstagramEmbedUrl($link);
+                } elseif ($this->isInstagramUrl($sourceUrl)) {
+                    $embedUrl = $this->buildInstagramEmbedUrl($sourceUrl);
                 }
 
-                $videoUrl = $isVideo && $embedUrl === null ? $link : null;
+                $videoUrl = $isVideo && $embedUrl === null ? $sourceUrl : null;
             }
 
             return [
@@ -423,7 +422,6 @@ class OptTokenDisplay extends Component
                 'title' => $ad->title,
                 'description' => $description,
                 'image' => $ad->image ? storage_url($ad->image) : null,
-                'link' => $ad->link,
                 'category' => $ad->category instanceof \BackedEnum ? $ad->category->value : (string) ($ad->category ?? 'advertisement'),
                 'category_label' => $categoryLabel,
                 'media_type' => $mediaType ?: null,
@@ -436,7 +434,6 @@ class OptTokenDisplay extends Component
                     $categoryLabel !== '' => $categoryLabel,
                     $isVideo => 'Video',
                     $mediaType === 'note' => 'Notice',
-                    $mediaType === 'link' => 'Link',
                     $ad->image !== null => 'Banner',
                     default => 'Notice',
                 },
@@ -444,7 +441,6 @@ class OptTokenDisplay extends Component
                 'autoplay' => (bool) ($ad->autoplay ?? true),
                 'loop' => (bool) ($ad->loop ?? true),
                 'muted' => (bool) ($ad->muted ?? true),
-                'open_in_new_tab' => (bool) ($ad->open_in_new_tab ?? true),
             ];
         })->values()->all();
     }
@@ -476,45 +472,44 @@ class OptTokenDisplay extends Component
             });
         }
 
-        $slides = $query->orderBy('category')->get()->map(function (DisplayEvent $ad, int $index): array {
+        return $query->orderBy('category')->get()->map(function (DisplayEvent $ad, int $index): array {
             $description = trim((string) $ad->description);
             $isVideo = false;
             $videoUrl = null;
             $embedUrl = null;
             $mediaType = strtolower((string) ($ad->media_type ?? ''));
-            $sourceUrl = trim((string) ($ad->media_url ?: $ad->link));
+            $sourceUrl = trim((string) ($ad->media_url ?? ''));
             $categoryLabel = $ad->category_label ?? 'Display Content';
 
             if ($mediaType === 'video' || ! empty($sourceUrl)) {
-                $link = $sourceUrl;
                 $isVideo = $mediaType === 'video'
-                    || str_contains($link, 'youtube.com')
-                    || str_contains($link, 'youtu.be')
-                    || str_contains($link, 'vimeo.com')
-                    || str_ends_with(strtolower($link), '.mp4')
-                    || str_ends_with(strtolower($link), '.webm');
+                    || str_contains($sourceUrl, 'youtube.com')
+                    || str_contains($sourceUrl, 'youtu.be')
+                    || str_contains($sourceUrl, 'vimeo.com')
+                    || str_ends_with(strtolower($sourceUrl), '.mp4')
+                    || str_ends_with(strtolower($sourceUrl), '.webm');
 
-                if (str_contains($link, 'youtube.com/watch')) {
-                    parse_str((string) parse_url($link, PHP_URL_QUERY), $query);
+                if (str_contains($sourceUrl, 'youtube.com/watch')) {
+                    parse_str((string) parse_url($sourceUrl, PHP_URL_QUERY), $query);
                     $videoId = $query['v'] ?? null;
                     if ($videoId) {
                         $embedUrl = $this->buildYouTubeEmbedUrl($videoId);
                     }
-                } elseif (str_contains($link, 'youtu.be/')) {
-                    $videoId = basename(parse_url($link, PHP_URL_PATH) ?? '');
+                } elseif (str_contains($sourceUrl, 'youtu.be/')) {
+                    $videoId = basename(parse_url($sourceUrl, PHP_URL_PATH) ?? '');
                     if ($videoId) {
                         $embedUrl = $this->buildYouTubeEmbedUrl($videoId);
                     }
-                } elseif (str_contains($link, 'vimeo.com/')) {
-                    $videoId = basename(parse_url($link, PHP_URL_PATH) ?? '');
+                } elseif (str_contains($sourceUrl, 'vimeo.com/')) {
+                    $videoId = basename(parse_url($sourceUrl, PHP_URL_PATH) ?? '');
                     if ($videoId) {
                         $embedUrl = 'https://player.vimeo.com/video/' . $videoId;
                     }
-                } elseif ($this->isInstagramUrl($link)) {
-                    $embedUrl = $this->buildInstagramEmbedUrl($link);
+                } elseif ($this->isInstagramUrl($sourceUrl)) {
+                    $embedUrl = $this->buildInstagramEmbedUrl($sourceUrl);
                 }
 
-                $videoUrl = $isVideo && $embedUrl === null ? $link : null;
+                $videoUrl = $isVideo && $embedUrl === null ? $sourceUrl : null;
             }
 
             return [
@@ -525,7 +520,6 @@ class OptTokenDisplay extends Component
                 'image' => $ad->image
                     ? storage_url($ad->image)
                     : (($mediaType === 'image' && $sourceUrl !== '') ? $sourceUrl : null),
-                'link' => $ad->link,
                 'category' => $ad->category instanceof \BackedEnum ? $ad->category->value : (string) ($ad->category ?? 'advertisement'),
                 'category_label' => $categoryLabel,
                 'media_type' => $mediaType ?: null,
@@ -538,7 +532,6 @@ class OptTokenDisplay extends Component
                     $categoryLabel !== '' => $categoryLabel,
                     $isVideo => 'Video',
                     $mediaType === 'note' => 'Notice',
-                    $mediaType === 'link' => 'Link',
                     $ad->image !== null => 'Banner',
                     default => 'Notice',
                 },
@@ -546,11 +539,8 @@ class OptTokenDisplay extends Component
                 'autoplay' => (bool) ($ad->autoplay ?? true),
                 'loop' => (bool) ($ad->loop ?? true),
                 'muted' => (bool) ($ad->muted ?? true),
-                'open_in_new_tab' => (bool) ($ad->open_in_new_tab ?? true),
             ];
         })->values()->all();
-
-        return $this->withDemoSlides($slides, 'Hospital Display');
     }
 
     protected function resolveDoctorQueue(Doctor $doctor): array
@@ -731,103 +721,6 @@ class OptTokenDisplay extends Component
             : $url;
     }
 
-    protected function withDemoSlides(array $slides, string $doctorName): array
-    {
-        if (count($slides) >= 3) {
-            return array_values($slides);
-        }
-
-        $existingIds = collect($slides)->pluck('id')->all();
-
-        foreach ($this->demoSlides($doctorName) as $demoSlide) {
-            if (in_array($demoSlide['id'], $existingIds, true)) {
-                continue;
-            }
-
-            $slides[] = $demoSlide;
-
-            if (count($slides) >= 3) {
-                break;
-            }
-        }
-
-        return array_values($slides);
-    }
-
-    protected function demoSlides(string $doctorName): array
-    {
-        $youtubeId = 'dQw4w9WgXcQ';
-
-        return [
-            [
-                'id' => 'demo-youtube',
-                'index' => 0,
-                'title' => 'Hospital Awareness Video',
-                'description' => "Watch the latest education and awareness content for {$doctorName}.",
-                'image' => null,
-                'link' => 'https://www.youtube.com/watch?v=' . $youtubeId,
-                'category' => 'advertisement',
-                'category_label' => 'Video',
-                'media_type' => 'video',
-                'source_url' => 'https://www.youtube.com/watch?v=' . $youtubeId,
-                'is_video' => true,
-                'video_url' => null,
-                'embed_url' => $this->buildYouTubeEmbedUrl($youtubeId),
-                'embed_type' => 'iframe',
-                'type_label' => 'Video',
-                'is_paused' => false,
-                'autoplay' => true,
-                'loop' => true,
-                'muted' => true,
-                'open_in_new_tab' => true,
-            ],
-            [
-                'id' => 'demo-image',
-                'index' => 1,
-                'title' => 'Stay Healthy, Stay Informed',
-                'description' => 'Helpful health guidance for patients waiting in the lobby.',
-                'image' => asset('images/default.png'),
-                'link' => null,
-                'category' => 'announcement',
-                'category_label' => 'Announcement',
-                'media_type' => 'image',
-                'source_url' => null,
-                'is_video' => false,
-                'video_url' => null,
-                'embed_url' => null,
-                'embed_type' => null,
-                'type_label' => 'Announcement',
-                'is_paused' => false,
-                'autoplay' => true,
-                'loop' => true,
-                'muted' => true,
-                'open_in_new_tab' => true,
-            ],
-            [
-                'id' => 'demo-note',
-                'index' => 2,
-                'title' => 'Appointment Reminder',
-                'description' => 'Please keep your token ready and follow the display instructions.',
-                'image' => null,
-                'link' => null,
-                'category' => 'notice',
-                'category_label' => 'Notice',
-                'media_type' => 'note',
-                'source_url' => null,
-                'is_video' => false,
-                'video_url' => null,
-                'embed_url' => null,
-                'embed_type' => null,
-                'type_label' => 'Notice',
-                'is_paused' => false,
-                'autoplay' => true,
-                'loop' => true,
-                'muted' => true,
-                'open_in_new_tab' => true,
-            ],
-        ];
-    }
-
     protected function isInstagramUrl(string $url): bool
     {
         return str_contains($url, 'instagram.com');
@@ -838,7 +731,7 @@ class OptTokenDisplay extends Component
         if (empty($mobile)) {
             return 'Mob. not available';
         }
-
+ 
         $digits = preg_replace('/\D+/', '', $mobile) ?: '';
         $tail = substr($digits, -3);
 
