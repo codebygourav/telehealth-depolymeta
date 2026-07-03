@@ -206,6 +206,7 @@ return [
                             'auto' => 'Auto Detect',
                             'split_ads' => '50/50 Doctor Card + Ads',
                             'grid_modal_ads' => 'Doctor Grid + Modal Ads',
+                            'doctor_schedule_sidebar' => 'Doctor OPD + Schedule Sidebar',
                             'events_only' => 'Events / Announcements Only',
                         ],
                         'default' => 'auto',
@@ -431,13 +432,20 @@ return [
                     'voice_enabled' => [
                         'type' => 'toggle',
                         'label' => 'Enable Voice Announcement',
-                        'default' => false,
+                        'default' => true,
                         'is_public' => false,
                     ],
                     'voice_language' => [
                         'type' => 'text',
                         'label' => 'Voice Language',
                         'default' => 'en-US',
+                        'is_public' => false,
+                    ],
+                    'voice_name' => [
+                        'type' => 'text',
+                        'label' => 'Preferred Voice Name',
+                        'default' => '',
+                        'helper' => 'Optional. Leave blank to auto-pick the best natural browser voice for the selected language.',
                         'is_public' => false,
                     ],
                     'announcement_template' => [

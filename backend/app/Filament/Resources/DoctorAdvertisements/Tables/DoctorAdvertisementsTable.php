@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\DoctorAdvertisements\Tables;
 
 use BackedEnum;
+use App\Enums\DisplayEventCategory;
+use App\Enums\DisplayMediaType;
 use App\Filament\Resources\DoctorAdvertisements\DoctorAdvertisementResource;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
@@ -33,6 +35,9 @@ class DoctorAdvertisementsTable
                 TextColumn::make('media_type')
                     ->label('Type')
                     ->badge()
+                    ->formatStateUsing(function ($state): string {
+                        return DisplayMediaType::normalize((string) $state)?->label() ?? 'Not set';
+                    })
                     ->colors([
                         'primary' => 'image',
                         'warning' => 'video',
@@ -46,15 +51,7 @@ class DoctorAdvertisementsTable
                     ->badge()
                     ->formatStateUsing(function ($state) {
                         $value = $state instanceof BackedEnum ? $state->value : (string) $state;
-
-                        return match ($value) {
-                            'advertisement' => 'Advertisement',
-                            'event' => 'Event',
-                            'info' => 'Info',
-                            'announcement' => 'Announcement',
-                            'notice' => 'Notice',
-                            default => str($value)->replace('_', ' ')->title()->toString(),
-                        };
+                        return DisplayEventCategory::tryFrom($value)?->label() ?? str($value)->replace('_', ' ')->title()->toString();
                     })
                     ->colors([
                         'primary' => 'advertisement',

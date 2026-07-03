@@ -682,7 +682,6 @@ class DoctorForm
                             Textarea::make('specializations_info')
                                 ->label('Specializations / Subspecialties')
                                 ->placeholder('e.g., MD Pediatrics, fellowship in Comprehensive Hematology Oncology')
-                                ->required()
                                 ->rows(4)
                                 ->columnSpanFull(),
 
@@ -695,7 +694,6 @@ class DoctorForm
                             RichEditor::make('memberships_info')
                                 ->label('Memberships')
                                 ->placeholder('Use editor for memberships or committee roles.')
-                                ->required()
                                 ->columnSpanFull(),
 
                             Textarea::make('special_interests')

@@ -54,8 +54,18 @@ jobs:
       - name: Copy primary code into deploymeta backend folder
         run: |
           cd source
-          # Determine files changed in the last 1 week (7 days)
-          git log --since="1 week ago" --name-only --pretty=format: | sort -u > ../changed_files.txt
+          # Determine changed files
+          BEFORE_SHA="${{ github.event.before }}"
+          AFTER_SHA="${{ github.event.after }}"
+          if [ -z "$AFTER_SHA" ]; then
+            AFTER_SHA="HEAD"
+          fi
+
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE_SHA" ] || ! git cat-file -e "$BEFORE_SHA" 2>/dev/null; then
+            git diff-tree --no-commit-id --name-only -r "$AFTER_SHA" > ../changed_files.txt
+          else
+            git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" > ../changed_files.txt
+          fi
           cd ..
 
           # Filter the files to exclude deleted files and ignored directories/files

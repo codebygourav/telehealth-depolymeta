@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\DoctorAdvertisements\Schemas;
 
 use BackedEnum;
+use App\Enums\DisplayEventCategory;
+use App\Enums\DisplayMediaType;
 use App\Models\DisplayEvent;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -19,12 +21,13 @@ class DoctorAdvertisementInfolist
                 ->formatStateUsing(function ($state) {
                     $value = $state instanceof BackedEnum ? $state->value : (string) $state;
 
-                    return str($value)->replace('_', ' ')->title()->toString();
+                    return DisplayEventCategory::tryFrom($value)?->label() ?? str($value)->replace('_', ' ')->title()->toString();
                 })
                 ->placeholder('-'),
             TextEntry::make('media_type')
                 ->label('Media Type')
                 ->badge()
+                ->formatStateUsing(fn ($state): string => DisplayMediaType::normalize((string) $state)?->label() ?? '-')
                 ->placeholder('-'),
             TextEntry::make('description')
                 ->placeholder('-')

@@ -11,6 +11,7 @@
     $doctorInitials = $doctor['initials'] ?? 'DR';
     $doctorAvatar = $doctor['avatar'] ?? '';
     $doctorEducation = $doctor['education_list'] ?? [];
+    $doctorBio = $doctor['bio'] ?? '';
     $doctorBreakNote = $doctor['is_on_break'] ?? false;
 @endphp
 
@@ -40,6 +41,7 @@
                     <span x-text="currentDoctor()?.experience" style="font-weight: 800; color: #1e293b;"></span>
                 </span>
             </div>
+            <div class="doctor-bio" x-show="currentDoctor()?.bio" x-text="currentDoctor()?.bio"></div>
             <div class="qualifications-list">
                 <template x-for="qual in currentDoctor()?.education_list || []" :key="qual">
                     <div class="qual-item" x-html="formatQual(qual)"></div>
@@ -57,6 +59,9 @@
                     </span>
                 @endif
             </div>
+            @if(!empty($doctorBio))
+                <div class="doctor-bio">{{ $doctorBio }}</div>
+            @endif
             @if(!empty($doctorEducation))
                 <div class="qualifications-list">
                     @foreach($doctorEducation as $qual)

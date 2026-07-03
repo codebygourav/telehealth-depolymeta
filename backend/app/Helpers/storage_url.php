@@ -4,10 +4,12 @@ use Illuminate\Support\Facades\Storage;
 
 if (!function_exists('storage_url')) {
 
-    function storage_url(?string $filePath, string $disk = 'public'): string
+    function storage_url(mixed $filePath, string $disk = 'public'): string
     {
+        $filePath = normalize_storage_file_path($filePath);
+
         // Return default image if file path is empty
-        if (empty($filePath)) {
+        if ($filePath === null || $filePath === '') {
             return asset('images/user-avatar.png');
         }
 
@@ -44,5 +46,44 @@ if (!function_exists('storage_url')) {
             // Fallback to default image if Storage fails
             return asset('images/user-avatar.png');
         }
+    }
+}
+
+if (!function_exists('normalize_storage_file_path')) {
+    function normalize_storage_file_path(mixed $filePath): ?string
+    {
+        if ($filePath instanceof \Stringable) {
+            $filePath = (string) $filePath;
+        }
+
+        if (is_array($filePath)) {
+            foreach (['path', 'url', 'file_path', 'value', 'avatar', 'image', 'src'] as $key) {
+                if (array_key_exists($key, $filePath)) {
+                    $normalized = normalize_storage_file_path($filePath[$key]);
+
+                    if ($normalized !== null && $normalized !== '') {
+                        return $normalized;
+                    }
+                }
+            }
+
+            foreach ($filePath as $item) {
+                $normalized = normalize_storage_file_path($item);
+
+                if ($normalized !== null && $normalized !== '') {
+                    return $normalized;
+                }
+            }
+
+            return null;
+        }
+
+        if (! is_string($filePath)) {
+            return null;
+        }
+
+        $filePath = trim($filePath);
+
+        return $filePath !== '' ? $filePath : null;
     }
 }

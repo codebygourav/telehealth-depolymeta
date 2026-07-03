@@ -1,4 +1,4 @@
-<div class="queue-spotlight-modal" x-show="activePopup?.kind === 'ad'" x-cloak>
+<div class="queue-spotlight-modal" x-show="activeAdPopup?.kind === 'ad'" x-cloak>
     <div class="queue-spotlight-card fade-enter">
         <div class="queue-spotlight-head" x-show="displayCopy.show_slide_heading" x-text="displayCopy.ad_popup_title || 'Doctor Spotlight'"></div>
 
@@ -48,7 +48,7 @@
                 @if((bool) ($board['display']['show_slide_heading'] ?? false) || (bool) ($board['display']['show_slide_description'] ?? false))
                     <div class="queue-spotlight-content" x-show="shouldShowSpotlightContent()">
                         <div class="queue-spotlight-kicker">
-                            <div class="popup-meta-chip" x-text="activePopup?.doctor_name || 'Doctor'"></div>
+                            <div class="popup-meta-chip" x-text="activeAdPopup?.doctor_name || 'Doctor'"></div>
                             <div class="popup-meta-chip" x-text="spotlightCurrentSlide()?.category_label || displayCopy.now_showing_label || 'Now showing'"></div>
                         </div>
 
@@ -60,7 +60,7 @@
                 @endif
 
                 <div class="queue-spotlight-footer">
-                    <span x-text="activePopup?.doctor_name || 'Doctor'"></span>
+                    <span x-text="activeAdPopup?.doctor_name || 'Doctor'"></span>
                     <span x-text="spotlightCurrentSlide()?.category_label || displayCopy.now_showing_label || 'Now showing'"></span>
                 </div>
             </div>

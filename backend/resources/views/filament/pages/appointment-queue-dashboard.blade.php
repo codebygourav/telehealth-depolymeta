@@ -10,6 +10,9 @@
             top:0px;
             background: #fff !important;
         }
+        .started_queue_app{
+            background: #055bd92b;
+        }
 
 
 
@@ -169,7 +172,9 @@
                         'badge' => 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 ring-1 ring-indigo-300',
                         'legend_text' => 'Current with Doctor (Active)',
                         'legend_card' => 'bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800 ring-1 ring-indigo-400/40',
-                        'row' => 'bg-indigo-50/40 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 dark:ring-indigo-500/30 shadow-xs border-l-4 border-l-indigo-600',
+                        'row' => 'hover:bg-indigo-50/60 started_queue_app dark:hover:bg-indigo-800/20 ring-1 ring-indigo-500/20 dark:ring-indigo-500/30 shadow-xs border-l-4 border-l-indigo-600',
+                   
+                   
                     ],
                     'completed' => [
                         'label' => 'Completed',

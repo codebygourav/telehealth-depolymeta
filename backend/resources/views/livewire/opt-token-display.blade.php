@@ -4,12 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $board['display']['page_title'] ?? 'Opt Token Display' }}</title>
+    @php
+        $favicon = \App\Services\SettingService::getFavicon() ?: asset('images/fav-icon.png');
+    @endphp
+    <link rel="icon" type="image/png" href="{{ $favicon }}">
+    <link rel="apple-touch-icon" href="{{ $favicon }}">
     @vite(['resources/css/app.css'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     @include('components.display.queue-display.styles')
-</head>
-<body>
+    </head>
+    <body>
     @php
         $board = $board ?? [];
         $refreshSeconds = max(10, (int) ($board['refresh_seconds'] ?? 30));
@@ -26,6 +31,12 @@
         );
     @endphp
     <div class="display-shell">
+        <x-display.queue-display.voice-announcer
+            :enabled="(bool) ($board['voice_enabled'] ?? false)"
+            :language="$board['voice_language'] ?? 'en-US'"
+            :voice-name="$board['voice_name'] ?? ''"
+            :template="$board['announcement_template'] ?? 'Token {token_number}, please proceed to Room {room_number}, Dr. {doctor_name}.'"
+        />
         @if (! $authenticated)
             <div class="auth-shell">
                 <div class="auth-card">
@@ -64,29 +75,21 @@
             <script type="application/json" id="opt-token-board-data">{!! $boardJson !!}</script>
             @if($displayMode === 'split_ads')
             <div
+                id="opt-token-board-root"
+                data-opt-token-board-root
                 x-data="optTokenBoard()"
                 x-init="init()"
+                :class="{ 'board-refreshing': isRefreshing }"
                 class="h-screen max-h-screen flex flex-col overflow-hidden"
             >
+                <div class="board-refresh-badge" x-show="isRefreshing" x-cloak>
+                    <span class="pulse"></span>
+                    Syncing queue
+                </div>
 
                 <div class="layout single-ads-layout">
                     <aside class="left-column">
-                        <!-- Redesigned Clock/Date Topbar inside Left Column -->
-                        <div class="left-column-topbar">
-                            <div style="width:100%; display: flex; align-items: center;justify-content:space-between; gap: clamp(8px, 0.8vw, 16px); font-weight: 800; font-size: clamp(14px, 1vw, 20px); letter-spacing: 0.02em;">
-                                <!-- Clock SVG Icon -->
-                                 <div style="display:flex;justify-content:space-between; align-items: center;gap:5px;">
-                                <svg style="width: 22px; height: 22px; opacity: 0.9;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                <span x-text="timeText"></span>
-                                </div>
-
-                                <span style="opacity: 0.4; font-weight: 300;">|</span>
-                                <span x-text="dateText" style="text-transform: uppercase; opacity: 0.9;"></span>
-                            </div>
-
-                        </div>
+                        <x-display.queue-display.topbar />
                         <div class="left_column_body">
                             <!-- Redesigned Standalone Doctor Card -->
                             <x-display.queue-display.doctor-card
@@ -186,19 +189,37 @@
                 </div>
             </div>
             @elseif($displayMode === 'grid_modal_ads')
-            <div x-data="optTokenBoard()" x-init="initStatic()" class="h-screen max-h-screen flex flex-col overflow-hidden">
-                <div class="topbar">
-                    <div class="brand">
-                       <img src="{{ asset('images/white-logo.png') }}" alt="logo" class="brand-logo">
-                    </div>
-                    <div class="topbar-actions">
-                        
-                        <div class="clock">
-                            <div x-text="timeText"></div>
-                            <div x-text="dateText"></div>
-                        </div>
-                    </div>
+            <div id="opt-token-board-root" data-opt-token-board-root x-data="optTokenBoard()" x-init="initStatic()" :class="{ 'board-refreshing': isRefreshing }" class="h-screen max-h-screen flex flex-col overflow-hidden">
+                <div class="board-refresh-badge" x-show="isRefreshing" x-cloak>
+                    <span class="pulse"></span>
+                    Syncing queue
                 </div>
+    @if($displayMode !== 'doctor_schedule_sidebar')
+        <div class="topbar">
+            <div class="brand">
+                <img src="{{ asset('images/white-logo.png') }}" alt="logo" class="brand-logo">
+            </div>
+            <div class="topbar-actions">
+                <button
+                    type="button"
+                    class="control-button icon-control"
+                    @click="announceCurrentPatient()"
+                    aria-label="Announce patient"
+                    title="Announce patient"
+                >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M11 5L6 9H3v6h3l5 4V5Z" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16.5 8.5a5 5 0 010 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                        <path d="M19 6a9 9 0 010 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <div class="clock">
+                    <div x-text="timeText"></div>
+                    <div x-text="dateText"></div>
+                </div>
+            </div>
+        </div>
+    @endif
 
                 @php($doctorGridColumns = max(2, min(3, (int) ($board['same_time_card_columns'] ?? 2))))
                 <div class="layout">
@@ -279,13 +300,32 @@
                     </div>
                 </div>
             </div>
+            @elseif($displayMode === 'doctor_schedule_sidebar')
+                @include('livewire.opt-token-display-schedule')
             @elseif($displayMode === 'events_only')
-            <div x-data="optTokenBoard()" x-init="initStatic()" class="h-screen max-h-screen flex flex-col overflow-hidden">
+            <div id="opt-token-board-root" data-opt-token-board-root x-data="optTokenBoard()" x-init="initStatic()" :class="{ 'board-refreshing': isRefreshing }" class="h-screen max-h-screen flex flex-col overflow-hidden">
+                <div class="board-refresh-badge" x-show="isRefreshing" x-cloak>
+                    <span class="pulse"></span>
+                    Syncing queue
+                </div>
                 <div class="topbar">
                     <div class="brand">
                        <img src="{{ asset('images/white-logo.png') }}" alt="logo" class="brand-logo">
                     </div>
                     <div class="topbar-actions">
+                        <button
+                            type="button"
+                            class="control-button icon-control"
+                            @click="announceCurrentPatient()"
+                            aria-label="Announce patient"
+                            title="Announce patient"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M11 5L6 9H3v6h3l5 4V5Z" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M16.5 8.5a5 5 0 010 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                                <path d="M19 6a9 9 0 010 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
                         <button
                             type="button"
                             class="control-button icon-control"
@@ -401,7 +441,11 @@
                 </div>
             </div>
             @elseif($displayMode === 'emergency')
-            <div x-data="optTokenBoard()" x-init="initStatic()" class="h-screen max-h-screen flex flex-col overflow-hidden">
+            <div id="opt-token-board-root" data-opt-token-board-root x-data="optTokenBoard()" x-init="initStatic()" :class="{ 'board-refreshing': isRefreshing }" class="h-screen max-h-screen flex flex-col overflow-hidden">
+                <div class="board-refresh-badge" x-show="isRefreshing" x-cloak>
+                    <span class="pulse"></span>
+                    Syncing queue
+                </div>
                 <div class="topbar">
                     <div class="brand">
                        <img src="{{ asset('images/white-logo.png') }}" alt="logo" class="w-100 h-10  inline-block">
@@ -446,13 +490,21 @@
                 dateText: '',
                 clockTimer: null,
                 doctorTimer: null,
+                globalSlideTimer: null,
                 slideAdvanceTimer: null,
                 popupSyncTimer: null,
-                reloadTimer: null,
+                refreshTimer: null,
+                refreshInFlight: false,
+                isRefreshing: false,
                 popupTimer: null,
                 mediaFrameHandler: null,
                 activeFrameSlideId: null,
                 activeFrameScope: 'doctor',
+                activeAdPopup: null,
+                focusedQueueToken: null,
+                queueCycleIndex: -1,
+                queueScrollTimer: null,
+                queuePauseUntil: 0,
                 youtubePlayers: {},
                 youtubeApiPromise: null,
                 payload: null,
@@ -471,12 +523,7 @@
 
                     this.initialized = true;
                     this.payload = this.readPayload();
-                    this.doctors = this.payload.doctors || [];
-                    this.displayCopy = this.payload.display || {};
-                    this.doctorRotationSeconds = Number(this.payload.doctor_rotation_seconds || 12);
-                    this.slideSeconds = Number(this.payload.slide_seconds || 8);
-                    this.adPopupIntervalSeconds = Math.max(30, Number(this.payload.ad_popup_interval_seconds || 180));
-                    this.adPopupDurationSeconds = Math.max(5, Number(this.payload.ad_popup_duration_seconds || 12));
+                    this.applyPayload(this.payload);
 
                     const seed = this.payload.now ? new Date(this.payload.now) : new Date();
                     this.setClock(seed);
@@ -484,28 +531,7 @@
                         this.setClock(new Date());
                     }, 1000);
 
-                    this.startReloadTimer();
-
-                    if (this.doctors.length) {
-                        this.doctorTimer = setInterval(() => {
-                            this.doctorIndex = (this.doctorIndex + 1) % this.doctors.length;
-                            this.slideIndex = 0;
-                            this.scheduleSlideAdvance();
-                            this.syncPopupState();
-                        }, Math.max(5, this.doctorRotationSeconds) * 1000);
-                    }
-
-                    this.globalSlideTimer = setInterval(() => {
-                        if (this.adsPaused) {
-                            return;
-                        }
-
-                        const slide = this.currentGlobalSlide();
-                        const globalSlides = this.globalSlides();
-                        if (globalSlides.length && !this.isVideoSlide(slide)) {
-                            this.globalSlideIndex = (this.globalSlideIndex + 1) % globalSlides.length;
-                        }
-                    }, Math.max(4, this.slideSeconds) * 1000);
+                    this.startRefreshTimer();
 
                     this.mediaFrameHandler = (event) => {
                         const data = event?.data;
@@ -523,7 +549,7 @@
                         }
 
                         if (payload?.event === 'onStateChange' && Number(payload?.info) === 0) {
-                            if (this.activePopup?.kind === 'ad') {
+                            if (this.activeAdPopup?.kind === 'ad') {
                                 this.spotlightNextSlide();
                                 return;
                             }
@@ -540,6 +566,87 @@
 
                     this.syncPopupState(true);
                     this.scheduleSlideAdvance();
+                    this.syncRotationTimers();
+                    this.syncQueueFocus(true);
+                    this.startQueueScrollTimer();
+                },
+                applyPayload(payload) {
+                    const nextPayload = payload || {};
+                    const previousDoctorId = this.currentDoctor()?.id || null;
+                    const previousSlideId = this.currentSlide()?.id || this.activeAdPopup?.slide_id || null;
+
+                    this.payload = nextPayload;
+                    this.doctors = nextPayload.doctors || [];
+                    this.displayCopy = nextPayload.display || {};
+                    this.doctorRotationSeconds = Number(nextPayload.doctor_rotation_seconds || 12);
+                    this.slideSeconds = Number(nextPayload.slide_seconds || 8);
+                    this.adPopupIntervalSeconds = Math.max(30, Number(nextPayload.ad_popup_interval_seconds || 180));
+                    this.adPopupDurationSeconds = Math.max(5, Number(nextPayload.ad_popup_duration_seconds || 12));
+
+                    if (this.doctors.length === 0) {
+                        this.doctorIndex = 0;
+                        this.slideIndex = 0;
+                    } else if (previousDoctorId) {
+                        const matchingDoctorIndex = this.doctors.findIndex((doctor) => String(doctor.id) === String(previousDoctorId));
+                        this.doctorIndex = matchingDoctorIndex >= 0 ? matchingDoctorIndex : Math.min(this.doctorIndex, this.doctors.length - 1);
+                    } else {
+                        this.doctorIndex = Math.min(this.doctorIndex, this.doctors.length - 1);
+                    }
+
+                    if (this.doctors.length && this.currentDoctor()?.slides?.length) {
+                        this.slideIndex = Math.min(this.slideIndex, this.currentDoctor().slides.length - 1);
+                    } else {
+                        this.slideIndex = 0;
+                    }
+
+                    if (previousSlideId) {
+                        const currentSlides = this.currentDoctor()?.slides || this.payload?.fallback_slides || [];
+                        const matchingSlideIndex = currentSlides.findIndex((slide) => String(slide.id) === String(previousSlideId));
+                        if (matchingSlideIndex >= 0) {
+                            this.slideIndex = matchingSlideIndex;
+                        }
+                    }
+
+                    this.syncRotationTimers();
+                    this.scheduleSlideAdvance();
+                    this.syncQueueFocus(true);
+                    this.startQueueScrollTimer();
+                },
+                syncRotationTimers() {
+                    if (this.doctorTimer) {
+                        clearInterval(this.doctorTimer);
+                        this.doctorTimer = null;
+                    }
+
+                    if (this.globalSlideTimer) {
+                        clearInterval(this.globalSlideTimer);
+                        this.globalSlideTimer = null;
+                    }
+
+                    if (this.doctors.length) {
+                        this.doctorTimer = setInterval(() => {
+                            this.doctorIndex = (this.doctorIndex + 1) % this.doctors.length;
+                            this.slideIndex = 0;
+                            this.scheduleSlideAdvance();
+                            this.focusedQueueToken = null;
+                            this.queueCycleIndex = -1;
+                            this.queuePauseUntil = Date.now() + 1200;
+                            this.showPopup(this.buildPatientPopup(this.currentDoctor()));
+                            this.startQueueScrollTimer();
+                        }, Math.max(5, this.doctorRotationSeconds) * 1000);
+                    }
+
+                    this.globalSlideTimer = setInterval(() => {
+                        if (this.adsPaused) {
+                            return;
+                        }
+
+                        const slide = this.currentGlobalSlide();
+                        const globalSlides = this.globalSlides();
+                        if (globalSlides.length && !this.isVideoSlide(slide)) {
+                            this.globalSlideIndex = (this.globalSlideIndex + 1) % globalSlides.length;
+                        }
+                    }, Math.max(4, this.slideSeconds) * 1000);
                 },
                 readPayload() {
                     const raw = document.getElementById('opt-token-board-data')?.textContent || '{}';
@@ -550,11 +657,125 @@
                         return {};
                     }
                 },
-                startReloadTimer() {
-                    const refreshSeconds = Number(this.payload?.refresh_seconds || 30);
-                    this.reloadTimer = setTimeout(() => {
-                        window.location.reload();
-                    }, Math.max(10, refreshSeconds) * 1000);
+                startRefreshTimer() {
+                    const refreshSeconds = Math.max(10, Number(this.payload?.refresh_seconds || 30));
+                    this.clearRefreshTimer();
+                    this.refreshTimer = setInterval(() => {
+                        this.refreshBoard();
+                    }, refreshSeconds * 1000);
+                },
+                clearRefreshTimer() {
+                    if (this.refreshTimer) {
+                        clearInterval(this.refreshTimer);
+                        this.refreshTimer = null;
+                    }
+                },
+                clearQueueScrollTimer() {
+                    if (this.queueScrollTimer) {
+                        clearInterval(this.queueScrollTimer);
+                        this.queueScrollTimer = null;
+                    }
+                },
+                startQueueScrollTimer() {
+                    this.clearQueueScrollTimer();
+
+                    const items = this.currentQueueItems();
+                    if (items.length <= 1) {
+                        this.focusedQueueToken = items[0]?.token || this.focusedQueueToken || null;
+                        this.scrollQueueTokenIntoView(this.focusedQueueToken);
+                        return;
+                    }
+
+                    const currentToken = this.focusedQueueToken || this.queuePopupToken() || items[0]?.token || null;
+                    const currentIndex = items.findIndex((item) => String(item.token || '') === String(currentToken || ''));
+                    this.queueCycleIndex = currentIndex >= 0 ? currentIndex : 0;
+                    this.focusedQueueToken = items[this.queueCycleIndex]?.token || null;
+                    this.scrollQueueTokenIntoView(this.focusedQueueToken);
+
+                    this.queueScrollTimer = setInterval(() => {
+                        const queueItems = this.currentQueueItems();
+                        if (!queueItems.length) {
+                            this.clearQueueScrollTimer();
+                            return;
+                        }
+
+                        if (Date.now() < this.queuePauseUntil) {
+                            return;
+                        }
+
+                        const popupToken = this.queuePopupToken();
+                        const currentItemIndex = queueItems.findIndex((item) => String(item.token || '') === String(this.focusedQueueToken || ''));
+                        const nextIndex = currentItemIndex >= 0
+                            ? (currentItemIndex + 1) % queueItems.length
+                            : 0;
+                        const nextItem = queueItems[nextIndex];
+
+                        this.queueCycleIndex = nextIndex;
+                        this.focusedQueueToken = nextItem?.token || null;
+                        this.scrollQueueTokenIntoView(this.focusedQueueToken);
+
+                        if (popupToken && String(nextItem?.token || '') === String(popupToken)) {
+                            this.queuePauseUntil = Date.now() + 1800;
+                            if (this.activePopup?.kind !== 'patient' || String(this.activePopup?.current_token || '') !== String(popupToken)) {
+                                this.showPopup(this.buildPatientPopup(this.currentDoctor()));
+                            }
+                        }
+                    }, 1100);
+                },
+                async refreshBoard() {
+                    if (this.refreshInFlight) {
+                        return;
+                    }
+
+                    this.refreshInFlight = true;
+                    this.isRefreshing = true;
+
+                    try {
+                        const response = await fetch(window.location.href, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Cache-Control': 'no-cache',
+                            },
+                            credentials: 'same-origin',
+                        });
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        const html = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const nextRoot = doc.querySelector('[data-opt-token-board-root]');
+                        const currentRoot = document.querySelector('[data-opt-token-board-root]');
+                        const nextPayloadRaw = doc.getElementById('opt-token-board-data')?.textContent || '{}';
+                        let nextPayload = {};
+
+                        try {
+                            nextPayload = JSON.parse(nextPayloadRaw);
+                        } catch (error) {
+                            nextPayload = {};
+                        }
+
+                        if (!nextRoot || !currentRoot) {
+                            return;
+                        }
+
+                        currentRoot.innerHTML = nextRoot.innerHTML;
+
+                        if (window.Alpine?.initTree) {
+                            window.Alpine.initTree(currentRoot);
+                        }
+
+                        this.applyPayload(nextPayload);
+                    } catch (error) {
+                        // Keep the current board on transient refresh errors.
+                    } finally {
+                        window.setTimeout(() => {
+                            this.isRefreshing = false;
+                        }, 260);
+                        this.refreshInFlight = false;
+                    }
                 },
                 setClock(date) {
                     this.timeText = date.toLocaleTimeString('en-US', {
@@ -656,6 +877,26 @@
                     this.spotlightIndex = (this.spotlightIndex + 1) % slides.length;
                     this.syncSpotlightPopup();
                 },
+                announceCurrentPatient() {
+                    if (!this.payload?.voice_enabled || !('speechSynthesis' in window)) {
+                        return;
+                    }
+
+                    const popup = this.activePopup?.kind === 'patient'
+                        ? this.activePopup
+                        : this.buildPatientPopup(this.currentDoctor());
+
+                    if (!popup) {
+                        return;
+                    }
+
+                    if (this.activePopup?.kind !== 'patient') {
+                        this.showPopup(popup);
+                        return;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('display-voice-announce', { detail: popup }));
+                },
                 prevDoctor() {
                     if (!this.doctors.length) {
                         return;
@@ -756,7 +997,7 @@
                         return;
                     }
 
-                    if (this.activePopup?.kind === 'ad') {
+                    if (this.activeAdPopup?.kind === 'ad') {
                         const slide = this.spotlightCurrentSlide();
 
                         if (!slide) {
@@ -817,7 +1058,7 @@
                             return;
                         }
 
-                        if (this.currentSlide()?.id !== slideId && this.activePopup?.slide_id !== slideId) {
+                        if (this.currentSlide()?.id !== slideId && this.activeAdPopup?.slide_id !== slideId) {
                             return;
                         }
 
@@ -857,14 +1098,14 @@
 
                     this.doctors.forEach((doctor) => {
                         const summary = doctor.queue_summary || {};
-                        const currentToken = summary.current_token || null;
-                        nextState[doctor.id] = currentToken;
+                        const popupToken = summary.popup_token ?? summary.current_token ?? summary.next_token ?? null;
+                        nextState[doctor.id] = popupToken;
 
-                        if (!changedDoctor && currentToken && previous[doctor.id] && previous[doctor.id] !== currentToken) {
+                        if (!changedDoctor && popupToken && previous[doctor.id] && previous[doctor.id] !== popupToken) {
                             changedDoctor = doctor;
                         }
 
-                        if (!changedDoctor && force && currentToken && !previous[doctor.id]) {
+                        if (!changedDoctor && force && popupToken && !previous[doctor.id]) {
                             changedDoctor = doctor;
                         }
                     });
@@ -873,11 +1114,6 @@
 
                     if (changedDoctor) {
                         this.showPopup(this.buildPatientPopup(changedDoctor));
-                        return;
-                    }
-
-                    if (this.activePopup?.kind === 'patient' && !force) {
-                        return;
                     }
 
                     const doctor = this.currentDoctor();
@@ -913,19 +1149,27 @@
                     }
                 },
                 buildPatientPopup(doctor) {
+                    if (!doctor) {
+                        return null;
+                    }
+
                     const summary = doctor.queue_summary || {};
+                    const popupToken = summary.popup_token ?? summary.current_token ?? summary.next_token ?? 'TOK-000';
+                    const popupPatient = summary.popup_patient ?? summary.current_patient ?? summary.next_patient ?? 'Waiting for next patient';
+                    const popupTimeSlot = summary.popup_time_slot ?? summary.current_time_slot ?? summary.next_time_slot ?? null;
+                    const popupRoom = summary.popup_room ?? summary.room_number ?? doctor.room ?? null;
 
                     return {
                         kind: 'patient',
                         doctor_id: doctor.id,
                         doctor_name: doctor.name || 'Doctor',
-                        current_token: summary.current_token || 'TOK-000',
-                        current_patient: summary.current_patient || 'Waiting for next patient',
-                        current_time_slot: summary.current_time_slot || null,
-                        next_token: summary.next_token || 'Pending',
-                        next_patient: summary.next_patient || 'No next patient',
-                        next_time_slot: summary.next_time_slot || null,
-                        room_number: summary.room_number || doctor.room || null,
+                        current_token: popupToken,
+                        current_patient: popupPatient,
+                        current_time_slot: popupTimeSlot,
+                        next_token: summary.next_token || popupToken,
+                        next_patient: summary.next_patient || popupPatient,
+                        next_time_slot: summary.next_time_slot || popupTimeSlot,
+                        room_number: popupRoom,
                     };
                 },
                 buildAdPopup(doctor, slide = null) {
@@ -965,7 +1209,14 @@
                         this.popupTimer = null;
                     }
 
-                    this.activePopup = popup;
+                    if (popup.kind === 'patient') {
+                        this.activePopup = popup;
+                        const popupPauseSeconds = Math.max(3, Number(this.payload?.popup_duration_seconds || 8));
+                        this.queuePauseUntil = Date.now() + (popupPauseSeconds * 1000);
+                        this.syncQueueFocus(true, popup.current_token || null);
+                    } else if (popup.kind === 'ad') {
+                        this.activeAdPopup = popup;
+                    }
 
                     if (popup.kind === 'ad') {
                         const slides = this.spotlightSlides();
@@ -976,7 +1227,7 @@
                     }
 
                     if (popup.kind === 'patient' && this.payload?.voice_enabled) {
-                        this.announce(popup);
+                        window.dispatchEvent(new CustomEvent('display-voice-announce', { detail: popup }));
                     }
 
                     if (popup.kind === 'ad') {
@@ -992,21 +1243,76 @@
                         }, Math.max(3, durationSeconds) * 1000);
                     }
                 },
-                announce(popup) {
-                    if (!('speechSynthesis' in window) || !popup) {
+                currentQueueItems() {
+                    return this.currentDoctor()?.queue_items || [];
+                },
+                queuePopupToken() {
+                    const doctor = this.currentDoctor();
+                    const summary = doctor?.queue_summary || {};
+
+                    if (this.activePopup?.kind === 'patient' && this.activePopup?.current_token) {
+                        return this.activePopup.current_token;
+                    }
+
+                    return summary.popup_token
+                        || summary.current_token
+                        || summary.next_token
+                        || null;
+                },
+                isFocusedQueueItem(item) {
+                    const token = String(item?.token || '');
+                    const focusedToken = String(this.focusedQueueToken || this.queuePopupToken() || '');
+
+                    return token !== '' && focusedToken !== '' && token === focusedToken;
+                },
+                syncQueueFocus(force = false, token = null) {
+                    const nextToken = token || this.queuePopupToken() || null;
+
+                    if (!nextToken) {
+                        if (force || !this.focusedQueueToken) {
+                            this.focusedQueueToken = null;
+                        }
                         return;
                     }
 
-                    const template = this.payload?.announcement_template || 'Token {token_number}, please proceed to Room {room_number}, Dr. {doctor_name}.';
-                    const message = template
-                        .replaceAll('{token_number}', popup.current_token || '')
-                        .replaceAll('{doctor_name}', popup.doctor_name || '')
-                        .replaceAll('{room_number}', popup.room_number || '');
+                    if (!force && this.focusedQueueToken === nextToken) {
+                        return;
+                    }
 
-                    window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(message);
-                    utterance.lang = this.payload?.voice_language || 'en-US';
-                    window.speechSynthesis.speak(utterance);
+                    this.focusedQueueToken = nextToken;
+
+                    this.$nextTick(() => {
+                        this.scrollQueueTokenIntoView(nextToken);
+                    });
+                },
+                scrollQueueTokenIntoView(token) {
+                    if (!token) {
+                        return;
+                    }
+
+                    const root = document.querySelector('[data-opt-token-board-root]');
+                    const container = root?.querySelector('.queue-list-container');
+
+                    if (!container) {
+                        return;
+                    }
+
+                    const rows = Array.from(container.querySelectorAll('[data-queue-token]'));
+                    const row = rows.find((item) => String(item.dataset.queueToken || '') === String(token));
+
+                    if (!row) {
+                        return;
+                    }
+
+                    row.classList.remove('queue-row-focus-flash');
+                    void row.offsetWidth;
+                    row.classList.add('queue-row-focus-flash');
+
+                    row.scrollIntoView({
+                        behavior: this.isRefreshing ? 'auto' : 'smooth',
+                        block: 'center',
+                        inline: 'nearest',
+                    });
                 },
                 currentDoctorSlide(doctor = null) {
                     const slides = doctor?.slides || this.slidesForCurrentDoctor();
@@ -1105,15 +1411,15 @@
 
                     const currentSlide = scope === 'global' ? this.currentGlobalSlide() : this.currentSlide();
 
-                    this.destroyYoutubePlayer(currentSlide?.id || this.activePopup?.slide_id || null);
+                    this.destroyYoutubePlayer(currentSlide?.id || this.activeAdPopup?.slide_id || null);
 
                     if (scope === 'global') {
                         this.globalSlideIndex = (this.globalSlideIndex + delta + slides.length) % slides.length;
                     } else {
                         this.slideIndex = (this.slideIndex + delta + slides.length) % slides.length;
-                        if (this.activePopup?.kind === 'ad') {
-                            this.destroyYoutubePlayer(this.activePopup?.slide_id || null);
-                            this.activePopup = null;
+                        if (this.activeAdPopup?.kind === 'ad') {
+                            this.destroyYoutubePlayer(this.activeAdPopup?.slide_id || null);
+                            this.activeAdPopup = null;
                         }
                     }
 
@@ -1133,9 +1439,10 @@
                     if (this.clockTimer) clearInterval(this.clockTimer);
                     if (this.doctorTimer) clearInterval(this.doctorTimer);
                     if (this.globalSlideTimer) clearInterval(this.globalSlideTimer);
+                    this.clearQueueScrollTimer();
                     this.clearSlideAdvanceTimer();
                     if (this.popupSyncTimer) clearInterval(this.popupSyncTimer);
-                    if (this.reloadTimer) clearTimeout(this.reloadTimer);
+                    this.clearRefreshTimer();
                     if (this.popupTimer) clearTimeout(this.popupTimer);
                     if (this.mediaFrameHandler) {
                         window.removeEventListener('message', this.mediaFrameHandler);

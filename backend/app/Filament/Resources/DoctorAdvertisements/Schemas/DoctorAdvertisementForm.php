@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\DoctorAdvertisements\Schemas;
 
 use App\Enums\DisplayEventCategory;
+use App\Enums\DisplayMediaType;
 use App\Models\Doctor;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -34,21 +35,8 @@ class DoctorAdvertisementForm
                         ->searchable()
                         ->placeholder('Choose category')
                         ->afterStateUpdated(function (?string $state, Set $set): void {
-                            if (in_array($state, [
-                                DisplayEventCategory::ANNOUNCEMENT->value,
-                                DisplayEventCategory::NOTICE->value,
-                                DisplayEventCategory::EMERGENCY_ALERT->value,
-                            ], true)) {
-                                $set('media_type', 'note');
-                            }
-
-                            if (in_array($state, [
-                                DisplayEventCategory::EVENT->value,
-                                DisplayEventCategory::HEALTH_CAMP->value,
-                                DisplayEventCategory::VACCINATION_CAMPAIGN->value,
-                                DisplayEventCategory::BLOOD_DONATION_CAMP->value,
-                            ], true)) {
-                                $set('media_type', 'image');
+                            if ($state && ($category = DisplayEventCategory::tryFrom($state))) {
+                                $set('media_type', $category->defaultMediaType()->value);
                             }
                         }),
                 ])
@@ -61,15 +49,15 @@ class DoctorAdvertisementForm
                         ->dehydrated(true),
                     Grid::make(2)->schema([
                         TextInput::make('title')
-                            ->label(fn (Get $get): string => self::titleLabel($get('category')))
-                            ->placeholder(fn (Get $get): string => self::titlePlaceholder($get('category')))
+                            ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->titleLabel() ?? 'Title')
+                            ->placeholder(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->titlePlaceholder() ?? 'Example: Pregnancy Awareness Campaign')
                             ->helperText('Use a short heading that reads clearly on a public waiting-screen display.')
                             ->required(),
                         Select::make('media_type')
                             ->label('Media Type')
-                            ->options(fn (Get $get): array => self::mediaTypeOptions($get('category')))
+                            ->options(DisplayMediaType::options())
                             ->placeholder('Choose media type')
-                            ->default('image')
+                            ->default(DisplayEventCategory::ADVERTISEMENT->defaultMediaType()->value)
                             ->searchable()
                             ->live()
                             ->required(),
@@ -87,15 +75,15 @@ class DoctorAdvertisementForm
                         ->openable()
                         ->downloadable()
                         ->columnSpanFull()
-                        ->visible(fn (Get $get): bool => self::showsImageField($get('category'), $get('media_type'))),
+                        ->visible(fn (Get $get): bool => DisplayEventCategory::tryFrom((string) $get('category'))?->showsImageField(DisplayMediaType::normalize((string) $get('media_type'))) ?? true),
                     TextInput::make('link')
-                        ->label(fn (Get $get): string => self::linkLabel($get('category'), $get('media_type')))
-                        ->placeholder(fn (Get $get): string => self::linkPlaceholder($get('category'), $get('media_type')))
+                        ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->linkLabel(DisplayMediaType::normalize((string) $get('media_type'))) ?? 'Media URL / Link')
+                        ->placeholder(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->linkPlaceholder(DisplayMediaType::normalize((string) $get('media_type'))) ?? 'Paste an external URL')
                         ->helperText('Used for video embeds, YouTube, registration links, and website targets.')
                         ->columnSpanFull()
-                        ->visible(fn (Get $get): bool => self::showsLinkField($get('category'), $get('media_type'))),
+                        ->visible(fn (Get $get): bool => DisplayEventCategory::tryFrom((string) $get('category'))?->showsLinkField(DisplayMediaType::normalize((string) $get('media_type'))) ?? true),
                     RichEditor::make('description')
-                        ->label(fn (Get $get): string => self::descriptionLabel($get('category')))
+                        ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->descriptionLabel() ?? 'Content')
                         ->placeholder('Add the notice, event details, instructions, or awareness copy to show on the screen.')
                         ->columnSpanFull(),
                     Select::make('doctors')
@@ -115,7 +103,7 @@ class DoctorAdvertisementForm
                         ->columnSpanFull(),
                     Grid::make(2)->schema([
                         TextInput::make('display_order')
-                            ->label(fn (Get $get): string => self::orderLabel($get('category')))
+                            ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->orderLabel() ?? 'Display Order')
                             ->numeric()
                             ->default(0)
                             ->helperText('Lower numbers appear earlier in the rotation. Use this as priority ordering.'),
@@ -127,14 +115,14 @@ class DoctorAdvertisementForm
                     ]),
                     Grid::make(2)->schema([
                         DateTimePicker::make('starts_at')
-                            ->label(fn (Get $get): string => self::startLabel($get('category')))
+                            ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->startLabel() ?? 'Starts At')
                             ->seconds(false)
                             ->placeholder('Optional start date and time'),
                         DateTimePicker::make('ends_at')
-                            ->label(fn (Get $get): string => self::endLabel($get('category')))
+                            ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->endLabel() ?? 'Ends At')
                             ->seconds(false)
                             ->placeholder('Optional end date and time'),
-                    ])->visible(fn (Get $get): bool => self::showsScheduleFields($get('category'))),
+                    ])->visible(fn (Get $get): bool => DisplayEventCategory::tryFrom((string) $get('category'))?->showsScheduleFields() ?? true),
                     Grid::make(4)->schema([
                         Toggle::make('autoplay')
                             ->label('Autoplay')
@@ -148,179 +136,9 @@ class DoctorAdvertisementForm
                         Toggle::make('open_in_new_tab')
                             ->label('Open Link New Tab')
                             ->default(true),
-                    ])->visible(fn (Get $get): bool => self::showsPlaybackOptions($get('category'), $get('media_type'))),
+                    ])->visible(fn (Get $get): bool => DisplayEventCategory::tryFrom((string) $get('category'))?->showsPlaybackOptions(DisplayMediaType::normalize((string) $get('media_type'))) ?? false),
                 ])
                 ->columnSpanFull(),
         ]);
-    }
-
-    protected static function titleLabel(?string $category): string
-    {
-        return match ($category) {
-            DisplayEventCategory::EVENT->value,
-            DisplayEventCategory::HEALTH_CAMP->value,
-            DisplayEventCategory::VACCINATION_CAMPAIGN->value,
-            DisplayEventCategory::BLOOD_DONATION_CAMP->value => 'Event Name',
-            default => 'Title',
-        };
-    }
-
-    protected static function titlePlaceholder(?string $category): string
-    {
-        return match ($category) {
-            DisplayEventCategory::EVENT->value => 'Example: Free Cardiology Camp This Friday',
-            DisplayEventCategory::HEALTH_AWARENESS->value => 'Example: Diabetes Awareness Week',
-            DisplayEventCategory::ANNOUNCEMENT->value => 'Example: OPD Counter Shifted to Block B',
-            DisplayEventCategory::EMERGENCY_ALERT->value => 'Example: Emergency Exit Drill in Progress',
-            default => 'Example: Pregnancy Awareness Campaign',
-        };
-    }
-
-    protected static function mediaTypeOptions(?string $category): array
-    {
-        return match ($category) {
-            DisplayEventCategory::ANNOUNCEMENT->value,
-            DisplayEventCategory::NOTICE->value,
-            DisplayEventCategory::EMERGENCY_ALERT->value => [
-                'note' => 'Text notice',
-                'image' => 'Image banner',
-            ],
-            DisplayEventCategory::EVENT->value,
-            DisplayEventCategory::HEALTH_CAMP->value,
-            DisplayEventCategory::VACCINATION_CAMPAIGN->value,
-            DisplayEventCategory::BLOOD_DONATION_CAMP->value => [
-                'image' => 'Image banner',
-                'video' => 'Video file / embed',
-                'youtube' => 'YouTube link',
-                'link' => 'Registration / website link',
-                'note' => 'Text notice',
-            ],
-            default => [
-                'image' => 'Image banner',
-                'video' => 'Video file / embed',
-                'youtube' => 'YouTube link',
-                'instagram' => 'Instagram link',
-                'link' => 'Website link',
-                'note' => 'Text note',
-            ],
-        };
-    }
-
-    protected static function showsImageField(?string $category, ?string $mediaType): bool
-    {
-        if ($mediaType === 'image' || blank($mediaType)) {
-            return true;
-        }
-
-        return in_array($category, [
-            DisplayEventCategory::ADVERTISEMENT->value,
-            DisplayEventCategory::HEALTH_AWARENESS->value,
-            DisplayEventCategory::DOCTOR_PROMOTION->value,
-            DisplayEventCategory::DEPARTMENT_PROMOTION->value,
-        ], true);
-    }
-
-    protected static function showsLinkField(?string $category, ?string $mediaType): bool
-    {
-        if (in_array($mediaType, ['video', 'youtube', 'instagram', 'link'], true)) {
-            return true;
-        }
-
-        return in_array($category, [
-            DisplayEventCategory::EVENT->value,
-            DisplayEventCategory::HEALTH_CAMP->value,
-            DisplayEventCategory::INFO->value,
-            DisplayEventCategory::VACCINATION_CAMPAIGN->value,
-            DisplayEventCategory::BLOOD_DONATION_CAMP->value,
-        ], true);
-    }
-
-    protected static function linkLabel(?string $category, ?string $mediaType): string
-    {
-        return match (true) {
-            $mediaType === 'youtube' => 'YouTube URL',
-            in_array($category, [
-                DisplayEventCategory::EVENT->value,
-                DisplayEventCategory::HEALTH_CAMP->value,
-                DisplayEventCategory::VACCINATION_CAMPAIGN->value,
-                DisplayEventCategory::BLOOD_DONATION_CAMP->value,
-            ], true) => 'Registration / Event URL',
-            default => 'Media URL / Link',
-        };
-    }
-
-    protected static function linkPlaceholder(?string $category, ?string $mediaType): string
-    {
-        return match (true) {
-            $mediaType === 'youtube' => 'https://www.youtube.com/watch?v=...',
-            $mediaType === 'video' => 'https://example.com/video.mp4',
-            in_array($category, [
-                DisplayEventCategory::EVENT->value,
-                DisplayEventCategory::HEALTH_CAMP->value,
-                DisplayEventCategory::VACCINATION_CAMPAIGN->value,
-                DisplayEventCategory::BLOOD_DONATION_CAMP->value,
-            ], true) => 'https://example.com/register',
-            default => 'Paste an external URL',
-        };
-    }
-
-    protected static function descriptionLabel(?string $category): string
-    {
-        return match ($category) {
-            DisplayEventCategory::ANNOUNCEMENT->value,
-            DisplayEventCategory::NOTICE->value,
-            DisplayEventCategory::EMERGENCY_ALERT->value => 'Message',
-            DisplayEventCategory::EVENT->value,
-            DisplayEventCategory::HEALTH_CAMP->value => 'Description',
-            default => 'Content',
-        };
-    }
-
-    protected static function orderLabel(?string $category): string
-    {
-        return $category === DisplayEventCategory::EMERGENCY_ALERT->value
-            ? 'Priority Order'
-            : 'Display Order';
-    }
-
-    protected static function startLabel(?string $category): string
-    {
-        return in_array($category, [
-            DisplayEventCategory::EVENT->value,
-            DisplayEventCategory::HEALTH_CAMP->value,
-            DisplayEventCategory::VACCINATION_CAMPAIGN->value,
-            DisplayEventCategory::BLOOD_DONATION_CAMP->value,
-        ], true) ? 'Start Date / Time' : 'Starts At';
-    }
-
-    protected static function endLabel(?string $category): string
-    {
-        return in_array($category, [
-            DisplayEventCategory::EVENT->value,
-            DisplayEventCategory::HEALTH_CAMP->value,
-            DisplayEventCategory::VACCINATION_CAMPAIGN->value,
-            DisplayEventCategory::BLOOD_DONATION_CAMP->value,
-        ], true) ? 'End Date / Time' : 'Ends At';
-    }
-
-    protected static function showsScheduleFields(?string $category): bool
-    {
-        return ! in_array($category, [
-            DisplayEventCategory::ANNOUNCEMENT->value,
-            DisplayEventCategory::NOTICE->value,
-        ], true);
-    }
-
-    protected static function showsPlaybackOptions(?string $category, ?string $mediaType): bool
-    {
-        if (in_array($category, [
-            DisplayEventCategory::NOTICE->value,
-            DisplayEventCategory::ANNOUNCEMENT->value,
-            DisplayEventCategory::EMERGENCY_ALERT->value,
-        ], true)) {
-            return false;
-        }
-
-        return in_array($mediaType, ['video', 'youtube', 'link', 'instagram', 'image', null, ''], true);
     }
 }

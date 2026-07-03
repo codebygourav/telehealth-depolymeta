@@ -114,15 +114,26 @@
                 }
                 
                 $initials = '';
-                if (!empty($firstName)) {
-                    $initials .= strtoupper(substr($firstName, 0, 1));
+                // Determine avatar image or initials fallback
+                $avatar = storage_url($this->data['avatar'] ?? null);
+
+
+                if ($avatar) {
+                    // Avatar exists, show image (handled in HTML below)
+                    $initials = '';
+                } else {
+                    // No avatar image, compute initials as fallback
+                    if (!empty($firstName)) {
+                        $initials .= strtoupper(substr($firstName, 0, 1));
+                    }
+                    if (!empty($lastName)) {
+                        $initials .= strtoupper(substr($lastName, 0, 1));
+                    }
+                    if (empty($initials)) {
+                        $initials = 'DR';
+                    }
                 }
-                if (!empty($lastName)) {
-                    $initials .= strtoupper(substr($lastName, 0, 1));
-                }
-                if (empty($initials)) {
-                    $initials = 'DR';
-                }
+
 
                 $licenseNum = $this->data['medical_license_number'] ?? 'N/A';
                 $startYear = $this->data['career_start_year'] ?? 'N/A';
@@ -133,7 +144,17 @@
                 $status = $this->data['status'] ?? 'active';
             @endphp
             
-            <div class="avatar">{{ $initials }}</div>
+            @if(!empty($avatar) && !str_contains($avatar, 'user-avatar.png'))
+                <img
+                    src="{{ $avatar }}"
+                    alt="{{ $name }}"
+                    class="avatar"
+                    style="object-fit: cover;"
+                    onerror="this.onerror=null; this.src='{{ asset('images/user-avatar.png') }}';"
+                >
+            @else
+                <div class="avatar">{{ $initials }}</div>
+            @endif
             <h3 class="text-lg font-bold text-gray-900 dark:text-white" style="margin: 0 0 4px">Dr. {{ $name }}</h3>
             
             <span class="status" style="margin-top: 8px;">

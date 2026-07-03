@@ -283,10 +283,10 @@ class BookAppointment extends Page implements HasForms
                             ->maxLength(255)
                             ->columnSpan(1),
 
-                        TextInput::make('new_patient_wife_name')
-                            ->label("Wife Name")
-                            ->required(fn(callable $get) => $get('patient_mode') === 'new' && $this->relationshipField($get) === 'wife_name')
-                            ->visible(fn(callable $get) => $get('patient_mode') === 'new' && $this->relationshipField($get) === 'wife_name')
+                        TextInput::make('new_patient_father_name')
+                            ->label("Father Name")
+                            ->required(fn(callable $get) => $get('patient_mode') === 'new' && $this->relationshipField($get) === 'father_name')
+                            ->visible(fn(callable $get) => $get('patient_mode') === 'new' && $this->relationshipField($get) === 'father_name')
                             ->maxLength(255)
                             ->columnSpan(1),
 
@@ -1046,7 +1046,7 @@ class BookAppointment extends Page implements HasForms
     private function relationshipFieldFromValues(?string $gender, ?string $maritalStatus): string
     {
         if ($maritalStatus === MaritalStatus::MARRIED->value) {
-            return $gender === GenderOption::FEMALE->value ? 'husband_name' : 'wife_name';
+            return $gender === GenderOption::FEMALE->value ? 'husband_name' : 'father_name';
         }
 
         return 'father_name';

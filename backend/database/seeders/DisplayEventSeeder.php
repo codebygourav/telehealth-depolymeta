@@ -19,44 +19,28 @@ class DisplayEventSeeder extends Seeder
         }
 
         $doctorIds = $doctors->pluck('id')->all();
-        $imagePool = [
-            '/images/cmc-telehealth.png',
-            '/images/default.png',
-            '/images/deploymeta.png',
-            '/images/cmc.png',
-            '/images/cmc-telehealth-black.png',
-        ];
-        $videoPool = [
-            'https://www.youtube.com/watch?v=ysz5S6PUM-U',
-            'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-            'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-        ];
+        $youtubeUrl = 'https://youtu.be/Y_VHZmMJVgA?si=8iFfe-K5xroek08z';
 
-        foreach (DisplayEventCategory::cases() as $index => $category) {
-            $isVideo = $index % 3 === 1;
-            $isLink = $index % 3 === 2;
+        $event = DisplayEvent::updateOrCreate(
+            ['slug' => 'display-opd-youtube-spotlight'],
+            [
+                'title' => 'OPD Spotlight Video',
+                'category' => DisplayEventCategory::ADVERTISEMENT->value,
+                'media_type' => 'video',
+                'media_url' => $youtubeUrl,
+                'link' => null,
+                'description' => 'Primary OPD display spotlight video.',
+                'display_order' => 1,
+                'starts_at' => now()->subDay(),
+                'ends_at' => now()->addDays(30),
+                'is_active' => true,
+                'autoplay' => true,
+                'loop' => true,
+                'muted' => true,
+                'open_in_new_tab' => false,
+            ]
+        );
 
-            $mediaUrl = $isVideo
-                ? $videoPool[$index % count($videoPool)]
-                : ($isLink ? null : $imagePool[$index % count($imagePool)]);
-
-            $event = DisplayEvent::updateOrCreate(
-                ['slug' => 'display-' . $category->value . '-all-doctors'],
-                [
-                    'title' => $category->label() . ' Update',
-                    'category' => $category->value,
-                    'media_type' => $isVideo ? 'video' : ($isLink ? 'link' : 'image'),
-                    'media_url' => $mediaUrl,
-                    'description' => $category->label() . ' content visible across all OPD display screens.',
-                    'link' => $isLink ? 'https://example.com/' . $category->value : ($isVideo ? $mediaUrl : null),
-                    'display_order' => $index + 1,
-                    'starts_at' => now()->subDay(),
-                    'ends_at' => now()->addDays(30),
-                    'is_active' => true,
-                ]
-            );
-
-            $event->doctors()->sync($doctorIds);
-        }
+        $event->doctors()->sync($doctorIds);
     }
 }

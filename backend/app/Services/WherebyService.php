@@ -57,6 +57,11 @@ class WherebyService
             'endDate' => $endDate,
             'roomMode' => 'normal',
             'isLocked' => true,
+            'liveTranscription' => [
+                'liveCaptions' => true,
+                'language' => 'en',
+                'startTrigger' => 'manual',
+            ],
             'fields' => ['hostRoomUrl'],
         ]);
 
@@ -151,6 +156,11 @@ class WherebyService
             'endDate' => $endDate,
             'roomMode' => 'normal',
             'isLocked' => true,
+            'liveTranscription' => [
+                'liveCaptions' => true,
+                'language' => 'en',
+                'startTrigger' => 'manual',
+            ],
             'fields' => ['hostRoomUrl'],
         ]);
 
@@ -338,10 +348,15 @@ class WherebyService
             'roomMode' => 'normal',
             'endDate' => now()->addDays(1)->toIso8601String(),
             'fields' => ['hostRoomUrl'],
+            'liveTranscription' => [
+                'startTrigger' => 'manual',
+                'liveCaptions' => true,
+                'language' => 'en',
+            ],
         ];
 
         $roomOptions = array_merge($defaultOptions, $options);
-
+        Log::info('Whereby request', $roomOptions);
         // Ensure hostRoomUrl is in fields
         if (!in_array('hostRoomUrl', $roomOptions['fields'] ?? [])) {
             $roomOptions['fields'] = array_merge($roomOptions['fields'] ?? [], ['hostRoomUrl']);

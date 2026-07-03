@@ -22,7 +22,5 @@
                 {{ $this->table }}
             </div>
         </section>
-
-    
     </div>
 </x-filament-panels::page>

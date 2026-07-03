@@ -6,6 +6,7 @@ use Filament\Pages\Page;
 use App\Models\Doctor;
 use App\Models\Appointment;
 use App\Models\AppointmentQueueLog;
+use App\Services\AppointmentQueueService;
 use App\Traits\HasCustomSidebar;
 use Carbon\Carbon;
 use Filament\Actions\Action;
@@ -529,17 +530,7 @@ class AppointmentQueueDashboard extends Page
 
     public function resolveQueueStatus(Appointment $appointment): string
     {
-        $queueStatus = strtolower((string) ($appointment->queue_status ?? ''));
-
-        if (in_array($queueStatus, ['scheduled', 'checkin', 'started', 'completed', 'skipped', 'no_show'], true)) {
-            return $queueStatus;
-        }
-
-        if ($queueStatus === 'waiting' || $queueStatus === '') {
-            return 'scheduled';
-        }
-
-        return 'scheduled';
+        return app(AppointmentQueueService::class)->resolveQueueStatus($appointment);
     }
 
     protected function isWithinScheduledActionWindow(Appointment $appointment, int $minutes = 60): bool
@@ -634,69 +625,6 @@ class AppointmentQueueDashboard extends Page
     // Get Next In Queue text
     public function getNextInQueueText($currentAppointment, $allAppointments): string
     {
-        $currentStatus = $this->resolveQueueStatus($currentAppointment);
-
-        if ($currentStatus === 'completed') {
-            // Find next
-            $next = $allAppointments->first(function ($appointment) {
-                return $this->resolveQueueStatus($appointment) === 'checkin';
-            });
-            return $next ? $next->queue_number : '-';
-        }
-
-        if ($currentStatus === 'started') {
-            $next = $allAppointments->first(function ($appointment) {
-                return $this->resolveQueueStatus($appointment) === 'checkin';
-            });
-            return $next ? "Next: " . $next->queue_number : '-';
-        }
-
-        if ($currentStatus === 'checkin') {
-            // Find running
-            $running = $allAppointments->first(function ($appointment) {
-                return $this->resolveQueueStatus($appointment) === 'started';
-            });
-            if ($running) {
-                return "After " . $running->queue_number;
-            }
-            // If none is running, check if they are the first waiting
-            $firstWaiting = $allAppointments->first(function ($appointment) {
-                return $this->resolveQueueStatus($appointment) === 'checkin';
-            });
-            if ($firstWaiting && $firstWaiting->id === $currentAppointment->id) {
-                return "Ready to Start";
-            }
-            return "In Queue";
-        }
-
-        if ($currentStatus === 'scheduled') {
-            if (!$this->isWithinScheduledActionWindow($currentAppointment, 60)) {
-                return 'Starts 1 hour before time';
-            }
-
-            $ordered = $allAppointments->values();
-            $currentIndex = $ordered->search(fn($appointment) => $appointment->id === $currentAppointment->id);
-
-            if ($currentIndex !== false) {
-                $next = $ordered->slice($currentIndex + 1)->first(function ($appointment) {
-                    $status = $this->resolveQueueStatus($appointment);
-                    return in_array($status, ['scheduled', 'checkin'], true);
-                });
-
-                return $next ? "Next: " . $next->queue_number : '-';
-            }
-
-            return '-';
-        }
-
-        if ($currentStatus === 'skipped') {
-            return "Can re-queue after current";
-        }
-
-        if ($currentStatus === 'no_show') {
-            return "Booked but not checked-in";
-        }
-
-        return '-';
+        return app(AppointmentQueueService::class)->getNextInQueueText($currentAppointment, $allAppointments);
     }
 }
