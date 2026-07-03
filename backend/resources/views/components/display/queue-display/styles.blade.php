@@ -67,7 +67,7 @@
         background: rgba(9, 35, 84, 0.86);
         color: #fff;
         font-size: 12px;
-        font-weight: 800;
+        font-weight: 600;
         letter-spacing: 0.04em;
         text-transform: uppercase;
         box-shadow: 0 12px 24px rgba(9, 35, 84, 0.2);
@@ -113,7 +113,7 @@
         align-items: center;
         gap: clamp(12px, 0.9vw, 20px);
         font-size: clamp(24px, 1.7vw, 40px);
-        font-weight: 800;
+        font-weight: 600;
         letter-spacing: -0.02em;
     }
 
@@ -132,13 +132,13 @@
         display: grid;
         place-items: center;
         font-size: clamp(18px, 1.1vw, 28px);
-        font-weight: 900;
+        font-weight: 600;
         border: 1px solid rgba(255, 255, 255, 0.24);
     }
 
     .clock {
         text-align: right;
-        font-weight: 800;
+        font-weight: 600;
         letter-spacing: 0.04em;
         text-transform: uppercase;
         font-size: clamp(13px, 0.95vw, 22px);
@@ -159,7 +159,7 @@
         padding: 0 clamp(14px, 1vw, 18px);
         border-radius: 999px;
         font-size: clamp(12px, 0.9vw, 18px);
-        font-weight: 900;
+        font-weight: 600;
         cursor: pointer;
     }
 
@@ -169,7 +169,9 @@
     }
 
     .icon-control {
-        width: 50px;
+        width: 30px;
+        height: 30px;
+        min-height: 30px;
         padding: 0;
         display: flex;
         justify-content: center;
@@ -177,8 +179,8 @@
     }
 
     .icon-control svg {
-        width: 20px;
-        height: 20px;
+        width: 17px;
+        height: 17px;
     }
 
     .layout {
@@ -218,7 +220,7 @@
         align-items: center;
         justify-content: space-between;
         font-size: clamp(14px, 1vw, 22px);
-        font-weight: 900;
+        font-weight: 600;
         color: #1e2a3a;
     }
 
@@ -339,7 +341,7 @@
     .left-column-topbar {
         background: var(--display-blue);
         color: #fff;
-        padding: 0px 15px;
+        padding: 0px 20px;
         border-radius: 0;
         display: flex;
         align-items: center;
@@ -443,7 +445,7 @@
 
     .bottom-slider-title {
         font-size: clamp(24px, 1.6vw, 40px);
-        font-weight: 900;
+        font-weight: 600;
         line-height: 1.1;
         color: #10213a;
     }
@@ -487,7 +489,7 @@
         font-size: clamp(28px, 2.2vw, 36px);
         line-height: 1.08;
         letter-spacing: -0.03em;
-        font-weight: 900;
+        font-weight: 600;
         color: #17233a;
     }
 
@@ -531,7 +533,7 @@
         border: none;
         background: var(--display-blue);
         color: #fff;
-        font-weight: 900;
+        font-weight: 600;
         font-size: 15px;
         box-shadow: 0 12px 28px rgba(5, 91, 217, 0.18);
         cursor: pointer;
@@ -628,8 +630,8 @@
         gap: 0;
         min-height: 0;
         overflow: hidden;
-        padding:15px;
-        background: linear-gradient(180deg, #ffffff, #f8fbff);
+        padding:20px;
+        background: rgba(255, 255, 255, 1);
     }
 
     .doctor-card-main {
@@ -637,9 +639,14 @@
         gap: clamp(14px, 1vw, 22px);
         align-items: flex-start;
         min-height: 0;
-        padding: 10px;
+        padding: 20px;
         border:1px solid #eee;
         border-radius:8px;
+        background-image: url('{{ asset('images/queue-images/doctor-card-bg.png') }}');
+        background-repeat: no-repeat;
+        background-position: right 18px center;
+        background-size: clamp(110px, 11vw, 170px);
+        /* padding-right: clamp(110px, 12vw, 170px); */
     }
 
     .doctor-card-avatar,
@@ -647,7 +654,7 @@
     .doctor-avatar-fallback {
         width: 140px;
         height: 140px;
-        border-radius: clamp(10px, 0.8vw, 16px);
+        border-radius: 6px;
         flex: none;
     }
 
@@ -663,7 +670,7 @@
         display: grid;
         place-items: center;
         font-size: 48px;
-        font-weight: 900;
+        font-weight: 600;
         border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
@@ -676,7 +683,7 @@
     .doctor-info h2 {
         margin: 0;
         font-size: 32px;
-        font-weight: 800;
+        font-weight: 600;
         color: #0f172a;
         letter-spacing: -0.02em;
         line-height: 1.08;
@@ -692,7 +699,7 @@
 
     .speciality {
         color: var(--display-blue);
-        font-weight: 900;
+        font-weight: 600;
         font-size: 18px;
     }
 
@@ -738,12 +745,12 @@
         align-items: center;
         gap: 8px;
         padding: 5px;
-        border-radius: 8px;
+        border-radius: 6px;
         background: #fff1f2;
         border: 1px solid #fecdd3;
         color: #be123c;
         font-size: 12px;
-        font-weight: 900;
+        font-weight: 600;
     }
 
     .doctor-break-note::before {
@@ -755,15 +762,7 @@
     }
 
     .doctor-card-bg-icon {
-        position: absolute;
-        right: 10px;
-        top: 10px;
-        width: 160px;
-        height: 160px;
-        color: var(--display-blue);
-        opacity: 0.04;
-        pointer-events: none;
-        z-index: 1;
+        display: none;
     }
 
     .queue-list-container {
@@ -779,7 +778,7 @@
         scrollbar-width: none;
         -ms-overflow-style: none;
         background-color: #fff;
-        padding:10px;
+        padding:0px;
     }
 
     .queue-list-container::-webkit-scrollbar {
@@ -813,48 +812,55 @@
     .queue-section-header h2 {
         margin: 0;
         font-size: 18px;
-        font-weight: 800;
+        font-weight: 600;
         color: #0f172a;
     }
 
     .queue-section-header .all-patients-link {
         font-size: clamp(14px, 0.95vw, 18px);
-        font-weight: 800;
+        font-weight: 600;
         color: #0f172a;
         text-decoration: underline;
     }
 
     .queue-table-header {
         display: grid;
-        grid-template-columns: minmax(88px, 128px) minmax(0, 1fr) minmax(116px, 170px) minmax(92px, 128px);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: clamp(10px, 0.8vw, 18px);
         align-items: center;
-        padding: 14px clamp(12px, 0.9vw, 20px);
-        background: #f1f5f9;
-        border-radius: 8px;
-        font-weight: 800;
+        padding: 10px;
+        border-radius: 6px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(30, 30, 30, 0.15);
+        font-weight: 600;
         font-size: clamp(13px, 0.95vw, 17px);
-        color: #475569;
+        color: #000;
         margin-bottom:10px;
+        transition: box-shadow 0.22s ease, transform 0.22s ease;
+    }
+
+    .queue-table-header .header-col {
+        min-width: 0;
     }
 
     .queue-table-header .header-col.turn-col {
         text-align: right;
+        white-space: nowrap;
     }
 
 
 
     .queue-row {
         display: grid;
-        grid-template-columns: minmax(88px, 128px) minmax(0, 1fr) minmax(116px, 170px) minmax(92px, 128px);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: clamp(10px, 0.8vw, 18px);
         align-items: center;
         min-height:fit-content;
         padding: 10px;
         border: 1px solid #e5ebf3;
-        border-radius: 8px;
+        border-radius: 6px;
         background: #fff;
-        box-shadow: 0 12px 26px rgba(15,23,42,.04);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
         transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease, color 0.22s ease;
         scroll-snap-align: center;
         transform-origin: center;
@@ -862,8 +868,6 @@
 
     .queue-row.focused {
         border-color: rgba(5, 91, 217, 0.35);
-        box-shadow: 0 18px 36px rgba(5, 91, 217, 0.16);
-        transform: scale(1.018);
         z-index: 2;
         animation: queueRowFocusIn 0.38s ease both;
     }
@@ -874,17 +878,19 @@
 
     .queue-row.focused.next {
         border-color: #ef4444;
-        box-shadow: 0 18px 36px rgba(239, 68, 68, 0.14);
+        box-shadow: 0 16px 34px rgba(239, 68, 68, 0.16);
     }
 
     .queue-row.focused.active {
         border-color: rgba(5, 91, 217, 0.55);
+        border: 1px solid rgba(5, 91, 217, 1);
     }
 
     .queue-row.active {
         background: #075bd8;
         border-color: transparent;
         color: #fff;
+        border: 1px solid rgba(5, 91, 217, 1);
     }
 
     .queue-row.next {
@@ -894,7 +900,7 @@
 
     .queue-row.next .token {
         color: #991b1b;
-        font-weight: 800;
+        font-weight: 600;
     }
 
     .queue-row.next .patient {
@@ -907,7 +913,7 @@
 
     .queue-row.next .turn {
         color: #dc2626;
-        font-weight: 900;
+        font-weight: 600;
     }
 
     .queue-row.next .status-pill {
@@ -917,8 +923,8 @@
     }
 
     .queue-row .token {
-        font-size: 18px;
-        font-weight: 700;
+        font-size: 16px;
+        font-weight: 500;
         color: #1e293b;
     }
 
@@ -927,8 +933,8 @@
     }
 
     .queue-row .patient {
-        font-size: 18px;
-        font-weight: 700;
+        font-size: 16px;
+        font-weight: 500;
         line-height: 1.1;
         color: #0f172a;
     }
@@ -938,8 +944,7 @@
     }
 
     .queue-row .phone {
-        font-size: clamp(11px, 0.85vw, 14px);
-        margin-top: 4px;
+        font-size: 12px;
         font-weight: 600;
         color: #64748b;
     }
@@ -949,7 +954,7 @@
     }
 
     .queue-row .time-slot {
-        font-size: clamp(11px, 0.85vw, 14px);
+        font-size: 14px;
         margin-top: 4px;
         font-weight: 700;
         color: #64748b;
@@ -964,13 +969,18 @@
         align-items: center;
         justify-content: center;
         font-size: 14px;
-        font-weight: 800;
-        border-radius: 8px;
-        padding: 5px 10px;
+        font-weight: 600;
+        border-radius: 6px;
+        min-height: 34px;
+        width: 112px;
+        padding: 5px 12px;
         text-align: center;
         border: 1px solid transparent;
-        width: max-content;
         justify-self: center;
+        box-sizing: border-box;
+        white-space: nowrap;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+        transition: box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
     }
 
     .status-pill.active-pill {
@@ -986,10 +996,13 @@
     }
 
     .queue-row .turn {
-        font-size: clamp(14px, 1vw, 18px);
+        font-size: 14px;
         text-align: right;
-        font-weight: 800;
+        font-weight: 600;
         color: #334155;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .queue-row.active .turn {
@@ -1025,10 +1038,7 @@
         align-items: center;
         gap: 12px;
         margin-top: auto;
-        padding: 0 12px;
-        border-top: 1px solid #eef2f7;
-        background: #f9fbff;
-        min-height: 48px;
+        padding: 0 20px;
     }
 
     .doctor-card-footer {
@@ -1045,7 +1055,7 @@
     }
 
     .footer-brand img {
-        height: 24px;
+        height: 58px;
         width: auto;
         object-fit: contain;
     }
@@ -1055,26 +1065,20 @@
         align-items: center;
         gap: 8px;
         padding: 8px;
-        border-radius: 4px;
-        background: #eef5fb;
-        border: 1px solid #bfdbfe;
+        border-radius: 10px;
+        background: #F6F9FF;
+        border: 1px solid rgba(237, 237, 237, 1);
         color: var(--display-blue);
         font-size: 14px;
         font-weight: 700;
         min-width: 0;
     }
 
-    .footer-alert-pill svg {
-        width: 18px;
-        height: 18px;
-        color: var(--display-blue);
-        flex: none;
-    }
 
     .schedule-panel {
         position: relative;
         overflow: hidden;
-        border-radius: 8px;
+        border-radius: 6px;
         background: #fff;
     }
 
@@ -1111,7 +1115,7 @@
 
     .day-title {
         font-size: 20px;
-        font-weight: 900;
+        font-weight: 600;
         line-height: 1.1;
     }
 
@@ -1119,9 +1123,9 @@
         background: var(--display-blue);
         color: white;
         padding: 8px 12px;
-        border-radius: 8px;
+        border-radius: 6px;
         font-size: 13px;
-        font-weight: 900;
+        font-weight: 600;
         white-space: nowrap;
     }
 
@@ -1134,7 +1138,7 @@
 
     .slot-card {
         border: 1px solid var(--display-line);
-        border-radius: 8px;
+        border-radius: 6px;
         padding: 10px;
         background: #fff;
         display: grid;
@@ -1151,7 +1155,7 @@
 
     .slot-doctor {
         font-size: 17px;
-        font-weight: 900;
+        font-weight: 600;
         line-height: 1.1;
     }
 
@@ -1166,15 +1170,15 @@
         margin-top: 6px;
         font-size: 14px;
         color: var(--display-blue);
-        font-weight: 900;
+        font-weight: 600;
     }
 
     .room-pill {
         background: #f8fafc;
         border: 1px solid var(--display-line);
         padding: 8px 10px;
-        border-radius: 8px;
-        font-weight: 900;
+        border-radius: 6px;
+        font-weight: 600;
         text-align: center;
         line-height: 1.15;
         min-width: 68px;
@@ -1187,8 +1191,8 @@
         display: inline-block;
         font-size: 13px;
         padding: 6px 10px;
-        border-radius: 8px;
-        font-weight: 900;
+        border-radius: 6px;
+        font-weight: 600;
     }
 
     .schedule-panel .panel-head {
@@ -1201,7 +1205,7 @@
 
     .schedule-panel .panel-title {
         font-size: 20px;
-        font-weight: 900;
+        font-weight: 600;
         color: #0f172a;
     }
 
@@ -1209,12 +1213,12 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 8px;
+        border-radius: 6px;
         padding: 6px 10px;
         background: #eff6ff;
         color: var(--display-blue);
         font-size: 12px;
-        font-weight: 900;
+        font-weight: 600;
     }
 
     .slot-card-main {
@@ -1235,10 +1239,10 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 8px;
+        border-radius: 6px;
         padding: 6px 10px;
         font-size: 12px;
-        font-weight: 900;
+        font-weight: 600;
         white-space: nowrap;
         flex: none;
     }
@@ -1249,7 +1253,7 @@
         align-items: center;
         gap: 10px;
         font-size: 12px;
-        font-weight: 800;
+        font-weight: 600;
         color: #64748b;
     }
 
@@ -1298,7 +1302,7 @@
     .queue-display-board-header h2 {
         margin: 0;
         font-size: 24px;
-        font-weight: 800;
+        font-weight: 600;
         color: #0f172a;
     }
 
@@ -1322,7 +1326,7 @@
 
     .popup-card {
         width: min(920px, 100%);
-        border-radius: 8px;
+        border-radius: 6px;
         overflow: hidden;
         background: #ffffff;
         border: 1px solid rgba(220, 227, 236, 0.95);
@@ -1351,7 +1355,7 @@
 
     .patient-popup-label {
         font-size: 24px;
-        font-weight: 900;
+        font-weight: 600;
         color: var(--display-blue);
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -1360,7 +1364,7 @@
     .patient-popup-token {
         margin: 12px 0;
         font-size: 88px;
-        font-weight: 900;
+        font-weight: 600;
         color: red;
         line-height: 1;
     }
@@ -1368,7 +1372,7 @@
     .patient-popup-card h2 {
         margin: 0;
         font-size: 40px;
-        font-weight: 900;
+        font-weight: 600;
         color: #0f172a;
     }
 
@@ -1376,7 +1380,7 @@
         margin: 12px 0 0;
         font-size: 22px;
         color: #64748b;
-        font-weight: 800;
+        font-weight: 600;
     }
 
     .queue-spotlight-modal {
@@ -1412,7 +1416,7 @@
         background: linear-gradient(180deg, rgba(5, 91, 217, 0.96), rgba(5, 91, 217, 0.82));
         color: #fff;
         font-size: 13px;
-        font-weight: 900;
+        font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.06em;
     }
@@ -1432,7 +1436,7 @@
         transform: translateY(-50%);
         width: 54px;
         height: 54px;
-        border-radius: 8px;
+        border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.34);
         background: rgba(15, 23, 42, 0.72);
         color: #fff;
@@ -1494,7 +1498,7 @@
         text-align: center;
         background: #fde7d8;
         color: #7d4754;
-        font-weight: 800;
+        font-weight: 600;
     }
 
     .queue-spotlight-empty-title {
@@ -1519,7 +1523,7 @@
         gap: 8px;
         z-index: 4;
         padding: 12px 14px;
-        border-radius: 8px;
+        border-radius: 6px;
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.24));
         backdrop-filter: blur(12px);
     }
@@ -1534,11 +1538,11 @@
         display: inline-flex;
         align-items: center;
         padding: 7px 12px;
-        border-radius: 8px;
+        border-radius: 6px;
         background: rgba(255, 255, 255, 0.12);
         border: 1px solid rgba(255, 255, 255, 0.18);
         font-size: clamp(12px, 0.85vw, 16px);
-        font-weight: 800;
+        font-weight: 600;
         color: #fff;
     }
 
@@ -1569,7 +1573,7 @@
         gap: 12px;
         padding: 10px 12px 12px;
         font-size: 13px;
-        font-weight: 800;
+        font-weight: 600;
         color: #10213a;
         background: rgba(255, 255, 255, 0.88);
         backdrop-filter: blur(10px);
@@ -1584,7 +1588,7 @@
         margin-top: 0;
         text-align: center;
         font-size: 13px;
-        font-weight: 800;
+        font-weight: 600;
         color: #334155;
         z-index: 6;
         background: rgba(255, 255, 255, 0.82);
@@ -1685,7 +1689,7 @@
         transform: translateY(-50%);
         width: 54px;
         height: 54px;
-        border-radius: 8px;
+        border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.34);
         background: rgba(15, 23, 42, 0.72);
         color: #fff;
@@ -1747,7 +1751,7 @@
         text-align: center;
         background: #fde7d8;
         color: #7d4754;
-        font-weight: 800;
+        font-weight: 600;
     }
 
     .spotlight-empty-title {
@@ -1772,7 +1776,7 @@
         gap: 8px;
         z-index: 4;
         padding: 12px 14px;
-        border-radius: 8px;
+        border-radius: 6px;
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.24));
         backdrop-filter: blur(12px);
     }
@@ -1808,7 +1812,7 @@
         margin-top: 0;
         text-align: center;
         font-size: 13px;
-        font-weight: 800;
+        font-weight: 600;
         color: #334155;
         z-index: 6;
         background: rgba(255, 255, 255, 0.82);
@@ -1821,7 +1825,7 @@
         background: var(--display-blue);
         color: #fff;
         font-size: 13px;
-        font-weight: 900;
+        font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.06em;
     }
@@ -1836,7 +1840,7 @@
         gap: 12px;
         padding: 10px 12px 12px;
         font-size: 13px;
-        font-weight: 800;
+        font-weight: 600;
         color: #10213a;
         background: rgba(255, 255, 255, 0.88);
         backdrop-filter: blur(10px);
@@ -1848,7 +1852,7 @@
         padding: 42px;
         text-align: center;
         background: #fff;
-        border-radius: 8px;
+        border-radius: 6px;
         border: 8px solid #dbeafe;
         box-shadow: 0 35px 90px rgba(15, 23, 42, 0.35);
     }

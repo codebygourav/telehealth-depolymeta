@@ -198,111 +198,32 @@
                     <span class="pulse"></span>
                     Syncing queue
                 </div>
-    @if($displayMode !== 'doctor_schedule_sidebar')
-        <div class="topbar">
-            <div class="brand">
-                <img src="{{ asset('images/white-logo.png') }}" alt="logo" class="brand-logo">
-            </div>
-            <div class="topbar-actions">
-                <button
-                    type="button"
-                    class="control-button icon-control"
-                    @click="announceCurrentPatient()"
-                    aria-label="Announce patient"
-                    title="Announce patient"
-                >
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M11 5L6 9H3v6h3l5 4V5Z" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M16.5 8.5a5 5 0 010 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                        <path d="M19 6a9 9 0 010 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                    </svg>
-                </button>
-                <div class="clock">
-                    <div x-text="timeText"></div>
-                    <div x-text="dateText"></div>
+
+                <x-display.queue-display.topbar />
+
+                <div class="layout" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0px; padding: 0px; overflow: hidden;">
+                    @for($panelIndex = 0; $panelIndex < 2; $panelIndex++)
+                        <template x-for="panelRenderKey in [gridPanelRenderKey({{ $panelIndex }})]" :key="'grid-panel-' + {{ $panelIndex }} + '-' + panelRenderKey">
+                            <aside class="panel doctor-panel" data-grid-panel="{{ $panelIndex }}" style="border-radius:0px; overflow: hidden;">
+                                <x-display.queue-display.doctor-card
+                                    class="fade-enter"
+                                    :alpine="true"
+                                    variant="split"
+                                    :show-topbar="false"
+                                    :show-queue="true"
+                                    :show-footer="false"
+                                    :doctor-accessor="'gridPanelDoctor(' . $panelIndex . ')'"
+                                    focused-expression="isGridPanelFocusedQueueItem({{ $panelIndex }}, item)"
+                                    sync-queue-expression="syncGridPanelQueueFocus({{ $panelIndex }}, true)"
+                                />
+                            </aside>
+                        </template>
+                    @endfor
                 </div>
-            </div>
-        </div>
-    @endif
 
-                @php($doctorGridColumns = max(2, min(3, (int) ($board['same_time_card_columns'] ?? 2))))
-                <div class="layout">
-                    <div class="multi-board"
-                         x-data="{
-                             gridPageIndex: 0,
-                             gridPageSize: 2,
-                             init() {
-                                 setInterval(() => {
-                                     const totalDoctors = {{ count($board['doctors'] ?? []) }};
-                                     const totalPages = Math.max(1, totalDoctors - this.gridPageSize + 1);
-                                     this.gridPageIndex = (this.gridPageIndex + 1) % totalPages;
-                                 }, 12000);
-                             }
-                         }"
-                    >
-                    <main class="panel multi-main-panel">
-                        <div class="section-head">
-                            <div>
-                                <div>{{ $board['screen_name'] ?? 'Main OPD Waiting Hall' }}</div>
-                                <small>{{ $board['screen_location'] ?? 'Ground Floor OPD' }}</small>
-                            </div>
-                            <div class="text-right">
-                                <div>{{ count($board['doctors'] ?? []) }} Doctors Live</div>
-                                <small>{{ $board['display']['queue_subtitle'] ?? 'Current token, next patient and queue position' }}</small>
-                            </div>
-                        </div>
-
-                        <div class="doctor-grid-container" style="position: relative; width: 100%; flex: 1; min-height: 0; overflow: hidden; padding: 0 clamp(10px, 0.8vw, 18px) clamp(10px, 0.8vw, 18px);">
-                            <div class="doctor-grid-track"
-                                 :style="'transform: translateX(calc(-100% / ' + gridPageSize + ' * ' + gridPageIndex + ' - (var(--display-gap) * ' + gridPageIndex + ' / ' + gridPageSize + ')))'"
-                            >
-                                @foreach(($board['doctors'] ?? []) as $idx => $doctor)
-                                    <div class="doctor-card-slide-wrapper">
-                                        <x-display.queue-display.doctor-card
-                                            :doctor="$doctor"
-                                            variant="grid"
-                                            :show-queue="true"
-                                            :show-footer="false"
-                                        />
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <!-- Page-level Bottom Bar/Footer for Grid Display -->
-                        <div class="queue-display-footer" style="margin-top: 14px; border-radius: 12px; border: 1px solid #eef2f7; flex-shrink: 0;">
-                            <div class="footer-brand">
-                                <span style="opacity: 0.6; font-size: 13px;">Powered by</span>
-                                <img src="{{ asset('images/deploymeta.png') }}" alt="Deploy Meta Logo">
-                            </div>
-                            <div class="footer-alert-pill">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
-                                </svg>
-                                <span>{{ $board['default_notice'] ?? 'Please keep your token ready and be seated. Thank you!' }}</span>
-                            </div>
-                        </div>
-                    </main>
-                    </div>
-
-                @include('components.display.queue-display.spotlight-slider')
-
-                <!-- Next Patient Popup -->
-                <div class="patient-popup-backdrop"
-                     x-show="activePopup && activePopup.kind === 'patient'"
-                     x-transition.opacity.duration.400ms
-                     x-cloak
-                >
-                    <div class="patient-popup-card"
-                         x-show="activePopup && activePopup.kind === 'patient'"
-                         x-transition.scale.90.duration.400ms
-                    >
-                        <div class="patient-popup-label" x-text="displayCopy.next_patient_label || 'NEXT PATIENT TURN'"></div>
-                        <div class="patient-popup-token" x-text="activePopup?.current_token || 'Pending'"></div>
-                        <h2 x-text="activePopup?.current_patient || 'No next patient'"></h2>
-                        <p x-text="activePopup?.room_number ? ('Please proceed to Room ' + activePopup.room_number) : 'Please proceed when called'"></p>
-                    </div>
-                </div>
+                <x-display.queue-display.doctor-card-footer
+                    :alpine="true"
+                />
             </div>
             @elseif($displayMode === 'doctor_schedule_sidebar')
                 @include('livewire.opt-token-display-schedule')
@@ -514,6 +435,10 @@
                 payload: null,
                 activePopup: null,
                 initialized: false,
+                displayMode: '',
+                gridPanels: [],
+                gridPanelTimers: [],
+                gridPanelQueueTimers: [],
                 init() {
                     this.initialize(true);
                 },
@@ -571,8 +496,10 @@
                     this.syncPopupState(true);
                     this.scheduleSlideAdvance();
                     this.syncRotationTimers();
-                    this.syncQueueFocus(true);
-                    this.startQueueScrollTimer();
+                    if (!this.usesIndependentDoctorGrid()) {
+                        this.syncQueueFocus(true);
+                        this.startQueueScrollTimer();
+                    }
                 },
                 applyPayload(payload) {
                     const nextPayload = payload || {};
@@ -582,10 +509,19 @@
                     this.payload = nextPayload;
                     this.doctors = nextPayload.doctors || [];
                     this.displayCopy = nextPayload.display || {};
+                    this.displayMode = String(nextPayload.display_mode || '');
                     this.doctorRotationSeconds = Number(nextPayload.doctor_rotation_seconds || 12);
                     this.slideSeconds = Number(nextPayload.slide_seconds || 8);
                     this.adPopupIntervalSeconds = Math.max(30, Number(nextPayload.ad_popup_interval_seconds || 180));
                     this.adPopupDurationSeconds = Math.max(5, Number(nextPayload.ad_popup_duration_seconds || 12));
+
+                    if (!this.adsEnabled()) {
+                        this.activeAdPopup = null;
+                    }
+
+                    if (!this.patientPopupEnabled()) {
+                        this.activePopup = null;
+                    }
 
                     if (this.doctors.length === 0) {
                         this.doctorIndex = 0;
@@ -613,10 +549,14 @@
 
                     this.syncRotationTimers();
                     this.scheduleSlideAdvance();
-                    this.syncQueueFocus(true);
-                    this.startQueueScrollTimer();
+                    if (!this.usesIndependentDoctorGrid()) {
+                        this.syncQueueFocus(true);
+                        this.startQueueScrollTimer();
+                    }
                 },
                 syncRotationTimers() {
+                    this.clearGridPanelTimers();
+
                     if (this.doctorTimer) {
                         clearInterval(this.doctorTimer);
                         this.doctorTimer = null;
@@ -627,7 +567,9 @@
                         this.globalSlideTimer = null;
                     }
 
-                    if (this.doctors.length) {
+                    if (this.usesIndependentDoctorGrid()) {
+                        this.syncGridPanels();
+                    } else if (this.doctors.length) {
                         this.doctorTimer = setInterval(() => {
                             this.doctorIndex = (this.doctorIndex + 1) % this.doctors.length;
                             this.slideIndex = 0;
@@ -635,7 +577,9 @@
                             this.focusedQueueToken = null;
                             this.queueCycleIndex = -1;
                             this.queuePauseUntil = Date.now() + 1200;
-                            this.showPopup(this.buildPatientPopup(this.currentDoctor()));
+                            if (this.patientPopupEnabled()) {
+                                this.showPopup(this.buildPatientPopup(this.currentDoctor()));
+                            }
                             this.startQueueScrollTimer();
                         }, Math.max(5, this.doctorRotationSeconds) * 1000);
                     }
@@ -798,6 +742,15 @@
                 currentDoctor() {
                     return this.doctors[this.doctorIndex] || null;
                 },
+                usesIndependentDoctorGrid() {
+                    return this.displayMode === 'grid_modal_ads';
+                },
+                adsEnabled() {
+                    return !['grid_modal_ads', 'doctor_schedule_sidebar'].includes(this.displayMode);
+                },
+                patientPopupEnabled() {
+                    return this.displayMode !== 'grid_modal_ads' && Boolean(this.payload?.popup_enabled);
+                },
                 spotlightText(value) {
                     return String(value ?? '')
                         .replace(/<[^>]*>/g, ' ')
@@ -812,6 +765,257 @@
                         return `<strong>${parts[0]}</strong> - ${parts.slice(1).join(' - ')}`;
                     }
                     return qual;
+                },
+                syncGridPanels(force = false) {
+                    if (!this.usesIndependentDoctorGrid()) {
+                        return;
+                    }
+
+                    const previousPanels = Array.isArray(this.gridPanels) ? this.gridPanels : [];
+                    const panelCount = 2;
+                    const doctorCount = this.doctors.length;
+                    const nextPanels = [];
+
+                    for (let panelIndex = 0; panelIndex < panelCount; panelIndex += 1) {
+                        const previousPanel = previousPanels[panelIndex] || {};
+                        const fallbackDoctorIndex = doctorCount
+                            ? (panelIndex % doctorCount)
+                            : 0;
+                        let doctorIndex = doctorCount
+                            ? Math.min(Number(previousPanel.doctorIndex ?? fallbackDoctorIndex), doctorCount - 1)
+                            : 0;
+
+                        if (doctorCount > 1) {
+                            const usedDoctorIndices = nextPanels.map((panel) => panel.doctorIndex);
+                            let attempts = 0;
+
+                            while (usedDoctorIndices.includes(doctorIndex) && attempts < doctorCount) {
+                                doctorIndex = (doctorIndex + 1) % doctorCount;
+                                attempts += 1;
+                            }
+                        }
+
+                        nextPanels.push({
+                            doctorIndex,
+                            renderKey: Number(previousPanel.renderKey || 0),
+                            focusedQueueToken: force ? null : (previousPanel.focusedQueueToken || null),
+                            queueCycleIndex: force ? -1 : Number(previousPanel.queueCycleIndex ?? -1),
+                            queuePauseUntil: force ? 0 : Number(previousPanel.queuePauseUntil || 0),
+                        });
+                    }
+
+                    this.gridPanels = nextPanels;
+                    this.startGridPanelTimers();
+
+                    this.$nextTick(() => {
+                        this.gridPanels.forEach((panel, panelIndex) => {
+                            this.syncGridPanelQueueFocus(panelIndex, true);
+                            this.startGridPanelQueueScroll(panelIndex);
+                        });
+                    });
+                },
+                clearGridPanelTimers() {
+                    this.gridPanelTimers.forEach((timerId) => clearTimeout(timerId));
+                    this.gridPanelTimers = [];
+
+                    this.gridPanelQueueTimers.forEach((timerId) => clearInterval(timerId));
+                    this.gridPanelQueueTimers = [];
+                },
+                startGridPanelTimers() {
+                    this.clearGridPanelTimers();
+
+                    if (!this.usesIndependentDoctorGrid() || this.doctors.length <= 1) {
+                        return;
+                    }
+
+                    const rotationMs = Math.max(5, this.doctorRotationSeconds) * 1000;
+                    const staggerMs = Math.max(1500, Math.floor(rotationMs / Math.max(2, this.gridPanels.length)));
+
+                    this.gridPanels.forEach((panel, panelIndex) => {
+                        const loop = () => {
+                            this.advanceGridPanelDoctor(panelIndex);
+                            this.gridPanelTimers[panelIndex] = setTimeout(loop, rotationMs);
+                        };
+
+                        const initialDelay = panelIndex === 0 ? rotationMs : (rotationMs + (staggerMs * panelIndex));
+                        this.gridPanelTimers[panelIndex] = setTimeout(loop, initialDelay);
+                    });
+                },
+                gridPanelDoctor(panelIndex) {
+                    const panel = this.gridPanels[panelIndex];
+                    if (!panel || !this.doctors.length) {
+                        return null;
+                    }
+
+                    return this.doctors[panel.doctorIndex] || this.doctors[0] || null;
+                },
+                gridPanelRenderKey(panelIndex) {
+                    return this.gridPanels[panelIndex]?.renderKey || 0;
+                },
+                resolveNextGridPanelDoctorIndex(panelIndex, delta = 1) {
+                    const panel = this.gridPanels[panelIndex];
+                    const doctorCount = this.doctors.length;
+
+                    if (!panel || !doctorCount) {
+                        return 0;
+                    }
+
+                    let candidate = (panel.doctorIndex + delta + doctorCount) % doctorCount;
+
+                    if (doctorCount <= 1) {
+                        return candidate;
+                    }
+
+                    const activeDoctorIndices = this.gridPanels
+                        .filter((_, index) => index !== panelIndex)
+                        .map((item) => item.doctorIndex);
+
+                    let attempts = 0;
+                    while (activeDoctorIndices.includes(candidate) && attempts < doctorCount) {
+                        candidate = (candidate + delta + doctorCount) % doctorCount;
+                        attempts += 1;
+                    }
+
+                    return candidate;
+                },
+                advanceGridPanelDoctor(panelIndex, delta = 1) {
+                    const panel = this.gridPanels[panelIndex];
+                    if (!panel || !this.doctors.length) {
+                        return;
+                    }
+
+                    panel.doctorIndex = this.resolveNextGridPanelDoctorIndex(panelIndex, delta);
+                    panel.renderKey += 1;
+                    panel.focusedQueueToken = null;
+                    panel.queueCycleIndex = -1;
+                    panel.queuePauseUntil = Date.now() + 900;
+
+                    this.$nextTick(() => {
+                        this.syncGridPanelQueueFocus(panelIndex, true);
+                        this.startGridPanelQueueScroll(panelIndex);
+                    });
+                },
+                gridPanelQueueItems(panelIndex) {
+                    return this.gridPanelDoctor(panelIndex)?.queue_items || [];
+                },
+                gridPanelQueuePopupToken(panelIndex) {
+                    const doctor = this.gridPanelDoctor(panelIndex);
+                    const summary = doctor?.queue_summary || {};
+
+                    return summary.popup_token
+                        || summary.current_token
+                        || summary.next_token
+                        || null;
+                },
+                isGridPanelFocusedQueueItem(panelIndex, item) {
+                    const panel = this.gridPanels[panelIndex];
+                    const token = String(item?.token || '');
+                    const focusedToken = String(panel?.focusedQueueToken || this.gridPanelQueuePopupToken(panelIndex) || '');
+
+                    return token !== '' && focusedToken !== '' && token === focusedToken;
+                },
+                syncGridPanelQueueFocus(panelIndex, force = false, token = null) {
+                    const panel = this.gridPanels[panelIndex];
+                    if (!panel) {
+                        return;
+                    }
+
+                    const nextToken = token || this.gridPanelQueuePopupToken(panelIndex) || this.gridPanelQueueItems(panelIndex)[0]?.token || null;
+
+                    if (!nextToken) {
+                        if (force || !panel.focusedQueueToken) {
+                            panel.focusedQueueToken = null;
+                        }
+                        return;
+                    }
+
+                    if (!force && panel.focusedQueueToken === nextToken) {
+                        return;
+                    }
+
+                    panel.focusedQueueToken = nextToken;
+
+                    this.$nextTick(() => {
+                        this.scrollGridPanelQueueTokenIntoView(panelIndex, nextToken);
+                    });
+                },
+                scrollGridPanelQueueTokenIntoView(panelIndex, token) {
+                    if (!token) {
+                        return;
+                    }
+
+                    const root = document.querySelector(`[data-grid-panel="${panelIndex}"]`);
+                    const container = root?.querySelector('.queue-list-container');
+
+                    if (!container) {
+                        return;
+                    }
+
+                    const rows = Array.from(container.querySelectorAll('[data-queue-token]'));
+                    const row = rows.find((item) => String(item.dataset.queueToken || '') === String(token));
+
+                    if (!row) {
+                        return;
+                    }
+
+                    row.classList.remove('queue-row-focus-flash');
+                    void row.offsetWidth;
+                    row.classList.add('queue-row-focus-flash');
+
+                    row.scrollIntoView({
+                        behavior: this.isRefreshing ? 'auto' : 'smooth',
+                        block: 'center',
+                        inline: 'nearest',
+                    });
+                },
+                startGridPanelQueueScroll(panelIndex) {
+                    if (this.gridPanelQueueTimers[panelIndex]) {
+                        clearInterval(this.gridPanelQueueTimers[panelIndex]);
+                        this.gridPanelQueueTimers[panelIndex] = null;
+                    }
+
+                    const panel = this.gridPanels[panelIndex];
+                    const items = this.gridPanelQueueItems(panelIndex);
+                    if (!panel) {
+                        return;
+                    }
+
+                    if (items.length <= 1) {
+                        panel.focusedQueueToken = items[0]?.token || panel.focusedQueueToken || null;
+                        this.scrollGridPanelQueueTokenIntoView(panelIndex, panel.focusedQueueToken);
+                        return;
+                    }
+
+                    const currentToken = panel.focusedQueueToken || this.gridPanelQueuePopupToken(panelIndex) || items[0]?.token || null;
+                    const currentIndex = items.findIndex((item) => String(item.token || '') === String(currentToken || ''));
+                    panel.queueCycleIndex = currentIndex >= 0 ? currentIndex : 0;
+                    panel.focusedQueueToken = items[panel.queueCycleIndex]?.token || null;
+                    this.scrollGridPanelQueueTokenIntoView(panelIndex, panel.focusedQueueToken);
+
+                    this.gridPanelQueueTimers[panelIndex] = setInterval(() => {
+                        const queueItems = this.gridPanelQueueItems(panelIndex);
+                        const state = this.gridPanels[panelIndex];
+
+                        if (!state || !queueItems.length) {
+                            clearInterval(this.gridPanelQueueTimers[panelIndex]);
+                            this.gridPanelQueueTimers[panelIndex] = null;
+                            return;
+                        }
+
+                        if (Date.now() < state.queuePauseUntil) {
+                            return;
+                        }
+
+                        const currentItemIndex = queueItems.findIndex((item) => String(item.token || '') === String(state.focusedQueueToken || ''));
+                        const nextIndex = currentItemIndex >= 0
+                            ? (currentItemIndex + 1) % queueItems.length
+                            : 0;
+                        const nextItem = queueItems[nextIndex];
+
+                        state.queueCycleIndex = nextIndex;
+                        state.focusedQueueToken = nextItem?.token || null;
+                        this.scrollGridPanelQueueTokenIntoView(panelIndex, state.focusedQueueToken);
+                    }, 1100);
                 },
                 doctorById(doctorId) {
                     if (doctorId === null || doctorId === undefined) {
@@ -997,6 +1201,11 @@
                 scheduleSlideAdvance() {
                     this.clearSlideAdvanceTimer();
 
+                    if (!this.adsEnabled()) {
+                        this.activeAdPopup = null;
+                        return;
+                    }
+
                     if (this.adsPaused) {
                         return;
                     }
@@ -1090,6 +1299,10 @@
                         return;
                     }
 
+                    if (!this.patientPopupEnabled()) {
+                        this.activePopup = null;
+                    }
+
                     const storageKey = 'opt-token-popup-state';
                     let previous = {};
                     try {
@@ -1116,8 +1329,13 @@
 
                     window.localStorage.setItem(storageKey, JSON.stringify(nextState));
 
-                    if (changedDoctor) {
+                    if (changedDoctor && this.patientPopupEnabled()) {
                         this.showPopup(this.buildPatientPopup(changedDoctor));
+                    }
+
+                    if (!this.adsEnabled()) {
+                        this.activeAdPopup = null;
+                        return;
                     }
 
                     const doctor = this.currentDoctor();
@@ -1177,7 +1395,7 @@
                     };
                 },
                 buildAdPopup(doctor, slide = null) {
-                    if (!doctor) {
+                    if (!this.adsEnabled() || !doctor) {
                         return null;
                     }
 
@@ -1205,6 +1423,14 @@
                 },
                 showPopup(popup) {
                     if (!popup) {
+                        return;
+                    }
+
+                    if (popup.kind === 'ad' && !this.adsEnabled()) {
+                        return;
+                    }
+
+                    if (popup.kind === 'patient' && !this.patientPopupEnabled()) {
                         return;
                     }
 
@@ -1443,6 +1669,7 @@
                     if (this.clockTimer) clearInterval(this.clockTimer);
                     if (this.doctorTimer) clearInterval(this.doctorTimer);
                     if (this.globalSlideTimer) clearInterval(this.globalSlideTimer);
+                    this.clearGridPanelTimers();
                     this.clearQueueScrollTimer();
                     this.clearSlideAdvanceTimer();
                     if (this.popupSyncTimer) clearInterval(this.popupSyncTimer);

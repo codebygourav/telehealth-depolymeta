@@ -28,7 +28,7 @@
             />
         </aside>
 
-        <section class="panel schedule-panel no-footer" style="overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; padding: 0; border-radius: 0px;">
+        <section class="panel schedule-panel no-footer" style="overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; padding: 0; border-radius: 0px;border:none;">
             <div class="panel-head">
                 <div class="panel-title">{{ $board['schedule_title'] ?? 'Full OPD Weekly Schedule' }}</div>
                 <div class="badge">Auto Sliding</div>
@@ -99,8 +99,6 @@
 
         </section>
     </div>
-
-    @include('components.display.queue-display.spotlight-slider')
 
     <div class="patient-popup-backdrop"
          x-show="activePopup && activePopup.kind === 'patient'"

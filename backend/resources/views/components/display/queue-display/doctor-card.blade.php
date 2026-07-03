@@ -5,6 +5,10 @@
 'showQueue' => true,
 'showFooter' => true,
 'showTopbar' => false,
+'doctorAccessor' => 'currentDoctor()',
+'displayCopyAccessor' => 'displayCopy',
+'focusedExpression' => 'isFocusedQueueItem(item)',
+'syncQueueExpression' => 'syncQueueFocus(true)',
 ])
 
 @php
@@ -21,12 +25,17 @@ $doctorQueueItems = $doctor['queue_items'] ?? [];
 $doctorDefaultNotice = $doctor['default_notice'] ?? null;
 @endphp
 
-<div {{ $attributes->class(['doctor-card-shell']) }} @if($alpine) x-show="currentDoctor()" x-cloak @endif>
+<div {{ $attributes->class(['doctor-card-shell']) }} @if($alpine) x-show="{{ $doctorAccessor }}" x-cloak @endif>
     @if($showTopbar)
         <x-display.queue-display.topbar />
     @endif
     <div class="doctor-card-inner">
-        <x-display.queue-display.doctor-card-header :doctor="$doctor" :alpine="$alpine" />
+        <x-display.queue-display.doctor-card-header
+            :doctor="$doctor"
+            :alpine="$alpine"
+            :doctor-accessor="$doctorAccessor"
+            :display-copy-accessor="$displayCopyAccessor"
+        />
 
         @if($showQueue)
         <div class="queue-section-header">
@@ -41,13 +50,13 @@ $doctorDefaultNotice = $doctor['default_notice'] ?? null;
         </div>
 
         <div class="queue-list-container"
-             x-init="syncQueueFocus(true)">
+             @if($alpine) x-init="{{ $syncQueueExpression }}" @endif>
             @if($alpine)
-            <template x-if="currentDoctor() && currentDoctor().queue_items && currentDoctor().queue_items.length">
-                <template x-for="item in currentDoctor().queue_items" :key="item.token + item.patient">
+            <template x-if="{{ $doctorAccessor }} && {{ $doctorAccessor }}.queue_items && {{ $doctorAccessor }}.queue_items.length">
+                <template x-for="item in {{ $doctorAccessor }}.queue_items" :key="item.token + item.patient">
                     <div class="queue-row fade-enter"
                         :data-queue-token="item.token"
-                        :class="{ 'active': item.is_active, 'next': item.is_next, 'focused': isFocusedQueueItem(item) }">
+                        :class="{ 'active': item.is_active, 'next': item.is_next, 'focused': {{ $focusedExpression }} }">
                         <div class="token" x-text="item.token"></div>
                         <div>
                             <div class="patient" x-text="item.patient"></div>
@@ -65,13 +74,13 @@ $doctorDefaultNotice = $doctor['default_notice'] ?? null;
                 </template>
             </template>
 
-            <template x-if="!currentDoctor() || !currentDoctor().queue_items || !currentDoctor().queue_items.length">
+            <template x-if="!{{ $doctorAccessor }} || !{{ $doctorAccessor }}.queue_items || !{{ $doctorAccessor }}.queue_items.length">
                 <div class="queue-row" style="grid-template-columns: 1fr;">
                     <div>
-                        <div class="patient" x-text="displayCopy.empty_state_title || 'No active doctor assigned'">
+                        <div class="patient" x-text="{{ $displayCopyAccessor }}.empty_state_title || 'No active doctor assigned'">
                         </div>
                         <div class="phone"
-                            x-text="displayCopy.empty_state_text || 'Please wait while we load the queue.'"></div>
+                            x-text="{{ $displayCopyAccessor }}.empty_state_text || 'Please wait while we load the queue.'"></div>
                     </div>
                 </div>
             </template>
@@ -124,5 +133,9 @@ $doctorDefaultNotice = $doctor['default_notice'] ?? null;
 </div>
 
 @if($showFooter)
-<x-display.queue-display.doctor-card-footer :alpine="$alpine" :notice="$doctorDefaultNotice" />
+<x-display.queue-display.doctor-card-footer
+    :alpine="$alpine"
+    :notice="$doctorDefaultNotice"
+    :display-copy-accessor="$displayCopyAccessor"
+/>
 @endif

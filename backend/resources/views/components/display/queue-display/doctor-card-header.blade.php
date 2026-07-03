@@ -1,6 +1,8 @@
 @props([
     'doctor' => null,
     'alpine' => false,
+    'doctorAccessor' => 'currentDoctor()',
+    'displayCopyAccessor' => 'displayCopy',
 ])
 
 @php
@@ -17,11 +19,11 @@
 
 <div class="doctor-card-main">
     @if($alpine)
-        <template x-if="currentDoctor()?.avatar && !currentDoctor()?.avatar.includes('user-avatar.png')">
-            <img :src="currentDoctor().avatar" class="doctor-avatar" :alt="currentDoctor()?.name">
+        <template x-if="{{ $doctorAccessor }}?.avatar && !{{ $doctorAccessor }}?.avatar.includes('user-avatar.png')">
+            <img :src="{{ $doctorAccessor }}.avatar" class="doctor-avatar" :alt="{{ $doctorAccessor }}?.name">
         </template>
-        <template x-if="!currentDoctor()?.avatar || currentDoctor()?.avatar.includes('user-avatar.png')">
-            <div class="doctor-avatar-fallback" x-text="currentDoctor()?.initials || 'DR'"></div>
+        <template x-if="!{{ $doctorAccessor }}?.avatar || {{ $doctorAccessor }}?.avatar.includes('user-avatar.png')">
+            <div class="doctor-avatar-fallback" x-text="{{ $doctorAccessor }}?.initials || 'DR'"></div>
         </template>
     @else
         @if(!empty($doctorAvatar) && !str_contains($doctorAvatar, 'user-avatar.png'))
@@ -33,21 +35,21 @@
 
     <div class="doctor-info">
         @if($alpine)
-            <h2 x-text="currentDoctor()?.name || displayCopy.empty_state_title"></h2>
+            <h2 x-text="{{ $doctorAccessor }}?.name || {{ $displayCopyAccessor }}.empty_state_title"></h2>
             <div class="speciality-row">
-                <span class="speciality" x-text="currentDoctor()?.department || 'General Practice'"></span>
-                <span class="exp-badge" x-show="currentDoctor()?.experience">
+                <span class="speciality" x-text="{{ $doctorAccessor }}?.department || 'General Practice'"></span>
+                <span class="exp-badge" x-show="{{ $doctorAccessor }}?.experience">
                     <span class="star-icon">★</span>
-                    <span x-text="currentDoctor()?.experience" style="font-weight: 800; color: #1e293b;"></span>
+                    <span x-text="{{ $doctorAccessor }}?.experience" style="font-weight: 600; color: #1e293b;"></span>
                 </span>
             </div>
-            <div class="doctor-bio" x-show="currentDoctor()?.bio" x-text="currentDoctor()?.bio"></div>
+            <div class="doctor-bio" x-show="{{ $doctorAccessor }}?.bio" x-text="{{ $doctorAccessor }}?.bio"></div>
             <div class="qualifications-list">
-                <template x-for="qual in currentDoctor()?.education_list || []" :key="qual">
+                <template x-for="qual in {{ $doctorAccessor }}?.education_list || []" :key="qual">
                     <div class="qual-item" x-html="formatQual(qual)"></div>
                 </template>
             </div>
-            <div class="doctor-break-note" x-show="currentDoctor()?.is_on_break" x-cloak>Doctor is on break</div>
+            <div class="doctor-break-note" x-show="{{ $doctorAccessor }}?.is_on_break" x-cloak>Doctor is on break</div>
         @else
             <h2>{{ $doctorName }}</h2>
             <div class="speciality-row">
