@@ -3559,3 +3559,11 @@ input[type="checkbox"]:checked::after {
         gap: 12px;
     }
 }
+
+.fi-toggle-off {
+    background: red;
+}
+
+.fi-toggle-on {
+    background: green;
+}

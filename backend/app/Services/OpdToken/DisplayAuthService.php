@@ -17,8 +17,8 @@ class DisplayAuthService
 
         $fingerprint = $this->fingerprint($display);
 
-        return $request->session()->get($this->sessionKey()) === $fingerprint
-            || $request->cookie($this->cookieKey()) === $fingerprint;
+        return $request->session()->get($this->sessionKey($display)) === $fingerprint
+            || $request->cookie($this->cookieKey($display)) === $fingerprint;
     }
 
     public function authenticate(Request $request, array $display, string $password): bool
@@ -31,30 +31,30 @@ class DisplayAuthService
 
         $fingerprint = $this->fingerprint($display);
 
-        $request->session()->put($this->sessionKey(), $fingerprint);
-        Cookie::queue(cookie()->make($this->cookieKey(), $fingerprint, 60 * 24 * 7));
+        $request->session()->put($this->sessionKey($display), $fingerprint);
+        Cookie::queue(cookie()->make($this->cookieKey($display), $fingerprint, 60 * 24 * 7));
 
         return true;
     }
 
-    public function forget(Request $request): void
+    public function forget(Request $request, array $display): void
     {
-        $request->session()->forget($this->sessionKey());
-        Cookie::queue(Cookie::forget($this->cookieKey()));
+        $request->session()->forget($this->sessionKey($display));
+        Cookie::queue(Cookie::forget($this->cookieKey($display)));
     }
 
     public function fingerprint(array $display): string
     {
-        return sha1((string) ($display['password'] ?? ''));
+        return sha1((string) ($display['screen_slug'] ?? 'global') . '|' . (string) ($display['password'] ?? ''));
     }
 
-    public function sessionKey(): string
+    public function sessionKey(array $display): string
     {
-        return 'opd-token.display.auth';
+        return 'opd-token.display.auth.' . substr(sha1((string) ($display['screen_slug'] ?? 'global')), 0, 12);
     }
 
-    public function cookieKey(): string
+    public function cookieKey(array $display): string
     {
-        return 'opd_token_display_auth';
+        return 'opd_token_display_auth_' . substr(sha1((string) ($display['screen_slug'] ?? 'global')), 0, 12);
     }
 }

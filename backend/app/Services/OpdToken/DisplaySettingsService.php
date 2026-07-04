@@ -2,12 +2,13 @@
 
 namespace App\Services\OpdToken;
 
+use App\Models\DisplayScreen;
 use App\Models\DisplayScreenSetting;
 use App\Models\Setting;
 
 class DisplaySettingsService
 {
-    public function load(): array
+    public function load(?DisplayScreen $screen = null): array
     {
         $defaults = [
             'screen_name' => 'Main OPD Waiting Hall',
@@ -72,6 +73,14 @@ class DisplaySettingsService
 
         $config = array_merge($defaults, $screenDisplay, $screenAds);
 
+        if ($screen) {
+            $screenSettings = is_array($screen->settings) ? $screen->settings : [];
+
+            $config = array_merge($config, [
+                'screen_name' => $screen->name,
+            ], $screenSettings);
+        }
+
         foreach ([
             'show_ads_panel',
             'randomize_bottom_content',
@@ -93,6 +102,10 @@ class DisplaySettingsService
             ->filter()
             ->values()
             ->all();
+
+        $config['screen_slug'] = $screen?->slug;
+        $config['screen_id'] = $screen?->getKey();
+        $config['screen_profile_name'] = $screen?->name;
 
         return $config;
     }

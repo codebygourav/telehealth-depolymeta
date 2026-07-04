@@ -46,12 +46,20 @@ Route::get('/opd-token', [DisplayTokenController::class, 'show'])->name('opd-tok
 Route::get('/opd-token/data', [DisplayTokenController::class, 'boardData'])->name('opd-token.data');
 Route::post('/opd-token/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opd-token.authenticate');
 Route::post('/opd-token/logout', [DisplayTokenController::class, 'logout'])->name('opd-token.logout');
+Route::get('/opd-token/{screen:slug}', [DisplayTokenController::class, 'show'])->name('opd-token.screen.display');
+Route::get('/opd-token/{screen:slug}/data', [DisplayTokenController::class, 'boardData'])->name('opd-token.screen.data');
+Route::post('/opd-token/{screen:slug}/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opd-token.screen.authenticate');
+Route::post('/opd-token/{screen:slug}/logout', [DisplayTokenController::class, 'logout'])->name('opd-token.screen.logout');
 
 // Backward-compatible aliases for old OPT URLs.
 Route::get('/opt-token', [DisplayTokenController::class, 'show'])->name('opt-token.display');
 Route::get('/opt-token/data', [DisplayTokenController::class, 'boardData'])->name('opt-token.data');
 Route::post('/opt-token/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opt-token.authenticate');
 Route::post('/opt-token/logout', [DisplayTokenController::class, 'logout'])->name('opt-token.logout');
+Route::get('/opt-token/{screen:slug}', [DisplayTokenController::class, 'show'])->name('opt-token.screen.display');
+Route::get('/opt-token/{screen:slug}/data', [DisplayTokenController::class, 'boardData'])->name('opt-token.screen.data');
+Route::post('/opt-token/{screen:slug}/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opt-token.screen.authenticate');
+Route::post('/opt-token/{screen:slug}/logout', [DisplayTokenController::class, 'logout'])->name('opt-token.screen.logout');
 Route::get('/queue', [DisplayTokenController::class, 'show'])->name('queue.display');
 
 Route::get('/thankyou-demo', function () {

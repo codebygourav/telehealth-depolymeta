@@ -5,7 +5,12 @@ namespace App\Filament\Resources\DoctorAdvertisements\Tables;
 use BackedEnum;
 use App\Enums\DisplayEventCategory;
 use App\Enums\DisplayMediaType;
-use App\Filament\Resources\DoctorAdvertisements\DoctorAdvertisementResource;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -14,6 +19,8 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class DoctorAdvertisementsTable
@@ -82,14 +89,51 @@ class DoctorAdvertisementsTable
                     ->label('Updated'),
             ])
             ->defaultSort('display_order', 'asc')
-            ->filters([])
+            ->filters([
+                SelectFilter::make('category')
+                    ->label('Category')
+                    ->options(collect(DisplayEventCategory::cases())
+                        ->mapWithKeys(fn (DisplayEventCategory $category) => [$category->value => $category->label()])
+                        ->toArray()),
+                SelectFilter::make('is_active')
+                    ->label('Status')
+                    ->options([
+                        '1' => 'Published',
+                        '0' => 'Draft',
+                    ])
+                    ->query(function ($query, array $data) {
+                        $value = $data['value'] ?? null;
+
+                        if ($value === null || $value === '') {
+                            return $query;
+                        }
+
+                        return $query->where('is_active', (bool) $value);
+                    }),
+                TrashedFilter::make()
+                    ->label('Deleted records'),
+            ])
             ->actions([
                 ActionGroup::make([
+                    EditAction::make()
+                        ->slideOver()
+                        ->modalWidth('5xl'),
                     ViewAction::make(),
-                    EditAction::make()->slideOver()->modalWidth('4xl'),
                     DeleteAction::make(),
+                    RestoreAction::make(),
+                    ForceDeleteAction::make()
+                        ->requiresConfirmation(),
                 ]),
             ])
-            ->recordAction('view');
+            ->recordAction('edit')
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->requiresConfirmation(),
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make()
+                        ->requiresConfirmation(),
+                ]),
+            ]);
     }
 }

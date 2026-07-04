@@ -64,7 +64,7 @@ class OptTokenDisplay extends Component
 
     public function logoutDisplay(): void
     {
-        $this->authService()->forget(request());
+        $this->authService()->forget(request(), $this->display);
         $this->authenticated = false;
         $this->refreshBoard();
     }

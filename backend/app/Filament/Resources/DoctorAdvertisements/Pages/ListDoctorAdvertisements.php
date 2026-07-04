@@ -24,7 +24,10 @@ class ListDoctorAdvertisements extends ListRecords
                 ->icon('heroicon-o-tv')
                 ->url(route('opd-token.display'))
                 ->openUrlInNewTab(),
-            CreateAction::make(),
+            CreateAction::make()
+                ->label('Add Display Content')
+                ->slideOver()
+                ->modalWidth('5xl'),
         ];
     }
 

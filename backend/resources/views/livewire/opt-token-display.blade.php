@@ -43,7 +43,7 @@
                     <h1 class="auth-title">{{ $board['display']['page_title'] ?? 'OPD Token Display' }}</h1>
                     <p class="auth-copy">{{ $board['display']['page_subtitle'] ?? 'Please keep your token ready and be seated.' }}</p>
 
-                    <form class="auth-row" method="POST" action="{{ route('opt-token.authenticate') }}">
+                    <form class="auth-row" method="POST" action="{{ $authenticateAction ?? route('opt-token.authenticate') }}">
                         @csrf
                         <div>
                             <input
@@ -69,8 +69,7 @@
 
                     <div class="auth-brand">
                         <div class="footer-brand">
-                            <span style="opacity: 0.6; font-size: 13px;">Powered by</span>
-                            <img src="{{ asset('images/deploymeta.png') }}" alt="Deploy Meta Logo">
+                            <img src="{{ asset('images/queue-images/powered_by_logo.jpg') }}" alt="Deploy Meta Logo">
                         </div>
                     </div>
                 </div>

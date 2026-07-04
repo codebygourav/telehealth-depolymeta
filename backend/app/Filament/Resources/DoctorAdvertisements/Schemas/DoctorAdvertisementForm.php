@@ -23,48 +23,90 @@ class DoctorAdvertisementForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Choose Category')
-                ->description('Select the screen content type first. The remaining fields adapt to the selected category.')
+            Hidden::make('placement')
+                ->default('doctor_display')
+                ->dehydrated(true),
+            Hidden::make('autoplay')
+                ->default(true)
+                ->dehydrated(true),
+            Hidden::make('loop')
+                ->default(true)
+                ->dehydrated(true),
+            Hidden::make('muted')
+                ->default(true)
+                ->dehydrated(true),
+            Hidden::make('open_in_new_tab')
+                ->default(true)
+                ->dehydrated(true),
+            Section::make('Essential Content')
+                ->description('Keep this simple. Add the content that should appear on the waiting-room screen and only the required media fields will be shown.')
                 ->schema([
-                    Select::make('category')
-                        ->label('Category')
-                        ->options(DisplayEventCategory::options())
-                        ->default(DisplayEventCategory::ADVERTISEMENT->value)
+                    Grid::make(3)->schema([
+                        Select::make('category')
+                            ->label('Content Type')
+                            ->options(DisplayEventCategory::options())
+                            ->default(DisplayEventCategory::ADVERTISEMENT->value)
+                            ->required()
+                            ->live()
+                            ->searchable()
+                            ->native(false)
+                            ->placeholder('Choose content type')
+                            ->afterStateUpdated(function (?string $state, Set $set): void {
+                                if ($state && ($category = DisplayEventCategory::tryFrom($state))) {
+                                    $set('media_type', $category->defaultMediaType()->value);
+                                }
+                            })
+                            ->columnSpan(2),
+                        Toggle::make('is_active')
+                            ->label('Published')
+                            ->default(true)
+                            ->onColor('success')
+                            ->offColor('gray'),
+                    ]),
+                    TextInput::make('title')
+                        ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->titleLabel() ?? 'Title')
+                        ->placeholder(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->titlePlaceholder() ?? 'Example: Pregnancy Awareness Campaign')
+                        ->helperText('Use a short heading that is easy to read from a distance.')
                         ->required()
-                        ->live()
-                        ->searchable()
-                        ->placeholder('Choose category')
-                        ->afterStateUpdated(function (?string $state, Set $set): void {
-                            if ($state && ($category = DisplayEventCategory::tryFrom($state))) {
-                                $set('media_type', $category->defaultMediaType()->value);
-                            }
-                        }),
+                        ->columnSpanFull(),
+                    RichEditor::make('description')
+                        ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->descriptionLabel() ?? 'Content')
+                        ->placeholder('Add the notice, event details, or awareness message to show on the display.')
+                        ->toolbarButtons([
+                            'bold',
+                            'italic',
+                            'bulletList',
+                            'orderedList',
+                            'link',
+                        ])
+                        ->helperText('Keep the message short and screen-friendly.')
+                        ->columnSpanFull(),
                 ])
                 ->columnSpanFull(),
-            Section::make('Content Details')
-                ->description('Configure the display content, targeting, scheduling, and playback rules.')
+            Section::make('Media')
+                ->description('Only show the media input that matches this content type.')
+                ->visible(fn (Get $get): bool => ! in_array(
+                    DisplayEventCategory::tryFrom((string) $get('category')),
+                    [
+                        DisplayEventCategory::ANNOUNCEMENT,
+                        DisplayEventCategory::NOTICE,
+                        DisplayEventCategory::EMERGENCY_ALERT,
+                    ],
+                    true,
+                ))
                 ->schema([
-                    Hidden::make('placement')
-                        ->default('doctor_display')
-                        ->dehydrated(true),
-                    Grid::make(2)->schema([
-                        TextInput::make('title')
-                            ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->titleLabel() ?? 'Title')
-                            ->placeholder(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->titlePlaceholder() ?? 'Example: Pregnancy Awareness Campaign')
-                            ->helperText('Use a short heading that reads clearly on a public waiting-screen display.')
-                            ->required(),
-                        Select::make('media_type')
-                            ->label('Media Type')
-                            ->options(DisplayMediaType::options())
-                            ->placeholder('Choose media type')
-                            ->default(DisplayEventCategory::ADVERTISEMENT->defaultMediaType()->value)
-                            ->searchable()
-                            ->live()
-                            ->required(),
-                    ]),
+                    Select::make('media_type')
+                        ->label('Display Format')
+                        ->options(DisplayMediaType::options())
+                        ->placeholder('Choose media type')
+                        ->default(DisplayEventCategory::ADVERTISEMENT->defaultMediaType()->value)
+                        ->searchable()
+                        ->native(false)
+                        ->live()
+                        ->required(),
                     FileUpload::make('image')
                         ->label('Banner / Visual')
-                        ->helperText('Upload the visual shown on the display for image-based content.')
+                        ->helperText('Upload an image only when this content needs a banner or poster.')
                         ->disk('public')
                         ->directory('display_events')
                         ->visibility('public')
@@ -79,13 +121,16 @@ class DoctorAdvertisementForm
                     TextInput::make('link')
                         ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->linkLabel(DisplayMediaType::normalize((string) $get('media_type'))) ?? 'Media URL / Link')
                         ->placeholder(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->linkPlaceholder(DisplayMediaType::normalize((string) $get('media_type'))) ?? 'Paste an external URL')
-                        ->helperText('Used for video embeds, YouTube, registration links, and website targets.')
+                        ->helperText('Use this only for video, website, Instagram, or registration links.')
                         ->columnSpanFull()
                         ->visible(fn (Get $get): bool => DisplayEventCategory::tryFrom((string) $get('category'))?->showsLinkField(DisplayMediaType::normalize((string) $get('media_type'))) ?? true),
-                    RichEditor::make('description')
-                        ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->descriptionLabel() ?? 'Content')
-                        ->placeholder('Add the notice, event details, instructions, or awareness copy to show on the screen.')
-                        ->columnSpanFull(),
+                ])
+                ->columns(1),
+            Section::make('Optional Visibility Rules')
+                ->description('Use these only when the content should target specific doctors or run during a fixed time window.')
+                ->collapsible()
+                ->collapsed()
+                ->schema([
                     Select::make('doctors')
                         ->label('Target Doctors')
                         ->multiple()
@@ -99,20 +144,8 @@ class DoctorAdvertisementForm
                         })
                         ->searchable()
                         ->preload()
-                        ->helperText('Leave empty to show this content for all doctors on the display screen.')
+                        ->helperText('Leave empty to show this content for every doctor on the selected display screen.')
                         ->columnSpanFull(),
-                    Grid::make(2)->schema([
-                        TextInput::make('display_order')
-                            ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->orderLabel() ?? 'Display Order')
-                            ->numeric()
-                            ->default(0)
-                            ->helperText('Lower numbers appear earlier in the rotation. Use this as priority ordering.'),
-                        Toggle::make('is_active')
-                            ->label('Published')
-                            ->default(true)
-                            ->onColor('success')
-                            ->offColor('gray'),
-                    ]),
                     Grid::make(2)->schema([
                         DateTimePicker::make('starts_at')
                             ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->startLabel() ?? 'Starts At')
@@ -123,22 +156,13 @@ class DoctorAdvertisementForm
                             ->seconds(false)
                             ->placeholder('Optional end date and time'),
                     ])->visible(fn (Get $get): bool => DisplayEventCategory::tryFrom((string) $get('category'))?->showsScheduleFields() ?? true),
-                    Grid::make(4)->schema([
-                        Toggle::make('autoplay')
-                            ->label('Autoplay')
-                            ->default(true),
-                        Toggle::make('loop')
-                            ->label('Loop')
-                            ->default(true),
-                        Toggle::make('muted')
-                            ->label('Muted')
-                            ->default(true),
-                        Toggle::make('open_in_new_tab')
-                            ->label('Open Link New Tab')
-                            ->default(true),
-                    ])->visible(fn (Get $get): bool => DisplayEventCategory::tryFrom((string) $get('category'))?->showsPlaybackOptions(DisplayMediaType::normalize((string) $get('media_type'))) ?? false),
+                    TextInput::make('display_order')
+                        ->label(fn (Get $get): string => DisplayEventCategory::tryFrom((string) $get('category'))?->orderLabel() ?? 'Display Order')
+                        ->numeric()
+                        ->default(0)
+                        ->helperText('Optional. Lower numbers appear earlier in the rotation.'),
                 ])
-                ->columnSpanFull(),
+                ->columns(2),
         ]);
     }
 }

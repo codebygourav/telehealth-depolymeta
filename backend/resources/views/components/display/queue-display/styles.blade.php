@@ -476,13 +476,6 @@
         overflow: hidden;
     }
 
-    .auth-card::before {
-        content: '';
-        position: absolute;
-        inset: 0 0 auto 0;
-        height: 6px;
-        background: var(--display-blue);
-    }
 
     .auth-title {
         margin: 0;

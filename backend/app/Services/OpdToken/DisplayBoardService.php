@@ -109,24 +109,32 @@ class DisplayBoardService
             ->orderBy('last_name');
 
         $showAppointmentsFirst = filter_var($display['show_doctor_list_from_appointments'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $appointmentDoctorIds = $appointmentDoctors->pluck('id')->all();
 
-        if ($showAppointmentsFirst && $appointmentDoctors->isNotEmpty()) {
-            $doctorIds = $appointmentDoctors->pluck('id')->all();
+        if ($mode === 'single') {
+            $doctorId = $selectedIds[0] ?? ($appointmentDoctorIds[0] ?? null);
 
-            if ($mode === 'single') {
-                $query->whereIn('id', [$doctorIds[0]]);
-            } elseif ($mode === 'multiple' && ! empty($selectedIds)) {
-                $query->whereIn('id', array_values(array_intersect($doctorIds, $selectedIds)));
-            } elseif (! empty($selectedIds)) {
-                $intersection = array_values(array_intersect($doctorIds, $selectedIds));
-                $query->whereIn('id', ! empty($intersection) ? $intersection : $doctorIds);
+            if ($doctorId) {
+                $query->whereKey($doctorId);
             } else {
-                $query->whereIn('id', $doctorIds);
+                $query->whereRaw('1 = 0');
             }
-        } elseif ($mode === 'single') {
-            $query->whereRaw('1 = 0');
-        } elseif ($mode === 'multiple' && ! empty($selectedIds)) {
-            $query->whereRaw('1 = 0');
+        } elseif ($mode === 'multiple') {
+            if (empty($selectedIds)) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $doctorIds = $showAppointmentsFirst && ! empty($appointmentDoctorIds)
+                    ? array_values(array_intersect($selectedIds, $appointmentDoctorIds))
+                    : $selectedIds;
+
+                if (! empty($doctorIds)) {
+                    $query->whereIn('id', $doctorIds);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            }
+        } elseif ($showAppointmentsFirst && ! empty($appointmentDoctorIds)) {
+            $query->whereIn('id', $appointmentDoctorIds);
         }
 
         $doctors = $query->get();

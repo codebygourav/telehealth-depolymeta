@@ -19,7 +19,6 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Schema as SchemaFacade;
 
 class DoctorAdvertisementResource extends Resource
 {
@@ -66,12 +65,16 @@ class DoctorAdvertisementResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with([
-            'doctors:id,first_name,last_name,doctor_code',
-            'creator:id,name',
-            'updater:id,name',
-            'deleter:id,name',
-        ]);
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ])
+            ->with([
+                'doctors:id,first_name,last_name,doctor_code',
+                'creator:id,name',
+                'updater:id,name',
+                'deleter:id,name',
+            ]);
     }
 
 

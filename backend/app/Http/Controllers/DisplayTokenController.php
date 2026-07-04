@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DisplayScreen;
 use App\Services\OpdToken\DisplayAuthService;
 use App\Services\OpdToken\DisplayBoardService;
 use App\Services\OpdToken\DoctorScheduleBoardService;
@@ -21,9 +22,11 @@ class DisplayTokenController extends Controller
     ) {
     }
 
-    public function show(Request $request): View
+    public function show(Request $request, ?DisplayScreen $screen = null): View
     {
-        $display = $this->settingsService->load();
+        abort_if($screen && ! $screen->is_active, 404);
+
+        $display = $this->settingsService->load($screen);
         $authenticated = $this->authService->isAuthenticated($request, $display);
         $board = $this->resolveBoard($display);
 
@@ -31,13 +34,17 @@ class DisplayTokenController extends Controller
             'authenticated' => $authenticated,
             'board' => $board,
             'display' => $display,
+            'displayScreen' => $screen,
+            'authenticateAction' => $this->authenticateRoute($screen),
             'passwordError' => session('display_auth_error'),
         ]);
     }
 
-    public function boardData(Request $request): JsonResponse
+    public function boardData(Request $request, ?DisplayScreen $screen = null): JsonResponse
     {
-        $display = $this->settingsService->load();
+        abort_if($screen && ! $screen->is_active, 404);
+
+        $display = $this->settingsService->load($screen);
 
         if (! $this->authService->isAuthenticated($request, $display)) {
             return response()->json([
@@ -48,25 +55,30 @@ class DisplayTokenController extends Controller
         return response()->json($this->resolveBoard($display));
     }
 
-    public function authenticate(Request $request): RedirectResponse
+    public function authenticate(Request $request, ?DisplayScreen $screen = null): RedirectResponse
     {
-        $display = $this->settingsService->load();
+        abort_if($screen && ! $screen->is_active, 404);
+
+        $display = $this->settingsService->load($screen);
         $password = trim((string) $request->input('password'));
 
         if ($this->authService->authenticate($request, $display, $password)) {
-            return redirect()->route('opd-token.display');
+            return redirect()->to($this->displayRoute($screen));
         }
 
         return redirect()
-            ->route('opd-token.display')
+            ->to($this->displayRoute($screen))
             ->with('display_auth_error', 'Invalid display password.');
     }
 
-    public function logout(Request $request): RedirectResponse
+    public function logout(Request $request, ?DisplayScreen $screen = null): RedirectResponse
     {
-        $this->authService->forget($request);
+        abort_if($screen && ! $screen->is_active, 404);
 
-        return redirect()->route('opd-token.display');
+        $display = $this->settingsService->load($screen);
+        $this->authService->forget($request, $display);
+
+        return redirect()->to($this->displayRoute($screen));
     }
 
     protected function resolveBoard(array $display): array
@@ -76,5 +88,19 @@ class DisplayTokenController extends Controller
         }
 
         return $this->boardService->buildBoard($display);
+    }
+
+    protected function displayRoute(?DisplayScreen $screen = null): string
+    {
+        return $screen
+            ? route('opd-token.screen.display', ['screen' => $screen])
+            : route('opd-token.display');
+    }
+
+    protected function authenticateRoute(?DisplayScreen $screen = null): string
+    {
+        return $screen
+            ? route('opd-token.screen.authenticate', ['screen' => $screen])
+            : route('opd-token.authenticate');
     }
 }
