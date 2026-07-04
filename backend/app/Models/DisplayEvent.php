@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DisplayEventCategory;
+use App\Enums\DisplayMediaType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -56,6 +57,27 @@ class DisplayEvent extends Model
 
     protected static function booted()
     {
+        static::saving(function ($event) {
+            $category = $event->category;
+            $mediaType = DisplayMediaType::normalize($event->media_type);
+
+            if ($category) {
+                // If the category & media type do not support an image field, clear the image.
+                if (! $category->showsImageField($mediaType)) {
+                    $event->image = null;
+                }
+
+                // If the category & media type do not support a link field, clear both link and media_url.
+                if (! $category->showsLinkField($mediaType)) {
+                    $event->link = null;
+                    $event->media_url = null;
+                } else {
+                    // Sync link to media_url so they stay in step when a link is supported
+                    $event->media_url = $event->link;
+                }
+            }
+        });
+
         static::creating(function ($event) {
             // Generate UUID if not set
             if (empty($event->id)) {

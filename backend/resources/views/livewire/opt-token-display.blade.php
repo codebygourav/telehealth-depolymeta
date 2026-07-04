@@ -241,6 +241,8 @@
                             type="button"
                             class="control-button icon-control"
                             @click="announceCurrentPatient()"
+                            :disabled="!patientPopupEnabled()"
+                            :style="!patientPopupEnabled() ? 'opacity: 0.4; cursor: not-allowed; pointer-events: none;' : ''"
                             aria-label="Announce patient"
                             title="Announce patient"
                         >
@@ -1085,7 +1087,7 @@
                     this.syncSpotlightPopup();
                 },
                 announceCurrentPatient() {
-                    if (!this.payload?.voice_enabled || !('speechSynthesis' in window)) {
+                    if (!this.patientPopupEnabled() || !this.payload?.voice_enabled || !('speechSynthesis' in window)) {
                         return;
                     }
 

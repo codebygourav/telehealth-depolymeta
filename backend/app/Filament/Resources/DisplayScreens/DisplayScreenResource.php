@@ -197,6 +197,13 @@ class DisplayScreenResource extends Resource
                         ->label('Patient Popup')
                         ->inline()
                         ->default(true),
+                    TextInput::make('settings.popup_duration_seconds')
+                        ->label('Patient Popup Duration (sec)')
+                        ->numeric()
+                        ->minValue(3)
+                        ->maxValue(30)
+                        ->default(8)
+                        ->helperText('How long the next-patient popup stays visible.'),
                     Toggle::make('settings.ad_popup_enabled')
                         ->label('Ad Popup')
                         ->inline()

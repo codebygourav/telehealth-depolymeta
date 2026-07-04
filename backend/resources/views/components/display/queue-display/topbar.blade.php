@@ -4,6 +4,8 @@
             type="button"
             class="control-button icon-control"
             @click="announceCurrentPatient()"
+            :disabled="!patientPopupEnabled()"
+            :style="!patientPopupEnabled() ? 'opacity: 0.4; cursor: not-allowed; pointer-events: none;' : ''"
             aria-label="Announce patient"
             title="Announce patient"
         >

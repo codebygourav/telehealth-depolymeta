@@ -88,7 +88,220 @@
     @media (max-width: 640px){.medicine-page-head,.medicine-card-title,.medicine-section-head{flex-direction:column}.medicine-stats-grid,.medicine-stats-grid.is-compact{grid-template-columns:1fr}.medicine-meta-grid{grid-template-columns:1fr}}
 </style>
 
-<div class="medicine-admin-shell">
+<div class="medicine-admin-shell"
+    x-data="{
+        language: 'en',
+        isPlayingAll: false,
+        currentPlayingIndex: null,
+        isSpeakingSelf: {},
+        items: @js($items),
+
+        formatTimesForSpeech(timesStr) {
+            if (!timesStr) return '';
+            const times = timesStr.split(',').map(t => t.trim());
+            const formatted = times.map(time => {
+                const parts = time.split(':');
+                if (parts.length < 2) return time;
+                const hour = parseInt(parts[0], 10);
+                const minute = parseInt(parts[1], 10);
+                if (isNaN(hour)) return time;
+                
+                let displayHour = hour;
+                if (hour > 12) displayHour = hour - 12;
+                else if (hour === 0) displayHour = 12;
+                
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                return displayHour + (minute > 0 ? ':' + (minute < 10 ? '0' + minute : minute) : '') + ' ' + ampm;
+            });
+            
+            if (formatted.length <= 1) return formatted[0] || '';
+            if (formatted.length === 2) {
+                return formatted[0] + ' and ' + formatted[1];
+            }
+            const last = formatted.pop();
+            return formatted.join(', ') + ', and ' + last;
+        },
+
+        generateMedicineSpeechText(item) {
+            const name = item.medicine_name || '';
+            const dosage = item.dosage || '';
+            const useType = item.use_type || 'regular';
+            const meal = item.meal_timing || '';
+            
+            let times = '';
+            if (item.frequency_times) {
+                times = Array.isArray(item.frequency_times) ? item.frequency_times.join(', ') : item.frequency_times;
+            }
+
+            let instList = [];
+            if (item.instructions) {
+                instList = Array.isArray(item.instructions) ? item.instructions : [item.instructions];
+            }
+
+            let text = 'Please take ' + name + '.';
+            if (dosage) {
+                text += ' Dosage is ' + dosage + '.';
+            }
+            if (useType === 'sos') {
+                text += ' Take as needed.';
+            } else {
+                const freq = item.frequency || '';
+                if (freq) {
+                    text += ' Take it ' + freq + '.';
+                }
+                if (times) {
+                    text += ' Scheduled times are ' + this.formatTimesForSpeech(times) + '.';
+                }
+            }
+            if (meal) {
+                text += ' Take it ' + meal.replace('_', ' ') + '.';
+            }
+            if (instList.length > 0) {
+                text += ' Instruction: ' + instList.join(', ') + '.';
+            }
+            return text;
+        },
+
+        gurmukhiToDevanagari(text) {
+            const map = {
+                'ਕ': 'क', 'ਖ': 'ख', 'ਗ': 'ग', 'ਘ': 'घ', 'ਙ': 'ङ',
+                'ਚ': 'च', 'ਛ': 'छ', 'ਜ': 'ज', 'ਝ': 'झ', 'ਞ': 'ञ',
+                'ਟ': 'ट', 'ਠ': 'ठ', 'ਡ': 'ड', 'ਢ': 'ढ', 'ਣ': 'ण',
+                'ਤ': 'त', 'ਥ': 'थ', 'ਦ': 'द', 'ਧ': 'ध', 'ਨ': 'न',
+                'ਪ': 'प', 'ਫ': 'फ', 'ਬ': 'ब', 'ਭ': 'भ', 'ਮ': 'म',
+                'ਯ': 'य', 'ਰ': 'र', 'ਲ': 'ल', 'ਵ': 'व', 'ੜ': 'ੜ',
+                'ਸ': 'स', 'ਹ': 'ह',
+                'ਸ਼': 'श', 'ਖ਼': 'ख़', 'ਗ਼': 'ग़', 'ਜ਼': 'ज़', 'ਫ਼': 'फ़', 'ਲ਼': 'ळ',
+                'ਅ': 'अ', 'ਆ': 'आ', 'ਇ': 'इ', 'ਈ': 'ई', 'ਉ': 'उ', 'ਊ': 'ऊ',
+                'ਏ': 'ए', 'ਐ': 'ऐ', 'ਓ': 'ओ', 'ਔ': 'औ',
+                'ਾ': 'ा', 'ਿ': 'ि', 'ੀ': 'ी', 'ੁ': 'ु', 'ੂ': 'ू',
+                'ੇ': 'े', 'ੈ': 'ै', 'ੋ': 'ो', 'ੌ': 'ौ',
+                'ਂ': 'ं', 'ੰ': 'ं', 'ੱ': '्',
+                '੍ਹ': '्ह', '੍ਰ': '्र', '੍ਵ': '्व',
+            };
+
+            let result = text;
+            result = result.replace(/ਖ਼/g, 'ख़')
+                           .replace(/ਗ਼/g, 'ग़')
+                           .replace(/ਜ਼/g, 'ज़')
+                           .replace(/ਫ਼/g, 'फ़')
+                           .replace(/ਲ਼/g, 'ळ')
+                           .replace(/ਸ਼/g, 'श');
+
+            return result.split('').map(char => map[char] || char).join('');
+        },
+
+        async speakText(text, lang, onEnd) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+
+            let speechText = text;
+            let bcpLang = 'en-IN';
+            if (lang === 'hi') bcpLang = 'hi-IN';
+            if (lang === 'pa') bcpLang = 'pa-IN';
+
+            if (lang !== 'en') {
+                try {
+                    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=' + lang + '&dt=t&q=' + encodeURIComponent(text);
+                    const res = await fetch(url);
+                    const json = await res.json();
+                    if (json && json[0]) {
+                        speechText = json[0].map(part => part[0] || '').join('');
+                    }
+                } catch (e) {
+                    console.error('Translation error, falling back to original English text:', e);
+                }
+            }
+
+            const voices = window.speechSynthesis.getVoices();
+            const searchLang = bcpLang.toLowerCase();
+            let voice = voices.find(v => v.lang.toLowerCase() === searchLang);
+            if (!voice) {
+                voice = voices.find(v => v.lang.toLowerCase().startsWith(searchLang.substring(0, 2)));
+            }
+
+            if (!voice && lang === 'pa') {
+                voice = voices.find(v => v.lang.toLowerCase() === 'hi-in') || 
+                        voices.find(v => v.lang.toLowerCase() === 'en-in');
+
+                if (voice && voice.lang.toLowerCase().startsWith('hi')) {
+                    speechText = this.gurmukhiToDevanagari(speechText);
+                    bcpLang = 'hi-IN';
+                }
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(speechText);
+            utterance.rate = 0.92;
+            utterance.lang = bcpLang;
+            
+            if (voice) {
+                utterance.voice = voice;
+                utterance.lang = voice.lang; // Fix: override utterance language to match voice language
+            }
+            
+            utterance.onend = onEnd;
+            utterance.onerror = onEnd;
+            
+            window.speechSynthesis.speak(utterance);
+        },
+
+        playAll() {
+            if (this.isPlayingAll) {
+                window.speechSynthesis.cancel();
+                this.isPlayingAll = false;
+                this.currentPlayingIndex = null;
+                return;
+            }
+            
+            if (!this.items || !this.items.length) return;
+            
+            this.isPlayingAll = true;
+            this.speakNext(0);
+        },
+
+        speakNext(index) {
+            if (index >= this.items.length) {
+                this.isPlayingAll = false;
+                this.currentPlayingIndex = null;
+                return;
+            }
+            
+            this.currentPlayingIndex = index;
+            const text = this.generateMedicineSpeechText(this.items[index]);
+            this.speakText(text, this.language, () => {
+                if (this.isPlayingAll) {
+                    this.speakNext(index + 1);
+                }
+            });
+        },
+
+        toggleSpeakItem(index) {
+            if (this.isSpeakingSelf[index]) {
+                window.speechSynthesis.cancel();
+                this.isSpeakingSelf = {};
+            } else {
+                window.speechSynthesis.cancel();
+                this.isSpeakingSelf = {};
+                this.isSpeakingSelf[index] = true;
+                this.isSpeakingSelf = { ...this.isSpeakingSelf };
+                
+                const text = this.generateMedicineSpeechText(this.items[index]);
+                this.speakText(text, this.language, () => {
+                    this.isSpeakingSelf[index] = false;
+                    this.isSpeakingSelf = { ...this.isSpeakingSelf };
+                });
+            }
+        },
+
+        stopAll() {
+            window.speechSynthesis.cancel();
+            this.isPlayingAll = false;
+            this.currentPlayingIndex = null;
+            this.isSpeakingSelf = {};
+        }
+    }"
+    @unload.window="stopAll()"
+    class="medicine-admin-shell">
     <div class="medicine-page-head">
         <div>
             <p class="medicine-kicker">Medicine / Prescription Template</p>
@@ -152,15 +365,73 @@
             <span class="medicine-pill is-gray">{{ $items->count() }} item(s)</span>
         </div>
 
+        <!-- Voice Announcement Test Panel in Admin -->
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.65rem 0.95rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">
+                    <svg style="width: 14px; height: 14px; color: #3b82f6;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5c-.347 2.287-1.567 4.52-3.238 6.412m-.346-6.412a17.982 17.982 0 00-2.22 3.864m1.96-1.83l-1.96-1.83" /></svg>
+                    Voice Language
+                </span>
+                <div style="display: inline-flex; background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0;gap:15px;">
+                    <template x-for="lang in [{key:'en', label:'English'}, {key:'hi', label:'Hindi'}, {key:'pa', label:'Punjabi'}]">
+                        <button
+                            type="button"
+                            @click="language = lang.key; stopAll();"
+                            :class="language === lang.key ? 'bg-primary-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'"
+                            style="padding: 0.2rem 0.55rem; font-size: 0.72rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.2s; border: none; outline: none; background: transparent; color: inherit;"
+                            x-text="lang.label"
+                            :style="language === lang.key ? 'background-color: #3b82f6; color: white;padding:5px 15px;border-radius:6px;' : ''"
+                        ></button>
+                    </template>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                @click="playAll()"
+                style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.85rem; font-size: 0.72rem; font-weight: 800; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: none; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); color: white;"
+                :style="isPlayingAll ? 'background-color: #ef4444;padding:5px 15px;border-radius:6px;' : 'background-color: #059669;padding:5px 15px;border-radius:6px;'"
+            >
+                <template x-if="isPlayingAll">
+                    <span style="display: flex; align-items: center; gap: 0.25rem;color:#fff;">
+                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                        Stop Preview
+                    </span>
+                </template>
+                <template x-if="!isPlayingAll">
+                    <span style="display: flex; align-items: center; gap: 0.25rem;color:#fff;">
+                        <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                        Listen to Prescription
+                    </span>
+                </template>
+            </button>
+        </div>
+
         <div class="medicine-medicine-grid">
             @forelse($items as $index => $item)
-                <div class="medicine-card">
+                <div class="medicine-card" :style="(isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}] ? 'border-color: #10b981; background-color: #f0fdf4;' : ''" style="transition: all 0.2s;">
                     <div class="medicine-card-head">
-                        <div>
-                            <h3>{{ $loop->iteration }}. {{ $item->medicine_name }}</h3>
-                            <p class="type">{{ $item->medicine_type ?: $item->medicine?->type?->name ?: 'Type not specified' }}</p>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <h3>{{ $loop->iteration }}. {{ $item->medicine_name }}</h3>
+                                <button
+                                    type="button"
+                                    @click="toggleSpeakItem({{ $index }})"
+                                    :class="(isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}] ? 'bg-blue-600 text-white scale-105' : 'bg-gray-100 text-gray-500 hover:text-gray-800 hover:bg-gray-200'"
+                                    style="padding: 0.2rem; border-radius: 9999px; transition: all 0.2s; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center; outline: none;"
+                                    :style="(isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}] ? 'background-color: #3b82f6; color: white;' : 'background-color: #f1f5f9; color: #64748b;'"
+                                    title="Listen to medicine voice guidance"
+                                >
+                                    <template x-if="(isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}]">
+                                        <svg style="width: 18px; height: 18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                    </template>
+                                    <template x-if="!((isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}])">
+                                        <svg style="width: 18px; height: 18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                                    </template>
+                                </button>
+                            </div>
+                            <span class="medicine-pill is-blue">{{ $item->doses_per_day ?: 1 }}x / day</span>
                         </div>
-                        <span class="medicine-pill is-blue">{{ $item->doses_per_day ?: 1 }}x / day</span>
                     </div>
 
                     <div class="medicine-meta-grid">

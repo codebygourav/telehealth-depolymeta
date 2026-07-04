@@ -1,8 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Calendar, CheckCircle2, Loader2, Pill, Search } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Calendar, CheckCircle2, Loader2, Pill, Search, Volume2, VolumeX, Languages } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import {
+  SpeechLanguage,
+  speakText,
+  stopSpeaking,
+  generateMedicineSpeechText,
+} from "@/lib/medicineVoiceHelper";
 
 import {
   Dialog,
@@ -45,6 +52,73 @@ export default function AssignMedicineTemplateDialog({
   const [stampPreference, setStampPreference] = useState<
     "only_global" | "only_department" | "both"
   >("only_global");
+
+  const [language, setLanguage] = useState<SpeechLanguage>("en");
+  const [isPlayingAll, setIsPlayingAll] = useState(false);
+  const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+    };
+  }, []);
+
+  // Stop active speech if dialog closes or selected template changes
+  useEffect(() => {
+    stopSpeaking();
+    setIsPlayingAll(false);
+    setCurrentPlayingIndex(null);
+  }, [open, selectedTemplateId]);
+
+  const handleLanguageChange = (lang: SpeechLanguage) => {
+    setLanguage(lang);
+    stopSpeaking();
+    setIsPlayingAll(false);
+    setCurrentPlayingIndex(null);
+  };
+
+  const playAll = () => {
+    if (isPlayingAll) {
+      stopSpeaking();
+      setIsPlayingAll(false);
+      setCurrentPlayingIndex(null);
+      return;
+    }
+
+    const items = selectedTemplate?.items ?? [];
+    if (items.length === 0) return;
+
+    setIsPlayingAll(true);
+    setCurrentPlayingIndex(0);
+
+    const firstMedText = generateMedicineSpeechText(items[0], language);
+    speakNext(firstMedText, 0);
+  };
+
+  const speakNext = (text: string, index: number) => {
+    const items = selectedTemplate?.items ?? [];
+    speakText(
+      text,
+      language,
+      undefined,
+      () => {
+        if (index < items.length - 1) {
+          const nextIndex = index + 1;
+          setCurrentPlayingIndex(nextIndex);
+          const nextMedText = generateMedicineSpeechText(items[nextIndex], language);
+          speakNext(nextMedText, nextIndex);
+        } else {
+          setIsPlayingAll(false);
+          setCurrentPlayingIndex(null);
+        }
+      },
+      (err) => {
+        console.error(err);
+        setIsPlayingAll(false);
+        setCurrentPlayingIndex(null);
+      }
+    );
+  };
 
   const templatesQuery = useMedicineTemplates();
   const assignTemplate = useAssignMedicineTemplate(appointmentId);
@@ -211,6 +285,56 @@ export default function AssignMedicineTemplateDialog({
                           {selectedTemplate.description}
                         </p>
                       )}
+
+                      {/* Voice Announcement Preview Panel */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-muted/60 rounded-lg border text-[11px] mt-2">
+                        <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-muted-foreground">
+                          <Languages className="w-3.5 h-3.5 text-primary" />
+                          <span>Voice Lang</span>
+                        </div>
+                        <div className="flex items-center gap-0.5 bg-background p-0.5 rounded border border-input">
+                          {(
+                            [
+                              { key: 'en', label: 'EN' },
+                              { key: 'hi', label: 'HI' },
+                              { key: 'pa', label: 'PA' },
+                            ] as const
+                          ).map((lang) => (
+                            <button
+                              key={lang.key}
+                              type="button"
+                              onClick={() => handleLanguageChange(lang.key)}
+                              className={cn(
+                                "px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer transition-all border-none outline-none",
+                                language === lang.key
+                                  ? "bg-primary text-primary-foreground shadow-sm"
+                                  : "text-muted-foreground hover:bg-muted/80"
+                              )}
+                            >
+                              {lang.label}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        <Button
+                          type="button"
+                          onClick={playAll}
+                          variant="outline"
+                          className="h-7 text-[10px] font-bold py-1 px-2.5 m-0 rounded border-none shadow-sm cursor-pointer"
+                        >
+                          {isPlayingAll ? (
+                            <>
+                              <VolumeX className="w-3.5 h-3.5 mr-1" />
+                              Stop
+                            </>
+                          ) : (
+                            <>
+                              <Volume2 className="w-3.5 h-3.5 mr-1" />
+                              Listen All
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -219,6 +343,8 @@ export default function AssignMedicineTemplateDialog({
                           key={item.id}
                           item={item}
                           index={index + 1}
+                          language={language}
+                          isCurrentlySpeaking={isPlayingAll && currentPlayingIndex === index}
                         />
                       ))}
                     </div>
@@ -311,18 +437,75 @@ function TemplateButton({
 function TemplateMedicinePreview({
   item,
   index,
+  language,
+  isCurrentlySpeaking,
 }: {
   item: MedicineTemplateItem;
   index: number;
+  language: SpeechLanguage;
+  isCurrentlySpeaking: boolean;
 }) {
+  const [isSpeakingSelf, setIsSpeakingSelf] = useState(false);
+  const isSpeaking = isCurrentlySpeaking || isSpeakingSelf;
+
+  const toggleSpeak = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isSpeakingSelf) {
+      stopSpeaking();
+      setIsSpeakingSelf(false);
+    } else {
+      stopSpeaking();
+      setIsSpeakingSelf(true);
+      
+      const text = generateMedicineSpeechText(item, language);
+      speakText(
+        text,
+        language,
+        undefined,
+        () => setIsSpeakingSelf(false),
+        () => setIsSpeakingSelf(false)
+      );
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (isSpeakingSelf) stopSpeaking();
+    };
+  }, [isSpeakingSelf]);
+
   return (
-    <div className="rounded-md border bg-background p-3">
+    <div className={cn(
+      "rounded-md border p-3 bg-background transition-all",
+      isSpeaking ? "border-emerald-600/30 bg-emerald-50/10 shadow-sm" : "border-muted"
+    )}>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-medium">
-            {index}. {item.medicine_name}
-          </p>
-          <p className="text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium">
+              {index}. {item.medicine_name}
+            </p>
+            <button
+              type="button"
+              onClick={toggleSpeak}
+              className={cn(
+                "p-1 rounded-full border border-muted-foreground/10 transition-all cursor-pointer flex items-center justify-center outline-none",
+                isSpeaking 
+                  ? "bg-[#013220] text-white hover:bg-emerald-800" 
+                  : "bg-white text-muted-foreground hover:bg-muted"
+              )}
+              title={isSpeaking ? "Stop voice guidance" : "Listen to voice guidance"}
+            >
+              {isSpeaking ? (
+                <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+              ) : (
+                <Volume2 className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
             {[
               item.dosage,
               `${item.doses_per_day ?? 1}x/day`,
