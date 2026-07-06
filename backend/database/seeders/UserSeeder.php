@@ -22,6 +22,7 @@ class UserSeeder extends Seeder
                 'guard_name' => 'web',
             ]);
         }
+        
 
         // Create or update super admin user
         $user = User::firstOrCreate(
