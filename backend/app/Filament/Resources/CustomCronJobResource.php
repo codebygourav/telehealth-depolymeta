@@ -7,7 +7,9 @@ use App\Models\CustomCronJob;
 use App\Traits\HasCustomSidebar;
 use Filament\Forms\Components\{
     TextInput,
-    Toggle
+    Toggle,
+    Select,
+    Placeholder
 };
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -59,12 +61,77 @@ class CustomCronJobResource extends Resource
                     ->placeholder('e.g. queue:work --stop-when-empty')
                     ->required()
                     ->maxLength(255),
+
+                Select::make('preset_schedule')
+                    ->label('Preset Schedules (Simple Timing Selector)')
+                    ->options([
+                        'custom' => 'Custom Cron Expression (set manually below)',
+                        '* * * * *' => 'Every Minute (* * * * *)',
+                        '*/5 * * * *' => 'Every 5 Minutes (*/5 * * * *)',
+                        '*/15 * * * *' => 'Every 15 Minutes (*/15 * * * *)',
+                        '*/30 * * * *' => 'Every 30 Minutes (*/30 * * * *)',
+                        '0 * * * *' => 'Every Hour (0 * * * *)',
+                        '0 */2 * * *' => 'Every 2 Hours (0 */2 * * *)',
+                        '0 0 * * *' => 'Daily at Midnight (0 0 * * *)',
+                        '0 12 * * *' => 'Daily at Noon (0 12 * * *)',
+                        '0 0 * * 0' => 'Weekly on Sunday (0 0 * * 0)',
+                        '0 0 1 * *' => 'Monthly on 1st of Month (0 0 1 * *)',
+                    ])
+                    ->dehydrated(false)
+                    ->reactive()
+                    ->default('custom')
+                    ->afterStateHydrated(function ($state, $set, $get) {
+                        $schedule = $get('schedule');
+                        $presets = [
+                            '* * * * *',
+                            '*/5 * * * *',
+                            '*/15 * * * *',
+                            '*/30 * * * *',
+                            '0 * * * *',
+                            '0 */2 * * *',
+                            '0 0 * * *',
+                            '0 12 * * *',
+                            '0 0 * * 0',
+                            '0 0 1 * *',
+                        ];
+                        if (in_array($schedule, $presets, true)) {
+                            $set('preset_schedule', $schedule);
+                        } else {
+                            $set('preset_schedule', 'custom');
+                        }
+                    })
+                    ->afterStateUpdated(function ($state, $set) {
+                        if ($state !== 'custom' && $state !== null) {
+                            $set('schedule', $state);
+                        }
+                    }),
+
                 TextInput::make('schedule')
                     ->label('Cron Schedule (Expression)')
                     ->placeholder('e.g. * * * * *')
                     ->required()
                     ->maxLength(255)
-                    ->helperText('Use a standard 5-field cron expression.')
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, $set) {
+                        $presets = [
+                            '* * * * *',
+                            '*/5 * * * *',
+                            '*/15 * * * *',
+                            '*/30 * * * *',
+                            '0 * * * *',
+                            '0 */2 * * *',
+                            '0 0 * * *',
+                            '0 12 * * *',
+                            '0 0 * * 0',
+                            '0 0 1 * *',
+                        ];
+                        if (!in_array($state, $presets, true)) {
+                            $set('preset_schedule', 'custom');
+                        } else {
+                            $set('preset_schedule', $state);
+                        }
+                    })
+                    ->helperText('Standard 5-field cron expression (Minute Hour Day Month Weekday).')
                     ->rules([
                         function () {
                             return function (string $attribute, $value, \Closure $fail) {
@@ -78,10 +145,46 @@ class CustomCronJobResource extends Resource
                             };
                         },
                     ]),
+
+                Placeholder::make('next_run_dates')
+                    ->label('Upcoming Executions (Next 3 Runs)')
+                    ->content(function ($get) {
+                        $schedule = $get('schedule');
+                        if (empty($schedule)) {
+                            return 'Please select a preset or type a custom schedule above.';
+                        }
+
+                        try {
+                            if (!CronExpression::isValidExpression($schedule)) {
+                                return new \Illuminate\Support\HtmlString('<span style="color: #ef4444; font-weight: 600;">Invalid cron expression format.</span>');
+                            }
+
+                            $cron = new CronExpression($schedule);
+                            $nextRuns = [];
+                            $currentTime = new \DateTime();
+
+                            for ($i = 0; $i < 3; $i++) {
+                                $currentTime = $cron->getNextRunDate($currentTime, 0, $i > 0);
+                                $nextRuns[] = $currentTime->format('Y-m-d H:i:s') . ' (Server Time)';
+                            }
+
+                            $html = '<ul style="list-style-type: disc; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.6;">';
+                            foreach ($nextRuns as $run) {
+                                $html .= '<li><strong>' . $run . '</strong></li>';
+                            }
+                            $html .= '</ul>';
+
+                            return new \Illuminate\Support\HtmlString($html);
+                        } catch (\Throwable $e) {
+                            return new \Illuminate\Support\HtmlString('<span style="color: #ef4444; font-size: 13px;">Error calculating next execution times: ' . e($e->getMessage()) . '</span>');
+                        }
+                    }),
+
                 TextInput::make('description')
                     ->label('Description')
                     ->maxLength(255)
                     ->columnSpanFull(),
+
                 Toggle::make('is_active')
                     ->label('Is Active')
                     ->default(true),
@@ -115,6 +218,25 @@ class CustomCronJobResource extends Resource
                     ->dateTime('Y-m-d H:i:s')
                     ->sortable()
                     ->placeholder('Never'),
+
+                TextColumn::make('next_run_at')
+                    ->label('Next Run')
+                    ->state(function (CustomCronJob $record): ?\DateTime {
+                        if (!$record->is_active || !$record->schedule) {
+                            return null;
+                        }
+                        try {
+                            if (!CronExpression::isValidExpression($record->schedule)) {
+                                return null;
+                            }
+                            $cron = new CronExpression($record->schedule);
+                            return $cron->getNextRunDate();
+                        } catch (\Throwable $e) {
+                            return null;
+                        }
+                    })
+                    ->dateTime('Y-m-d H:i:s')
+                    ->placeholder('N/A'),
 
                 TextColumn::make('last_run_status')
                     ->label('Status')

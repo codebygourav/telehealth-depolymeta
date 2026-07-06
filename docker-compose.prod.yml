@@ -48,6 +48,7 @@ services:
 
     volumes:
       - ./backend:/var/www/html
+      - ./backend/docker/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
       - vendor_data:/var/www/html/vendor
 
     depends_on:

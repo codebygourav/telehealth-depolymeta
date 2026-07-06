@@ -14,6 +14,10 @@ RUN curl -sS https://getcomposer.org/installer | php \
 COPY docker/entrypoint.sh /usr/local/bin/app-entrypoint
 RUN chmod +x /usr/local/bin/app-entrypoint
 
+# Copy custom php.ini/uploads.ini settings
+COPY docker/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
+
 RUN chown -R www-data:www-data /var/www/html
 
 EXPOSE 9000
