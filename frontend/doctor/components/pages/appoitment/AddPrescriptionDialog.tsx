@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X } from "lucide-react";
+import { Loader2, Mic, X } from "lucide-react";
 import { useParams } from "next/navigation";
 
 import {
@@ -30,6 +30,7 @@ import { RadioField } from "@/components/custom/RadioField";
 import { useAuth } from "@/context/userContext";
 import { useAddPrescription } from "@/queries/useAddPrescription";
 import { useMedicines } from "@/queries/useMedicines";
+import { useParsePrescriptionDraft } from "@/queries/useParsePrescriptionDraft";
 
 const PrescriptionSchema = z.object({
   medicine_id: z.string().optional(),
@@ -41,7 +42,7 @@ const PrescriptionSchema = z.object({
   timing_afternoon: z.boolean().optional(),
   timing_evening: z.boolean().optional(),
   timing_night: z.boolean().optional(),
-  meal: z.enum(["before_meal", "after_meal"], {
+  meal: z.enum(["before_meal", "after_meal", "with_meal"], {
     message: "Please select a meal option",
   }),
   instructions: z.string().optional(),
@@ -56,20 +57,71 @@ type MedicineItem = {
   type?: string | null;
 };
 
+type BrowserSpeechRecognitionAlternative = {
+  transcript: string;
+};
+
+type BrowserSpeechRecognitionResult = {
+  isFinal: boolean;
+  0: BrowserSpeechRecognitionAlternative;
+};
+
+type BrowserSpeechRecognitionEvent = {
+  resultIndex: number;
+  results: ArrayLike<BrowserSpeechRecognitionResult>;
+};
+
+type BrowserSpeechRecognitionErrorEvent = {
+  error: string;
+};
+
+type BrowserSpeechRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
+  onerror: ((event: BrowserSpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+};
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+  }
+}
+
 interface AddPrescriptionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  assistantConfig?: {
+    enabled?: boolean;
+    input_mode?: string;
+    text_mode_max_chars?: number;
+    speech_locale?: string;
+    supported_locales?: string[];
+    allow_custom_locale?: boolean;
+    requires_doctor_review?: boolean;
+  } | null;
 }
 
 export default function AddPrescriptionDialog({
   open,
   onOpenChange,
+  assistantConfig,
 }: AddPrescriptionDialogProps) {
   const { token } = useAuth();
   const params = useParams();
   const appointment_id = params?.id as string;
 
   const addPrescription = useAddPrescription(appointment_id || "", token!);
+  const parseDraft = useParsePrescriptionDraft(appointment_id || "");
 
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,6 +129,20 @@ export default function AddPrescriptionDialog({
   const [startDate, setStartDate] = useState<string>(getTodayDate());
   const [endDate, setEndDate] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [draftInput, setDraftInput] = useState("");
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [draftWarnings, setDraftWarnings] = useState<string[]>([]);
+  const [draftMissingFields, setDraftMissingFields] = useState<string[]>([]);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speechError, setSpeechError] = useState<string | null>(null);
+  const [selectedSpeechLocale, setSelectedSpeechLocale] = useState("auto");
+  const [customSpeechLocale, setCustomSpeechLocale] = useState("");
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const shouldParseAfterStopRef = useRef(false);
+  const draftInputRef = useRef("");
+  const transcriptBaseRef = useRef("");
+  const transcriptFinalRef = useRef("");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -124,6 +190,57 @@ export default function AddPrescriptionDialog({
     setValue("dosage", "");
   }, [medicationType, setValue]);
 
+  useEffect(() => {
+    draftInputRef.current = draftInput;
+  }, [draftInput]);
+
+  useEffect(() => {
+    if (!open) {
+      stopListening(false);
+      setDraftInput("");
+      setDraftId(null);
+      setDraftWarnings([]);
+      setDraftMissingFields([]);
+      setSpeechError(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const configuredLocale = assistantConfig?.speech_locale?.trim() || "en-IN";
+    const supportedLocales = assistantConfig?.supported_locales || [];
+
+    if (supportedLocales.includes(configuredLocale)) {
+      setSelectedSpeechLocale(configuredLocale);
+      setCustomSpeechLocale("");
+      return;
+    }
+
+    if (supportedLocales.includes("auto")) {
+      setSelectedSpeechLocale("auto");
+      setCustomSpeechLocale(configuredLocale === "auto" ? "" : configuredLocale);
+      return;
+    }
+
+    setSelectedSpeechLocale(configuredLocale);
+    setCustomSpeechLocale("");
+  }, [assistantConfig?.speech_locale, assistantConfig?.supported_locales]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const SpeechRecognitionApi =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    setSpeechSupported(Boolean(SpeechRecognitionApi));
+
+    return () => {
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+    };
+  }, []);
+
   const dosageOptions = useMemo(() => {
     return getDosageOptions(medicationType);
   }, [medicationType]);
@@ -153,6 +270,7 @@ export default function AddPrescriptionDialog({
   const mealOptions = [
     { label: "Before Meal", value: "before_meal" },
     { label: "After Meal", value: "after_meal" },
+    { label: "With Meal", value: "with_meal" },
   ];
 
   const handleSelectMedicine = (medicine: MedicineItem) => {
@@ -181,6 +299,7 @@ export default function AddPrescriptionDialog({
     if (data.timing_night) timings.push("night");
 
     const payload = {
+      draft_id: draftId,
       stamp_preference: data.stamp_preference,
       medicines: [
         {
@@ -217,10 +336,226 @@ export default function AddPrescriptionDialog({
     setStartDate(getTodayDate());
     setEndDate("");
     setSelectedType(null);
+    setDraftInput("");
+    setDraftId(null);
+    setDraftWarnings([]);
+    setDraftMissingFields([]);
     onOpenChange(false);
   };
 
   const medicineList = medicinesQuery.data?.data || [];
+  const assistantMode = assistantConfig?.input_mode || "off";
+  const dictationEnabled =
+    Boolean(assistantConfig?.enabled) &&
+    (assistantMode === "text" || assistantMode === "speech");
+  const speechModeEnabled = dictationEnabled && assistantMode === "speech";
+  const textModeMaxChars = assistantConfig?.text_mode_max_chars || 1000;
+  const defaultSpeechLocale = assistantConfig?.speech_locale || "en-IN";
+  const supportedSpeechLocales =
+    assistantConfig?.supported_locales?.length
+      ? assistantConfig.supported_locales
+      : ["auto", "en-IN", "hi-IN", "pa-IN"];
+  const allowCustomSpeechLocale = assistantConfig?.allow_custom_locale !== false;
+
+  const localeLabelMap: Record<string, string> = {
+    auto: "Auto (Browser Language)",
+    "en-IN": "English (India)",
+    "hi-IN": "Hindi (हिंदी)",
+    "pa-IN": "Punjabi (ਪੰਜਾਬੀ)",
+  };
+
+  const speechLocaleOptions = [
+    ...supportedSpeechLocales.map((locale) => ({
+      value: locale,
+      label: localeLabelMap[locale] || locale,
+    })),
+    ...(allowCustomSpeechLocale ? [{ value: "custom", label: "Custom Locale" }] : []),
+  ];
+
+  const combineTranscript = (...parts: Array<string | null | undefined>) =>
+    parts
+      .map((part) => (part || "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const resolvedSpeechLocale = (() => {
+    if (selectedSpeechLocale === "custom") {
+      return customSpeechLocale.trim() || defaultSpeechLocale;
+    }
+
+    if (selectedSpeechLocale === "auto") {
+      if (typeof window !== "undefined" && navigator.language) {
+        return navigator.language;
+      }
+
+      return defaultSpeechLocale;
+    }
+
+    return selectedSpeechLocale || defaultSpeechLocale;
+  })();
+
+  const applyDraftToForm = (payload: any) => {
+    const form = payload?.form || {};
+
+    setValue("medicine_id", form.medicine_id || "custom", { shouldValidate: true });
+    setValue("medicine_name", form.medicine_name || "", { shouldValidate: true });
+    setValue("medication_type", form.medication_type || "tablet", { shouldValidate: true });
+    setValue("dosage", form.dosage || "", { shouldValidate: true });
+    setValue("frequency", form.frequency || "", { shouldValidate: true });
+    setValue("timing_morning", Boolean(form.timing_morning));
+    setValue("timing_afternoon", Boolean(form.timing_afternoon));
+    setValue("timing_evening", Boolean(form.timing_evening));
+    setValue("timing_night", Boolean(form.timing_night));
+
+    if (form.meal) {
+      setValue("meal", form.meal, { shouldValidate: true });
+    }
+
+    setValue("instructions", form.instructions || "", { shouldValidate: true });
+    setValue("stamp_preference", form.stamp_preference || "only_global", {
+      shouldValidate: true,
+    });
+
+    setSelectedType(form.medication_type || "tablet");
+    setStartDate(form.start_date || getTodayDate());
+    setEndDate(form.end_date || "");
+  };
+
+  const handleParseDraft = (inputText?: string) => {
+    const textToParse = (inputText ?? draftInputRef.current).trim();
+
+    if (!textToParse) {
+      return;
+    }
+
+    parseDraft.mutate(
+      {
+        input_text: textToParse,
+      },
+      {
+        onSuccess: (response: any) => {
+          const payload = response?.data || {};
+          setDraftId(payload.draft_id || null);
+          setDraftWarnings(payload.warnings || []);
+          setDraftMissingFields(payload.missing_fields || []);
+          applyDraftToForm(payload);
+        },
+        onError: (error: any) => {
+          alert(
+            error?.response?.data?.errors?.message ||
+            error?.message ||
+            "Failed to parse prescription text."
+          );
+        },
+      }
+    );
+  };
+
+  const stopListening = (shouldPrefill: boolean) => {
+    shouldParseAfterStopRef.current = shouldPrefill;
+
+    if (!recognitionRef.current) {
+      if (shouldPrefill && draftInputRef.current.trim()) {
+        handleParseDraft(draftInputRef.current);
+      }
+
+      return;
+    }
+
+    recognitionRef.current.stop();
+  };
+
+  const startListening = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const SpeechRecognitionApi =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionApi) {
+      setSpeechSupported(false);
+      setSpeechError("This browser does not support voice dictation.");
+      return;
+    }
+
+    recognitionRef.current?.abort();
+
+    const recognition = new SpeechRecognitionApi();
+    transcriptBaseRef.current = draftInputRef.current.trim();
+    transcriptFinalRef.current = "";
+    shouldParseAfterStopRef.current = false;
+
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = resolvedSpeechLocale;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      let finalTranscript = transcriptFinalRef.current;
+      let interimTranscript = "";
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result?.[0]?.transcript?.trim();
+
+        if (!transcript) {
+          continue;
+        }
+
+        if (result.isFinal) {
+          finalTranscript = combineTranscript(finalTranscript, transcript);
+        } else {
+          interimTranscript = combineTranscript(interimTranscript, transcript);
+        }
+      }
+
+      transcriptFinalRef.current = finalTranscript;
+
+      const nextDraft = combineTranscript(
+        transcriptBaseRef.current,
+        finalTranscript,
+        interimTranscript
+      ).slice(0, textModeMaxChars);
+
+      setDraftInput(nextDraft);
+      setSpeechError(null);
+    };
+
+    recognition.onerror = (event) => {
+      setSpeechError(
+        event.error === "not-allowed"
+          ? "Microphone permission was blocked."
+          : "Voice capture failed. Please try again."
+      );
+    };
+
+    recognition.onend = () => {
+      const shouldPrefill = shouldParseAfterStopRef.current;
+
+      shouldParseAfterStopRef.current = false;
+      setIsListening(false);
+      recognitionRef.current = null;
+
+      if (shouldPrefill && draftInputRef.current.trim()) {
+        handleParseDraft(draftInputRef.current);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    setSpeechError(null);
+    setIsListening(true);
+
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+      setIsListening(false);
+      setSpeechError("Voice capture could not be started. Please try again.");
+    }
+  };
 
   return (
     <>
@@ -236,6 +571,151 @@ export default function AddPrescriptionDialog({
 
           <div className="max-h-[80vh] overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
+              {dictationEnabled && (
+                <div className="space-y-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 sm:p-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:text-sm font-semibold">
+                      Prescription Dictation Assistant
+                    </Label>
+                    <p className="text-[11px] sm:text-sm text-muted-foreground">
+                      {speechModeEnabled
+                        ? "Use the microphone to capture the doctor's voice in any browser-supported language. The transcript appears below, then the form is autofilled only after the doctor clicks Done."
+                        : "Paste the dictated prescription text here. The system will prefill the form, but the doctor must review every field before saving."}
+                    </p>
+                  </div>
+
+                  {speechModeEnabled && (
+                    <div className="space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                        <div className="space-y-1.5">
+                          <Label className="text-[11px] sm:text-xs font-medium text-muted-foreground">
+                            Speech Language
+                          </Label>
+                          <Select
+                            value={selectedSpeechLocale}
+                            onValueChange={setSelectedSpeechLocale}
+                            disabled={isListening}
+                          >
+                            <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm">
+                              <SelectValue placeholder="Select language" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {speechLocaleOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value} className="text-xs sm:text-sm">
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {selectedSpeechLocale === "custom" && (
+                          <div className="space-y-1.5">
+                            <Label className="text-[11px] sm:text-xs font-medium text-muted-foreground">
+                              Custom Locale
+                            </Label>
+                            <Input
+                              value={customSpeechLocale}
+                              onChange={(event) => setCustomSpeechLocale(event.target.value)}
+                              placeholder="Example: fr-FR, ta-IN, ar-SA"
+                              disabled={isListening}
+                              className="h-8 sm:h-9 text-xs sm:text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant={isListening ? "destructive" : "secondary"}
+                          onClick={() =>
+                            isListening ? stopListening(true) : startListening()
+                          }
+                          disabled={parseDraft.isPending}
+                          className="h-8 sm:h-9 text-xs sm:text-sm"
+                        >
+                          {isListening ? (
+                            <>
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              Done & Prefill
+                            </>
+                          ) : (
+                            <>
+                              <Mic className="mr-1.5 h-3.5 w-3.5" />
+                              Start Voice Input
+                            </>
+                          )}
+                        </Button>
+
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
+                          Active locale: {resolvedSpeechLocale}
+                          {speechSupported ? "" : " | Browser voice capture unavailable"}
+                        </p>
+                      </div>
+
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Medicine matching still depends on names saved in inventory. Always review the prefilled fields before saving.
+                      </p>
+                    </div>
+                  )}
+
+                  <Textarea
+                    placeholder={
+                      speechModeEnabled
+                        ? "Speak or edit the transcript here before prefilling."
+                        : "Example: Paracetamol 650 mg twice a day morning and night after meal for 5 days. Instructions: drink water."
+                    }
+                    value={draftInput}
+                    onChange={(e) => setDraftInput(e.target.value.slice(0, textModeMaxChars))}
+                    rows={5}
+                    className="text-xs sm:text-sm"
+                  />
+
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      {draftInput.length}/{textModeMaxChars} characters
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => handleParseDraft()}
+                      disabled={!draftInput.trim() || parseDraft.isPending || isListening}
+                      className="h-8 sm:h-9 text-xs sm:text-sm"
+                    >
+                      {parseDraft.isPending
+                        ? "Prefilling..."
+                        : speechModeEnabled
+                          ? "Prefill From Transcript"
+                          : "Prefill From Text"}
+                    </Button>
+                  </div>
+
+                  {speechError && (
+                    <div className="rounded-md bg-red-50 p-3 text-[11px] sm:text-sm text-red-700">
+                      {speechError}
+                    </div>
+                  )}
+
+                  {(draftWarnings.length > 0 || draftMissingFields.length > 0) && (
+                    <div className="rounded-md bg-amber-50 p-3 text-[11px] sm:text-sm text-amber-900">
+                      {draftWarnings.length > 0 && (
+                        <ul className="list-disc space-y-1 pl-4">
+                          {draftWarnings.map((warning) => (
+                            <li key={warning}>{warning}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {draftMissingFields.length > 0 && (
+                        <p className="mt-2">
+                          Missing fields: {draftMissingFields.join(", ")}.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Medicine search / selected medicine */}
               <div className="space-y-1.5 sm:space-y-2">
                 <Label className="text-xs sm:text-sm">Medicine</Label>
@@ -406,7 +886,7 @@ export default function AddPrescriptionDialog({
                 label="Meal *"
                 value={meal || ""}
                 onChange={(value) =>
-                  setValue("meal", value as "before_meal" | "after_meal", {
+                  setValue("meal", value as PrescriptionForm["meal"], {
                     shouldValidate: true,
                   })
                 }

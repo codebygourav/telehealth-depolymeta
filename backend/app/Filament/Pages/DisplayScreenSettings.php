@@ -3,10 +3,13 @@
 namespace App\Filament\Pages;
 
 use App\Models\DisplayScreenSetting;
+use App\Support\DisplayVoiceAnnouncement;
 use App\Traits\HasCustomSidebar;
+use Filament\Forms\Components\Placeholder;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\HtmlString;
 
 class DisplayScreenSettings extends Settings
 {
@@ -135,9 +138,14 @@ class DisplayScreenSettings extends Settings
                 ->columnSpanFull(),
             Section::make('Voice Announcement')
                 ->description('Configure browser-based token announcements.')
-                ->schema($this->buildSectionsFromConfig('display_ads', [
-                    'voice' => config('settings.display_ads.sections.voice', []),
-                ]))
+                ->schema([
+                    Placeholder::make('voice_announcement_browser_info')
+                        ->label('Browser Voice Info')
+                        ->content(new HtmlString($this->voiceAnnouncementInfoHtml())),
+                    ...$this->buildSectionsFromConfig('display_ads', [
+                        'voice' => config('settings.display_ads.sections.voice', []),
+                    ]),
+                ])
                 ->visible(fn () => $this->activeTab === 'voice')
                 ->columnSpanFull(),
             Section::make('Content Defaults')
@@ -193,5 +201,27 @@ class DisplayScreenSettings extends Settings
             ->title('Display settings saved successfully')
             ->success()
             ->send();
+    }
+
+    private function voiceAnnouncementInfoHtml(): string
+    {
+        $placeholders = implode(', ', DisplayVoiceAnnouncement::placeholders());
+        $defaultTemplate = e(DisplayVoiceAnnouncement::defaultTemplate());
+
+        return <<<HTML
+<div style="display:grid;gap:14px;">
+    <div style="padding:12px 14px;border-radius:12px;border:1px dashed #cbd5e1;background:#f8fafc;color:#334155;font-size:13px;line-height:1.65;">
+        <div><strong>Voice count</strong>: Browser voices are dynamic. The exact number depends on the current device, browser, operating system, and installed language packs.</div>
+        <div><strong>Common language codes</strong>: <code>en-US</code> (English US), <code>en-IN</code> (English India), <code>hi-IN</code> (Hindi), <code>pa-IN</code> (Punjabi).</div>
+        <div><strong>Preferred Voice Name</strong>: Optional. Use the exact browser voice name if you want one specific voice. Leave it blank to auto-pick the best matching voice.</div>
+    </div>
+    <div style="padding:12px 14px;border-radius:12px;border:1px solid #e2e8f0;background:#ffffff;color:#334155;font-size:13px;line-height:1.65;">
+        <div><strong>Available placeholders</strong></div>
+        <div><code>{$placeholders}</code></div>
+        <div style="margin-top:8px;"><strong>Copy-ready example</strong></div>
+        <div><code>{$defaultTemplate}</code></div>
+    </div>
+</div>
+HTML;
     }
 }

@@ -87,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/medicines', [PrescriptionController::class, 'index']);
         Route::get('/departments', [DepartmentController::class, 'index']);
         Route::post('{appointmentId}/prescriptions', [PrescriptionController::class, 'store']);
+        Route::post('{appointmentId}/prescription-drafts/text', [PrescriptionController::class, 'parseTextDraft']);
         Route::get('/medicine-templates', [MedicineTemplateController::class, 'index']);
         Route::get('/medicine-templates/{id}', [MedicineTemplateController::class, 'show']);
         Route::post('/{appointmentId}/assign-medicine-template', [MedicineTemplateController::class, 'assign']);

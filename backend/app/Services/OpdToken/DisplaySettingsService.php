@@ -5,6 +5,7 @@ namespace App\Services\OpdToken;
 use App\Models\DisplayScreen;
 use App\Models\DisplayScreenSetting;
 use App\Models\Setting;
+use App\Support\DisplayVoiceAnnouncement;
 
 class DisplaySettingsService
 {
@@ -44,7 +45,7 @@ class DisplaySettingsService
             'voice_enabled' => true,
             'voice_language' => 'en-US',
             'voice_name' => '',
-            'announcement_template' => 'Token {token_number}, please proceed to Room {room_number}, Dr. {doctor_name}.',
+            'announcement_template' => DisplayVoiceAnnouncement::defaultTemplate(),
             'badge_label' => 'Doctor Advertisement Slider',
             'empty_slide_title' => 'No advertisement assigned',
             'empty_slide_text' => 'Add at least one active advertisement for this doctor.',

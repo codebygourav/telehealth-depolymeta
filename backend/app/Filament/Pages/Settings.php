@@ -108,6 +108,25 @@ class Settings extends Page
             }
         }
 
+        foreach ($config as $groupKey => $group) {
+            foreach (($group['sections'] ?? []) as $section) {
+                $dbGroup = $section['db_group'] ?? $groupKey;
+
+                foreach (($section['fields'] ?? []) as $fieldKey => $field) {
+                    if (! array_key_exists('default', $field)) {
+                        continue;
+                    }
+
+                    $fullKey = "{$dbGroup}.{$fieldKey}";
+                    $currentValue = data_get($data, $fullKey);
+
+                    if ($currentValue === null || $currentValue === '') {
+                        data_set($data, $fullKey, $field['default']);
+                    }
+                }
+            }
+        }
+
         return $data;
     }
 
@@ -118,13 +137,18 @@ class Settings extends Page
             ->statePath('data');
     }
 
+    public static function getHiddenSettingsGroups(): array
+    {
+        return ['display', 'display_ads', 'prescription_voice'];
+    }
+
     protected function buildFormSchema(): array
     {
         $schema = [];
         $config = config('settings', []);
 
         foreach ($config as $groupKey => $group) {
-            if (in_array($groupKey, ['display', 'display_ads'], true)) {
+            if (in_array($groupKey, static::getHiddenSettingsGroups(), true)) {
                 continue;
             }
 
@@ -419,7 +443,8 @@ class Settings extends Page
                     ->label($field['label'])
                     ->placeholder($field['placeholder'] ?? null)
                     ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
-                    ->rows($field['rows'] ?? 3),
+                    ->rows($field['rows'] ?? 3)
+                    ->default($field['default'] ?? null),
                 function ($component) use ($field) {
                     if (isset($field['maxLength'])) {
                         $component->maxLength($field['maxLength']);

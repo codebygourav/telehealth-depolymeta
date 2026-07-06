@@ -167,7 +167,7 @@
 
             <nav>
                 @foreach (config('settings') as $key => $group)
-                    @if (in_array($key, ['display', 'display_ads'], true))
+                    @if (in_array($key, $this->getHiddenSettingsGroups(), true))
                         @continue
                     @endif
 

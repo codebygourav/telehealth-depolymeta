@@ -63,8 +63,10 @@
 
             const message = (this.template || 'Token {token_number}, please proceed to Room {room_number}, Dr. {doctor_name}.')
                 .replaceAll('{token_number}', payload.current_token || payload.token_number || payload.token || '')
+                .replaceAll('{patient_name}', payload.current_patient || payload.patient_name || '')
                 .replaceAll('{doctor_name}', payload.doctor_name || '')
-                .replaceAll('{room_number}', payload.room_number || payload.room || '');
+                .replaceAll('{room_number}', payload.room_number || payload.room || '')
+                .replaceAll('{time_slot}', payload.current_time_slot || payload.time_slot || '');
 
             if (!message.trim()) {
                 return;

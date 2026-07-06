@@ -144,6 +144,59 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Prescription Voice Settings
+    |--------------------------------------------------------------------------
+    */
+    'prescription_voice' => [
+        'label' => 'Prescription Voice',
+        'icon' => 'heroicon-o-speaker-wave',
+        'description' => 'Global browser speech templates for medicine and prescription guidance.',
+        'sections' => [
+            'general' => [
+                'label' => 'General',
+                'description' => 'These templates are used anywhere the browser-based prescription speech player is enabled.',
+                'fields' => [
+                    'enabled' => [
+                        'type' => 'toggle',
+                        'label' => 'Enable Browser SpeechSynthesis',
+                        'default' => true,
+                        'helper' => 'Uses the browser SpeechSynthesis API. No server-side TTS service is required.',
+                        'is_public' => false,
+                    ],
+                    'default_language' => [
+                        'type' => 'select',
+                        'label' => 'Default Language',
+                        'options' => [
+                            'en' => 'English',
+                            'hi' => 'Hindi',
+                            'pa' => 'Punjabi',
+                        ],
+                        'default' => \App\Support\PrescriptionSpeech::DEFAULT_LANGUAGE,
+                        'helper' => 'This is the default selected language in the prescription voice preview.',
+                        'is_public' => false,
+                    ],
+                ],
+            ],
+            'templates' => [
+                'label' => 'Template',
+                'description' => \App\Support\PrescriptionSpeech::placeholdersHelpText(),
+                'fields' => [
+                    'template' => [
+                        'type' => 'textarea',
+                        'label' => 'Speech Template',
+                        'rows' => 4,
+                        'default' => \App\Support\PrescriptionSpeech::defaultTemplate(),
+                        'helper' => \App\Support\PrescriptionSpeech::placeholdersHelpText(),
+                        'placeholder' => \App\Support\PrescriptionSpeech::defaultTemplate(),
+                        'is_public' => false,
+                    ],
+                ],
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Display Screen Settings
     |--------------------------------------------------------------------------
     */
@@ -439,6 +492,7 @@ return [
                         'type' => 'text',
                         'label' => 'Voice Language',
                         'default' => 'en-US',
+                        'helper' => \App\Support\DisplayVoiceAnnouncement::languageHelpText(),
                         'is_public' => false,
                     ],
                     'voice_name' => [
@@ -452,7 +506,9 @@ return [
                         'type' => 'textarea',
                         'label' => 'Announcement Template',
                         'rows' => 3,
-                        'default' => 'Token {token_number}, please proceed to Room {room_number}, Dr. {doctor_name}.',
+                        'default' => \App\Support\DisplayVoiceAnnouncement::defaultTemplate(),
+                        'helper' => \App\Support\DisplayVoiceAnnouncement::placeholdersHelpText(),
+                        'placeholder' => \App\Support\DisplayVoiceAnnouncement::defaultTemplate(),
                         'is_public' => false,
                     ],
                 ],

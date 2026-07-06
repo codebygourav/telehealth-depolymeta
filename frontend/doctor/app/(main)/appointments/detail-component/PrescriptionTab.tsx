@@ -53,6 +53,15 @@ interface Medicine {
 }
 
 type MealTiming = "before_meal" | "after_meal" | "with_meal" | string;
+type DictationAssistantConfig = {
+  enabled?: boolean;
+  input_mode?: string;
+  text_mode_max_chars?: number;
+  speech_locale?: string;
+  supported_locales?: string[];
+  allow_custom_locale?: boolean;
+  requires_doctor_review?: boolean;
+};
 type ConclusionReportFile = {
   id: string;
   name: string;
@@ -289,6 +298,7 @@ export default function PrescriptionTab({
   const pdfUrl = data?.data?.pdf_url;
   const instructionsByDoctor = data?.data?.instructions_by_doctor;
   const nextVisitDate = data?.data?.next_visit_date;
+  const dictationAssistant = (data?.data?.dictation_assistant ?? null) as DictationAssistantConfig | null;
 
   // Conclusion data
   const conclusionFiles = (conclusionData?.data?.conclusion_report_files ??
@@ -347,6 +357,7 @@ export default function PrescriptionTab({
         <AddPrescriptionDialog
           open={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
+          assistantConfig={dictationAssistant}
         />
         <AssignMedicineTemplateDialog
           appointmentId={appointmentId}
@@ -520,6 +531,7 @@ export default function PrescriptionTab({
       <AddPrescriptionDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
+        assistantConfig={dictationAssistant}
       />
 
       <AssignMedicineTemplateDialog

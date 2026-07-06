@@ -36,6 +36,8 @@
             return $time;
         }
     };
+
+    $speechSettings = \App\Support\PrescriptionSpeech::settings();
 @endphp
 
 <style>
@@ -90,76 +92,256 @@
 
 <div class="medicine-admin-shell"
     x-data="{
-        language: 'en',
+        speechEnabled: @js((bool) ($speechSettings['enabled'] ?? true)),
+        language: @js((string) ($speechSettings['default_language'] ?? 'en')),
+        speechTemplate: @js((string) ($speechSettings['template'] ?? \App\Support\PrescriptionSpeech::defaultTemplate())),
+        placeholderTokens: @js($speechSettings['placeholders'] ?? []),
+        translationCache: {},
         isPlayingAll: false,
         currentPlayingIndex: null,
         isSpeakingSelf: {},
         items: @js($items),
+        supportedLanguages: [
+            { key: 'en', label: 'English' },
+            { key: 'hi', label: 'Hindi' },
+            { key: 'pa', label: 'Punjabi' },
+        ],
 
-        formatTimesForSpeech(timesStr) {
-            if (!timesStr) return '';
-            const times = timesStr.split(',').map(t => t.trim());
-            const formatted = times.map(time => {
-                const parts = time.split(':');
-                if (parts.length < 2) return time;
-                const hour = parseInt(parts[0], 10);
-                const minute = parseInt(parts[1], 10);
-                if (isNaN(hour)) return time;
-                
-                let displayHour = hour;
-                if (hour > 12) displayHour = hour - 12;
-                else if (hour === 0) displayHour = 12;
-                
-                const ampm = hour >= 12 ? 'PM' : 'AM';
-                return displayHour + (minute > 0 ? ':' + (minute < 10 ? '0' + minute : minute) : '') + ' ' + ampm;
-            });
-            
-            if (formatted.length <= 1) return formatted[0] || '';
-            if (formatted.length === 2) {
-                return formatted[0] + ' and ' + formatted[1];
+        init() {
+            if (!('speechSynthesis' in window)) {
+                return;
             }
-            const last = formatted.pop();
-            return formatted.join(', ') + ', and ' + last;
+
+            if (typeof window.speechSynthesis.getVoices === 'function') {
+                window.speechSynthesis.getVoices();
+            }
+
+            if (typeof window.speechSynthesis.addEventListener === 'function') {
+                window.speechSynthesis.addEventListener('voiceschanged', () => {
+                    window.speechSynthesis.getVoices();
+                });
+            }
         },
 
-        generateMedicineSpeechText(item) {
-            const name = item.medicine_name || '';
-            const dosage = item.dosage || '';
-            const useType = item.use_type || 'regular';
-            const meal = item.meal_timing || '';
-            
-            let times = '';
-            if (item.frequency_times) {
-                times = Array.isArray(item.frequency_times) ? item.frequency_times.join(', ') : item.frequency_times;
+        canSpeak() {
+            return this.speechEnabled && ('speechSynthesis' in window);
+        },
+
+        normalizeText(value) {
+            if (value === null || value === undefined) {
+                return '';
             }
 
-            let instList = [];
-            if (item.instructions) {
-                instList = Array.isArray(item.instructions) ? item.instructions : [item.instructions];
+            return String(value).replace(/\s+/g, ' ').trim();
+        },
+
+        normalizeCompiledText(value) {
+            return this.normalizeText(
+                String(value || '')
+                    .replace(/\s+([,.;:!?।])/g, '$1')
+                    .replace(/([.?!।])(?=[^\s])/g, '$1 ')
+            );
+        },
+
+        getLocale(lang) {
+            return {
+                en: 'en-IN',
+                hi: 'hi-IN',
+                pa: 'pa-IN',
+            }[lang] || 'en-IN';
+        },
+
+        renderTemplate(template, data) {
+            const raw = String(template || '').replace(/\{([a-z0-9_]+)\}/gi, (_, key) => {
+                return this.normalizeText(data[key] ?? '');
+            });
+
+            return this.normalizeCompiledText(raw);
+        },
+
+        templateForLanguage() {
+            return this.normalizeText(this.speechTemplate);
+        },
+
+        formatTimeForSpeech(time, lang) {
+            const normalized = this.normalizeText(time);
+            if (!normalized) {
+                return '';
             }
 
-            let text = 'Please take ' + name + '.';
-            if (dosage) {
-                text += ' Dosage is ' + dosage + '.';
+            const parts = normalized.split(':');
+            if (parts.length < 2) {
+                return normalized;
             }
-            if (useType === 'sos') {
-                text += ' Take as needed.';
-            } else {
-                const freq = item.frequency || '';
-                if (freq) {
-                    text += ' Take it ' + freq + '.';
-                }
-                if (times) {
-                    text += ' Scheduled times are ' + this.formatTimesForSpeech(times) + '.';
-                }
+
+            const hour = Number.parseInt(parts[0], 10);
+            const minute = Number.parseInt(parts[1], 10);
+
+            if (Number.isNaN(hour) || Number.isNaN(minute)) {
+                return normalized;
             }
-            if (meal) {
-                text += ' Take it ' + meal.replace('_', ' ') + '.';
+
+            const date = new Date();
+            date.setHours(hour, minute, 0, 0);
+
+            return new Intl.DateTimeFormat(this.getLocale(lang), {
+                hour: 'numeric',
+                minute: '2-digit',
+            }).format(date);
+        },
+
+        formatTimesForSpeech(times, lang) {
+            const normalized = Array.isArray(times)
+                ? times
+                : String(times || '')
+                    .split(',')
+                    .map((time) => time.trim())
+                    .filter(Boolean);
+
+            const formatted = normalized
+                .map((time) => this.formatTimeForSpeech(time, lang))
+                .filter(Boolean);
+
+            if (!formatted.length) {
+                return '';
             }
-            if (instList.length > 0) {
-                text += ' Instruction: ' + instList.join(', ') + '.';
+
+            if (typeof Intl.ListFormat === 'function') {
+                return new Intl.ListFormat(this.getLocale(lang), {
+                    style: 'long',
+                    type: 'conjunction',
+                }).format(formatted);
             }
-            return text;
+
+            if (formatted.length === 1) {
+                return formatted[0];
+            }
+
+            const last = formatted.pop();
+            return formatted.join(', ') + ' and ' + last;
+        },
+
+        mealTimingLabel(value) {
+            const labels = {
+                before_meal: 'before meal',
+                after_meal: 'after meal',
+                with_meal: 'with meal',
+            };
+
+            return labels[value] || this.normalizeText(String(value || '').replace(/_/g, ' '));
+        },
+
+        durationLabel(item) {
+            const medicine = item || {};
+            const value = Number.parseInt(medicine.duration_value ?? '', 10);
+            if (!value) {
+                return '';
+            }
+
+            const type = this.normalizeText(medicine.duration_type || 'days');
+            const units = {
+                days: ['day', 'days'],
+                weeks: ['week', 'weeks'],
+                months: ['month', 'months'],
+            };
+            const typeUnits = units[type];
+
+            if (!typeUnits) {
+                return value + ' ' + type;
+            }
+
+            return value + ' ' + (value === 1 ? typeUnits[0] : typeUnits[1]);
+        },
+
+        frequencyLabel(item) {
+            const medicine = item || {};
+            if (this.normalizeText(medicine.use_type) === 'sos') {
+                return 'as needed';
+            }
+
+            const doses = Number.parseInt(medicine.doses_per_day ?? '', 10);
+            if (doses === 1) {
+                return 'once a day';
+            }
+            if (doses === 2) {
+                return 'twice a day';
+            }
+            if (doses === 3) {
+                return 'three times a day';
+            }
+            if (doses > 3) {
+                return doses + ' times a day';
+            }
+
+            const code = this.normalizeText(medicine.frequency || '').toUpperCase();
+            if (code === 'OD') {
+                return 'once a day';
+            }
+            if (code === 'BD') {
+                return 'twice a day';
+            }
+            if (code === 'TDS') {
+                return 'three times a day';
+            }
+
+            return this.normalizeText(medicine.frequency || '');
+        },
+
+        sentence(prefix, value, suffix = '.') {
+            const normalizedValue = this.normalizeText(value);
+            if (!normalizedValue) {
+                return '';
+            }
+
+            return this.normalizeCompiledText(prefix + normalizedValue + suffix);
+        },
+
+        buildSpeechData(item, index, lang = this.language) {
+            const medicine = item || {};
+            const useType = this.normalizeText(medicine.use_type || 'regular');
+            const dosage = this.normalizeText(medicine.dosage);
+            const instructions = Array.isArray(medicine.instructions)
+                ? medicine.instructions.map((instruction) => this.normalizeText(instruction)).filter(Boolean).join(', ')
+                : this.normalizeText(medicine.instructions);
+            const timingList = useType === 'sos' ? '' : this.formatTimesForSpeech(medicine.frequency_times || [], lang);
+            const mealTimingLabel = this.mealTimingLabel(medicine.meal_timing);
+            const durationLabel = this.durationLabel(medicine);
+            const takeWhen = this.normalizeText(medicine.take_when);
+            const minGap = this.normalizeText(medicine.min_gap);
+            const maxDosesPerDay = this.normalizeText(medicine.max_doses_per_day);
+            const frequencyLabel = this.frequencyLabel(medicine);
+
+            return {
+                item_number: String(index + 1),
+                medicine_name: this.normalizeText(medicine.medicine_name),
+                medicine_type: this.normalizeText(medicine.medicine_type),
+                dosage,
+                use_type_label: useType === 'sos' ? 'as needed' : 'scheduled daily',
+                frequency_label: frequencyLabel,
+                timing_list: timingList,
+                meal_timing_label: mealTimingLabel,
+                duration_label: durationLabel,
+                instructions,
+                take_when: takeWhen,
+                min_gap: minGap,
+                max_doses_per_day: maxDosesPerDay,
+                dosage_sentence: this.sentence('Dosage: ', dosage),
+                schedule_sentence: useType === 'sos'
+                    ? 'Take only when needed.'
+                    : this.sentence('Take ', frequencyLabel),
+                timing_sentence: this.sentence('Scheduled times: ', timingList),
+                meal_timing_sentence: this.sentence('Take ', mealTimingLabel),
+                duration_sentence: this.sentence('Continue for ', durationLabel),
+                instructions_sentence: this.sentence('Instructions: ', instructions),
+                reason_sentence: this.sentence('Use for ', takeWhen),
+                min_gap_sentence: this.sentence('Keep at least ', minGap, ' between doses.'),
+                max_doses_sentence: this.sentence('Maximum ', maxDosesPerDay, ' in 24 hours.'),
+            };
+        },
+
+        generateMedicineSpeechText(item, index, lang = this.language) {
+            const template = this.templateForLanguage();
+            return this.renderTemplate(template, this.buildSpeechData(item, index, lang));
         },
 
         gurmukhiToDevanagari(text) {
@@ -191,70 +373,150 @@
             return result.split('').map(char => map[char] || char).join('');
         },
 
+        pickVoice(lang) {
+            if (!('speechSynthesis' in window)) {
+                return null;
+            }
+
+            const voices = typeof window.speechSynthesis.getVoices === 'function'
+                ? window.speechSynthesis.getVoices()
+                : [];
+            if (!voices.length) {
+                return null;
+            }
+
+            const locale = this.getLocale(lang).toLowerCase();
+            const languagePrefix = locale.slice(0, 2);
+            const scoreVoice = (voice) => {
+                const voiceLocale = String(voice.lang || '').toLowerCase();
+                const voiceName = String(voice.name || '').toLowerCase();
+                let score = 0;
+
+                if (voice.localService) score += 3;
+                if (voice.default) score += 2;
+                if (voiceLocale === locale) score += 4;
+                if (voiceLocale.startsWith(languagePrefix)) score += 2;
+                if (voiceName.includes('natural')) score += 3;
+                if (voiceName.includes('enhanced')) score += 2;
+                if (voiceName.includes('premium')) score += 2;
+                if (voiceName.includes('google')) score += 1;
+                if (voiceName.includes('microsoft')) score += 1;
+
+                return score;
+            };
+
+            let pool = voices.filter((voice) => String(voice.lang || '').toLowerCase().startsWith(languagePrefix));
+
+            if (lang === 'pa') {
+                const punjabiVoices = voices.filter((voice) => String(voice.lang || '').toLowerCase().startsWith('pa'));
+                if (punjabiVoices.length) {
+                    pool = punjabiVoices;
+                } else {
+                    pool = voices.filter((voice) => ['hi', 'en'].includes(String(voice.lang || '').toLowerCase().slice(0, 2)));
+                }
+            }
+
+            if (!pool.length) {
+                pool = voices;
+            }
+
+            return pool.slice().sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] || null;
+        },
+
+        shouldTranslate(text, lang) {
+            return lang !== 'en' && Boolean(this.normalizeText(text));
+        },
+
+        async translateText(text, lang) {
+            const normalizedText = this.normalizeCompiledText(text);
+            if (!normalizedText || !this.shouldTranslate(normalizedText, lang)) {
+                return normalizedText;
+            }
+
+            const cacheKey = lang + '::' + normalizedText;
+            if (this.translationCache[cacheKey]) {
+                return this.translationCache[cacheKey];
+            }
+
+            try {
+                const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + encodeURIComponent(lang) + '&dt=t&q=' + encodeURIComponent(normalizedText);
+                const response = await fetch(url);
+                const payload = await response.json();
+                const translated = Array.isArray(payload && payload[0])
+                    ? payload[0].map((part) => part[0] || '').join('')
+                    : normalizedText;
+
+                this.translationCache[cacheKey] = this.normalizeCompiledText(translated);
+                return this.translationCache[cacheKey];
+            } catch (error) {
+                console.error('Prescription speech translation failed:', error);
+                return normalizedText;
+            }
+        },
+
         async speakText(text, lang, onEnd) {
-            if (!('speechSynthesis' in window)) return;
+            if (!this.canSpeak()) {
+                if (typeof onEnd === 'function') {
+                    onEnd();
+                }
+                return;
+            }
+
             window.speechSynthesis.cancel();
 
-            let speechText = text;
-            let bcpLang = 'en-IN';
-            if (lang === 'hi') bcpLang = 'hi-IN';
-            if (lang === 'pa') bcpLang = 'pa-IN';
-
-            if (lang !== 'en') {
-                try {
-                    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=' + lang + '&dt=t&q=' + encodeURIComponent(text);
-                    const res = await fetch(url);
-                    const json = await res.json();
-                    if (json && json[0]) {
-                        speechText = json[0].map(part => part[0] || '').join('');
-                    }
-                } catch (e) {
-                    console.error('Translation error, falling back to original English text:', e);
+            let speechText = await this.translateText(text, lang);
+            if (!speechText) {
+                if (typeof onEnd === 'function') {
+                    onEnd();
                 }
+                return;
             }
 
-            const voices = window.speechSynthesis.getVoices();
-            const searchLang = bcpLang.toLowerCase();
-            let voice = voices.find(v => v.lang.toLowerCase() === searchLang);
-            if (!voice) {
-                voice = voices.find(v => v.lang.toLowerCase().startsWith(searchLang.substring(0, 2)));
+            let bcpLang = this.getLocale(lang);
+            const voice = this.pickVoice(lang);
+
+            if (lang === 'pa' && voice && String(voice.lang || '').toLowerCase().startsWith('hi')) {
+                speechText = this.gurmukhiToDevanagari(speechText);
+                bcpLang = 'hi-IN';
             }
 
-            if (!voice && lang === 'pa') {
-                voice = voices.find(v => v.lang.toLowerCase() === 'hi-in') || 
-                        voices.find(v => v.lang.toLowerCase() === 'en-in');
-
-                if (voice && voice.lang.toLowerCase().startsWith('hi')) {
-                    speechText = this.gurmukhiToDevanagari(speechText);
-                    bcpLang = 'hi-IN';
-                }
-            }
-            
             const utterance = new SpeechSynthesisUtterance(speechText);
-            utterance.rate = 0.92;
+            utterance.rate = 0.94;
+            utterance.pitch = 1;
+            utterance.volume = 1;
             utterance.lang = bcpLang;
-            
+
             if (voice) {
                 utterance.voice = voice;
-                utterance.lang = voice.lang; // Fix: override utterance language to match voice language
+                if (voice.lang) {
+                    utterance.lang = voice.lang;
+                }
             }
-            
-            utterance.onend = onEnd;
-            utterance.onerror = onEnd;
-            
+
+            utterance.onend = () => {
+                if (typeof onEnd === 'function') {
+                    onEnd();
+                }
+            };
+            utterance.onerror = () => {
+                if (typeof onEnd === 'function') {
+                    onEnd();
+                }
+            };
+
             window.speechSynthesis.speak(utterance);
         },
 
         playAll() {
             if (this.isPlayingAll) {
-                window.speechSynthesis.cancel();
-                this.isPlayingAll = false;
-                this.currentPlayingIndex = null;
+                this.stopAll();
                 return;
             }
-            
-            if (!this.items || !this.items.length) return;
-            
+
+            if (!this.canSpeak() || !this.items || !this.items.length) {
+                return;
+            }
+
             this.isPlayingAll = true;
             this.speakNext(0);
         },
@@ -265,9 +527,9 @@
                 this.currentPlayingIndex = null;
                 return;
             }
-            
+
             this.currentPlayingIndex = index;
-            const text = this.generateMedicineSpeechText(this.items[index]);
+            const text = this.generateMedicineSpeechText(this.items[index], index);
             this.speakText(text, this.language, () => {
                 if (this.isPlayingAll) {
                     this.speakNext(index + 1);
@@ -276,25 +538,31 @@
         },
 
         toggleSpeakItem(index) {
-            if (this.isSpeakingSelf[index]) {
-                window.speechSynthesis.cancel();
-                this.isSpeakingSelf = {};
-            } else {
-                window.speechSynthesis.cancel();
-                this.isSpeakingSelf = {};
-                this.isSpeakingSelf[index] = true;
-                this.isSpeakingSelf = { ...this.isSpeakingSelf };
-                
-                const text = this.generateMedicineSpeechText(this.items[index]);
-                this.speakText(text, this.language, () => {
-                    this.isSpeakingSelf[index] = false;
-                    this.isSpeakingSelf = { ...this.isSpeakingSelf };
-                });
+            if (!this.canSpeak()) {
+                return;
             }
+
+            const wasSpeaking = Boolean(this.isSpeakingSelf[index]);
+            this.stopAll();
+
+            if (wasSpeaking) {
+                return;
+            }
+
+            this.isSpeakingSelf[index] = true;
+            this.isSpeakingSelf = { ...this.isSpeakingSelf };
+
+            const text = this.generateMedicineSpeechText(this.items[index], index);
+            this.speakText(text, this.language, () => {
+                this.isSpeakingSelf[index] = false;
+                this.isSpeakingSelf = { ...this.isSpeakingSelf };
+            });
         },
 
         stopAll() {
-            window.speechSynthesis.cancel();
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
             this.isPlayingAll = false;
             this.currentPlayingIndex = null;
             this.isSpeakingSelf = {};
@@ -373,7 +641,7 @@
                     Voice Language
                 </span>
                 <div style="display: inline-flex; background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0;gap:15px;">
-                    <template x-for="lang in [{key:'en', label:'English'}, {key:'hi', label:'Hindi'}, {key:'pa', label:'Punjabi'}]">
+                    <template x-for="lang in supportedLanguages" :key="lang.key">
                         <button
                             type="button"
                             @click="language = lang.key; stopAll();"
@@ -390,7 +658,8 @@
                 type="button"
                 @click="playAll()"
                 style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.85rem; font-size: 0.72rem; font-weight: 800; border-radius: 8px; cursor: pointer; transition: all 0.2s; border: none; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); color: white;"
-                :style="isPlayingAll ? 'background-color: #ef4444;padding:5px 15px;border-radius:6px;' : 'background-color: #059669;padding:5px 15px;border-radius:6px;'"
+                :disabled="!canSpeak()"
+                :style="!canSpeak() ? 'background-color: #94a3b8; padding:5px 15px; border-radius:6px; cursor:not-allowed;' : (isPlayingAll ? 'background-color: #ef4444;padding:5px 15px;border-radius:6px;' : 'background-color: #059669;padding:5px 15px;border-radius:6px;')"
             >
                 <template x-if="isPlayingAll">
                     <span style="display: flex; align-items: center; gap: 0.25rem;color:#fff;">
@@ -407,6 +676,23 @@
             </button>
         </div>
 
+        <div style="margin: -0.15rem 0 1rem; padding: 0.85rem 0.95rem; border-radius: 12px; background: #fff; border: 1px dashed #cbd5e1;">
+            <p style="margin: 0; font-size: 0.82rem; color: #475569;">
+                Global speech template source:
+                <strong>Medicine → Prescription Voice</strong>.
+                Browser TTS is
+                <strong x-text="speechEnabled ? 'enabled' : 'disabled'"></strong>.
+            </p>
+            <p style="margin: 0.45rem 0 0; font-size: 0.78rem; color: #64748b;">
+                Available placeholders:
+            </p>
+            <div style="display:flex; flex-wrap:wrap; gap:0.45rem; margin-top:0.55rem;">
+                <template x-for="token in placeholderTokens" :key="token">
+                    <span style="display:inline-flex; align-items:center; border-radius:999px; background:#eff6ff; color:#1d4ed8; padding:0.22rem 0.55rem; font-size:0.72rem; font-weight:700;" x-text="token"></span>
+                </template>
+            </div>
+        </div>
+
         <div class="medicine-medicine-grid">
             @forelse($items as $index => $item)
                 <div class="medicine-card" :style="(isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}] ? 'border-color: #10b981; background-color: #f0fdf4;' : ''" style="transition: all 0.2s;">
@@ -417,9 +703,10 @@
                                 <button
                                     type="button"
                                     @click="toggleSpeakItem({{ $index }})"
+                                    :disabled="!canSpeak()"
                                     :class="(isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}] ? 'bg-blue-600 text-white scale-105' : 'bg-gray-100 text-gray-500 hover:text-gray-800 hover:bg-gray-200'"
                                     style="padding: 0.2rem; border-radius: 9999px; transition: all 0.2s; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center; outline: none;"
-                                    :style="(isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}] ? 'background-color: #3b82f6; color: white;' : 'background-color: #f1f5f9; color: #64748b;'"
+                                    :style="!canSpeak() ? 'background-color: #e2e8f0; color: #94a3b8; cursor:not-allowed;' : (((isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}]) ? 'background-color: #3b82f6; color: white;' : 'background-color: #f1f5f9; color: #64748b;')"
                                     title="Listen to medicine voice guidance"
                                 >
                                     <template x-if="(isPlayingAll && currentPlayingIndex === {{ $index }}) || isSpeakingSelf[{{ $index }}]">

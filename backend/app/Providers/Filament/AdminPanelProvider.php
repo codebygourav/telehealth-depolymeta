@@ -4,7 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login as CustomLogin;
 use Filament\Enums\DatabaseNotificationsPosition;
-use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, Dashboard, DisplayAdsSettings, DisplayScreenSettings, DoctorReport, ManageVideoLinks, OPDCalendar, QueueLogsDashboard, RolePermissionMatrix, Settings};
+use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, Dashboard, DisplayAdsSettings, DisplayScreenSettings, DoctorReport, ManageVideoLinks, OPDCalendar, PrescriptionVoiceSettings, QueueLogsDashboard, RolePermissionMatrix, Settings};
 use App\Filament\Resources\DisplayScreens\DisplayScreenResource;
 use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\EmailLogs\EmailLogResource;
@@ -62,6 +62,7 @@ class AdminPanelProvider extends PanelProvider
                 OPDCalendar::class,
                 RolePermissionMatrix::class,
                 Settings::class,
+                PrescriptionVoiceSettings::class,
                 DisplayScreenSettings::class,
                 DisplayAdsSettings::class,
                 BookAppointment::class,

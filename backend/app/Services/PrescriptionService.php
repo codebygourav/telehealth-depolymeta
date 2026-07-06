@@ -132,7 +132,7 @@ class PrescriptionService
 
         // Final Fallback for testing if logo not found
         if (! $hospital_logo_base64) {
-            $path = public_path('images/cmc-telehealth.png');
+            $path = public_path('images/deploymeta.png');
             if (file_exists($path)) {
                 $type = pathinfo($path, PATHINFO_EXTENSION);
                 $data_img = file_get_contents($path);
