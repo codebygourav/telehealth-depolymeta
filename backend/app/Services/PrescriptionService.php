@@ -176,6 +176,7 @@ class PrescriptionService
      */
     public static function generatePdf($appointmentId): bool
     {
+        ini_set('memory_limit', '512M');
         $data = self::resolvePrescriptionData($appointmentId);
         if (! $data) {
             throw new \Exception('Could not resolve prescription data for Appointment ID: ' . $appointmentId);

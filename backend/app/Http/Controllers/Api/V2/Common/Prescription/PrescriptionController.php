@@ -485,6 +485,7 @@ class PrescriptionController extends Controller
             return ApiResponseService::notFound(__('responses.prescription.not_found'));
         }
 
+        ini_set('memory_limit', '512M');
         $pdf = Pdf::loadView('Prescription.prescription', $data);
 
         return $pdf->stream('Prescription-' . $appointmentId . '.pdf');

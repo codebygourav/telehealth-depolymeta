@@ -192,6 +192,42 @@ return [
                     ],
                 ],
             ],
+            'dictation' => [
+                'db_group' => 'prescription_dictation',
+                'label' => 'Prescription Dictation',
+                'description' => 'Manage AI voice dictation and transcription settings.',
+                'fields' => [
+                    'enabled' => [
+                        'type' => 'toggle',
+                        'label' => 'Enable AI Dictation',
+                        'default' => false,
+                        'helper' => 'Enable or disable AI dictation features for prescriptions.',
+                        'env_key' => 'PRESCRIPTION_DICTATION_ENABLED',
+                        'is_public' => false,
+                    ],
+                    'input_mode' => [
+                        'type' => 'select',
+                        'label' => 'Input Mode',
+                        'options' => [
+                            'off' => 'Disabled',
+                            'text' => 'Text Mode (Keyboard Input)',
+                            'speech' => 'Speech Mode (Voice Recording)',
+                        ],
+                        'default' => 'off',
+                        'helper' => 'Choose how doctors can dictate prescriptions (text input vs voice/speech recording).',
+                        'env_key' => 'PRESCRIPTION_DICTATION_INPUT_MODE',
+                        'is_public' => false,
+                    ],
+                    'text_mode_max_chars' => [
+                        'type' => 'number',
+                        'label' => 'Max Characters for Text Input',
+                        'default' => 1000,
+                        'helper' => 'Maximum character limit allowed for the dictation input text.',
+                        'env_key' => 'PRESCRIPTION_DICTATION_TEXT_MAX_CHARS',
+                        'is_public' => false,
+                    ],
+                ],
+            ],
         ],
     ],
 

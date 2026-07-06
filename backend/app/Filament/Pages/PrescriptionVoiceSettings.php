@@ -42,25 +42,22 @@ class PrescriptionVoiceSettings extends Settings
     {
         $dictationSettings = PrescriptionDictation::settings();
 
-        return [
-            Section::make('Browser Speech Configuration')
-                ->description('Default templates are rendered dynamically, then translated at runtime for non-English speech playback.')
-                ->schema(
-                    $this->buildSectionsFromConfig(
-                        'prescription_voice',
-                        config('settings.prescription_voice.sections', [])
-                    )
-                )
-                ->columnSpanFull(),
-            Section::make('Prescription Dictation Test Mode')
-                ->description('This testing mode is controlled from backend env values, not from the database settings form.')
-                ->schema([
-                    Placeholder::make('prescription_dictation_status')
-                        ->label('Current Status')
-                        ->content(new HtmlString($this->dictationStatusHtml($dictationSettings))),
-                ])
-                ->columnSpanFull(),
-        ];
+        return array_merge(
+            $this->buildSectionsFromConfig(
+                'prescription_voice',
+                config('settings.prescription_voice.sections', [])
+            ),
+            [
+                Section::make('Prescription Dictation Status')
+                    ->description('Overview of current environment variables.')
+                    ->schema([
+                        Placeholder::make('prescription_dictation_status')
+                            ->label('Current Status')
+                            ->content(new HtmlString($this->dictationStatusHtml($dictationSettings))),
+                    ])
+                    ->columnSpanFull()
+            ]
+        );
     }
 
     private function dictationStatusHtml(array $settings): string
