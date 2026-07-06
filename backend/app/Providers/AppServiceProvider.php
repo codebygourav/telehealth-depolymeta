@@ -113,5 +113,17 @@ class AppServiceProvider extends ServiceProvider
                     'class' => 'custom-pagination custom-resource-table',
                 ], merge: true);
         });
+
+        // Apply dynamic PHP memory limit from database settings
+        try {
+            if (!app()->runningInConsole() || \Illuminate\Support\Facades\Schema::hasTable('cron_settings')) {
+                $memoryLimit = \Illuminate\Support\Facades\DB::table('cron_settings')->value('memory_limit');
+                if ($memoryLimit) {
+                    ini_set('memory_limit', $memoryLimit);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Fail silent during bootstrap/migration
+        }
     }
 }

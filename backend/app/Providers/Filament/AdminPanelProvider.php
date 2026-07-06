@@ -4,7 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login as CustomLogin;
 use Filament\Enums\DatabaseNotificationsPosition;
-use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, Dashboard, DisplayAdsSettings, DisplayScreenSettings, DoctorReport, ManageVideoLinks, OPDCalendar, PrescriptionVoiceSettings, QueueLogsDashboard, RolePermissionMatrix, Settings};
+use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, CronSettings, Dashboard, DisplayAdsSettings, DisplayScreenSettings, DoctorReport, ManageVideoLinks, OPDCalendar, PrescriptionVoiceSettings, QueueLogsDashboard, RolePermissionMatrix, Settings};
 use App\Filament\Resources\DisplayScreens\DisplayScreenResource;
 use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\EmailLogs\EmailLogResource;
@@ -19,6 +19,7 @@ use App\Filament\Resources\VaccinationDocuments\VaccinationDocumentResource;
 use App\Filament\Resources\VaccinationGeneralFaqs\VaccinationGeneralFaqResource;
 use App\Filament\Resources\VaccinationTemplates\VaccinationTemplateResource;
 use App\Filament\Resources\Vaccinations\VaccinationResource;
+use App\Filament\Resources\CustomCronJobResource;
 use App\Models\Setting;
 use Filament\Http\Middleware\{Authenticate, AuthenticateSession, DisableBladeIconComponents, DispatchServingFilamentEvent};
 use Filament\Navigation\NavigationBuilder;
@@ -63,6 +64,7 @@ class AdminPanelProvider extends PanelProvider
                 RolePermissionMatrix::class,
                 Settings::class,
                 PrescriptionVoiceSettings::class,
+                CronSettings::class,
                 DisplayScreenSettings::class,
                 DisplayAdsSettings::class,
                 BookAppointment::class,
@@ -102,7 +104,7 @@ class AdminPanelProvider extends PanelProvider
                 VaccinationGeneralFaqResource::class,
                 VaccinationTemplateResource::class,
                 VaccinationResource::class,
-
+                CustomCronJobResource::class,
             ])
             ->navigation(fn(NavigationBuilder $builder): NavigationBuilder => \App\Filament\CustomSidebarManager::buildFilamentNavigation($builder))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
