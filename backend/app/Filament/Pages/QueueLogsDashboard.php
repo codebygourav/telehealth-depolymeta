@@ -7,6 +7,7 @@ use App\Models\Doctor;
 use App\Models\AppointmentQueueLog;
 use App\Traits\HasCustomSidebar;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Livewire\WithPagination;
 
@@ -21,10 +22,11 @@ class QueueLogsDashboard extends Page
 
     // State properties
     public ?string $logDoctorId = null;
-    public string $logTab = 'summary';
+    public string $logTab = 'timeline';
     public ?string $logFromDate = null;
     public ?string $logToDate = null;
     public string $doctorSearchQuery = '';
+    public string $logTypeFilter = 'all';
     public ?int $selectedSlotIndex = null;
 
     public static function getSidebarOptions(): array
@@ -60,7 +62,7 @@ class QueueLogsDashboard extends Page
     {
         $this->logFromDate = now()->toDateString();
         $this->logToDate = now()->toDateString();
-        $this->logTab = 'summary';
+        $this->logTab = 'timeline';
 
         if (Auth::user()?->hasRole('doctor')) {
             $doc = Doctor::where('user_id', Auth::id())->first();
@@ -89,6 +91,11 @@ class QueueLogsDashboard extends Page
     }
 
     public function updatedDoctorSearchQuery()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedLogTypeFilter()
     {
         $this->resetPage();
     }
@@ -146,14 +153,14 @@ class QueueLogsDashboard extends Page
                 'initials' => $initials,
                 'department' => $dept,
                 'log_count_today' => $logCount,
+                'status' => $this->getDoctorLiveStatus($doctor->id),
             ];
         }
 
         return $result;
     }
 
-    // Get queue action logs
-    public function getQueueLogs()
+    protected function getQueueLogsQuery(): Builder
     {
         $query = AppointmentQueueLog::query()
             ->with(['appointment.patient', 'creator', 'doctor']);
@@ -187,7 +194,20 @@ class QueueLogsDashboard extends Page
 
         $query->whereBetween('created_at', [$from, $to]);
 
-        return $query->orderBy('created_at', 'desc')->paginate(20);
+        $actions = $this->getActionsForLogType($this->logTypeFilter);
+        if ($actions) {
+            $query->whereIn('action', $actions);
+        }
+
+        return $query;
+    }
+
+    // Get queue action logs
+    public function getQueueLogs()
+    {
+        return $this->getQueueLogsQuery()
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
     }
 
     // Helper to format date & time according to d/m/Y and H:i
@@ -534,19 +554,19 @@ class QueueLogsDashboard extends Page
     // Get patient-wise consultations for the consultations tab
     public function getPatientConsultations()
     {
-        if (!$this->logDoctorId) {
-            return collect([]);
-        }
-
         $appTimezone = config('app.timezone') ?: 'UTC';
         $from = $this->logFromDate ? Carbon::parse($this->logFromDate, $appTimezone)->startOfDay() : Carbon::today($appTimezone)->startOfDay();
         $to = $this->logToDate ? Carbon::parse($this->logToDate, $appTimezone)->endOfDay() : Carbon::today($appTimezone)->endOfDay();
 
-        $query = \App\Models\Appointment::where('doctor_id', $this->logDoctorId)
+        $query = \App\Models\Appointment::query()
             ->whereBetween('appointment_date', [$from->toDateString(), $to->toDateString()])
-            ->with('patient');
+            ->with(['patient', 'doctor']);
 
-        if ($this->logFromDate === $this->logToDate && !is_null($this->selectedSlotIndex)) {
+        if ($this->logDoctorId) {
+            $query->where('doctor_id', $this->logDoctorId);
+        }
+
+        if ($this->logDoctorId && $this->logFromDate === $this->logToDate && !is_null($this->selectedSlotIndex)) {
             $stats = $this->getTimingStatsForDate($this->logDoctorId, $this->logFromDate);
             if (isset($stats['slots'][$this->selectedSlotIndex])) {
                 $slot = $stats['slots'][$this->selectedSlotIndex];
@@ -592,6 +612,7 @@ class QueueLogsDashboard extends Page
             $result[] = [
                 'token' => $app->queue_number ?? '—',
                 'patient_name' => $app->patient ? "{$app->patient->first_name} {$app->patient->last_name}" : 'Faker Patient',
+                'doctor_name' => $app->doctor ? "Dr. {$app->doctor->first_name} {$app->doctor->last_name}" : '—',
                 'phone' => $app->patient?->mobile_no ?? '—',
                 'booked_time' => $app->appointment_time ? Carbon::parse($app->appointment_time)->format('H:i') : '—',
                 'check_in' => $checkInTime,
@@ -609,6 +630,135 @@ class QueueLogsDashboard extends Page
             $parts = explode('-', $app['token']);
             return (int) end($parts);
         });
+    }
+
+    public function getQueueSummaryMetrics(): array
+    {
+        $logs = $this->getQueueLogsQuery()->get(['action']);
+
+        $metrics = [
+            'total' => $logs->count(),
+            'patient' => 0,
+            'break' => 0,
+            'queue' => 0,
+            'system' => 0,
+        ];
+
+        foreach ($logs as $log) {
+            $metrics[$this->getLogCategory($log->action)]++;
+        }
+
+        return $metrics;
+    }
+
+    public function getDoctorAuditSummaries(): array
+    {
+        $doctorRows = $this->logDoctorId
+            ? array_values(array_filter($this->getDoctors(), fn (array $doctor): bool => $doctor['id'] === $this->logDoctorId))
+            : $this->getDoctors();
+
+        $dateRange = $this->getDateRangeStrings();
+        $consultations = $this->getPatientConsultations()->groupBy('doctor_name');
+        $summaries = [];
+
+        foreach ($doctorRows as $doctor) {
+            $activeSeconds = 0;
+            $breakSeconds = 0;
+            $extraSeconds = 0;
+            $firstCheckIn = null;
+            $lastEnd = null;
+
+            foreach ($dateRange as $dateStr) {
+                $stats = $this->getTimingStatsForDate($doctor['id'], $dateStr);
+                $overall = $stats['overall'] ?? [];
+
+                $activeSeconds += (int) ($overall['active_seconds'] ?? 0);
+                $breakSeconds += (int) ($overall['total_break_seconds'] ?? 0);
+                $extraSeconds += (int) ($overall['extra_seconds'] ?? 0);
+
+                if (($overall['check_in'] ?? null) && (!$firstCheckIn || $overall['check_in']->lt($firstCheckIn))) {
+                    $firstCheckIn = $overall['check_in'];
+                }
+
+                if (($overall['last_app_end'] ?? null) && (!$lastEnd || $overall['last_app_end']->gt($lastEnd))) {
+                    $lastEnd = $overall['last_app_end'];
+                }
+            }
+
+            $doctorConsults = $consultations->get($doctor['name'], collect([]));
+            $summaries[] = [
+                'id' => $doctor['id'],
+                'name' => $doctor['name'],
+                'department' => $doctor['department'],
+                'status' => $doctor['status'],
+                'log_count_today' => $doctor['log_count_today'],
+                'check_in' => $firstCheckIn?->format('H:i') ?? '—',
+                'last_end' => $lastEnd?->format('H:i') ?? '—',
+                'patients_attended' => $doctorConsults->where('status', 'completed')->count(),
+                'skipped_count' => $doctorConsults->whereIn('status', ['skipped', 'no_show'])->count(),
+                'active_time' => $this->formatDurationMinutes($activeSeconds),
+                'break_time' => $this->formatDurationMinutes($breakSeconds),
+                'extra_time' => $this->formatDurationMinutes($extraSeconds),
+            ];
+        }
+
+        if (!$this->logDoctorId && count($summaries) > 1) {
+            $summaries[] = [
+                'id' => 'combined',
+                'name' => 'Combined Report',
+                'department' => 'All Departments',
+                'status' => 'Live',
+                'log_count_today' => array_sum(array_column($summaries, 'log_count_today')),
+                'check_in' => '—',
+                'last_end' => '—',
+                'patients_attended' => array_sum(array_column($summaries, 'patients_attended')),
+                'skipped_count' => array_sum(array_column($summaries, 'skipped_count')),
+                'active_time' => $this->formatDurationMinutes($this->sumDurationMinutes($summaries, 'active_time')),
+                'break_time' => $this->formatDurationMinutes($this->sumDurationMinutes($summaries, 'break_time')),
+                'extra_time' => $this->formatDurationMinutes($this->sumDurationMinutes($summaries, 'extra_time')),
+            ];
+        }
+
+        return $summaries;
+    }
+
+    public function getStatusTransition(AppointmentQueueLog $log): array
+    {
+        return match ($log->action) {
+            'check_in' => ['old' => 'Not available', 'new' => 'Available'],
+            'check_out' => ['old' => 'Available', 'new' => 'Checked out'],
+            'break_start' => ['old' => 'Available', 'new' => 'On Break'],
+            'break_end' => ['old' => 'On Break', 'new' => 'Available'],
+            'start' => ['old' => 'Called', 'new' => 'Running'],
+            'complete' => ['old' => 'Running', 'new' => 'Completed'],
+            'skip' => ['old' => 'Called', 'new' => 'Skipped'],
+            'revert' => ['old' => 'Skipped', 'new' => 'Queued'],
+            'not_complete' => ['old' => 'Called', 'new' => 'No Show'],
+            default => ['old' => '—', 'new' => '—'],
+        };
+    }
+
+    public function getCurrentAuditHeading(): string
+    {
+        if (!$this->logDoctorId) {
+            return 'All Doctors Audit Trail';
+        }
+
+        $doctor = Doctor::find($this->logDoctorId);
+
+        return $doctor ? "Dr. {$doctor->first_name} {$doctor->last_name} Audit Trail" : 'Doctor Audit Trail';
+    }
+
+    public function getCurrentDoctorDescription(): string
+    {
+        if (!$this->logDoctorId) {
+            return 'Clear timeline for check-in, patient calls, consultation start/end, skipped patient, breaks, extra time and status changes.';
+        }
+
+        $doctor = Doctor::with('departments')->find($this->logDoctorId);
+        $department = $doctor?->departments?->first()?->name ?? 'General Practice';
+
+        return "{$department} queue audit with patient flow, break actions, consultation timing and operator history.";
     }
 
     // Get formatted log details for Timeline UI
@@ -793,13 +943,13 @@ class QueueLogsDashboard extends Page
                         "Dr. {$doc->first_name} {$doc->last_name}",
                         $deptName,
                         $room,
-                        $stats['shift_start'] ? $stats['shift_start']->format('H:i') : '—',
-                        $stats['shift_end'] ? $stats['shift_end']->format('H:i') : '—',
-                        $stats['check_in'] ? $stats['check_in']->format('H:i') : '—',
-                        $stats['last_app_end'] ? $stats['last_app_end']->format('H:i') : '—',
-                        $this->formatDurationMinutes($stats['active_seconds']),
-                        $this->formatDurationMinutes($stats['total_break_seconds']),
-                        $this->formatDurationMinutes($stats['extra_seconds']),
+                        count($stats['shift_intervals']) ? explode(' - ', $stats['shift_intervals'][0])[0] : '—',
+                        count($stats['shift_intervals']) ? explode(' - ', $stats['shift_intervals'][count($stats['shift_intervals']) - 1])[1] : '—',
+                        $stats['overall']['check_in'] ? $stats['overall']['check_in']->format('H:i') : '—',
+                        $stats['overall']['last_app_end'] ? $stats['overall']['last_app_end']->format('H:i') : '—',
+                        $this->formatDurationMinutes((int) ($stats['overall']['active_seconds'] ?? 0)),
+                        $this->formatDurationMinutes((int) ($stats['overall']['total_break_seconds'] ?? 0)),
+                        $this->formatDurationMinutes((int) ($stats['overall']['extra_seconds'] ?? 0)),
                     ]);
                 }
             }
@@ -979,5 +1129,76 @@ class QueueLogsDashboard extends Page
         if ($seconds > 0 || empty($parts)) $parts[] = "{$seconds}s";
         
         return implode(' ', $parts);
+    }
+
+    protected function getActionsForLogType(string $type): ?array
+    {
+        return match ($type) {
+            'patient' => ['start', 'complete'],
+            'break' => ['break_start', 'break_end'],
+            'queue' => ['skip', 'revert', 'not_complete'],
+            'system' => ['check_in', 'check_out'],
+            default => null,
+        };
+    }
+
+    protected function getLogCategory(string $action): string
+    {
+        return match ($action) {
+            'start', 'complete' => 'patient',
+            'break_start', 'break_end' => 'break',
+            'skip', 'revert', 'not_complete' => 'queue',
+            default => 'system',
+        };
+    }
+
+    protected function getDoctorLiveStatus(string $doctorId): string
+    {
+        $latestLog = AppointmentQueueLog::where('doctor_id', $doctorId)
+            ->whereDate('created_at', Carbon::today())
+            ->latest('created_at')
+            ->first();
+
+        if (!$latestLog) {
+            return 'Live';
+        }
+
+        return match ($latestLog->action) {
+            'break_start' => 'On Break',
+            'check_out' => 'Checked Out',
+            default => 'In OPD',
+        };
+    }
+
+    protected function getDateRangeStrings(): array
+    {
+        $from = Carbon::parse($this->logFromDate)->startOfDay();
+        $to = Carbon::parse($this->logToDate)->startOfDay();
+        $dates = [];
+
+        while ($from->lte($to)) {
+            $dates[] = $from->toDateString();
+            $from->addDay();
+        }
+
+        return $dates;
+    }
+
+    protected function sumDurationMinutes(array $rows, string $key): int
+    {
+        $seconds = 0;
+
+        foreach ($rows as $row) {
+            [$hours, $minutes] = array_pad(explode('h', str_replace('m', '', str_replace(' ', '', $row[$key]))), 2, null);
+
+            if ($minutes === null) {
+                $seconds += ((int) $hours) * 60;
+                continue;
+            }
+
+            $seconds += (((int) $hours) * 60) + ((int) $minutes);
+        }
+
+        return $seconds * 60;
     }
 }

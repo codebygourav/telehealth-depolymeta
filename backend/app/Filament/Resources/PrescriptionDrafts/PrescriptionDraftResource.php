@@ -13,6 +13,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Filament\Actions\ViewAction;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class PrescriptionDraftResource extends Resource
 {
@@ -96,6 +97,20 @@ class PrescriptionDraftResource extends Resource
                     ->searchable()
                     ->wrap(),
 
+                TextColumn::make('source_type')
+                    ->label('Input Mode')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'speech' => 'Voice',
+                        'text' => 'Typed',
+                        default => strtoupper((string) ($state ?: 'unknown')),
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'speech' => 'success',
+                        'text' => 'info',
+                        default => 'gray',
+                    }),
+
                 TextColumn::make('confidence_score')
                     ->label('Confidence')
                     ->badge()
@@ -113,6 +128,31 @@ class PrescriptionDraftResource extends Resource
                         default => 'gray',
                     })
                     ->sortable(),
+
+                TextColumn::make('saved_medicines_count')
+                    ->label('Saved Medicines')
+                    ->state(fn (PrescriptionDraft $record): int => static::extractCreatedMedicines($record)->count())
+                    ->badge()
+                    ->color('primary'),
+
+                TextColumn::make('doctor_added_medicines_count')
+                    ->label('Doctor Added')
+                    ->state(fn (PrescriptionDraft $record): int => static::extractCreatedMedicines($record)
+                        ->where('medicine_source', 'doctor_added')
+                        ->count())
+                    ->badge()
+                    ->color(fn (int $state): string => $state > 0 ? 'warning' : 'gray'),
+
+                TextColumn::make('medicine_breakdown')
+                    ->label('Medicine Breakdown')
+                    ->state(function (PrescriptionDraft $record): string {
+                        $createdMedicines = static::extractCreatedMedicines($record);
+                        $inventoryCount = $createdMedicines->where('medicine_source', 'inventory')->count();
+                        $doctorAddedCount = $createdMedicines->where('medicine_source', 'doctor_added')->count();
+
+                        return "{$inventoryCount} stock / {$doctorAddedCount} doctor-added";
+                    })
+                    ->wrap(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
@@ -122,6 +162,13 @@ class PrescriptionDraftResource extends Resource
                         'parsed' => 'Parsed Only',
                         'applied' => 'Applied to Prescription',
                         'rejected' => 'Rejected',
+                    ]),
+
+                SelectFilter::make('source_type')
+                    ->label('Input Mode')
+                    ->options([
+                        'speech' => 'Voice',
+                        'text' => 'Typed',
                     ]),
             ])
             ->actions([
@@ -168,7 +215,12 @@ class PrescriptionDraftResource extends Resource
                         ->suffix('%'),
 
                     TextEntry::make('source_type')
-                        ->label('Source Type'),
+                        ->label('Source Type')
+                        ->formatStateUsing(fn (?string $state): string => match ($state) {
+                            'speech' => 'Voice',
+                            'text' => 'Typed',
+                            default => strtoupper((string) ($state ?: 'unknown')),
+                        }),
                 ]),
 
             InfoSection::make('Raw Voice Transcript / Text Speech')
@@ -213,6 +265,35 @@ class PrescriptionDraftResource extends Resource
                         ->placeholder('Not submitted/applied yet.'),
                 ])
                 ->visible(fn($record) => !empty($record->submitted_payload)),
+
+            InfoSection::make('Saved Medicines')
+                ->schema([
+                    TextEntry::make('saved_medicines_summary')
+                        ->label('')
+                        ->state(function (PrescriptionDraft $record): string {
+                            $createdMedicines = static::extractCreatedMedicines($record);
+
+                            if ($createdMedicines->isEmpty()) {
+                                return 'No saved medicines recorded.';
+                            }
+
+                            return $createdMedicines
+                                ->map(function (array $medicine, int $index): string {
+                                    $name = (string) ($medicine['medicine_name'] ?? 'Unknown medicine');
+                                    $source = match ($medicine['medicine_source'] ?? null) {
+                                        'doctor_added' => 'Doctor-added',
+                                        'inventory' => 'Stock medicine',
+                                        default => 'Unknown source',
+                                    };
+
+                                    return ($index + 1) . '. ' . $name . ' (' . $source . ')';
+                                })
+                                ->implode("\n");
+                        })
+                        ->columnSpanFull()
+                        ->placeholder('No saved medicines recorded.'),
+                ])
+                ->visible(fn (PrescriptionDraft $record): bool => static::extractCreatedMedicines($record)->isNotEmpty()),
         ]);
     }
 
@@ -226,5 +307,11 @@ class PrescriptionDraftResource extends Resource
         return [
             'index' => ListPrescriptionDrafts::route('/'),
         ];
+    }
+
+    protected static function extractCreatedMedicines(PrescriptionDraft $record): Collection
+    {
+        return collect($record->submitted_payload['created_medicines'] ?? [])
+            ->filter(fn ($medicine) => is_array($medicine));
     }
 }

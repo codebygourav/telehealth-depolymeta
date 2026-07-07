@@ -1,205 +1,194 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
-        <!-- SCREEN 3: Past Queue Records Logs / Audit (Redesigned Dashboard) -->
-        @php
-            $logs = $this->getQueueLogs();
-        @endphp
+    @php
+        $logs = $this->getQueueLogs();
+        $summaryMetrics = $this->getQueueSummaryMetrics();
+        $patientConsultations = $this->getPatientConsultations();
+        $doctorSummaries = $this->getDoctorAuditSummaries();
+        $isSingleDay = $logFromDate === $logToDate;
+        $selectedDoctor = $logDoctorId ? \App\Models\Doctor::with('departments')->find($logDoctorId) : null;
+        $selectedDoctorStats = $selectedDoctor && $isSingleDay ? $this->getTimingStatsForDate($selectedDoctor->id, $logFromDate) : null;
+    @endphp
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <!-- Left Sidebar: Doctors list selection -->
-            <div class="lg:col-span-1 lg:sticky lg:top-24 bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-4 shadow-sm flex flex-col max-h-[calc(100vh-120px)] overflow-y-auto">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 px-2">Doctors Directory</h3>
-                
-                <!-- Search bar for doctors -->
-                <div class="mb-4 px-2">
-                    <input 
-                        wire:model.live="doctorSearchQuery" 
-                        type="text" 
-                        placeholder="Search doctor..." 
-                        class="w-full bg-gray-50 dark:bg-gray-850 border border-gray-250 dark:border-gray-850 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
+    <div class="space-y-4">
+        <section class="rounded-[10px] border border-[#dce3ec] bg-white px-5 py-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                    <div class="mb-2 text-[13px] font-medium text-gray-500">Appointments &amp; Finance / Queue Logs &amp; Audit</div>
+                    <h1 class="text-[22px] font-extrabold tracking-[-0.02em] text-gray-950">Doctor Queue Logs &amp; Audit</h1>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onclick="history.back()"
+                        class="inline-flex items-center gap-2 rounded-[8px] border border-[#bdd3f6] bg-white px-4 py-2.5 text-[13px] font-extrabold text-primary transition hover:bg-[#eef5ff]"
+                    >
+                        <x-heroicon-o-arrow-left class="h-4 w-4" />
+                        Back
+                    </button>
+
+                    <button
+                        type="button"
+                        wire:click="downloadLogs"
+                        class="inline-flex items-center gap-2 rounded-[8px] bg-primary px-4 py-2.5 text-[13px] font-extrabold text-white transition hover:bg-primary-600"
+                    >
+                        <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
+                        Export CSV
+                    </button>
+
+                    <button
+                        type="button"
+                        onclick="window.print()"
+                        class="inline-flex items-center gap-2 rounded-[8px] bg-[#eef2f7] px-4 py-2.5 text-[13px] font-extrabold text-slate-700 transition hover:bg-[#e2e8f0]"
+                    >
+                        <x-heroicon-o-printer class="h-4 w-4" />
+                        Print Report
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+            <aside class="rounded-[12px] border border-[#dce3ec] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] xl:sticky xl:top-24 xl:h-[calc(100vh-11rem)] xl:overflow-y-auto">
+                <div class="text-[12px] font-black uppercase tracking-[0.12em] text-slate-400">Doctors Directory</div>
+
+                <div class="mt-3">
+                    <input
+                        wire:model.live="doctorSearchQuery"
+                        type="text"
+                        placeholder="Search doctor..."
+                        class="w-full rounded-[8px] border border-[#d8dee8] bg-white px-3 py-2.5 text-[13px] text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/10"
                     />
                 </div>
 
-                <div class="space-y-1.5">
-                    <!-- All Doctors Option -->
-                    <button 
-                        wire:click="selectDoctor(null)" 
-                        class="w-full text-left px-3 py-2.5 rounded-xl text-xs transition flex items-center justify-between {{ is_null($logDoctorId) ? 'bg-primary text-white font-bold' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300' }}"
+                <div class="mt-4 space-y-2">
+                    <button
+                        wire:click="selectDoctor(null)"
+                        class="flex w-full items-start gap-3 rounded-[10px] border px-3 py-3 text-left transition {{ is_null($logDoctorId) ? 'border-[#cfe1ff] bg-[#eef5ff]' : 'border-transparent hover:border-[#cfe1ff] hover:bg-[#f8fbff]' }}"
                     >
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-950/40 text-primary flex items-center justify-center font-bold text-xs shrink-0 {{ is_null($logDoctorId) ? 'bg-white/20 text-white' : '' }}">ALL</div>
-                            <div class="min-w-0">
-                                <div class="font-bold truncate text-sm {{ is_null($logDoctorId) ? 'text-white' : 'text-gray-900 dark:text-white' }}">All Doctors</div>
-                                <div class="text-[11px] truncate mt-0.5 {{ is_null($logDoctorId) ? 'text-white/80' : 'text-gray-550 dark:text-gray-400' }}">Download combined report</div>
-                            </div>
+                        <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full {{ is_null($logDoctorId) ? 'bg-primary text-white' : 'bg-[#dbeafe] text-primary' }} text-[11px] font-black">AD</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-[14px] font-extrabold text-slate-900">All Doctors</div>
+                            <div class="mt-0.5 truncate text-[12px] text-slate-500">Combined queue report</div>
+                            <span class="mt-2 inline-flex rounded-full bg-[#eaf2ff] px-2 py-0.5 text-[11px] font-black text-primary">Live</span>
                         </div>
                     </button>
- 
-                    <!-- List of Doctors -->
-                    @foreach($this->getDoctors() as $doc)
-                        <button 
-                            wire:click="selectDoctor('{{ $doc['id'] }}')" 
-                            class="w-full text-left px-3 py-2.5 rounded-xl text-xs transition flex items-center justify-between {{ $logDoctorId === $doc['id'] ? 'bg-primary text-white font-bold' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300' }}"
+
+                    @foreach ($this->getDoctors() as $doctor)
+                        @php
+                            $isActive = $logDoctorId === $doctor['id'];
+                            $statusClasses = match ($doctor['status']) {
+                                'On Break' => 'bg-[#fff3df] text-[#c26300]',
+                                'Checked Out' => 'bg-[#ffecec] text-[#e11d48]',
+                                default => 'bg-[#e7f8ee] text-[#0c8a43]',
+                            };
+                        @endphp
+
+                        <button
+                            wire:click="selectDoctor('{{ $doctor['id'] }}')"
+                            class="flex w-full items-start gap-3 rounded-[10px] border px-3 py-3 text-left transition {{ $isActive ? 'border-[#cfe1ff] bg-[#eef5ff]' : 'border-transparent hover:border-[#cfe1ff] hover:bg-[#f8fbff]' }}"
                         >
-                            <div class="flex items-center gap-2.5 min-w-0">
-                                <div class="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-950/40 text-primary flex items-center justify-center font-bold text-xs shrink-0 {{ $logDoctorId === $doc['id'] ? 'bg-white/20 text-white' : '' }}">
-                                    {{ $doc['initials'] }}
-                                </div>
-                                <div class="min-w-0">
-                                    <div class="font-bold truncate text-sm {{ $logDoctorId === $doc['id'] ? 'text-white' : 'text-gray-900 dark:text-white' }}">{{ $doc['name'] }}</div>
-                                    <div class="text-[11px] truncate mt-0.5 {{ $logDoctorId === $doc['id'] ? 'text-white/80' : 'text-gray-500 dark:text-gray-400' }}">
-                                        {{ $doc['department'] }} • {{ $doc['log_count_today'] }} logs today
-                                    </div>
-                                </div>
+                            <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full {{ $isActive ? 'bg-primary text-white' : 'bg-[#dbeafe] text-primary' }} text-[11px] font-black">
+                                {{ $doctor['initials'] }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="truncate text-[14px] font-extrabold text-slate-900">{{ $doctor['name'] }}</div>
+                                <div class="mt-0.5 truncate text-[12px] text-slate-500">{{ $doctor['department'] }} • {{ $doctor['log_count_today'] }} logs today</div>
+                                <span class="mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-black {{ $statusClasses }}">{{ $doctor['status'] }}</span>
                             </div>
                         </button>
                     @endforeach
                 </div>
-            </div>
+            </aside>
 
+            <section class="min-w-0 rounded-[12px] border border-[#dce3ec] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] md:p-5">
+                <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <h2 class="text-[22px] font-extrabold tracking-[-0.02em] text-slate-950">{{ $this->getCurrentAuditHeading() }}</h2>
+                        <p class="mt-1 max-w-4xl text-[13px] leading-6 text-slate-500">{{ $this->getCurrentDoctorDescription() }}</p>
+                    </div>
 
-            <!-- Right Main Area: Log feed, filters, export -->
-            <div class="lg:col-span-3 space-y-6 min-w-0">
-                <!-- Header -->
-                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                        @if($logDoctorId)
-                            @php $currentLogDoc = \App\Models\Doctor::find($logDoctorId); @endphp
-                            Audit Trail - Dr. {{ $currentLogDoc?->first_name }} {{ $currentLogDoc?->last_name }}
-                        @else
-                            All Doctors Audit Trail
-                        @endif
-                    </h2>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Daily queue log with shift calculation, appointment timing, break deduction, extra time and export report.</p>
-                </div>
-
-                <!-- Tabs Navigation -->
-                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-2 shadow-sm flex flex-wrap items-center gap-2">
-                    <button 
-                        wire:click="selectTab('summary')"
-                        class="px-4 py-2 text-xs font-bold rounded-xl transition {{ $logTab === 'summary' ? 'bg-primary text-white font-extrabold' : 'text-gray-550 hover:bg-gray-50 dark:hover:bg-gray-850' }}"
-                    >
-                        Today Summary
-                    </button>
-                    <button 
-                        wire:click="selectTab('timeline')"
-                        class="px-4 py-2 text-xs font-bold rounded-xl transition {{ $logTab === 'timeline' ? 'bg-primary text-white font-extrabold' : 'text-gray-550 hover:bg-gray-50 dark:hover:bg-gray-850' }}"
-                    >
-                        Timeline Logs
-                    </button>
-                    <button 
-                        wire:click="selectTab('consultations')"
-                        class="px-4 py-2 text-xs font-bold rounded-xl transition {{ $logTab === 'consultations' ? 'bg-primary text-white font-extrabold' : 'text-gray-550 hover:bg-gray-50 dark:hover:bg-gray-850' }}"
-                    >
-                        Patient-wise Consultations
-                    </button>
-                    <button 
-                        wire:click="selectTab('download')"
-                        class="px-4 py-2 text-xs font-bold rounded-xl transition {{ $logTab === 'download' ? 'bg-primary text-white font-extrabold' : 'text-gray-550 hover:bg-gray-50 dark:hover:bg-gray-850' }}"
-                    >
-                        Download / Export
-                    </button>
-                </div>
-
-                <!-- Filter Controls (Always Visible) -->
-                <div class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">From Date</label>
-                            <input 
-                                wire:model.live="logFromDate" 
-                                type="date" 
-                                class="w-full bg-gray-50 dark:bg-gray-850 border border-gray-250 dark:border-gray-850 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">To Date</label>
-                            <input 
-                                wire:model.live="logToDate" 
-                                type="date" 
-                                class="w-full bg-gray-50 dark:bg-gray-850 border border-gray-250 dark:border-gray-850 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Report Type</label>
-                            <select 
-                                class="w-full bg-gray-50 dark:bg-gray-850 border border-gray-250 dark:border-gray-850 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 text-gray-900 dark:text-white"
-                            >
-                                <option value="single">Single doctor daily report</option>
-                                <option value="combined">Combined daily report</option>
-                            </select>
-                        </div>
-                        <div>
-                            <button 
-                                wire:click="applyFilters"
-                                type="button"
-                                class="w-full py-2 bg-primary hover:bg-primary-500 text-white rounded-xl text-xs font-bold transition shadow-sm"
-                            >
-                                Apply
-                            </button>
-                        </div>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex rounded-full bg-[#eaf2ff] px-3 py-1 text-[11px] font-black text-primary">Live audit view</span>
                     </div>
                 </div>
 
-                @php
-                    $isSingleDay = ($logFromDate === $logToDate);
-                    $stats = null;
-                    if ($logDoctorId && $isSingleDay) {
-                        $stats = $this->getTimingStatsForDate($logDoctorId, $logFromDate);
-                    }
-                @endphp
+                <div class="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_1fr_180px]">
+                    <div>
+                        <label class="mb-1.5 block text-[12px] font-extrabold text-slate-500">From Date</label>
+                        <input
+                            wire:model.live="logFromDate"
+                            type="date"
+                            class="h-[38px] w-full rounded-[8px] border border-[#d8dee8] bg-white px-3 text-[13px] text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        />
+                    </div>
 
-                <!-- Global OPD Timing Shifts Selector (Always Visible on all tabs if single day & doctor selected) -->
-                @if($logDoctorId && $isSingleDay && $stats && !$stats['is_future'] && count($stats['slots']) > 0)
-                    <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm space-y-3">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-550 flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Doctor Shift / OPD Availability timing
-                            </h3>
-                            @if(!is_null($selectedSlotIndex))
-                                <button wire:click="$set('selectedSlotIndex', null)" class="text-xs text-primary hover:underline font-bold transition">Clear Selection / Show Full Day</button>
+                    <div>
+                        <label class="mb-1.5 block text-[12px] font-extrabold text-slate-500">To Date</label>
+                        <input
+                            wire:model.live="logToDate"
+                            type="date"
+                            class="h-[38px] w-full rounded-[8px] border border-[#d8dee8] bg-white px-3 text-[13px] text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="mb-1.5 block text-[12px] font-extrabold text-slate-500">Log Type</label>
+                        <select
+                            wire:model.live="logTypeFilter"
+                            class="h-[38px] w-full rounded-[8px] border border-[#d8dee8] bg-white px-3 text-[13px] text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        >
+                            <option value="all">All logs</option>
+                            <option value="patient">Patient logs</option>
+                            <option value="break">Break logs</option>
+                            <option value="queue">Queue changes</option>
+                            <option value="system">System/admin actions</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="mb-1.5 block text-[12px] font-extrabold text-transparent">Apply</label>
+                        <button
+                            type="button"
+                            wire:click="applyFilters"
+                            class="h-[38px] w-full rounded-[8px] bg-primary px-3 text-[13px] font-extrabold text-white transition hover:bg-primary-600"
+                        >
+                            Apply
+                        </button>
+                    </div>
+                </div>
+
+                @if ($selectedDoctor && $isSingleDay && $selectedDoctorStats && !$selectedDoctorStats['is_future'] && count($selectedDoctorStats['slots']) > 0)
+                    <div class="mt-4 rounded-[10px] border border-[#dce3ec] bg-[#f8fbff] p-4">
+                        <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="text-[12px] font-black uppercase tracking-[0.12em] text-slate-400">Doctor Shift Windows</div>
+                            @if (!is_null($selectedSlotIndex))
+                                <button wire:click="$set('selectedSlotIndex', null)" class="text-[12px] font-extrabold text-primary transition hover:underline">Show full day</button>
                             @endif
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                            <!-- Full Day Option Card -->
-                            <button 
-                                wire:click="$set('selectedSlotIndex', null)" 
-                                class="text-left p-3.5 rounded-xl border transition-all duration-200 {{ is_null($selectedSlotIndex) ? 'bg-primary-50/50 border-primary dark:bg-primary-950/20 ring-2 ring-primary/20' : 'bg-gray-50 border-gray-150 hover:bg-gray-100 dark:bg-gray-850 dark:border-gray-800 dark:hover:bg-gray-800' }}"
+
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <button
+                                wire:click="$set('selectedSlotIndex', null)"
+                                class="rounded-[10px] border p-3 text-left transition {{ is_null($selectedSlotIndex) ? 'border-primary bg-white ring-2 ring-primary/10' : 'border-[#dce3ec] bg-white hover:border-[#bdd3f6]' }}"
                             >
-                                <div class="font-bold text-[10px] uppercase text-gray-400">Full Day Summary</div>
-                                <div class="text-sm font-extrabold mt-1 text-gray-900 dark:text-white">All Shifts Combined</div>
-                                <div class="text-[10px] text-gray-450 dark:text-gray-550 mt-1 flex items-center gap-1">
-                                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                                    {{ count($stats['slots']) }} Shift(s) Scheduled
-                                </div>
+                                <div class="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Full Day Summary</div>
+                                <div class="mt-1 text-[14px] font-extrabold text-slate-900">All shifts combined</div>
+                                <div class="mt-1 text-[11px] font-semibold text-slate-500">{{ count($selectedDoctorStats['slots']) }} shift(s) scheduled</div>
                             </button>
 
-                            <!-- Slot Cards -->
-                            @foreach($stats['slots'] as $idx => $slot)
-                                @php
-                                    $isSelected = ($selectedSlotIndex === $idx);
-                                @endphp
-                                <button 
-                                    wire:click="$set('selectedSlotIndex', {{ $idx }})" 
-                                    class="text-left p-3.5 rounded-xl border transition-all duration-200 {{ $isSelected ? 'bg-primary-50/50 border-primary dark:bg-primary-950/20 ring-2 ring-primary/20' : 'bg-gray-50 border-gray-150 hover:bg-gray-100 dark:bg-gray-850 dark:border-gray-800 dark:hover:bg-gray-800' }}"
+                            @foreach ($selectedDoctorStats['slots'] as $idx => $slot)
+                                <button
+                                    wire:click="$set('selectedSlotIndex', {{ $idx }})"
+                                    class="rounded-[10px] border p-3 text-left transition {{ $selectedSlotIndex === $idx ? 'border-primary bg-white ring-2 ring-primary/10' : 'border-[#dce3ec] bg-white hover:border-[#bdd3f6]' }}"
                                 >
-                                    <div class="font-bold text-[10px] uppercase text-gray-455 flex items-center gap-1.5">
-                                        <span>Shift {{ $idx + 1 }}</span>
-                                        @if($slot['check_in'])
-                                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                        @else
-                                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                                        @endif
-                                    </div>
-                                    <div class="text-sm font-extrabold mt-1 text-gray-900 dark:text-white">
-                                        {{ $slot['label'] }}
-                                    </div>
-                                    <div class="text-[10px] text-gray-450 dark:text-gray-550 mt-1 font-semibold">
-                                        @if($slot['check_in'])
+                                    <div class="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Shift {{ $idx + 1 }}</div>
+                                    <div class="mt-1 text-[14px] font-extrabold text-slate-900">{{ $slot['label'] }}</div>
+                                    <div class="mt-1 text-[11px] font-semibold text-slate-500">
+                                        @if ($slot['check_in'])
                                             Attended: {{ $slot['check_in']->format('H:i') }} - {{ $slot['last_app_end'] ? $slot['last_app_end']->format('H:i') : '—' }}
                                         @else
-                                            No Attendance Logged
+                                            No attendance logged
                                         @endif
                                     </div>
                                 </button>
@@ -207,546 +196,257 @@
                         </div>
                     </div>
                 @endif
-                             @if($logTab === 'summary')
-                    <!-- TODAY SUMMARY TAB -->
-                    @if($logDoctorId)
-                        @php
-                            if ($stats && !$stats['is_future'] && $isSingleDay) {
-                                if (is_null($selectedSlotIndex)) {
-                                    $activeSec = $stats['overall']['active_seconds'];
-                                    $breakSec = $stats['overall']['total_break_seconds'];
-                                    $extraSec = $stats['overall']['extra_seconds'];
-                                    $checkIn = $stats['overall']['check_in'];
-                                    $lastAppEnd = $stats['overall']['last_app_end'];
-                                    $firstConsult = $stats['overall']['first_consult_start'];
-                                    $breaks = $stats['overall']['breaks'];
-                                    $shiftLabel = count($stats['shift_intervals']) > 0 ? implode(' / ', $stats['shift_intervals']) : 'No Shift Scheduled';
-                                    
-                                    // Match overall check-in to closest slot for display
-                                    $matchedStart = null;
-                                    $checkInDiffMin = 0;
-                                    if ($checkIn && !empty($stats['slots'])) {
-                                        $minDiff = null;
-                                        $closestSlot = null;
-                                        foreach ($stats['slots'] as $s) {
-                                            $diff = abs($checkIn->timestamp - $s['start']->timestamp);
-                                            if (is_null($minDiff) || $diff < $minDiff) {
-                                                $minDiff = $diff;
-                                                $closestSlot = $s;
-                                            }
-                                        }
-                                        if ($closestSlot) {
-                                            $matchedStart = $closestSlot['start'];
-                                            $checkInDiffMin = round(($checkIn->timestamp - $closestSlot['start']->timestamp) / 60);
-                                        }
-                                    }
-                                    
-                                    $matchedEnd = null;
-                                    $checkoutDiffMin = 0;
-                                    if ($lastAppEnd && !empty($stats['slots'])) {
-                                        $minDiff = null;
-                                        $closestSlot = null;
-                                        foreach ($stats['slots'] as $s) {
-                                            $diff = abs($lastAppEnd->timestamp - $s['end']->timestamp);
-                                            if (is_null($minDiff) || $diff < $minDiff) {
-                                                $minDiff = $diff;
-                                                $closestSlot = $s;
-                                            }
-                                        }
-                                        if ($closestSlot) {
-                                            $matchedEnd = $closestSlot['end'];
-                                            $checkoutDiffMin = round(($lastAppEnd->timestamp - $closestSlot['end']->timestamp) / 60);
-                                        }
-                                    }
-                                } else {
-                                    $slot = $stats['slots'][$selectedSlotIndex] ?? null;
-                                    $activeSec = $slot ? $slot['active_seconds'] : 0;
-                                    $breakSec = $slot ? $slot['total_break_seconds'] : 0;
-                                    $extraSec = $slot ? $slot['extra_seconds'] : 0;
-                                    $checkIn = $slot ? $slot['check_in'] : null;
-                                    $lastAppEnd = $slot ? $slot['last_app_end'] : null;
-                                    $firstConsult = $slot ? $slot['first_consult_start'] : null;
-                                    $breaks = $slot ? $slot['breaks'] : [];
-                                    $shiftLabel = $slot ? $slot['label'] : '—';
-                                    
-                                    $matchedStart = $slot ? $slot['start'] : null;
-                                    $checkInDiffMin = $slot ? $slot['check_in_diff_minutes'] : 0;
-                                    $matchedEnd = $slot ? $slot['end'] : null;
-                                    $checkoutDiffMin = $slot ? $slot['checkout_diff_minutes'] : 0;
-                                }
-                            }
-                        @endphp
 
-                        @if($stats && $stats['is_future'])
-                            <!-- Future Date Message -->
-                            <div class="bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 p-6 rounded-2xl border border-amber-250 dark:border-amber-900 text-center font-semibold text-sm">
-                                Future Date Selected: Logs and timing calculations are not available for future dates.
-                            </div>
-                        @elseif($isSingleDay)
-                            <!-- Stats Cards -->
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                                    <div class="text-[10px] uppercase font-bold text-gray-450 dark:text-gray-550">SCHEDULED SHIFT</div>
-                                    <div class="text-lg font-extrabold text-gray-900 dark:text-white mt-1.5">
-                                        {{ $shiftLabel }}
-                                    </div>
-                                </div>
-                                <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                                    <div class="text-[10px] uppercase font-bold text-gray-455 dark:text-gray-550">ACTUAL ACTIVE TIME</div>
-                                    <div class="text-2xl font-extrabold text-primary-600 dark:text-primary-400 mt-1.5">
-                                        {{ $this->formatDurationMinutes($activeSec) }}
-                                    </div>
-                                </div>
-                                <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                                    <div class="text-[10px] uppercase font-bold text-gray-455 dark:text-gray-550">TOTAL BREAK</div>
-                                    <div class="text-2xl font-extrabold text-amber-500 mt-1.5">
-                                        {{ $this->formatDurationMinutes($breakSec) }}
-                                    </div>
-                                </div>
-                                <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
-                                    <div class="text-[10px] uppercase font-bold text-gray-455 dark:text-gray-550">EXTRA TIME</div>
-                                    <div class="text-2xl font-extrabold text-red-500 mt-1.5">
-                                        {{ $this->formatDurationMinutes($extraSec) }}
-                                    </div>
-                                </div>
-                            </div>
+                <div class="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-5">
+                    <div class="rounded-[12px] border border-[#e1e7ef] bg-gradient-to-b from-white to-[#f9fbff] p-4">
+                        <div class="text-[28px] font-extrabold leading-none text-slate-950">{{ $summaryMetrics['total'] }}</div>
+                        <div class="mt-2 text-[12px] font-bold text-slate-500">Total Logs</div>
+                    </div>
+                    <div class="rounded-[12px] border border-[#e1e7ef] bg-gradient-to-b from-white to-[#f9fbff] p-4">
+                        <div class="text-[28px] font-extrabold leading-none text-slate-950">{{ $summaryMetrics['patient'] }}</div>
+                        <div class="mt-2 text-[12px] font-bold text-slate-500">Patient Actions</div>
+                    </div>
+                    <div class="rounded-[12px] border border-[#e1e7ef] bg-gradient-to-b from-white to-[#f9fbff] p-4">
+                        <div class="text-[28px] font-extrabold leading-none text-slate-950">{{ $summaryMetrics['break'] }}</div>
+                        <div class="mt-2 text-[12px] font-bold text-slate-500">Break Actions</div>
+                    </div>
+                    <div class="rounded-[12px] border border-[#e1e7ef] bg-gradient-to-b from-white to-[#f9fbff] p-4">
+                        <div class="text-[28px] font-extrabold leading-none text-slate-950">{{ $summaryMetrics['queue'] }}</div>
+                        <div class="mt-2 text-[12px] font-bold text-slate-500">Queue Changes</div>
+                    </div>
+                    <div class="col-span-2 rounded-[12px] border border-[#e1e7ef] bg-gradient-to-b from-white to-[#f9fbff] p-4 xl:col-span-1">
+                        <div class="text-[28px] font-extrabold leading-none text-slate-950">{{ $summaryMetrics['system'] }}</div>
+                        <div class="mt-2 text-[12px] font-bold text-slate-500">Admin / System</div>
+                    </div>
+                </div>
 
-                            <!-- Daily Timing Calculation details -->
-                            <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-4">
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white">Daily Timing Calculation</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <!-- Check-in -->
-                                    <div class="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
-                                        <div class="text-[11px] font-bold text-gray-400 dark:text-gray-550 uppercase">Doctor Check-in</div>
-                                        <div class="text-base font-bold text-gray-900 dark:text-white mt-1.5">
-                                            @if($checkIn)
-                                                {{ $checkIn->format('H:i') }}
-                                                @if($matchedStart)
-                                                    @if($checkInDiffMin > 0)
-                                                        <span class="text-xs font-semibold text-red-500 ml-2">
-                                                            ({{ $checkInDiffMin }} min late from {{ $matchedStart->format('H:i') }} slot start)
-                                                        </span>
-                                                    @else
-                                                        <span class="text-xs font-semibold text-green-500 ml-2">
-                                                            (On time / early for {{ $matchedStart->format('H:i') }} slot start)
-                                                        </span>
-                                                    @endif
-                                                @endif
-                                            @else
-                                                — <span class="text-xs text-gray-400 font-semibold ml-2">(Not checked in)</span>
-                                            @endif
-                                        </div>
-                                    </div>
+                <div class="mt-5 border-b border-[#e5e7eb]">
+                    <div class="-mb-px flex flex-wrap gap-2">
+                        @foreach ([
+                            'timeline' => 'Timeline',
+                            'consultations' => 'Patient-wise',
+                            'doctor' => 'Doctor Summary',
+                            'audit' => 'Audit Details',
+                        ] as $tabKey => $tabLabel)
+                            <button
+                                wire:click="selectTab('{{ $tabKey }}')"
+                                class="border-b-[3px] px-3 py-3 text-[13px] font-black transition {{ $logTab === $tabKey ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700' }}"
+                            >
+                                {{ $tabLabel }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
 
-                                    <!-- Last Appointment End -->
-                                    <div class="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border border-gray-150 dark:border-gray-800">
-                                        <div class="text-[11px] font-bold text-gray-400 dark:text-gray-550 uppercase">Last Appointment End</div>
-                                        <div class="text-base font-bold text-gray-900 dark:text-white mt-1.5">
-                                            @if($lastAppEnd)
-                                                {{ $lastAppEnd->format('H:i') }}
-                                                @if($matchedEnd)
-                                                    @if($checkoutDiffMin > 0)
-                                                        <span class="text-xs font-semibold text-red-500 ml-2">
-                                                            ({{ $checkoutDiffMin }} min extra after {{ $matchedEnd->format('H:i') }} slot end)
-                                                        </span>
-                                                    @else
-                                                        <span class="text-xs font-semibold text-green-500 ml-2">
-                                                            (Completed before {{ $matchedEnd->format('H:i') }} slot end)
-                                                        </span>
-                                                    @endif
-                                                @endif
-                                            @else
-                                                — <span class="text-xs text-gray-400 font-semibold ml-2">(No consultations ended)</span>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    <!-- First Consultation Start -->
-                                    <div class="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
-                                        <div class="text-[11px] font-bold text-gray-400 dark:text-gray-550 uppercase">First Consultation Start</div>
-                                        <div class="text-base font-bold text-gray-900 dark:text-white mt-1.5">
-                                            @if($firstConsult)
-                                                {{ $firstConsult->format('H:i') }}
-                                                @if($checkIn)
-                                                    @php
-                                                        $diffFirstSec = $firstConsult->timestamp - $checkIn->timestamp;
-                                                        $diffFirstMin = round($diffFirstSec / 60);
-                                                    @endphp
-                                                    <span class="text-xs font-semibold text-gray-550 ml-2">
-                                                        ({{ $diffFirstMin }} min after check-in)
-                                                    </span>
-                                                @endif
-                                            @else
-                                                — <span class="text-xs text-gray-400 font-semibold ml-2">(No consultations started)</span>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    <!-- Break Deduction -->
-                                    <div class="bg-gray-50 dark:bg-gray-850 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
-                                        <div class="text-[11px] font-bold text-gray-400 dark:text-gray-550 uppercase">Break Deduction</div>
-                                        <div class="text-base font-bold text-gray-900 dark:text-white mt-1.5">
-                                            @if(count($breaks) > 0)
-                                                @php
-                                                    $breakList = [];
-                                                    foreach($breaks as $b) {
-                                                        $breakList[] = $b['start']->format('H:i') . ' - ' . ($b['end'] ? $b['end']->format('H:i') : 'Ongoing');
-                                                    }
-                                                @endphp
-                                                <span class="text-sm font-semibold">{{ implode(', ', $breakList) }}</span>
-                                                <span class="text-xs font-bold text-amber-600 ml-2">Total break: {{ round($breakSec / 60) }} minutes</span>
-                                            @else
-                                                No breaks taken
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @else
-                            <!-- Date range list daily stats -->
-                            <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-4">
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white">Daily Shift & Timing Log</h3>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-left border-collapse text-xs">
-                                        <thead>
-                                            <tr class="bg-gray-50 dark:bg-gray-850 border-b border-gray-150 dark:border-gray-800 font-bold uppercase text-gray-450 dark:text-gray-500">
-                                                <th class="px-4 py-3">Date</th>
-                                                <th class="px-4 py-3">Scheduled Shift</th>
-                                                <th class="px-4 py-3">Check-in Time</th>
-                                                <th class="px-4 py-3">Last Appointment End</th>
-                                                <th class="px-4 py-3 text-center">Break Duration</th>
-                                                <th class="px-4 py-3 text-center">Active Time</th>
-                                                <th class="px-4 py-3 text-center">Extra Time</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-850">
-                                            @php
-                                                $curr = \Carbon\Carbon::parse($logFromDate)->startOfDay();
-                                                $end = \Carbon\Carbon::parse($logToDate)->startOfDay();
-                                                $days = [];
-                                                while($curr->lte($end)) {
-                                                    $days[] = $curr->toDateString();
-                                                    $curr->addDay();
-                                                }
-                                            @endphp
-                                            @foreach(array_reverse($days) as $dayStr)
-                                                @php
-                                                    $dStats = $this->getTimingStatsForDate($logDoctorId, $dayStr);
-                                                @endphp
-                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40 text-gray-700 dark:text-gray-300">
-                                                    <td class="px-4 py-3 font-semibold">{{ \Carbon\Carbon::parse($dayStr)->format('d/m/Y') }}</td>
-                                                    <td class="px-4 py-3">
-                                                        @if(count($dStats['shift_intervals']) > 0)
-                                                            {{ implode(' / ', $dStats['shift_intervals']) }}
-                                                        @else
-                                                            —
-                                                        @endif
-                                                    </td>
-                                                    <td class="px-4 py-3 font-mono">{{ (isset($dStats['overall']['check_in']) && $dStats['overall']['check_in']) ? $dStats['overall']['check_in']->format('H:i') : '—' }}</td>
-                                                    <td class="px-4 py-3 font-mono">{{ (isset($dStats['overall']['last_app_end']) && $dStats['overall']['last_app_end']) ? $dStats['overall']['last_app_end']->format('H:i') : '—' }}</td>
-                                                    <td class="px-4 py-3 text-center font-bold text-amber-600">{{ $this->formatDurationMinutes($dStats['overall']['total_break_seconds'] ?? 0) }}</td>
-                                                    <td class="px-4 py-3 text-center font-bold text-primary">{{ $this->formatDurationMinutes($dStats['overall']['active_seconds'] ?? 0) }}</td>
-                                                    <td class="px-4 py-3 text-center font-bold text-red-500">{{ $this->formatDurationMinutes($dStats['overall']['extra_seconds'] ?? 0) }}</td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        @endif
-                    @else
-                        <!-- All doctors consolidated summary list -->
-                        <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-4">
-                            <h3 class="text-base font-bold text-gray-900 dark:text-white">Doctors Shift & Work Hours Summary</h3>
-                            <p class="text-xs text-gray-550 dark:text-gray-400">Showing consolidated timings for all active doctors for the selected date.</p>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr class="bg-gray-50 dark:bg-gray-850 border-b border-gray-150 dark:border-gray-800 font-bold uppercase text-gray-450 dark:text-gray-550">
-                                            <th class="px-4 py-3">Doctor</th>
-                                            <th class="px-4 py-3">Department</th>
-                                            <th class="px-4 py-3">Check-in Time</th>
-                                            <th class="px-4 py-3">Last Appointment End</th>
-                                            <th class="px-4 py-3 text-center">Total Break</th>
-                                            <th class="px-4 py-3 text-center">Active Time</th>
-                                            <th class="px-4 py-3 text-center">Extra Time</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-850">
-                                        @foreach($this->getDoctors() as $doc)
-                                            @php
-                                                $dStats = $this->getTimingStatsForDate($doc['id'], $logFromDate);
-                                            @endphp
-                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40 text-gray-700 dark:text-gray-300">
-                                                <td class="px-4 py-3 font-semibold">{{ $doc['name'] }}</td>
-                                                <td class="px-4 py-3 text-gray-500">{{ $doc['department'] }}</td>
-                                                <td class="px-4 py-3 font-mono">{{ (isset($dStats['overall']['check_in']) && $dStats['overall']['check_in']) ? $dStats['overall']['check_in']->format('H:i') : '—' }}</td>
-                                                <td class="px-4 py-3 font-mono">{{ (isset($dStats['overall']['last_app_end']) && $dStats['overall']['last_app_end']) ? $dStats['overall']['last_app_end']->format('H:i') : '—' }}</td>
-                                                <td class="px-4 py-3 text-center font-bold text-amber-600">{{ $this->formatDurationMinutes($dStats['overall']['total_break_seconds'] ?? 0) }}</td>
-                                                <td class="px-4 py-3 text-center font-bold text-primary">{{ $this->formatDurationMinutes($dStats['overall']['active_seconds'] ?? 0) }}</td>
-                                                <td class="px-4 py-3 text-center font-bold text-red-500">{{ $this->formatDurationMinutes($dStats['overall']['extra_seconds'] ?? 0) }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    @endif
-
-                    <!-- Excel Export Info Box -->
-                    <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-4">
-                        <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 dark:text-gray-550">Excel Export Should Include</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="bg-gray-50 dark:bg-gray-850 p-4.5 rounded-xl border border-gray-100 dark:border-gray-800 space-y-2">
-                                <h4 class="font-bold text-sm text-gray-800 dark:text-white">Doctor Summary</h4>
-                                <p class="text-xs text-gray-500 dark:text-gray-450 leading-relaxed">
-                                    Doctor, department, room, shift start/end, check-in, last end, active time, break time, extra time.
-                                </p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-850 p-4.5 rounded-xl border border-gray-100 dark:border-gray-800 space-y-2">
-                                <h4 class="font-bold text-sm text-gray-800 dark:text-white">Patient Rows</h4>
-                                <p class="text-xs text-gray-500 dark:text-gray-450 leading-relaxed">
-                                    Token, patient, phone, booked time, check-in, start, complete, waiting time, consultation duration, status.
-                                </p>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-850 p-4.5 rounded-xl border border-gray-100 dark:border-gray-800 space-y-2">
-                                <h4 class="font-bold text-sm text-gray-800 dark:text-white">Audit Rows</h4>
-                                <p class="text-xs text-gray-500 dark:text-gray-450 leading-relaxed">
-                                    Action type, action time, old status, new status, performed by, remarks, notification sent yes/no.
-                                </p>
-                            </div>
-                        </div>
+                @if ($logTab === 'timeline')
+                    <div class="mt-4 rounded-[10px] border border-[#ffe0a3] bg-[#fff8e9] px-4 py-3 text-[13px] leading-6 text-[#8a4b00]">
+                        This timeline shows every important queue action in order: doctor availability, breaks, patient attended, skipped or re-queued, completed consultation, remarks and who performed the action.
                     </div>
 
-                @elseif($logTab === 'timeline')
-                    <!-- TIMELINE FEED TAB -->
-                    <div class="space-y-4">
-                        @if($logs->hasPages())
-                            <div class="mb-4">
-                                {{ $logs->links('livewire::tailwind') }}
-                            </div>
+                    <div class="mt-4">
+                        @if ($logs->hasPages())
+                            <div class="mb-4">{{ $logs->links('livewire::tailwind') }}</div>
                         @endif
-                        <div class="relative pl-8 border-l-2 border-gray-250 dark:border-gray-800 space-y-6">
-                            @forelse($logs as $log)
+
+                        <div class="relative pl-7 before:absolute before:left-[10px] before:top-0 before:h-full before:w-[2px] before:bg-[#dce8fb] before:content-['']">
+                            @forelse ($logs as $log)
                                 @php
                                     $details = $this->getLogDetails($log);
-                                    $colorMap = [
-                                        'green' => [
-                                            'bg' => 'bg-green-500',
-                                            'bg-light' => 'bg-green-50 dark:bg-green-950/20',
-                                            'text' => 'text-green-700 dark:text-green-400',
-                                            'border' => 'border-green-200 dark:border-green-900/60',
-                                        ],
-                                        'danger' => [
-                                            'bg' => 'bg-red-500',
-                                            'bg-light' => 'bg-red-50 dark:bg-red-950/20',
-                                            'text' => 'text-red-700 dark:text-red-400',
-                                            'border' => 'border-red-200 dark:border-red-900/60',
-                                        ],
-                                        'amber' => [
-                                            'bg' => 'bg-amber-500',
-                                            'bg-light' => 'bg-amber-50 dark:bg-amber-950/20',
-                                            'text' => 'text-amber-700 dark:text-amber-400',
-                                            'border' => 'border-amber-200 dark:border-amber-900/60',
-                                        ],
-                                        'indigo' => [
-                                            'bg' => 'bg-indigo-500',
-                                            'bg-light' => 'bg-indigo-50 dark:bg-indigo-950/20',
-                                            'text' => 'text-indigo-700 dark:text-indigo-400',
-                                            'border' => 'border-indigo-200 dark:border-indigo-900/60',
-                                        ],
-                                        'gray' => [
-                                            'bg' => 'bg-gray-500',
-                                            'bg-light' => 'bg-gray-100 dark:bg-gray-800',
-                                            'text' => 'text-gray-700 dark:text-gray-300',
-                                            'border' => 'border-gray-200 dark:border-gray-700',
-                                        ],
-                                    ];
-                                    
-                                    $style = $colorMap[$details['color']] ?? $colorMap['gray'];
-                                    
-                                    $pngIconMap = [
-                                        'check_in' => 'checkin.png',
-                                        'check_out' => 'no-show.png',
-                                        'break_start' => 'skip.png',
-                                        'break_end' => 'checkin.png',
-                                        'start' => 'start.png',
-                                        'complete' => 'completed.png',
-                                        'skip' => 'skip.png',
-                                        'not_complete' => 'no-show.png',
-                                        'revert' => 'checkin.png'
-                                    ];
-                                    $pngIcon = $pngIconMap[$log->action] ?? 'checkin.png';
+                                    $tagClasses = match ($details['color']) {
+                                        'green' => 'bg-[#e7f8ee] text-[#0c8a43]',
+                                        'amber' => 'bg-[#fff3df] text-[#c26300]',
+                                        'indigo' => 'bg-[#eaf2ff] text-primary',
+                                        'danger' => 'bg-[#ffecec] text-[#e11d48]',
+                                        default => 'bg-[#eef2f7] text-slate-700',
+                                    };
                                 @endphp
-                                
-                                <div class="relative">
-                                    <!-- Icon Marker Dot -->
-                                    <span class="absolute -left-[45px] top-1 flex h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 shrink-0 z-10">
-                                        <img src="/images/queue-images/{{ $pngIcon }}" class="h-4.5 w-4.5 object-contain" alt="{{ $log->action }}" />
-                                    </span>
-                                    
-                                    <!-- Entry Card -->
-                                    <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-850 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-all duration-300">
-                                        <div class="space-y-1.5 min-w-0 flex-1">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold {{ $style['bg-light'] }} {{ $style['text'] }} border {{ $style['border'] }}">
-                                                    {{ $details['title'] }}
-                                                </span>
-                                                
-                                                @if(!$logDoctorId && $log->doctor)
-                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-50 text-primary dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/60">
-                                                        Dr. {{ $log->doctor->first_name }}
-                                                    </span>
-                                                @endif
 
-                                                @if($details['duration'])
-                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-50 border border-gray-250 text-gray-650 dark:bg-gray-850 dark:border-gray-800 dark:text-gray-300">
-                                                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                        Duration: {{ $details['duration'] }}
-                                                    </span>
-                                                @endif
-                                                
-                                                <span class="text-[11px] font-semibold text-gray-450 dark:text-gray-500">
-                                                    {{ $log->created_at->format('d/m/Y') }}
-                                                </span>
-                                            </div>
-                                            
-                                            <p class="text-sm font-medium text-gray-700 dark:text-gray-350 leading-relaxed">
-                                                {{ $details['desc'] }}
-                                            </p>
+                                <div class="relative mb-3 grid gap-4 rounded-[12px] border border-[#e1e7ef] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] lg:grid-cols-[92px_minmax(0,1fr)_160px]">
+                                    <span class="absolute -left-[23px] top-[18px] h-3 w-3 rounded-full border-[3px] border-white bg-primary shadow-[0_0_0_2px_#bdd7ff]"></span>
 
-                                            @if($details['remarks'])
-                                                <div class="mt-2 text-xs bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5 border border-gray-150 dark:border-gray-850 text-gray-600 dark:text-gray-450">
-                                                    <span class="font-bold text-gray-500 dark:text-gray-400">Note:</span> {{ $details['remarks'] }}
-                                                </div>
+                                    <div class="text-[15px] font-black text-primary">{{ $log->created_at->format('h:i A') }}</div>
+
+                                    <div class="min-w-0">
+                                        <h4 class="text-[15px] font-extrabold text-slate-950">{{ $details['title'] }}</h4>
+                                        <p class="mt-1 text-[13px] leading-6 text-slate-500">{{ $details['desc'] }}</p>
+                                        <p class="mt-2 text-[12px] text-slate-400">
+                                            Performed by:
+                                            <span class="font-bold text-slate-600">{{ $log->creator?->name ?? 'System' }}</span>
+                                            @if ($details['remarks'])
+                                                | Remarks: {{ $details['remarks'] }}
                                             @endif
-                                        </div>
-                                        
-                                        <div class="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800 text-xs shrink-0">
-                                            <div class="text-xs font-extrabold text-gray-900 dark:text-white">
-                                                {{ $details['time_range'] }}
-                                            </div>
-                                            <div class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                                                By {{ $log->creator ? $log->creator->name : 'System' }}
-                                            </div>
-                                        </div>
+                                        </p>
+                                    </div>
+
+                                    <div class="flex items-start justify-start lg:justify-end">
+                                        <span class="inline-flex rounded-full px-3 py-1 text-[12px] font-black {{ $tagClasses }}">{{ $details['title'] }}</span>
                                     </div>
                                 </div>
                             @empty
-                                <div class="py-12 text-center text-gray-500 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6">
-                                    <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                                    <h3 class="font-semibold text-gray-700 dark:text-gray-300">No events logged yet</h3>
-                                    <p class="text-sm text-gray-450 mt-1">Activities will show up here as actions are performed.</p>
-                                </div>
+                                <div class="rounded-[12px] border border-[#e1e7ef] bg-white px-4 py-10 text-center text-[14px] text-slate-500">No logs found for the selected filters.</div>
                             @endforelse
                         </div>
+
+                        @if ($logs->hasPages())
+                            <div class="mt-4">{{ $logs->links('livewire::tailwind') }}</div>
+                        @endif
+                    </div>
+                @elseif ($logTab === 'consultations')
+                    <div class="mt-4 overflow-hidden rounded-[12px] border border-[#dce3ec]">
+                        <div class="border-b border-[#dce3ec] bg-white px-4 py-3">
+                            <h3 class="text-[15px] font-extrabold text-slate-950">Patient-wise Consultation Summary</h3>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full border-collapse text-left text-[13px]">
+                                <thead>
+                                    <tr class="bg-[#f8fafc] text-[12px] font-black uppercase tracking-[0.06em] text-slate-600">
+                                        <th class="px-4 py-3">Token</th>
+                                        <th class="px-4 py-3">Patient</th>
+                                        <th class="px-4 py-3">Doctor</th>
+                                        <th class="px-4 py-3">Booked</th>
+                                        <th class="px-4 py-3">Check-In</th>
+                                        <th class="px-4 py-3">Started</th>
+                                        <th class="px-4 py-3">Ended</th>
+                                        <th class="px-4 py-3">Waiting</th>
+                                        <th class="px-4 py-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-[#edf0f5] bg-white">
+                                    @forelse ($patientConsultations as $consultation)
+                                        @php
+                                            $statusClasses = match ($consultation['status']) {
+                                                'completed' => 'bg-[#e7f8ee] text-[#0c8a43]',
+                                                'started' => 'bg-[#eaf2ff] text-primary',
+                                                'checkin' => 'bg-[#fff3df] text-[#c26300]',
+                                                'skipped' => 'bg-[#eef2f7] text-slate-700',
+                                                default => 'bg-[#ffecec] text-[#e11d48]',
+                                            };
+                                        @endphp
+                                        <tr class="align-top text-slate-700">
+                                            <td class="px-4 py-3 font-black text-primary">{{ $consultation['token'] }}</td>
+                                            <td class="px-4 py-3">
+                                                <div class="font-extrabold text-slate-900">{{ $consultation['patient_name'] }}</div>
+                                                <div class="mt-1 text-[11px] text-slate-400">{{ $consultation['phone'] }}</div>
+                                            </td>
+                                            <td class="px-4 py-3">{{ $consultation['doctor_name'] }}</td>
+                                            <td class="px-4 py-3">{{ $consultation['booked_time'] }}</td>
+                                            <td class="px-4 py-3">{{ $consultation['check_in'] ? $consultation['check_in']->format('H:i') : '—' }}</td>
+                                            <td class="px-4 py-3">{{ $consultation['started'] ? $consultation['started']->format('H:i') : '—' }}</td>
+                                            <td class="px-4 py-3">{{ $consultation['completed'] ? $consultation['completed']->format('H:i') : '—' }}</td>
+                                            <td class="px-4 py-3">{{ $consultation['waiting_seconds'] !== null ? $this->formatDurationMinutes($consultation['waiting_seconds']) : '—' }}</td>
+                                            <td class="px-4 py-3">
+                                                <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-black {{ $statusClasses }}">
+                                                    {{ $consultation['status'] === 'checkin' ? 'Checked-in' : ($consultation['status'] === 'no_show' ? 'No Show' : ucfirst($consultation['status'])) }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="9" class="px-4 py-10 text-center text-slate-500">No patient consultation records found.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @elseif ($logTab === 'doctor')
+                    <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        @foreach ($doctorSummaries as $summary)
+                            <div class="rounded-[10px] border border-[#e1e7ef] bg-white p-4">
+                                <div class="text-[15px] font-extrabold text-slate-950">{{ $summary['name'] }}</div>
+                                <div class="mt-1 text-[12px] text-slate-500">{{ $summary['department'] }}</div>
+                                <div class="mt-3 space-y-1.5 text-[13px] leading-6 text-slate-600">
+                                    <div>Check-in: <span class="font-bold text-slate-900">{{ $summary['check_in'] }}</span></div>
+                                    <div>Last End: <span class="font-bold text-slate-900">{{ $summary['last_end'] }}</span></div>
+                                    <div>Patients attended: <span class="font-bold text-slate-900">{{ $summary['patients_attended'] }}</span></div>
+                                    <div>Total break: <span class="font-bold text-slate-900">{{ $summary['break_time'] }}</span></div>
+                                    <div>Active time: <span class="font-bold text-slate-900">{{ $summary['active_time'] }}</span></div>
+                                    <div>Extra time: <span class="font-bold text-slate-900">{{ $summary['extra_time'] }}</span></div>
+                                    <div>Skipped/Requeued: <span class="font-bold text-slate-900">{{ $summary['skipped_count'] }}</span></div>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
 
-                    @if($logs->hasPages())
-                        <div class="mt-4">
-                            {{ $logs->links('livewire::tailwind') }}
+                    @if ($selectedDoctor && $selectedDoctorStats && !$selectedDoctorStats['is_future'])
+                        <div class="mt-4 overflow-hidden rounded-[12px] border border-[#dce3ec]">
+                            <div class="border-b border-[#dce3ec] bg-white px-4 py-3">
+                                <h3 class="text-[15px] font-extrabold text-slate-950">Daily Timing Calculation</h3>
+                            </div>
+
+                            <div class="grid gap-4 bg-white p-4 md:grid-cols-2">
+                                <div class="rounded-[10px] border border-[#e1e7ef] bg-[#f9fbff] p-4">
+                                    <div class="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Scheduled Shift</div>
+                                    <div class="mt-2 text-[17px] font-extrabold text-slate-950">
+                                        {{ count($selectedDoctorStats['shift_intervals']) ? implode(' / ', $selectedDoctorStats['shift_intervals']) : 'No shift scheduled' }}
+                                    </div>
+                                </div>
+                                <div class="rounded-[10px] border border-[#e1e7ef] bg-[#f9fbff] p-4">
+                                    <div class="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Actual Active Time</div>
+                                    <div class="mt-2 text-[17px] font-extrabold text-primary">
+                                        {{ $this->formatDurationMinutes((int) ($selectedDoctorStats['overall']['active_seconds'] ?? 0)) }}
+                                    </div>
+                                </div>
+                                <div class="rounded-[10px] border border-[#e1e7ef] bg-[#f9fbff] p-4">
+                                    <div class="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Total Break</div>
+                                    <div class="mt-2 text-[17px] font-extrabold text-[#c26300]">
+                                        {{ $this->formatDurationMinutes((int) ($selectedDoctorStats['overall']['total_break_seconds'] ?? 0)) }}
+                                    </div>
+                                </div>
+                                <div class="rounded-[10px] border border-[#e1e7ef] bg-[#f9fbff] p-4">
+                                    <div class="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Extra Time</div>
+                                    <div class="mt-2 text-[17px] font-extrabold text-[#e11d48]">
+                                        {{ $this->formatDurationMinutes((int) ($selectedDoctorStats['overall']['extra_seconds'] ?? 0)) }}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     @endif
-
-                @elseif($logTab === 'consultations')
-                    <!-- PATIENT CONSULTATIONS TAB -->
-                    @if($logDoctorId)
-                        <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-4">
-                            <div>
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white">Patient-wise Consultation Summary</h3>
-                                <p class="text-xs text-gray-550 dark:text-gray-400 mt-0.5">Use this table for auditing patient arrivals, wait times, and consultation durations.</p>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr class="bg-gray-50 dark:bg-gray-850 border-b border-gray-150 dark:border-gray-800 font-bold uppercase text-gray-450 dark:text-gray-500">
-                                            <th class="px-4 py-3">Token</th>
-                                            <th class="px-4 py-3">Patient</th>
-                                            <th class="px-4 py-3">Booked Time</th>
-                                            <th class="px-4 py-3">Check-In</th>
-                                            <th class="px-4 py-3">Started</th>
-                                            <th class="px-4 py-3">Completed</th>
-                                            <th class="px-4 py-3 text-center">Waiting Time</th>
-                                            <th class="px-4 py-3 text-center">Consult Time</th>
-                                            <th class="px-4 py-3">Status</th>
-                                            <th class="px-4 py-3">Remarks</th>
+                @elseif ($logTab === 'audit')
+                    <div class="mt-4 overflow-hidden rounded-[12px] border border-[#dce3ec]">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full border-collapse text-left text-[13px]">
+                                <thead>
+                                    <tr class="bg-[#f8fafc] text-[12px] font-black uppercase tracking-[0.06em] text-slate-600">
+                                        <th class="px-4 py-3">Time</th>
+                                        <th class="px-4 py-3">Action</th>
+                                        <th class="px-4 py-3">Old Status</th>
+                                        <th class="px-4 py-3">New Status</th>
+                                        <th class="px-4 py-3">Performed By</th>
+                                        <th class="px-4 py-3">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-[#edf0f5] bg-white">
+                                    @forelse ($logs as $log)
+                                        @php
+                                            $details = $this->getLogDetails($log);
+                                            $transition = $this->getStatusTransition($log);
+                                        @endphp
+                                        <tr class="align-top text-slate-700">
+                                            <td class="px-4 py-3 font-semibold text-primary">{{ $log->created_at->format('h:i A') }}</td>
+                                            <td class="px-4 py-3 font-extrabold text-slate-900">{{ $details['title'] }}</td>
+                                            <td class="px-4 py-3">{{ $transition['old'] }}</td>
+                                            <td class="px-4 py-3">{{ $transition['new'] }}</td>
+                                            <td class="px-4 py-3">{{ $log->creator?->name ?? 'System' }}</td>
+                                            <td class="px-4 py-3 text-slate-500">{{ $details['remarks'] ?: '—' }}</td>
                                         </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-850">
-                                        @forelse($this->getPatientConsultations() as $appt)
-                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/40 text-gray-700 dark:text-gray-300">
-                                                <td class="px-4 py-3 font-bold text-primary-600 dark:text-primary-400 font-mono">{{ $appt['token'] }}</td>
-                                                <td class="px-4 py-3">
-                                                    <div class="font-bold text-gray-900 dark:text-white">{{ $appt['patient_name'] }}</div>
-                                                    <div class="text-[10px] text-gray-400 font-mono mt-0.5">{{ $appt['phone'] }}</div>
-                                                </td>
-                                                <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-400">{{ $appt['booked_time'] }}</td>
-                                                <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-400">{{ $appt['check_in'] ? $appt['check_in']->format('H:i') : '—' }}</td>
-                                                <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-400">{{ $appt['started'] ? $appt['started']->format('H:i') : '—' }}</td>
-                                                <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-400">{{ $appt['completed'] ? $appt['completed']->format('H:i') : '—' }}</td>
-                                                <td class="px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300">
-                                                    {{ $appt['waiting_seconds'] !== null ? $this->formatDurationMinutes($appt['waiting_seconds']) : '—' }}
-                                                </td>
-                                                <td class="px-4 py-3 text-center font-semibold text-gray-700 dark:text-gray-300">
-                                                    {{ $appt['consult_seconds'] !== null ? $this->formatDurationMinutes($appt['consult_seconds']) : '—' }}
-                                                </td>
-                                                <td class="px-4 py-3">
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold 
-                                                        {{ $appt['status'] === 'completed' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 border border-green-200' : '' }}
-                                                        {{ $appt['status'] === 'started' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border border-indigo-200' : '' }}
-                                                        {{ $appt['status'] === 'checkin' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200' : '' }}
-                                                        {{ $appt['status'] === 'skipped' ? 'bg-gray-150 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border border-gray-250' : '' }}
-                                                        {{ $appt['status'] === 'no_show' ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200' : '' }}
-                                                    ">
-                                                        {{ $appt['status'] === 'no_show' ? 'No Show' : ($appt['status'] === 'checkin' ? 'Checked-in' : ($appt['status'] === 'started' ? 'Started' : ucfirst($appt['status']))) }}
-                                                    </span>
-                                                </td>
-                                                <td class="px-4 py-3 text-gray-500 max-w-[150px] truncate" title="{{ $appt['remarks'] }}">
-                                                    {{ $appt['remarks'] ?: '—' }}
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="10" class="py-8 text-center text-gray-500">No consultation records found for this doctor on selected dates.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="px-4 py-10 text-center text-slate-500">No audit rows found.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
-                    @else
-                        <!-- Select doctor view prompt -->
-                        <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-2xl p-12 shadow-sm text-center space-y-4">
-                            <div class="mx-auto w-16 h-16 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary flex items-center justify-center">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                            </div>
-                            <div class="max-w-md mx-auto">
-                                <h3 class="font-bold text-gray-950 dark:text-white text-lg">Select a Doctor</h3>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Please select an individual doctor from the left directory to view patient-by-patient waiting times and consultation durations.</p>
-                            </div>
-                        </div>
-                    @endif
-
-                @elseif($logTab === 'download')
-                    <!-- DOWNLOAD / EXPORT TAB -->
-                    <div class="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-850 rounded-2xl p-8 shadow-sm text-center space-y-4">
-                        <div class="mx-auto w-16 h-16 rounded-full bg-primary-50 dark:bg-primary-950/40 text-primary flex items-center justify-center">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        </div>
-                        <div class="max-w-md mx-auto">
-                            <h3 class="font-bold text-gray-950 dark:text-white text-lg">Generate Spreadsheet Report</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Export queue operations audit logs, doctor shift calculations, and patient-wise consult logs for the selected date range as a single unified spreadsheet file.</p>
-                        </div>
-                        <button 
-                            wire:click="downloadLogs"
-                            class="px-6 py-2.5 bg-primary hover:bg-primary-500 text-white rounded-xl text-xs font-bold transition duration-200 shadow-sm inline-flex items-center gap-2"
-                        >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Download Spreadsheet (CSV)
-                        </button>
                     </div>
                 @endif
-            </div>
+            </section>
+        </div>
+
+        <div class="border-t border-[#dbe1e9] pt-4 text-center text-[13px] text-slate-500">
+            © {{ now()->format('Y') }} Telehealth Deploymeta. All rights reserved.<br>
+            info@cmctelehealth.com
         </div>
     </div>
 </x-filament-panels::page>

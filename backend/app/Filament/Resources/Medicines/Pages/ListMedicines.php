@@ -3,10 +3,12 @@
 namespace App\Filament\Resources\Medicines\Pages;
 
 use App\Filament\Resources\Medicines\MedicineResource;
+use App\Filament\Resources\PrescriptionDrafts\PrescriptionDraftResource;
 use Filament\Actions\CreateAction;
 use App\Filament\Resources\Pages\ListRecords;
 use App\Filament\Resources\Medicines\Pages\ManageCategoriesTypes;
 use App\Models\{MedicineCategory, MedicineType};
+use App\Models\PrescriptionDraft;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Str;
 use Filament\Actions\ExportAction;
@@ -15,7 +17,6 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use App\Filament\Exports\MedicineExporter;
 use App\Filament\Imports\MedicineImporter;
-
 class ListMedicines extends ListRecords
 {
     protected static string $resource = MedicineResource::class;
@@ -28,6 +29,30 @@ class ListMedicines extends ListRecords
 
             ManageCategoriesTypes::manageTypesAction()
                 ->visible(fn() => MedicineResource::canViewAny() || MedicineResource::canCreate()),
+
+            Action::make('voicePrescriptionLogs')
+                ->label('Voice Logs')
+                ->icon('heroicon-o-microphone')
+                ->color('primary')
+                ->url(fn (): string => PrescriptionDraftResource::getUrl('index', [
+                    'tableFilters' => [
+                        'status' => ['value' => PrescriptionDraft::STATUS_APPLIED],
+                        'source_type' => ['value' => 'speech'],
+                    ],
+                ]))
+                ->visible(fn (): bool => PrescriptionDraftResource::canViewAny()),
+
+            Action::make('doctorAddedFromVoice')
+                ->label('Voice Summary')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('warning')
+                ->modalHeading('Voice Prescription Summary')
+                ->modalWidth('7xl')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Close')
+                ->modalContent(fn () => view('filament.medicines.voice-prescription-summary', $this->getVoicePrescriptionSummaryData()))
+                ->visible(fn (): bool => PrescriptionDraftResource::canViewAny()),
+
             ActionGroup::make([
 
 
@@ -311,5 +336,61 @@ class ListMedicines extends ListRecords
                 ->danger()
                 ->send();
         }
+    }
+
+    protected function getVoicePrescriptionSummaryData(): array
+    {
+        $voiceDrafts = PrescriptionDraft::query()
+            ->with(['doctor.user', 'patient'])
+            ->where('status', PrescriptionDraft::STATUS_APPLIED)
+            ->where('source_type', 'speech')
+            ->latest('applied_at')
+            ->latest('created_at')
+            ->get();
+
+        $createdMedicines = $voiceDrafts->flatMap(function (PrescriptionDraft $draft) {
+            return collect($draft->submitted_payload['created_medicines'] ?? [])
+                ->filter(fn ($medicine) => is_array($medicine))
+                ->map(function (array $medicine) use ($draft) {
+                    return [
+                        'medicine_name' => (string) ($medicine['medicine_name'] ?? 'Unknown medicine'),
+                        'medicine_source' => (string) ($medicine['medicine_source'] ?? 'unknown'),
+                        'doctor_name' => $draft->doctor
+                            ? 'Dr. ' . trim($draft->doctor->first_name . ' ' . $draft->doctor->last_name)
+                            : 'Unknown Doctor',
+                        'patient_name' => $draft->patient
+                            ? trim($draft->patient->first_name . ' ' . $draft->patient->last_name)
+                            : 'Unknown Patient',
+                        'applied_at' => $draft->applied_at ?? $draft->created_at,
+                        'draft_id' => $draft->id,
+                        'prescription_id' => $medicine['prescription_id'] ?? null,
+                    ];
+                });
+        })->values();
+
+        $doctorAddedMedicines = $createdMedicines
+            ->where('medicine_source', 'doctor_added')
+            ->groupBy(fn (array $medicine) => Str::lower(trim($medicine['medicine_name'])))
+            ->map(function ($group) {
+                $first = $group->first();
+
+                return [
+                    'medicine_name' => $first['medicine_name'],
+                    'count' => $group->count(),
+                    'last_used_at' => $group->pluck('applied_at')->filter()->sortDesc()->first(),
+                    'last_doctor_name' => $group->pluck('doctor_name')->filter()->first(),
+                ];
+            })
+            ->sortByDesc('count')
+            ->values();
+
+        return [
+            'voiceDraftCount' => $voiceDrafts->count(),
+            'totalCreatedMedicinesCount' => $createdMedicines->count(),
+            'doctorAddedCount' => $createdMedicines->where('medicine_source', 'doctor_added')->count(),
+            'inventoryCount' => $createdMedicines->where('medicine_source', 'inventory')->count(),
+            'recentVoiceDrafts' => $voiceDrafts->take(8),
+            'doctorAddedMedicines' => $doctorAddedMedicines,
+        ];
     }
 }
