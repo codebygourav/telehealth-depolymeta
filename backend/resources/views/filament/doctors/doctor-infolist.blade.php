@@ -139,10 +139,22 @@
                 </h2>
                 <div class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 space-y-3">
                     @if ($doctor->bio)
-                        <p class="leading-relaxed text-base">{{ $doctor->bio }}</p>
+                        <div class="leading-relaxed text-base prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
+                            @if (strip_tags($doctor->bio) !== $doctor->bio)
+                                {!! $doctor->bio !!}
+                            @else
+                                {{ $doctor->bio }}
+                            @endif
+                        </div>
                     @endif
                     @if ($doctor->description)
-                        <div class="text-sm opacity-90">{!! nl2br(e($doctor->description)) !!}</div>
+                        <div class="text-sm opacity-90 prose dark:prose-invert max-w-none">
+                            @if (strip_tags($doctor->description) !== $doctor->description)
+                                {!! $doctor->description !!}
+                            @else
+                                {!! nl2br(e($doctor->description)) !!}
+                            @endif
+                        </div>
                     @endif
                 </div>
             </div>
@@ -347,29 +359,43 @@
                 @endif
 
                 {{-- Capabilities Grid (Specializations, Procedures, Expertise) --}}
-                @if (!empty($specializations) || !empty($keyProcedures) || !empty($expertise))
+                @if (
+                    !empty($specializations) || !empty($doctor->specializations_info) ||
+                    !empty($keyProcedures) || !empty($doctor->key_procedures_info) ||
+                    !empty($expertise) || !empty($doctor->expertise_info)
+                )
                     <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
                         <div class="flex flex-col gap-5">
 
-                            @if (!empty($specializations))
+                            @if (!empty($specializations) || !empty($doctor->specializations_info))
                                 <div>
                                     <h3
                                         class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                                         <x-heroicon-o-star class="w-4 h-4 text-yellow-500" /> Specializations
                                     </h3>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach ($specializations as $spec)
-                                            <span
-                                                class="px-3 py-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200">
-                                                {{ is_array($spec) ? $spec['name'] ?? ($spec['title'] ?? '') : $spec }}
-                                            </span>
-                                        @endforeach
-                                    </div>
+                                    @if (!empty($specializations) && is_array($specializations) && count($specializations) > 0)
+                                        <div class="flex flex-wrap gap-2">
+                                            @foreach ($specializations as $spec)
+                                                <span
+                                                    class="px-3 py-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                    {{ is_array($spec) ? $spec['name'] ?? ($spec['title'] ?? '') : $spec }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="prose dark:prose-invert max-w-none text-sm text-gray-700 dark:text-gray-300">
+                                            @if (strip_tags($doctor->specializations_info) !== $doctor->specializations_info)
+                                                {!! $doctor->specializations_info !!}
+                                            @else
+                                                {{ $doctor->specializations_info }}
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
 
-                            @if (!empty($expertise))
-                                @if (!empty($specializations))
+                            @if (!empty($expertise) || !empty($doctor->expertise_info))
+                                @if (!empty($specializations) || !empty($doctor->specializations_info))
                                     <div class="border-t border-gray-100 dark:border-gray-800 pt-5"></div>
                                 @endif
                                 <div>
@@ -377,19 +403,32 @@
                                         class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                                         <x-heroicon-o-check-badge class="w-4 h-4 text-blue-500" /> Area of Expertise
                                     </h3>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach ($expertise as $exp)
-                                            <span
-                                                class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 rounded-lg text-sm font-medium">
-                                                {{ is_array($exp) ? $exp['name'] ?? ($exp['title'] ?? '') : $exp }}
-                                            </span>
-                                        @endforeach
-                                    </div>
+                                    @if (!empty($expertise) && is_array($expertise) && count($expertise) > 0)
+                                        <div class="flex flex-wrap gap-2">
+                                            @foreach ($expertise as $exp)
+                                                <span
+                                                    class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 rounded-lg text-sm font-medium">
+                                                    {{ is_array($exp) ? $exp['name'] ?? ($exp['title'] ?? '') : $exp }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="prose dark:prose-invert max-w-none text-sm text-gray-700 dark:text-gray-300">
+                                            @if (strip_tags($doctor->expertise_info) !== $doctor->expertise_info)
+                                                {!! $doctor->expertise_info !!}
+                                            @else
+                                                {{ $doctor->expertise_info }}
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
 
-                            @if (!empty($keyProcedures))
-                                @if (!empty($specializations) || !empty($expertise))
+                            @if (!empty($keyProcedures) || !empty($doctor->key_procedures_info))
+                                @if (
+                                    !empty($specializations) || !empty($doctor->specializations_info) ||
+                                    !empty($expertise) || !empty($doctor->expertise_info)
+                                )
                                     <div class="border-t border-gray-100 dark:border-gray-800 pt-5"></div>
                                 @endif
                                 <div>
@@ -397,17 +436,27 @@
                                         class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                                         <x-heroicon-o-sparkles class="w-4 h-4 text-purple-500" /> Key Procedures
                                     </h3>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        @foreach ($keyProcedures as $proc)
-                                            <div
-                                                class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
-                                                <x-heroicon-o-check-circle class="w-4 h-4 text-purple-500 shrink-0" />
-                                                <span class="text-sm font-medium text-gray-800 dark:text-gray-200">
-                                                    {{ is_array($proc) ? $proc['name'] ?? ($proc['title'] ?? '') : $proc }}
-                                                </span>
-                                            </div>
-                                        @endforeach
-                                    </div>
+                                    @if (!empty($keyProcedures) && is_array($keyProcedures) && count($keyProcedures) > 0)
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            @foreach ($keyProcedures as $proc)
+                                                <div
+                                                    class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
+                                                    <x-heroicon-o-check-circle class="w-4 h-4 text-purple-500 shrink-0" />
+                                                    <span class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                                        {{ is_array($proc) ? $proc['name'] ?? ($proc['title'] ?? '') : $proc }}
+                                                    </span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="prose dark:prose-invert max-w-none text-sm text-gray-700 dark:text-gray-300">
+                                            @if (strip_tags($doctor->key_procedures_info) !== $doctor->key_procedures_info)
+                                                {!! $doctor->key_procedures_info !!}
+                                            @else
+                                                {{ $doctor->key_procedures_info }}
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
 
@@ -575,9 +624,14 @@
                                                     <div>
                                                         <h4 class="font-bold text-gray-900 dark:text-white text-sm">
                                                             Special Interests</h4>
-                                                        <p
-                                                            class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5">
-                                                            {{ $doctor->special_interests }}</p>
+                                                        <div
+                                                            class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5 prose dark:prose-invert max-w-none">
+                                                            @if (strip_tags($doctor->special_interests) !== $doctor->special_interests)
+                                                                {!! $doctor->special_interests !!}
+                                                            @else
+                                                                {{ $doctor->special_interests }}
+                                                            @endif
+                                                        </div>
                                                     </div>
                                                 </div>
                                             @endif
@@ -589,9 +643,14 @@
                                                     <div>
                                                         <h4 class="font-bold text-gray-900 dark:text-white text-sm">
                                                             Memberships</h4>
-                                                        <p
-                                                            class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5">
-                                                            {{ $doctor->memberships_info }}</p>
+                                                        <div
+                                                            class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5 prose dark:prose-invert max-w-none">
+                                                            @if (strip_tags($doctor->memberships_info) !== $doctor->memberships_info)
+                                                                {!! $doctor->memberships_info !!}
+                                                            @else
+                                                                {{ $doctor->memberships_info }}
+                                                            @endif
+                                                        </div>
                                                     </div>
                                                 </div>
                                             @endif
@@ -603,9 +662,14 @@
                                                     <div>
                                                         <h4 class="font-bold text-gray-900 dark:text-white text-sm">
                                                             Availability Notes</h4>
-                                                        <p
-                                                            class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5">
-                                                            {{ $doctor->availability_info }}</p>
+                                                        <div
+                                                            class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5 prose dark:prose-invert max-w-none">
+                                                            @if (strip_tags($doctor->availability_info) !== $doctor->availability_info)
+                                                                {!! $doctor->availability_info !!}
+                                                            @else
+                                                                {{ $doctor->availability_info }}
+                                                            @endif
+                                                        </div>
                                                     </div>
                                                 </div>
                                             @endif

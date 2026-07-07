@@ -11,6 +11,7 @@ import {
   Download,
   ExternalLink,
   ClipboardList,
+  Mic,
   Trash2,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -50,7 +51,27 @@ interface Medicine {
   min_gap?: string;
   max_doses_per_day?: string;
   patient_instruction?: string;
+  medicine_source?: "inventory" | "doctor_added" | "unknown";
+  created_via?: "speech" | null;
 }
+
+type DraftHistoryItem = {
+  id: string;
+  source_type?: "text" | "speech" | string;
+  status?: string;
+  input_text?: string;
+  confidence_score?: number | null;
+  warnings?: string[];
+  missing_fields?: string[];
+  applied_at?: string | null;
+  medicine_name?: string | null;
+  medicine_source?: "inventory" | "doctor_added" | "unknown" | null;
+  created_medicines?: Array<{
+    prescription_id?: string;
+    medicine_name?: string;
+    medicine_source?: "inventory" | "doctor_added" | "unknown";
+  }>;
+};
 
 type MealTiming = "before_meal" | "after_meal" | "with_meal" | string;
 type DictationAssistantConfig = {
@@ -131,18 +152,36 @@ const MedicineAccordionItem = ({
                   >
                     {medicine.status}
                   </Badge>
+                  {medicine.medicine_source === "doctor_added" && (
+                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[9px] sm:text-xs px-1 sm:px-1.5">
+                      Doctor-added
+                    </Badge>
+                  )}
+                  {medicine.medicine_source === "inventory" && (
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] sm:text-xs px-1 sm:px-1.5"
+                    >
+                      Stock medicine
+                    </Badge>
+                  )}
+                  {medicine.created_via === "speech" && (
+                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[9px] sm:text-xs px-1 sm:px-1.5">
+                      Voice draft
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-[10px] sm:text-sm text-muted-foreground">
                   <span>{medicine.dosage}</span>
                   <span className="hidden xs:inline">•</span>
                   <span className="capitalize">
-                    {medicine.use_type === 'sos'
-                      ? 'SOS (As Needed)'
-                      : (medicine.use_type && medicine.use_type !== 'regular'
-                          ? medicine.use_type.replace('_', ' ')
-                          : medicine.frequencylabel)}
+                    {medicine.use_type === "sos"
+                      ? "SOS (As Needed)"
+                      : medicine.use_type && medicine.use_type !== "regular"
+                        ? medicine.use_type.replace("_", " ")
+                        : medicine.frequencylabel}
                   </span>
-                  {medicine.use_type !== 'sos' && medicine.times && (
+                  {medicine.use_type !== "sos" && medicine.times && (
                     <>
                       <span className="hidden xs:inline">•</span>
                       <span>{medicine.times}</span>
@@ -194,37 +233,79 @@ const MedicineAccordionItem = ({
               </p>
               <p className="text-xs sm:text-sm font-medium">{medicine.date}</p>
             </div>
+
+            <div className="space-y-1 sm:space-y-2">
+              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
+                Medicine Source
+              </p>
+              <p className="text-xs sm:text-sm font-medium">
+                {medicine.medicine_source === "doctor_added"
+                  ? "Doctor-added medicine"
+                  : medicine.medicine_source === "inventory"
+                    ? "Stock medicine"
+                    : "Unknown"}
+              </p>
+            </div>
+
+            <div className="space-y-1 sm:space-y-2">
+              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
+                Entry Method
+              </p>
+              <p className="text-xs sm:text-sm font-medium">
+                {medicine.created_via === "speech"
+                  ? "Voice draft"
+                  : "Standard entry"}
+              </p>
+            </div>
           </div>
 
-          {medicine.use_type === 'sos' && (
+          {medicine.use_type === "sos" && (
             <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4 mt-3 pt-3 border-t">
               {medicine.take_when && (
                 <div className="space-y-1">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Take When / Reason</p>
-                  <p className="text-xs sm:text-sm font-medium capitalize">{medicine.take_when}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
+                    Take When / Reason
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium capitalize">
+                    {medicine.take_when}
+                  </p>
                 </div>
               )}
               {medicine.min_gap && (
                 <div className="space-y-1">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Minimum Gap</p>
-                  <p className="text-xs sm:text-sm font-medium capitalize">{medicine.min_gap}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
+                    Minimum Gap
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium capitalize">
+                    {medicine.min_gap}
+                  </p>
                 </div>
               )}
               {medicine.max_doses_per_day && (
                 <div className="space-y-1">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Max Doses Per Day</p>
-                  <p className="text-xs sm:text-sm font-medium capitalize">{medicine.max_doses_per_day}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
+                    Max Doses Per Day
+                  </p>
+                  <p className="text-xs sm:text-sm font-medium capitalize">
+                    {medicine.max_doses_per_day}
+                  </p>
                 </div>
               )}
             </div>
           )}
 
-          {medicine.use_type && medicine.use_type !== 'regular' && medicine.use_type !== 'sos' && (
-            <div className="space-y-1 mt-3 pt-3 border-t">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide font-semibold">Special Instructions</p>
-              <p className="text-xs sm:text-sm font-medium capitalize">Take as {medicine.use_type.replace('_', ' ')}</p>
-            </div>
-          )}
+          {medicine.use_type &&
+            medicine.use_type !== "regular" &&
+            medicine.use_type !== "sos" && (
+              <div className="space-y-1 mt-3 pt-3 border-t">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide font-semibold">
+                  Special Instructions
+                </p>
+                <p className="text-xs sm:text-sm font-medium capitalize">
+                  Take as {medicine.use_type.replace("_", " ")}
+                </p>
+              </div>
+            )}
 
           {medicine.instructions && medicine.instructions.length > 0 && (
             <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-blue-50 rounded-lg">
@@ -295,10 +376,21 @@ export default function PrescriptionTab({
   }
 
   const medicines = data?.data?.medicines || [];
+  const draftHistory = (data?.data?.draft_history ?? []) as DraftHistoryItem[];
   const pdfUrl = data?.data?.pdf_url;
   const instructionsByDoctor = data?.data?.instructions_by_doctor;
   const nextVisitDate = data?.data?.next_visit_date;
-  const dictationAssistant = (data?.data?.dictation_assistant ?? null) as DictationAssistantConfig | null;
+  const dictationAssistant = (data?.data?.dictation_assistant ??
+    null) as DictationAssistantConfig | null;
+  const doctorAddedCount = medicines.filter(
+    (medicine: Medicine) => medicine.medicine_source === "doctor_added",
+  ).length;
+  const voiceAddedCount = medicines.filter(
+    (medicine: Medicine) => medicine.created_via === "speech",
+  ).length;
+  const speechDraftHistoryCount = draftHistory.filter(
+    (draft) => draft.source_type === "speech",
+  ).length;
 
   // Conclusion data
   const conclusionFiles = (conclusionData?.data?.conclusion_report_files ??
@@ -416,6 +508,16 @@ export default function PrescriptionTab({
                 >
                   {medicines.length} Items
                 </Badge>
+                {voiceAddedCount > 0 && (
+                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                    {voiceAddedCount} Voice-added
+                  </Badge>
+                )}
+                {doctorAddedCount > 0 && (
+                  <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                    {doctorAddedCount} Doctor-added
+                  </Badge>
+                )}
               </div>
               <div></div>
             </div>
@@ -447,6 +549,145 @@ export default function PrescriptionTab({
             </div>
           )}
         </div>
+      )}
+
+      {draftHistory.length > 0 && (
+        <Card className="overflow-hidden p-0">
+          <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4 border-b">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-sm sm:text-base">
+              <Mic className="h-4 w-4 text-primary" />
+              Draft Verification
+              <Badge
+                variant="secondary"
+                className="text-[10px] sm:text-xs px-1.5 sm:px-2"
+              >
+                {draftHistory.length} Drafts
+              </Badge>
+              {speechDraftHistoryCount > 0 && (
+                <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                  {speechDraftHistoryCount} Voice
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="p-3 sm:p-4 space-y-3">
+            {draftHistory.map((draft) => (
+              <div
+                key={draft.id}
+                className="rounded-lg border bg-muted/20 p-3 sm:p-4 space-y-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge
+                      className={`text-[10px] sm:text-xs px-1.5 sm:px-2 ${
+                        draft.source_type === "speech"
+                          ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {draft.source_type === "speech"
+                        ? "Voice Draft"
+                        : "Typed Draft"}
+                    </Badge>
+                    {draft.medicine_source === "doctor_added" && (
+                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                        Doctor-added medicine
+                      </Badge>
+                    )}
+                    {draft.medicine_source === "inventory" && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] sm:text-xs px-1.5 sm:px-2"
+                      >
+                        Stock medicine
+                      </Badge>
+                    )}
+                    {typeof draft.confidence_score === "number" && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] sm:text-xs px-1.5 sm:px-2"
+                      >
+                        Confidence {draft.confidence_score}%
+                      </Badge>
+                    )}
+                  </div>
+
+                  {draft.applied_at && (
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      Applied{" "}
+                      {new Date(draft.applied_at).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  )}
+                </div>
+
+                {draft.input_text && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
+                      Doctor Input
+                    </p>
+                    <p className="text-xs sm:text-sm leading-relaxed break-words">
+                      {draft.input_text}
+                    </p>
+                  </div>
+                )}
+
+                {draft.created_medicines &&
+                  draft.created_medicines.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
+                        Saved Medicines
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {draft.created_medicines.map((medicine, index) => (
+                          <Badge
+                            key={`${draft.id}-medicine-${medicine.prescription_id ?? index}`}
+                            variant="outline"
+                            className="text-[10px] sm:text-xs px-1.5 sm:px-2"
+                          >
+                            {medicine.medicine_name}
+                            {medicine.medicine_source === "doctor_added"
+                              ? " • doctor-added"
+                              : medicine.medicine_source === "inventory"
+                                ? " • stock"
+                                : ""}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                {(draft.warnings?.length || draft.missing_fields?.length) && (
+                  <div className="rounded-lg bg-amber-50 p-2.5 sm:p-3">
+                    <p className="text-[10px] sm:text-xs text-amber-700 uppercase tracking-wide mb-1">
+                      Review Notes
+                    </p>
+                    {draft.warnings?.length ? (
+                      <ul className="list-disc list-inside space-y-1 text-[11px] sm:text-sm text-amber-800">
+                        {draft.warnings.map((warning) => (
+                          <li key={`${draft.id}-warning-${warning}`}>
+                            {warning}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {draft.missing_fields?.length ? (
+                      <p className="text-[11px] sm:text-sm text-amber-800 mt-1">
+                        Missing fields: {draft.missing_fields.join(", ")}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {/* Doctor Instructions & Next Visit Card */}
@@ -547,14 +788,19 @@ export default function PrescriptionTab({
       />
 
       {deleteTarget && (
-        <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <Dialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => !open && setDeleteTarget(null)}
+        >
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
               <DialogTitle className="text-destructive flex items-center gap-2">
                 Remove Medicine
               </DialogTitle>
               <DialogDescription>
-                Are you sure you want to remove <strong className="text-foreground">{deleteTarget.name}</strong> from this prescription? This action cannot be undone.
+                Are you sure you want to remove{" "}
+                <strong className="text-foreground">{deleteTarget.name}</strong>{" "}
+                from this prescription? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="flex sm:justify-end gap-2 pt-4">
@@ -572,7 +818,9 @@ export default function PrescriptionTab({
                 disabled={deleteMutation.isPending}
                 onClick={async () => {
                   try {
-                    await deleteMutation.mutateAsync(deleteTarget.prescription_id);
+                    await deleteMutation.mutateAsync(
+                      deleteTarget.prescription_id,
+                    );
                   } catch (err) {
                     console.error(err);
                   } finally {

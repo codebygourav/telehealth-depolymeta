@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api\V2\Common\Prescription;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Appointment, Medicine, Patient, Prescription, DoctorAddedMedicine, Doctor};
-use App\Services\{ApiResponseService, PrescriptionService, NotificationService};
+use App\Models\{Appointment, Medicine, Patient, Prescription, PrescriptionDraft, DoctorAddedMedicine, Doctor};
+use App\Services\{ApiResponseService, PrescriptionDraftParser, PrescriptionService, NotificationService};
+use App\Support\PrescriptionDictation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -40,6 +41,7 @@ class PrescriptionController extends Controller
         // 🔹 Inline Validation
         $validator = Validator::make($request->all(), [
             'medicines' => 'required|array|min:1',
+            'draft_id' => 'nullable|uuid|exists:prescription_drafts,id',
 
             'medicines.*.medicine_name' => 'required|string|max:255',
             'medicines.*.medicine_id' => 'nullable|uuid|exists:medicines,id',
@@ -86,20 +88,7 @@ class PrescriptionController extends Controller
 
         // 🔹 Authenticated doctor
         $doctor = $request->user();
-        $doctorId = null;
-        if (method_exists($doctor, 'doctor')) {
-            $doctorInstance = $doctor->doctor;
-            if ($doctorInstance) {
-                $doctorId = $doctorInstance->id;
-            }
-        }
-        if (! $doctorId && property_exists($doctor, 'doctor_id')) {
-            $doctorId = $doctor->doctor_id;
-        }
-        // If $doctor->id is actually the Doctor id (not User id), use as-is
-        if (! $doctorId && ! empty($doctor->id)) {
-            $doctorId = $doctor->id;
-        }
+        $doctorId = $this->resolveDoctorId($doctor);
         // Ultimately, prevent further progress if we can't determine a valid doctor_id,
         // since this will break the foreign key constraint in the prescriptions table.
         if (! $doctorId) {
@@ -189,6 +178,35 @@ class PrescriptionController extends Controller
             $created[] = $prescription;
         }
 
+        if ($request->filled('draft_id')) {
+            $draft = PrescriptionDraft::query()
+                ->where('id', $request->input('draft_id'))
+                ->where('appointment_id', $appointment->id)
+                ->where('doctor_id', $doctorId)
+                ->first();
+
+            if ($draft) {
+                $draft->update([
+                    'status' => PrescriptionDraft::STATUS_APPLIED,
+                    'submitted_payload' => [
+                        'stamp_preference' => $request->input('stamp_preference'),
+                        'medicines' => $request->input('medicines', []),
+                        'created_prescription_ids' => collect($created)->pluck('id')->values()->all(),
+                        'created_medicines' => collect($created)->map(function (Prescription $prescription): array {
+                            return [
+                                'prescription_id' => $prescription->id,
+                                'medicine_name' => $prescription->medicine_name,
+                                'medicine_source' => $prescription->doctor_added_medicine_id
+                                    ? 'doctor_added'
+                                    : ($prescription->medicine_id ? 'inventory' : 'unknown'),
+                            ];
+                        })->values()->all(),
+                    ],
+                    'applied_at' => now(),
+                ]);
+            }
+        }
+
         // 🔹 Delete existing PDF and regenerate
         $pdfPath = 'prescriptions/Prescription-' . $appointmentId . '.pdf';
         if (Storage::disk('public')->exists($pdfPath)) {
@@ -203,6 +221,71 @@ class PrescriptionController extends Controller
         return ApiResponseService::created('responses.created', [
             'medicines' => $created,
             'pdf_url' => $this->getPrescriptionPdfUrl($appointmentId),
+        ]);
+    }
+
+    public function parseTextDraft(Request $request, string $appointmentId, PrescriptionDraftParser $parser)
+    {
+        if (! PrescriptionDictation::isDraftParsingEnabled()) {
+            return ApiResponseService::error(
+                'responses.validation_failed',
+                ['message' => 'Prescription draft parsing is not enabled for this account.'],
+                422,
+                null,
+                'DICTATION_DISABLED'
+            );
+        }
+
+        $appointment = Appointment::findOrFail($appointmentId);
+
+        $validator = Validator::make($request->all(), [
+            'input_text' => 'required|string|max:5000',
+            'source_type' => 'nullable|string|in:text,speech',
+        ]);
+
+        if ($validator->fails()) {
+            $messages = collect($validator->errors()->toArray())
+                ->flatten()
+                ->all();
+
+            return ApiResponseService::error(
+                'responses.validation_failed',
+                ['message' => implode(' ', $messages)],
+                422,
+                null,
+                'VALIDATION_FAILED'
+            );
+        }
+
+        $doctorId = $this->resolveDoctorId($request->user());
+
+        if (! $doctorId) {
+            return ApiResponseService::validationError('Doctor association not detected or invalid. Please contact support.');
+        }
+
+        $inputText = trim((string) $request->input('input_text'));
+        $parsed = $parser->parse($inputText, $doctorId);
+
+        $draft = PrescriptionDraft::create([
+            'appointment_id' => $appointment->id,
+            'doctor_id' => $doctorId,
+            'patient_id' => $appointment->patient_id,
+            'source_type' => (string) $request->input('source_type', PrescriptionDraft::SOURCE_TEXT),
+            'status' => PrescriptionDraft::STATUS_PARSED,
+            'input_text' => $inputText,
+            'parsed_payload' => $parsed,
+            'warnings' => $parsed['warnings'] ?? [],
+            'missing_fields' => $parsed['missing_fields'] ?? [],
+            'confidence_score' => $parsed['confidence_score'] ?? null,
+        ]);
+
+        return ApiResponseService::success('responses.success', data: [
+            'draft_id' => $draft->id,
+            'form' => $parsed['form'] ?? [],
+            'warnings' => $draft->warnings ?? [],
+            'missing_fields' => $draft->missing_fields ?? [],
+            'confidence_score' => $draft->confidence_score,
+            'source_type' => $draft->source_type,
         ]);
     }
 
@@ -317,12 +400,27 @@ class PrescriptionController extends Controller
 
         $data = $this->resolvePrescriptionData($appointmentid);
 
+        $appliedDrafts = PrescriptionDraft::query()
+            ->where('appointment_id', $appointment->id)
+            ->where('status', PrescriptionDraft::STATUS_APPLIED)
+            ->latest('applied_at')
+            ->latest('created_at')
+            ->get();
+
+        $voicePrescriptionIds = $appliedDrafts
+            ->where('source_type', 'speech')
+            ->flatMap(fn (PrescriptionDraft $draft) => $draft->submitted_payload['created_prescription_ids'] ?? [])
+            ->filter()
+            ->flip();
+
         if (! $data) {
             return ApiResponseService::success('responses.prescription.not_found', data: [
                 'pdf_url' => null,
                 'medicines' => [],
                 'instructions_by_doctor' => $appointment->instructions_by_doctor,
                 'next_visit_date' => $appointment->next_visit_date ? Carbon::parse($appointment->next_visit_date)->format('Y-m-d') : null,
+                'dictation_assistant' => PrescriptionDictation::settings(),
+                'draft_history' => $this->mapDraftHistory($appliedDrafts),
             ]);
         }
 
@@ -391,6 +489,10 @@ class PrescriptionController extends Controller
                 'meal' => $med->meal_timing,
                 'status' => $status,
                 'notes' => $med->notes,
+                'medicine_source' => $med->doctor_added_medicine_id
+                    ? 'doctor_added'
+                    : ($med->medicine_id ? 'inventory' : 'unknown'),
+                'created_via' => $voicePrescriptionIds->has($med->id) ? 'speech' : null,
             ];
 
             if ($status === 'Ongoing') {
@@ -411,6 +513,8 @@ class PrescriptionController extends Controller
             'medicines' => $medicineList,
             'instructions_by_doctor' => $appointment->instructions_by_doctor,
             'next_visit_date' => $appointment->next_visit_date ? Carbon::parse($appointment->next_visit_date)->format('Y-m-d') : null,
+            'dictation_assistant' => PrescriptionDictation::settings(),
+            'draft_history' => $this->mapDraftHistory($appliedDrafts),
         ]);
     }
 
@@ -441,5 +545,50 @@ class PrescriptionController extends Controller
     protected function resolvePrescriptionData($appointmentId)
     {
         return PrescriptionService::resolvePrescriptionData($appointmentId);
+    }
+
+    protected function resolveDoctorId($doctor): ?string
+    {
+        $doctorId = null;
+
+        if (method_exists($doctor, 'doctor')) {
+            $doctorInstance = $doctor->doctor;
+            if ($doctorInstance) {
+                $doctorId = $doctorInstance->id;
+            }
+        }
+
+        if (! $doctorId && property_exists($doctor, 'doctor_id')) {
+            $doctorId = $doctor->doctor_id;
+        }
+
+        if (! $doctorId && ! empty($doctor->id)) {
+            $doctorId = $doctor->id;
+        }
+
+        return $doctorId;
+    }
+
+    protected function mapDraftHistory($drafts): array
+    {
+        return $drafts->map(function (PrescriptionDraft $draft): array {
+            $parsedForm = $draft->parsed_payload['form'] ?? [];
+            $createdMedicines = $draft->submitted_payload['created_medicines'] ?? [];
+
+            return [
+                'id' => $draft->id,
+                'source_type' => $draft->source_type,
+                'status' => $draft->status,
+                'input_text' => $draft->input_text,
+                'confidence_score' => $draft->confidence_score,
+                'warnings' => $draft->warnings ?? [],
+                'missing_fields' => $draft->missing_fields ?? [],
+                'applied_at' => $draft->applied_at?->toIso8601String(),
+                'medicine_name' => $parsedForm['medicine_name'] ?? null,
+                'medicine_source' => $parsedForm['medicine_source'] ?? null,
+                'created_prescription_ids' => $draft->submitted_payload['created_prescription_ids'] ?? [],
+                'created_medicines' => is_array($createdMedicines) ? array_values($createdMedicines) : [],
+            ];
+        })->values()->all();
     }
 }
