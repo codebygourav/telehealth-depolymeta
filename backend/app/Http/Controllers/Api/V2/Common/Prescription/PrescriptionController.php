@@ -46,6 +46,7 @@ class PrescriptionController extends Controller
 
             'medicines.*.medicine_name' => 'required|string|max:255',
             'medicines.*.medicine_id' => 'nullable|uuid|exists:medicines,id',
+            'medicines.*.medication_type' => 'nullable|string|max:255',
 
             'medicines.*.frequency' => 'required|in:OD,BD,TDS,SOS',
 
@@ -105,6 +106,7 @@ class PrescriptionController extends Controller
         $created = [];
 
         foreach ($request->medicines as $item) {
+            $medicineName = trim((string) ($item['medicine_name'] ?? ''));
 
             // Resolve meal_timing from dedicated field, or fall back to before_meal/after_meal flags
             $mealTiming = $item['meal'] ?? null;
@@ -140,23 +142,27 @@ class PrescriptionController extends Controller
                 : null;
             $medicineId = $item['medicine_id'] ?? null;
             $doctorAddedMedicineId = null;
-            $medicineType = null;
+            $medicineType = $item['medication_type'] ?? null;
 
             if ($medicineId) {
                 $medicine = Medicine::with('type')->find($medicineId);
-                $medicineType = $medicine?->type?->name;
+                $medicineType = $medicine?->type?->name ?? $medicineType;
             } else {
                 // If medicine_id is not provided, check if it exists in main medicines table by name
-                $existingMedicine = Medicine::with('type')->where('name', $item['medicine_name'])->first();
+                $existingMedicine = $this->findMedicineByName($medicineName);
                 if ($existingMedicine) {
                     $medicineId = $existingMedicine->id;
-                    $medicineType = $existingMedicine->type?->name;
+                    $medicineType = $existingMedicine->type?->name ?? $medicineType;
                 } else {
-                    // It's a new medicine, store it in doctor_added_medicines table
-                    $addedMedicine = DoctorAddedMedicine::firstOrCreate(
-                        ['name' => $item['medicine_name']],
-                        ['added_by_doctor' => $doctorId]
-                    );
+                    $addedMedicine = $this->findDoctorAddedMedicineByName($medicineName, $doctorId);
+
+                    if (! $addedMedicine) {
+                        $addedMedicine = DoctorAddedMedicine::create([
+                            'name' => $medicineName,
+                            'added_by_doctor' => $doctorId,
+                        ]);
+                    }
+
                     $doctorAddedMedicineId = $addedMedicine->id;
                 }
             }
@@ -169,14 +175,14 @@ class PrescriptionController extends Controller
                 'medicine_id' => $medicineId,
                 'doctor_added_medicine_id' => $doctorAddedMedicineId,
                 'medicine_type' => $medicineType,
-                'medicine_name' => $item['medicine_name'],
+                'medicine_name' => $medicineName,
                 'dosage' => $item['dosage'],
                 'frequency' => $item['frequency'],
                 'frequency_times' => $frequencyTimes,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'instructions' => $item['instructions'] ?? null,
-                'meal_timing' => $item['meal'],
+                'meal_timing' => $mealTiming,
             ]);
 
             $created[] = $prescription;
@@ -229,7 +235,7 @@ class PrescriptionController extends Controller
             return ApiResponseService::validationError($validator->errors());
         }
 
-        $parsed = $parser->parse((string) $request->input('input_text'));
+        $parsed = $parser->parse((string) $request->input('input_text'), $doctorId);
 
         $draft = PrescriptionDraft::create([
             'appointment_id' => $appointment->id,
@@ -534,6 +540,34 @@ class PrescriptionController extends Controller
         }
 
         return $draft;
+    }
+
+    private function findMedicineByName(string $medicineName): ?Medicine
+    {
+        $normalizedName = mb_strtolower(trim($medicineName));
+
+        if ($normalizedName === '') {
+            return null;
+        }
+
+        return Medicine::query()
+            ->with('type')
+            ->whereRaw('LOWER(name) = ?', [$normalizedName])
+            ->first();
+    }
+
+    private function findDoctorAddedMedicineByName(string $medicineName, string $doctorId): ?DoctorAddedMedicine
+    {
+        $normalizedName = mb_strtolower(trim($medicineName));
+
+        if ($normalizedName === '') {
+            return null;
+        }
+
+        return DoctorAddedMedicine::query()
+            ->where('added_by_doctor', $doctorId)
+            ->whereRaw('LOWER(name) = ?', [$normalizedName])
+            ->first();
     }
 
     public function destroy(string $id)

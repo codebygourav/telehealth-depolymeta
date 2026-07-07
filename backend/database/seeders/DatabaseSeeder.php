@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             DoctorReviewSeeder::class,
             AdvertisementSeeder::class,
             DisplayScreenSettingSeeder::class,
+            DisplayScreenSeeder::class,
             DisplayEventSeeder::class,
             SettingsSeeder::class,
             VaccinationModuleSeeder::class,

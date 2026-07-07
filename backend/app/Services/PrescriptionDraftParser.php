@@ -2,13 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\DoctorAddedMedicine;
 use App\Models\Medicine;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
 class PrescriptionDraftParser
 {
-    public function parse(string $inputText): array
+    public function parse(string $inputText, ?string $doctorId = null): array
     {
         $translatedText = $this->translateToEnglish($inputText);
         $sourceText = $this->normalizeText($translatedText);
@@ -16,11 +17,11 @@ class PrescriptionDraftParser
         $warnings = [];
         $missingFields = [];
 
-        [$medicine, $medicineWarnings] = $this->resolveMedicine($sourceText, $text);
+        [$medicine, $medicineWarnings] = $this->resolveMedicine($sourceText, $text, $doctorId);
         $warnings = [...$warnings, ...$medicineWarnings];
 
-        $medicineName = $medicine?->name ?? $this->extractMedicineName($sourceText, $text);
-        $medicineType = $medicine?->type?->name ?? $this->extractMedicationType($text) ?? 'tablet';
+        $medicineName = $medicine['name'] ?? $this->extractMedicineName($sourceText, $text);
+        $medicineType = $medicine['type'] ?? $this->extractMedicationType($text) ?? 'tablet';
         $dosage = $this->extractDosage($text);
         $frequency = $this->extractFrequency($text);
         $timings = $this->extractTimings($text);
@@ -29,8 +30,9 @@ class PrescriptionDraftParser
         $instructions = $this->extractInstructions($sourceText, $text);
 
         $form = [
-            'medicine_id' => $medicine?->id,
+            'medicine_id' => ($medicine['source'] ?? null) === 'inventory' ? ($medicine['id'] ?? null) : null,
             'medicine_name' => $medicineName,
+            'medicine_source' => $medicine['source'] ?? null,
             'medication_type' => $medicineType ?: 'tablet',
             'dosage' => $dosage,
             'frequency' => $frequency,
@@ -99,9 +101,9 @@ class PrescriptionDraftParser
         ]);
     }
 
-    private function resolveMedicine(string $sourceText, string $canonicalText): array
+    private function resolveMedicine(string $sourceText, string $canonicalText, ?string $doctorId = null): array
     {
-        $matched = Medicine::query()
+        $matchedInventory = Medicine::query()
             ->with('type:id,name')
             ->get(['id', 'name', 'type_id'])
             ->filter(function (Medicine $medicine) use ($sourceText, $canonicalText): bool {
@@ -116,11 +118,58 @@ class PrescriptionDraftParser
             ->sortByDesc(fn (Medicine $medicine) => strlen((string) $medicine->name))
             ->values();
 
-        if ($matched->count() > 1) {
+        if ($matchedInventory->count() > 1) {
             return [null, ['Multiple medicine candidates were detected. Dictate one medicine at a time in text mode.']];
         }
 
-        return [$matched->first(), []];
+        if ($matchedInventory->count() === 1) {
+            /** @var Medicine $medicine */
+            $medicine = $matchedInventory->first();
+
+            return [[
+                'id' => $medicine->id,
+                'name' => $medicine->name,
+                'type' => $medicine->type?->name,
+                'source' => 'inventory',
+            ], []];
+        }
+
+        if (! $doctorId) {
+            return [null, []];
+        }
+
+        $matchedDoctorAdded = DoctorAddedMedicine::query()
+            ->where('added_by_doctor', $doctorId)
+            ->get(['id', 'name'])
+            ->filter(function (DoctorAddedMedicine $medicine) use ($sourceText, $canonicalText): bool {
+                $name = $this->normalizeText((string) $medicine->name);
+                $canonicalName = $this->canonicalizeForParsing($name);
+
+                return $name !== '' && (
+                    $this->containsText($sourceText, $name)
+                    || $this->containsText($canonicalText, $canonicalName)
+                );
+            })
+            ->sortByDesc(fn (DoctorAddedMedicine $medicine) => strlen((string) $medicine->name))
+            ->values();
+
+        if ($matchedDoctorAdded->count() > 1) {
+            return [null, ['Multiple custom medicine candidates were detected. Dictate one medicine at a time in text mode.']];
+        }
+
+        if ($matchedDoctorAdded->count() === 1) {
+            /** @var DoctorAddedMedicine $medicine */
+            $medicine = $matchedDoctorAdded->first();
+
+            return [[
+                'id' => $medicine->id,
+                'name' => $medicine->name,
+                'type' => null,
+                'source' => 'doctor_added',
+            ], []];
+        }
+
+        return [null, []];
     }
 
     private function containsText(string $haystack, string $needle): bool

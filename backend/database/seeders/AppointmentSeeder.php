@@ -166,8 +166,15 @@ class AppointmentSeeder extends Seeder
             $created++;
         }
 
+        $targetDoctors = $doctors
+            ->filter(fn (Doctor $doctor) => $this->isTargetQueueDoctor($doctor))
+            ->values();
+
         $created += $this->seedDisplayQueueScenarios($doctors, $patients);
-        $created += $this->seedTodayLoadForEachDoctor($doctors, $patients);
+        $created += $this->seedTodayLoadForEachDoctor(
+            $targetDoctors->isNotEmpty() ? $targetDoctors : $doctors,
+            $patients
+        );
 
         $this->command->info("{$created} appointments seeded successfully!");
     }
@@ -182,18 +189,16 @@ class AppointmentSeeder extends Seeder
         $totalPatients = max(1, $patients->count());
         $created = 0;
 
-        $queuePattern = [
-            ['queue_status' => 'started', 'status' => AppointmentStatus::CONFIRMED->value],
-            ['queue_status' => 'checkin', 'status' => AppointmentStatus::CONFIRMED->value],
-            ['queue_status' => 'checkin', 'status' => AppointmentStatus::CONFIRMED->value],
-            ['queue_status' => 'scheduled', 'status' => AppointmentStatus::CONFIRMED->value],
-            ['queue_status' => 'scheduled', 'status' => AppointmentStatus::CONFIRMED->value],
-            ['queue_status' => 'scheduled', 'status' => AppointmentStatus::CONFIRMED->value],
-            ['queue_status' => 'skipped', 'status' => AppointmentStatus::CONFIRMED->value],
-            ['queue_status' => 'no_show', 'status' => AppointmentStatus::NO_SHOW->value],
-            ['queue_status' => 'scheduled', 'status' => AppointmentStatus::CONFIRMED->value],
-            ['queue_status' => 'completed', 'status' => AppointmentStatus::COMPLETED->value],
-        ];
+        $queuePattern = array_merge(
+            array_fill(0, 10, [
+                'queue_status' => 'checkin',
+                'status' => AppointmentStatus::CONFIRMED->value,
+            ]),
+            array_fill(0, 4, [
+                'queue_status' => 'completed',
+                'status' => AppointmentStatus::COMPLETED->value,
+            ])
+        );
 
         foreach ($doctors->values() as $doctorIndex => $doctor) {
             $room = $doctor->address_line2 ?: 'Room ' . str_pad((string) (101 + ($doctorIndex % 20)), 3, '0', STR_PAD_LEFT);
@@ -246,6 +251,17 @@ class AppointmentSeeder extends Seeder
                 }
 
                 $this->createPaymentIfMissing($appointment);
+
+                if ($slot['queue_status'] === 'completed' && ! $appointment->prescriptions()->exists()) {
+                    $this->createPrescription($appointment, [
+                        'name' => 'Paracetamol',
+                        'type' => 'Tablet',
+                        'dosage' => '500mg',
+                        'frequency' => '1 tablet, twice a day',
+                        'times' => ['08:00', '20:00'],
+                    ], 0);
+                }
+
                 $created++;
             }
         }
@@ -259,7 +275,6 @@ class AppointmentSeeder extends Seeder
         $scenarioPatients = $patients->take(12)->values();
 
         if ($scenarioDoctors->count() < 4 || $scenarioPatients->count() < 8) {
-            $this->command?->warn('Scenario queue seeding skipped: need at least 4 doctors and 8 patients.');
             return 0;
         }
 
@@ -395,8 +410,19 @@ class AppointmentSeeder extends Seeder
             ->first();
 
         if ($existingToday) {
+            $needsSave = false;
+
             if (blank($existingToday->doctor_room) && !blank($room)) {
                 $existingToday->doctor_room = $room;
+                $needsSave = true;
+            }
+
+            if ((int) ($existingToday->capacity ?? 0) < 20) {
+                $existingToday->capacity = 20;
+                $needsSave = true;
+            }
+
+            if ($needsSave) {
                 $existingToday->save();
             }
 
@@ -413,7 +439,7 @@ class AppointmentSeeder extends Seeder
         ]);
 
         $availability->fill([
-            'capacity' => 12,
+            'capacity' => 20,
             'is_available' => true,
             'is_recurring' => false,
             'day_of_week' => strtolower(Carbon::today()->format('l')),
@@ -506,5 +532,12 @@ class AppointmentSeeder extends Seeder
             'name' => 'file',
             'files' => [$fileUrl],
         ]);
+    }
+
+    private function isTargetQueueDoctor(Doctor $doctor): bool
+    {
+        $email = strtolower((string) ($doctor->user?->email ?? ''));
+
+        return in_array($email, ['mjoseph@gmail.com', 'kjoseph@gmail.com'], true);
     }
 }

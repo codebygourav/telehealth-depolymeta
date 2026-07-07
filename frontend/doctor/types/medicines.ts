@@ -1,8 +1,9 @@
 export interface MedicineItem {
   id: string;
   name: string;
-  type: string;
-  category: string;
+  type: string | null;
+  category: string | null;
+  source?: "inventory" | "doctor_added";
   created_at: string;
   updated_at: string;
 }
