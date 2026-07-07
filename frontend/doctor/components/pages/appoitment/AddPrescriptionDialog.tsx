@@ -96,7 +96,6 @@ type RequestError = {
 };
 
 type EntryMode = "voice" | "manual" | null;
-type DictationMode = "guided" | "note";
 type VoiceLocale = "en-IN" | "hi-IN" | "pa-IN";
 
 type BrowserSpeechRecognitionAlternative = {
@@ -283,12 +282,10 @@ export default function AddPrescriptionDialog({
     Boolean(assistantConfig?.enabled) &&
     (assistantMode === "text" || assistantMode === "speech");
   const speechModeEnabled = dictationEnabled && assistantMode === "speech";
-  const textModeMaxChars = assistantConfig?.text_mode_max_chars || 1000;
 
   const [entryMode, setEntryMode] = useState<EntryMode>(
     getDefaultEntryMode(dictationEnabled),
   );
-  const [dictationMode, setDictationMode] = useState<DictationMode>("guided");
   const [manualStep, setManualStep] = useState(1);
   const [guidedStep, setGuidedStep] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -296,7 +293,6 @@ export default function AddPrescriptionDialog({
   const [startDate, setStartDate] = useState<string>(getTodayDate());
   const [endDate, setEndDate] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const [draftInput, setDraftInput] = useState("");
   const [guidedTranscripts, setGuidedTranscripts] = useState<
     Record<number, string>
   >(createEmptyGuidedTranscripts());
@@ -318,6 +314,10 @@ export default function AddPrescriptionDialog({
   const guidedTranscriptsRef = useRef<Record<number, string>>(
     createEmptyGuidedTranscripts(),
   );
+
+  const setDraftInput = (value: string) => {
+    draftInputRef.current = value;
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -368,10 +368,6 @@ export default function AddPrescriptionDialog({
     Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 
   useEffect(() => {
-    draftInputRef.current = draftInput;
-  }, [draftInput]);
-
-  useEffect(() => {
     return () => {
       recognitionRef.current?.abort();
       recognitionRef.current = null;
@@ -392,7 +388,6 @@ export default function AddPrescriptionDialog({
       setSearchQuery,
       setShowSuccess,
       setEntryMode,
-      setDictationMode,
       setManualStep,
       setGuidedStep,
       setGuidedTranscripts,
@@ -661,13 +656,9 @@ export default function AddPrescriptionDialog({
 
     if (!recognitionRef.current) {
       if (shouldPrefill) {
-        if (dictationMode === "guided") {
-          const combined = buildGuidedDraftText();
-          if (combined) {
-            handleParseDraft(combined);
-          }
-        } else if (draftInputRef.current.trim()) {
-          handleParseDraft(draftInputRef.current);
+        const combined = buildGuidedDraftText();
+        if (combined) {
+          handleParseDraft(combined);
         }
       }
       return;
@@ -693,14 +684,9 @@ export default function AddPrescriptionDialog({
 
     const recognition = new SpeechRecognitionApi();
     hasSpeechInputRef.current = true;
-
-    if (dictationMode === "guided") {
-      transcriptBaseRef.current = (
-        guidedTranscriptsRef.current[guidedStep] || ""
-      ).trim();
-    } else {
-      transcriptBaseRef.current = draftInputRef.current.trim();
-    }
+    transcriptBaseRef.current = (
+      guidedTranscriptsRef.current[guidedStep] || ""
+    ).trim();
 
     transcriptFinalRef.current = "";
     shouldParseAfterStopRef.current = false;
@@ -741,18 +727,14 @@ export default function AddPrescriptionDialog({
         interimTranscript,
       );
 
-      if (dictationMode === "guided") {
-        setGuidedTranscripts((prev) => {
-          const updated = {
-            ...prev,
-            [guidedStep]: nextText,
-          };
-          guidedTranscriptsRef.current = updated;
-          return updated;
-        });
-      } else {
-        setDraftInput(nextText.slice(0, textModeMaxChars));
-      }
+      setGuidedTranscripts((prev) => {
+        const updated = {
+          ...prev,
+          [guidedStep]: nextText,
+        };
+        guidedTranscriptsRef.current = updated;
+        return updated;
+      });
 
       setSpeechError(null);
     };
@@ -773,13 +755,9 @@ export default function AddPrescriptionDialog({
       recognitionRef.current = null;
 
       if (shouldPrefill) {
-        if (dictationMode === "guided") {
-          const combined = buildGuidedDraftText();
-          if (combined) {
-            handleParseDraft(combined);
-          }
-        } else if (draftInputRef.current.trim()) {
-          handleParseDraft(draftInputRef.current);
+        const combined = buildGuidedDraftText();
+        if (combined) {
+          handleParseDraft(combined);
         }
       }
     };
@@ -948,296 +926,183 @@ export default function AddPrescriptionDialog({
                             ))}
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-2 rounded-xl border bg-background p-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              stopListening(false);
-                              setDictationMode("guided");
-                            }}
-                            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                              dictationMode === "guided"
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            Guided Steps
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              stopListening(false);
-                              setDictationMode("note");
-                            }}
-                            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                              dictationMode === "note"
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            Full Note
-                          </button>
-                        </div>
                       </div>
 
-                      {dictationMode === "guided" && (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                            {guidedVoiceSteps.map((step) => {
-                              const isActive = guidedStep === step.id;
-                              const isComplete =
-                                normalizeValue(guidedTranscripts[step.id]) !==
-                                "";
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                          {guidedVoiceSteps.map((step) => {
+                            const isActive = guidedStep === step.id;
+                            const isComplete =
+                              normalizeValue(guidedTranscripts[step.id]) !== "";
 
-                              return (
-                                <button
-                                  key={step.id}
-                                  type="button"
-                                  onClick={() => {
-                                    stopListening(false);
-                                    setGuidedStep(step.id);
-                                  }}
-                                  className={`rounded-xl border px-3 py-2 text-left transition ${
-                                    isActive
-                                      ? "border-primary bg-primary/5"
-                                      : "border-border bg-background"
-                                  }`}
-                                >
-                                  <p className="text-xs font-semibold">
-                                    Step {step.id}
-                                  </p>
-                                  <p className="mt-1 text-sm font-medium">
-                                    {step.title}
-                                  </p>
-                                  <p className="mt-1 text-[11px] text-muted-foreground">
-                                    {isComplete ? "Captured" : "Pending"}
-                                  </p>
-                                </button>
-                              );
-                            })}
+                            return (
+                              <button
+                                key={step.id}
+                                type="button"
+                                onClick={() => {
+                                  stopListening(false);
+                                  setGuidedStep(step.id);
+                                }}
+                                className={`rounded-xl border px-3 py-2 text-left transition ${
+                                  isActive
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border bg-background"
+                                }`}
+                              >
+                                <p className="text-xs font-semibold">
+                                  Step {step.id}
+                                </p>
+                                <p className="mt-1 text-sm font-medium">
+                                  {step.title}
+                                </p>
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  {isComplete ? "Captured" : "Pending"}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="rounded-2xl border bg-background p-4">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">
+                              {guidedVoiceSteps[guidedStep - 1]?.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {guidedVoiceSteps[guidedStep - 1]?.hint}
+                            </p>
                           </div>
 
-                          <div className="rounded-2xl border bg-background p-4">
-                            <div className="space-y-1">
-                              <p className="text-sm font-semibold">
-                                {guidedVoiceSteps[guidedStep - 1]?.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {guidedVoiceSteps[guidedStep - 1]?.hint}
-                              </p>
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap items-center gap-2">
-                              {speechModeEnabled && speechSupported && (
-                                <Button
-                                  type="button"
-                                  variant={
-                                    isListening ? "destructive" : "secondary"
-                                  }
-                                  onClick={() =>
-                                    isListening
-                                      ? stopListening(false)
-                                      : startListening()
-                                  }
-                                  disabled={parseDraft.isPending}
-                                >
-                                  {isListening ? (
-                                    <>
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      Stop Listening
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Mic className="mr-2 h-4 w-4" />
-                                      Start Listening
-                                    </>
-                                  )}
-                                </Button>
-                              )}
-
-                              <span className="text-xs text-muted-foreground">
-                                Language:{" "}
-                                {
-                                  voiceLanguageOptions.find(
-                                    (item) =>
-                                      item.value === selectedSpeechLocale,
-                                  )?.label
-                                }
-                              </span>
-                            </div>
-
-                            <div className="mt-4 space-y-2">
-                              <Label className="text-xs font-semibold text-muted-foreground">
-                                Step Transcript
-                              </Label>
-                              <Textarea
-                                value={guidedTranscripts[guidedStep] || ""}
-                                onChange={(event) => {
-                                  const nextValue = event.target.value;
-                                  setGuidedTranscripts((prev) => {
-                                    const updated = {
-                                      ...prev,
-                                      [guidedStep]: nextValue,
-                                    };
-                                    guidedTranscriptsRef.current = updated;
-                                    return updated;
-                                  });
-                                }}
-                                rows={3}
-                                className="text-sm"
-                                placeholder="Speak here or type the step manually."
-                                disabled={isListening}
-                              />
-                            </div>
-
-                            <div className="mt-4 flex items-center justify-between gap-3">
+                          <div className="mt-4 flex flex-wrap items-center gap-2">
+                            {speechModeEnabled && speechSupported && (
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant={
+                                  isListening ? "destructive" : "secondary"
+                                }
+                                onClick={() =>
+                                  isListening
+                                    ? stopListening(false)
+                                    : startListening()
+                                }
+                                disabled={parseDraft.isPending}
+                              >
+                                {isListening ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Stop Listening
+                                  </>
+                                ) : (
+                                  <>
+                                    <Mic className="mr-2 h-4 w-4" />
+                                    Start Listening
+                                  </>
+                                )}
+                              </Button>
+                            )}
+
+                            <span className="text-xs text-muted-foreground">
+                              Language:{" "}
+                              {
+                                voiceLanguageOptions.find(
+                                  (item) => item.value === selectedSpeechLocale,
+                                )?.label
+                              }
+                            </span>
+                          </div>
+
+                          <div className="mt-4 space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground">
+                              Step Transcript
+                            </Label>
+                            <Textarea
+                              value={guidedTranscripts[guidedStep] || ""}
+                              onChange={(event) => {
+                                const nextValue = event.target.value;
+                                setGuidedTranscripts((prev) => {
+                                  const updated = {
+                                    ...prev,
+                                    [guidedStep]: nextValue,
+                                  };
+                                  guidedTranscriptsRef.current = updated;
+                                  return updated;
+                                });
+                              }}
+                              rows={3}
+                              className="text-sm"
+                              placeholder="Speak here or type the step manually."
+                              disabled={isListening}
+                            />
+                          </div>
+
+                          <div className="mt-4 flex items-center justify-between gap-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                stopListening(false);
+                                setGuidedStep((previous) =>
+                                  Math.max(previous - 1, 1),
+                                );
+                              }}
+                              disabled={guidedStep === 1 || isListening}
+                            >
+                              Back
+                            </Button>
+
+                            {guidedStep < guidedVoiceSteps.length ? (
+                              <Button
+                                type="button"
                                 onClick={() => {
                                   stopListening(false);
                                   setGuidedStep((previous) =>
-                                    Math.max(previous - 1, 1),
+                                    Math.min(
+                                      previous + 1,
+                                      guidedVoiceSteps.length,
+                                    ),
                                   );
                                 }}
-                                disabled={guidedStep === 1 || isListening}
+                                disabled={isListening}
                               >
-                                Back
+                                Next
                               </Button>
-
-                              {guidedStep < guidedVoiceSteps.length ? (
-                                <Button
-                                  type="button"
-                                  onClick={() => {
-                                    stopListening(false);
-                                    setGuidedStep((previous) =>
-                                      Math.min(
-                                        previous + 1,
-                                        guidedVoiceSteps.length,
-                                      ),
-                                    );
-                                  }}
-                                  disabled={isListening}
-                                >
-                                  Next
-                                </Button>
-                              ) : (
-                                <Button
-                                  type="button"
-                                  onClick={handleFinishGuidedPrefill}
-                                  disabled={
-                                    parseDraft.isPending ||
-                                    !Object.values(guidedTranscripts).some(
-                                      (value) => Boolean(value.trim()),
-                                    )
-                                  }
-                                >
-                                  {parseDraft.isPending
-                                    ? "Prefilling..."
-                                    : "Prefill Manual Form"}
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="rounded-2xl border bg-background p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              Guided Summary
-                            </p>
-                            <div className="mt-3 space-y-3">
-                              {guidedVoiceSteps.map((step) => (
-                                <div key={step.id} className="space-y-1">
-                                  <p className="text-xs font-medium text-muted-foreground">
-                                    Step {step.id}: {step.title}
-                                  </p>
-                                  <p className="text-sm">
-                                    {guidedTranscripts[step.id] ||
-                                      "No input yet"}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {dictationMode === "note" && (
-                        <div className="space-y-4">
-                          {speechModeEnabled && (
-                            <div className="flex flex-wrap items-center gap-2">
-                              {speechSupported && (
-                                <Button
-                                  type="button"
-                                  variant={
-                                    isListening ? "destructive" : "secondary"
-                                  }
-                                  onClick={() =>
-                                    isListening
-                                      ? stopListening(true)
-                                      : startListening()
-                                  }
-                                  disabled={parseDraft.isPending}
-                                >
-                                  {isListening ? (
-                                    <>
-                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      Stop and Prefill
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Mic className="mr-2 h-4 w-4" />
-                                      Start Listening
-                                    </>
-                                  )}
-                                </Button>
-                              )}
-
-                              <span className="text-xs text-muted-foreground">
-                                Language:{" "}
-                                {
-                                  voiceLanguageOptions.find(
-                                    (item) =>
-                                      item.value === selectedSpeechLocale,
-                                  )?.label
+                            ) : (
+                              <Button
+                                type="button"
+                                onClick={handleFinishGuidedPrefill}
+                                disabled={
+                                  parseDraft.isPending ||
+                                  !Object.values(guidedTranscripts).some(
+                                    (value) => Boolean(value.trim()),
+                                  )
                                 }
-                              </span>
-                            </div>
-                          )}
-
-                          <Textarea
-                            value={draftInput}
-                            onChange={(event) =>
-                              setDraftInput(
-                                event.target.value.slice(0, textModeMaxChars),
-                              )
-                            }
-                            rows={6}
-                            className="text-sm"
-                            placeholder="Type or dictate the complete prescription note here."
-                            disabled={isListening}
-                          />
-
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-xs text-muted-foreground">
-                              {draftInput.length}/{textModeMaxChars} characters
-                            </p>
-                            <Button
-                              type="button"
-                              onClick={() => handleParseDraft()}
-                              disabled={
-                                !draftInput.trim() ||
-                                parseDraft.isPending ||
-                                isListening
-                              }
-                            >
-                              {parseDraft.isPending
-                                ? "Prefilling..."
-                                : "Prefill Manual Form"}
-                            </Button>
+                              >
+                                {parseDraft.isPending
+                                  ? "Prefilling..."
+                                  : "Prefill Manual Form"}
+                              </Button>
+                            )}
                           </div>
                         </div>
-                      )}
+
+                        <div className="rounded-2xl border bg-background p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Guided Summary
+                          </p>
+                          <div className="mt-3 space-y-3">
+                            {guidedVoiceSteps.map((step) => (
+                              <div key={step.id} className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  Step {step.id}: {step.title}
+                                </p>
+                                <p className="text-sm">
+                                  {guidedTranscripts[step.id] || "No input yet"}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
 
                       {speechError && (
                         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -1848,7 +1713,6 @@ function resetDialogState({
   setSearchQuery,
   setShowSuccess,
   setEntryMode,
-  setDictationMode,
   setManualStep,
   setGuidedStep,
   setGuidedTranscripts,
@@ -1869,7 +1733,6 @@ function resetDialogState({
   setSearchQuery: (value: string) => void;
   setShowSuccess: (value: boolean) => void;
   setEntryMode: (value: EntryMode) => void;
-  setDictationMode: (value: DictationMode) => void;
   setManualStep: (value: number) => void;
   setGuidedStep: (value: number) => void;
   setGuidedTranscripts: (value: Record<number, string>) => void;
@@ -1892,7 +1755,6 @@ function resetDialogState({
   setSearchQuery("");
   setShowSuccess(false);
   setEntryMode(getDefaultEntryMode(dictationEnabled));
-  setDictationMode("guided");
   setManualStep(1);
   setGuidedStep(1);
   setGuidedTranscripts(createEmptyGuidedTranscripts());

@@ -97,6 +97,7 @@ class DoctorSeeder extends Seeder
                 'career_start_year' => $entry['career_start_year'],
                 'medical_license_number' => $entry['medical_license_number'],
                 'bio' => $entry['bio'],
+                'sub_title' => $entry['sub_title'] ?? null,
                 'description' => $entry['description'],
                 'address_line1' => 'Christian Medical College, Ludhiana',
                 'country' => 'India',
