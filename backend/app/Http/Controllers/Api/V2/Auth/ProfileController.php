@@ -212,6 +212,27 @@ class ProfileController extends Controller
             ],
             'alternate_no' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:2000',
+            'allergies' => 'nullable|string|max:2000',
+            'existing_conditions' => 'nullable|string|max:2000',
+            'current_medications' => 'nullable|string|max:5000',
+            'past_medical_history' => 'nullable|string|max:5000',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_relationship' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:32',
+            'insurance_provider' => 'nullable|string|max:255',
+            'insurance_policy_number' => 'nullable|string|max:255',
+            'insurance_policy_expiry' => 'nullable|date',
+            'insurance_tpa_details' => 'nullable|string|max:500',
+            'treatment_consent_accepted' => 'nullable|boolean',
+            'book_appointment' => 'nullable|boolean',
+            'department_id' => ['nullable', 'uuid', 'exists:departments,id'],
+            'doctor_id' => ['nullable', 'uuid', 'exists:doctors,id'],
+            'availability_id' => ['nullable', 'uuid', 'exists:availabilities,id'],
+            'appointment_date' => 'nullable|date',
+            'appointment_time' => 'nullable|string',
+            'consultation_type' => ['nullable', 'string', 'in:in-person,video'],
+            'opd_type' => ['nullable', 'string', 'in:general,private'],
+            'visit_reason' => 'nullable|string|max:5000',
             'expo_push_token' => 'nullable|string',
             'device_type' => 'nullable|string',
             'device_name' => 'nullable|string',
@@ -439,7 +460,7 @@ class ProfileController extends Controller
                 $result['appointment']->loadMissing(['doctor', 'availability', 'payment']);
                 $a = $result['appointment'];
                 $doctorLabel = $a->doctor
-                    ? 'Dr. ' . trim(($a->doctor->first_name ?? '') . ' ' . ($a->doctor->last_name ?? ''))
+                    ? trim(($a->doctor->first_name ?? '') . ' ' . ($a->doctor->last_name ?? ''))
                     : null;
                 $consultationLabel = $a->consultation_type === 'video' ? 'Online (video)' : 'In-person';
                 $pay = $a->payment;

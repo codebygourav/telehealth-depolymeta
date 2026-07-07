@@ -43,6 +43,7 @@ class Doctor extends Model
         'pincode',
         'landmark',
         'bio',
+        'sub_title',
         'description',
         'languages_known',
         'social_links',
@@ -58,9 +59,6 @@ class Doctor extends Model
         'availability_info',
         'memberships_info',
         'status',
-        'is_checked_in',
-        'checked_in_at',
-        'is_on_break',
         'hide_from_mobile_app',
         'hide_from_wordpress_api',
         'is_test_doctor',
@@ -99,9 +97,6 @@ class Doctor extends Model
         'hide_from_mobile_app' => 'boolean',
         'hide_from_wordpress_api' => 'boolean',
         'is_test_doctor' => 'boolean',
-        'is_checked_in' => 'boolean',
-        'checked_in_at' => 'datetime',
-        'is_on_break' => 'boolean',
         'years_experience' => 'integer',
         'education_info' => 'array',
         'awards_info' => 'array',
@@ -363,10 +358,6 @@ class Doctor extends Model
         return $this->hasMany(DoctorReplacement::class, 'original_doctor_id');
     }
 
-
-
-
-
     public static function canUserAccess(): bool
     {
         /** @var \App\Models\User $user */
@@ -510,10 +501,4 @@ class Doctor extends Model
                 });
         });
     }
-
-    public function displayEvents()
-    {
-        return $this->belongsToMany(DisplayEvent::class, 'display_event_doctor', 'doctor_id', 'display_event_id')->withTimestamps();
-    }
 }
-

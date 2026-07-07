@@ -59,7 +59,7 @@ class TestVideoConsultation extends Page implements HasForms
                                     ? $appointment->patient->first_name . ' ' . $appointment->patient->last_name
                                     : 'N/A';
                                 $doctorName = $appointment->doctor
-                                    ? 'Dr. ' . $appointment->doctor->first_name . ' ' . $appointment->doctor->last_name
+                                    ? $appointment->doctor->first_name . ' ' . $appointment->doctor->last_name
                                     : 'N/A';
                                 $date = $appointment->appointment_date
                                     ? \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y')
@@ -67,6 +67,7 @@ class TestVideoConsultation extends Page implements HasForms
 
                                 return [$appointment->id => "{$patientName} with {$doctorName} - {$date}"];
                             });
+                            
                     })
                     ->searchable()
                     ->required()

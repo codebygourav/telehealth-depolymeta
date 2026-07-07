@@ -11,15 +11,15 @@
         $groupedRows = $this->rows->groupBy('date');
         $activeFilterCount = $this->activeFilterCount;
         $slotGridColumns = $showDoctorContext
-            ? '32px minmax(180px, 1fr) minmax(200px, 1.1fr) minmax(86px, .5fr) minmax(220px, 1.25fr) minmax(100px, .6fr) minmax(150px, .75fr) minmax(90px, .5fr) minmax(240px, 1fr)'
-            : '32px minmax(220px, 1.2fr) minmax(86px, .5fr) minmax(220px, 1.25fr) minmax(100px, .6fr) minmax(150px, .75fr) minmax(90px, .5fr) minmax(240px, 1fr)';
+            ? '32px minmax(70px, 1fr) minmax(60px, 1.1fr) minmax(66px, .5fr) minmax(220px, 1.25fr) minmax(100px, 0.6fr) minmax(70px, .75fr) minmax(0px, .5fr) minmax(210px, 1fr)'
+            : '32px minmax(70px, 1fr) minmax(60px, 1.1fr) minmax(66px, .5fr) minmax(220px, 1.25fr) minmax(100px, 0.6fr) minmax(70px, .75fr) minmax(0px, .5fr) minmax(210px, 1fr)';
         $slotTableMinWidth = $showDoctorContext ? '1260px' : '1080px';
         $openDate = $groupedRows->has($todayDate) ? $todayDate : $groupedRows->keys()->first() ?? null;
     @endphp
 
     <style>
         .availability-shell {
-            --av-primary: #055bd9;
+            --av-primary: #073827;
             --av-primary-hover: #052a1f;
             --av-border: #e2e8f0;
             --av-border-strong: #cbd5e1;
@@ -378,11 +378,11 @@
             line-height: 1.5;
         }
 
-        /* Filament modal toggles — #055bd9 on, gray off */
+        /* Filament modal toggles — #073827 on, gray off */
         .fi-modal .fi-fo-toggle[aria-checked="true"] .fi-toggle,
         .fi-modal .fi-fo-toggle[aria-checked="true"] {
-            background-color: #055bd9 !important;
-            border-color: #055bd9 !important;
+            background-color: #073827 !important;
+            border-color: #073827 !important;
         }
 
         .fi-modal .fi-fo-toggle[aria-checked="false"] .fi-toggle,
@@ -859,14 +859,14 @@
 
     <div class="availability-shell" wire:key="availability-shell-{{ $this->availabilityRefreshVersion }}">
         <div class="availability-kpis">
-            <div class="availability-kpi" style="--kpi-dot: #055bd9">
+            <div class="availability-kpi" style="--kpi-dot: #073827">
                 <div class="availability-kpi__top">
                     <span class="availability-kpi__label">Total slots</span>
                     <span class="availability-kpi__dot"></span>
                 </div>
                 <div class="availability-kpi__value">{{ $summary['total'] }}</div>
             </div>
-            <div class="availability-kpi" style="--kpi-dot: #055bd9; --kpi-value-color: #055bd9">
+            <div class="availability-kpi" style="--kpi-dot: #073827; --kpi-value-color: #073827">
                 <div class="availability-kpi__top">
                     <span class="availability-kpi__label">Available</span>
                     <span class="availability-kpi__dot"></span>
@@ -1184,7 +1184,7 @@
                                                 style="color: var(--av-primary); font-weight: 700; text-decoration: none;">Profile</a>
                                         @endif
                                     </div>
-
+                                    
                                 @endif
                                 <div>
                                     <div class="availability-main">

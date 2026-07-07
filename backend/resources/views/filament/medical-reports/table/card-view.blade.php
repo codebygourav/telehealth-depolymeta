@@ -87,7 +87,7 @@
                 @foreach ($doctors as $doctor)
                 <img class="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-gray-800 object-cover"
                     src="{{ storage_url($doctor->avatar) }}" alt="{{ $doctor->user?->name }}"
-                    title="Dr. {{ $doctor->user?->name }}">
+                    title="{{ $doctor->user?->name }}">
                 @endforeach
                 @if ($moreDoctors > 0)
                 <div
@@ -97,7 +97,7 @@
                 @endif
             </div>
             <div class="text-xs text-gray-500">
-                Dr. {{ $doctors->pluck('user.name')->join(', Dr. ') }} {{ $moreDoctors > 0 ? 'and others' : '' }}
+                {{ $doctors->pluck('user.name')->join(', ') }} {{ $moreDoctors > 0 ? 'and others' : '' }}
             </div>
         </div>
         @else

@@ -78,7 +78,7 @@ class DoctorReviewForm
                         Select::make('doctor_id')
                             ->label('Doctor')
                             ->relationship('doctor', 'first_name', fn($query) => $query->with('user'))
-                            ->getOptionLabelFromRecordUsing(fn($record) => 'Dr. ' . $record->first_name . ' ' . $record->last_name)
+                            ->getOptionLabelFromRecordUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
                             ->searchable()
                             ->preload()
                             ->required()
@@ -174,7 +174,7 @@ class DoctorReviewForm
                                 $time = $appointment->appointment_time ?? 'N/A';
                                 $status = $appointment->status instanceof \App\Enums\AppointmentStatus ? $appointment->status->label() : ($appointment->status->value ?? (string) $appointment->status);
                                 $type = $appointment->consultation_type ?? 'N/A';
-                                $doctorName = $appointment->doctor ? "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}" : 'N/A';
+                                $doctorName = $appointment->doctor ? "{$appointment->doctor->first_name} {$appointment->doctor->last_name}" : 'N/A';
                                 
                                 return new HtmlString("
                                     <div class='p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700'>

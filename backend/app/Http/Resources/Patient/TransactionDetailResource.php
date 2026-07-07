@@ -34,7 +34,7 @@ class TransactionDetailResource extends JsonResource
             'order_id' => $this->razorpay_order_id,
 
             'paid_to' => $doctor
-                ? 'Dr. ' . $doctor->first_name . ' ' . $doctor->last_name
+                ? $doctor->first_name . ' ' . $doctor->last_name
                 : 'Medical Service',
 
             'receipt_url' => $this->receipt_pdf

@@ -162,7 +162,7 @@ class AppointmentsTable
                             });
 
                         if ($replacement && $replacement->replacementDoctor) {
-                            return 'Replaced by: Dr. ' . $replacement->replacementDoctor->first_name . ' ' . $replacement->replacementDoctor->last_name;
+                            return 'Replaced by: ' . $replacement->replacementDoctor->first_name . ' ' . $replacement->replacementDoctor->last_name;
                         }
                         return null;
                     })
@@ -454,7 +454,7 @@ class AppointmentsTable
                                 ->getOptionLabelFromRecordUsing(function ($record) {
                                     $firstName = $record->first_name ?? '';
                                     $lastName = $record->last_name ?? '';
-                                    $name = trim("Dr. {$firstName} {$lastName}");
+                                    $name = trim("{$firstName} {$lastName}");
                                     return $name ?: 'Unknown Doctor';
                                 })
                                 ->searchable(['first_name', 'last_name'])
@@ -539,7 +539,7 @@ class AppointmentsTable
                                 ->getOptionLabelFromRecordUsing(function ($record) {
                                     $firstName = $record->first_name ?? '';
                                     $lastName = $record->last_name ?? '';
-                                    $name = trim("Dr. {$firstName} {$lastName}");
+                                    $name = trim("{$firstName} {$lastName}");
                                     return $name ?: 'Unknown Doctor';
                                 })
                                 ->searchable(['first_name', 'last_name'])

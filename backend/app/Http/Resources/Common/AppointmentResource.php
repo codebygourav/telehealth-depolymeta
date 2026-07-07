@@ -109,7 +109,7 @@ class AppointmentResource extends JsonResource
             if ($user && $isDoctor) {
                 // For hosts, use doctor profile name or user name, prefixed with Dr.
                 $name = $user->doctor ? ($user->doctor->first_name . ' ' . $user->doctor->last_name) : $user->name;
-                $displayName = 'Dr. ' . $name;
+                $displayName = $name;
             } elseif ($user) {
                 // For patients, use patient name or user name
                 $displayName = $user->patient ? ($user->patient->first_name . ' ' . $user->patient->last_name) : $user->name;
@@ -147,7 +147,7 @@ class AppointmentResource extends JsonResource
             $result['doctor'] = [
                 'id' => $this->doctor->id,
                 'user_id' => $this->doctor->user_id,
-                'name' => 'Dr. ' . $this->doctor->first_name . ' ' . $this->doctor->last_name,
+                'name' => $this->doctor->first_name . ' ' . $this->doctor->last_name,
                 'avatar' => storage_url($this->doctor->avatar),
                 'department' => $this->doctor->departments->first()?->name,
                 'slug' => $this->doctor->slug,

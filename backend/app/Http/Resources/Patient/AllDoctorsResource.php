@@ -47,7 +47,7 @@ class AllDoctorsResource extends JsonResource
 
         return [
             'id' => $this->resource->user_id, // Keeping as user_id as per current implementation
-            'name' => 'Dr. ' . $this->resource->first_name . ' ' . $this->resource->last_name,
+            'name' => $this->resource->first_name . ' ' . $this->resource->last_name,
             'speciality' => $this->departments->map(function ($department) {
                 $symptomNames = [];
                 $symptomIds = $department->symptom_ids ?: [];

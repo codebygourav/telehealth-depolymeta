@@ -41,7 +41,7 @@
                 <div class="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                     <x-heroicon-o-user class="h-4 w-4 text-gray-400" />
                     <span class="font-medium">
-                        {{ $doctor?->name ? 'Dr. ' . $doctor->name : 'Unassigned doctor' }}
+                        {{ $doctor?->name ? $doctor->name : 'Unassigned doctor' }}
                     </span>
                 </div>
             </div>

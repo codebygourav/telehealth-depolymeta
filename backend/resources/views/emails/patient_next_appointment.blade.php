@@ -9,7 +9,7 @@
         }
 
         $doctorName = $appointment->doctor
-            ? 'Dr. ' . trim(($appointment->doctor->first_name ?? '') . ' ' . ($appointment->doctor->last_name ?? ''))
+            ? trim(($appointment->doctor->first_name ?? '') . ' ' . ($appointment->doctor->last_name ?? ''))
             : 'Doctor';
 
         return [

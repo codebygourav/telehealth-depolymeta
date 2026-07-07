@@ -130,7 +130,7 @@ class PatientNotificationController extends Controller
     private function slotPayload(DoctorAvailability $availability, Carbon $date): array
     {
         $doctorName = $availability->doctor
-            ? 'Dr. '.trim(($availability->doctor->first_name ?? '').' '.($availability->doctor->last_name ?? ''))
+            ? trim(($availability->doctor->first_name ?? '').' '.($availability->doctor->last_name ?? ''))
             : 'Doctor';
         $startTime = Carbon::parse($availability->start_time)->format('H:i:s');
         $endTime = Carbon::parse($availability->end_time)->format('H:i:s');

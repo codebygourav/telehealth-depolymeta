@@ -101,9 +101,8 @@ return [
             ],
             'validation' => [
                 'professional_experience_info' => 'sometimes|array',
-                'professional_experience_info.*.start_date' => 'sometimes|date',
-                'professional_experience_info.*.end_date' => 'sometimes|date',
                 'professional_experience_info.*.association' => 'sometimes|string',
+                'professional_experience_info.*.description' => 'sometimes|string',
             ],
             'field_types' => [
                 'professional_experience_info' => 'json',
@@ -117,8 +116,7 @@ return [
                 'education_info' => 'sometimes|array',
                 'education_info.*.degree' => 'sometimes|string|max:255',
                 'education_info.*.institution' => 'sometimes|string|max:255',
-                'education_info.*.start_date' => 'sometimes|date',
-                'education_info.*.end_date' => 'sometimes|date',
+                'education_info.*.completion_year' => 'sometimes|string|max:255',
             ],
             'field_types' => [
                 'education_info' => 'json',
@@ -132,8 +130,7 @@ return [
                 'certifications_info' => 'sometimes|array',
                 'certifications_info.*.name' => 'sometimes|string|max:255',
                 'certifications_info.*.organization' => 'sometimes|string|max:255',
-                'certifications_info.*.issue_date' => 'sometimes|date',
-                'certifications_info.*.expiry_date' => 'sometimes|date',
+                'certifications_info.*.description' => 'sometimes|string|max:1000',
                 'certifications_info.*.certification_image' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',
             ],
             'field_types' => [
@@ -183,7 +180,6 @@ return [
             'validation' => [
                 'awards_info' => 'sometimes|array',
                 'awards_info.*.title' => 'sometimes|string|max:255',
-                'awards_info.*.organization' => 'sometimes|string|max:255',
                 'awards_info.*.year' => 'sometimes|string|max:4',
                 'awards_info.*.description' => 'sometimes|string|max:1000',
                 'awards_info.*.award_image' => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:2048',

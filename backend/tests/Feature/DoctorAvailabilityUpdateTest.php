@@ -24,7 +24,7 @@ class DoctorAvailabilityUpdateTest extends TestCase
         parent::setUp();
 
         $user = User::create([
-            'name' => 'Dr. Test',
+            'name' => 'Test',
             'email' => 'dr.test@telehealth.test',
             'phone' => '9800000002',
             'password' => bcrypt('password'),

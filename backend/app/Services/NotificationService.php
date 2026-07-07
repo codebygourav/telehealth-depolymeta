@@ -6,7 +6,6 @@ use App\Models\Leave;
 use App\Models\Appointment;
 use App\Models\DoctorReview;
 use App\Models\User;
-use App\Models\PatientVaccination;
 use App\Notifications\SystemNotification;
 use App\Enums\NotificationType;
 use Illuminate\Support\Facades\Log;
@@ -119,7 +118,7 @@ class NotificationService
         $timeStr = \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A');
 
         $snapshot = [
-            'doctor_name' => "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}",
+            'doctor_name' => "{$appointment->doctor->first_name} {$appointment->doctor->last_name}",
             'patient_name' => "{$appointment->patient->first_name} {$appointment->patient->last_name}",
             'appointment_date' => $dateStr,
             'appointment_time' => $timeStr,
@@ -132,7 +131,7 @@ class NotificationService
                 user: $appointment->patient->user,
                 type: NotificationType::APPOINTMENT_CONFIRMED->value,
                 title: 'Appointment Confirmed',
-                message: "Your appointment with Dr. {$appointment->doctor->first_name} on {$dateStr} at {$timeStr} is confirmed.",
+                message: "Your appointment with {$appointment->doctor->first_name} on {$dateStr} at {$timeStr} is confirmed.",
                 category: 'appointment',
                 entityType: 'appointment',
                 entityId: $appointment->id,
@@ -165,7 +164,7 @@ class NotificationService
             : \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y');
 
         $snapshot = [
-            'doctor_name' => "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}",
+            'doctor_name' => "{$appointment->doctor->first_name} {$appointment->doctor->last_name}",
             'patient_name' => "{$appointment->patient->first_name} {$appointment->patient->last_name}",
             'appointment_date' => $dateStr,
         ];
@@ -173,8 +172,8 @@ class NotificationService
         // Notify Patient
         if ($appointment->patient && $appointment->patient->user) {
             $message = $cancelledBy === 'doctor'
-                ? "Your appointment with Dr. {$appointment->doctor->first_name} on {$dateStr} has been cancelled by the doctor."
-                : "Your appointment with Dr. {$appointment->doctor->first_name} on {$dateStr} has been successfully cancelled.";
+                ? "Your appointment with {$appointment->doctor->first_name} on {$dateStr} has been cancelled by the doctor."
+                : "Your appointment with {$appointment->doctor->first_name} on {$dateStr} has been successfully cancelled.";
 
             self::send(
                 user: $appointment->patient->user,
@@ -219,7 +218,7 @@ class NotificationService
         $timeStr = \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A');
 
         $snapshot = [
-            'doctor_name' => "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}",
+            'doctor_name' => "{$appointment->doctor->first_name} {$appointment->doctor->last_name}",
             'patient_name' => "{$appointment->patient->first_name} {$appointment->patient->last_name}",
             'new_date' => $dateStr,
             'new_time' => $timeStr,
@@ -231,7 +230,7 @@ class NotificationService
                 user: $appointment->patient->user,
                 type: NotificationType::APPOINTMENT_RESCHEDULED->value,
                 title: 'Appointment Rescheduled',
-                message: "Your appointment with Dr. {$appointment->doctor->first_name} has been rescheduled to {$dateStr} at {$timeStr}.",
+                message: "Your appointment with {$appointment->doctor->first_name} has been rescheduled to {$dateStr} at {$timeStr}.",
                 category: 'appointment',
                 entityType: 'appointment',
                 entityId: $appointment->id,
@@ -265,7 +264,7 @@ class NotificationService
                 user: $appointment->patient->user,
                 type: NotificationType::APPOINTMENT_COMPLETED->value,
                 title: 'Appointment Completed',
-                message: "Your appointment with Dr. {$appointment->doctor->first_name} has been marked as completed. We hope you feel better!",
+                message: "Your appointment with {$appointment->doctor->first_name} has been marked as completed. We hope you feel better!",
                 category: 'appointment',
                 entityType: 'appointment',
                 entityId: $appointment->id
@@ -406,7 +405,7 @@ class NotificationService
             : \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y');
 
         $snapshot = [
-            'doctor_name' => "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}",
+            'doctor_name' => "{$appointment->doctor->first_name} {$appointment->doctor->last_name}",
             'patient_name' => "{$appointment->patient->first_name} {$appointment->patient->last_name}",
             'appointment_date' => $dateStr,
             'reason' => $reason
@@ -491,7 +490,7 @@ class NotificationService
         };
 
         $snapshot = [
-            'doctor_name' => "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}",
+            'doctor_name' => "{$appointment->doctor->first_name} {$appointment->doctor->last_name}",
             'patient_name' => "{$appointment->patient->first_name} {$appointment->patient->last_name}",
             'appointment_time' => $timeStr,
             'minutes' => $minutes,
@@ -509,7 +508,7 @@ class NotificationService
                 user: $appointment->patient->user,
                 type: $type,
                 title: 'Appointment Reminder',
-                message: "Reminder: You have an appointment with Dr. {$appointment->doctor->first_name} {$timePhrase} {$timeStr}.",
+                message: "Reminder: You have an appointment with {$appointment->doctor->first_name} {$timePhrase} {$timeStr}.",
                 category: 'appointment',
                 entityType: 'appointment',
                 entityId: $appointment->id,
@@ -567,7 +566,7 @@ class NotificationService
                     user: $appointment->patient->user,
                     type: NotificationType::VIDEO_CALL_JOINED->value,
                     title: 'Doctor Joined Video Call',
-                    message: "Dr. {$displayName} has joined the video call.",
+                    message: "{$displayName} has joined the video call.",
                     category: 'appointment',
                     entityType: 'appointment',
                     entityId: $appointment->id,
@@ -606,7 +605,7 @@ class NotificationService
                     user: $appointment->patient->user,
                     type: NotificationType::VIDEO_CALL_LEFT->value,
                     title: 'Doctor Left Video Call',
-                    message: "Dr. {$displayName} has left the video call.",
+                    message: "{$displayName} has left the video call.",
                     category: 'appointment',
                     entityType: 'appointment',
                     entityId: $appointment->id,
@@ -660,7 +659,7 @@ class NotificationService
     public static function notifyPrescriptionAdded(Appointment $appointment)
     {
         if ($appointment->patient && $appointment->patient->user) {
-            $doctorName = "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}";
+            $doctorName = "{$appointment->doctor->first_name} {$appointment->doctor->last_name}";
             self::send(
                 user: $appointment->patient->user,
                 type: NotificationType::PRESCRIPTION_ADDED->value,
@@ -682,7 +681,7 @@ class NotificationService
     public static function notifyDoctorInstructionsAdded(Appointment $appointment)
     {
         if ($appointment->patient && $appointment->patient->user) {
-            $doctorName = "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}";
+            $doctorName = "{$appointment->doctor->first_name} {$appointment->doctor->last_name}";
             self::send(
                 user: $appointment->patient->user,
                 type: NotificationType::DOCTOR_INSTRUCTIONS_ADDED->value,
@@ -693,340 +692,6 @@ class NotificationService
                 entityId: $appointment->id,
                 meta: [
                     'doctor_name' => $doctorName,
-                ]
-            );
-        }
-    }
-
-    /**
-     * Notify patient when a vaccination dose is due or approaching due.
-     */
-    public static function notifyVaccinationDue(PatientVaccination $vaccination, string $daysLabel)
-    {
-        if ($vaccination->patient && $vaccination->patient->user) {
-            $vaccineName = $vaccination->vaccination?->name ?: 'Vaccine';
-            $dueDate = $vaccination->due_date ? $vaccination->due_date->format('M d, Y') : '—';
-            $patientName = trim(($vaccination->patient?->first_name ?? '') . ' ' . ($vaccination->patient?->last_name ?? '')) ?: 'your account';
-
-            $message = "The vaccination dose for {$vaccineName} ({$patientName}) is {$daysLabel}. Due date: {$dueDate}.";
-
-            self::send(
-                user: $vaccination->patient->user,
-                type: NotificationType::VACCINATION_DUE->value,
-                title: 'Vaccination Dose Due Alert',
-                message: $message,
-                category: 'system',
-                entityType: 'patient_vaccination',
-                entityId: $vaccination->id,
-                meta: [
-                    'vaccine_name' => $vaccineName,
-                    'due_date' => $dueDate,
-                    'days_label' => $daysLabel,
-                    'dose_no' => $vaccination->dose_no,
-                    'patient_name' => $patientName,
-                ]
-            );
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Notify patient when a vaccination dose is overdue.
-     */
-    public static function notifyVaccinationOverdue(PatientVaccination $vaccination)
-    {
-        if ($vaccination->patient && $vaccination->patient->user) {
-            $vaccineName = $vaccination->vaccination?->name ?: 'Vaccine';
-            $dueDate = $vaccination->due_date ? $vaccination->due_date->format('M d, Y') : '—';
-            $patientName = trim(($vaccination->patient?->first_name ?? '') . ' ' . ($vaccination->patient?->last_name ?? '')) ?: 'your account';
-
-            $message = "WARNING: The vaccination dose for {$vaccineName} ({$patientName}) was due on {$dueDate} and is now OVERDUE.";
-
-            self::send(
-                user: $vaccination->patient->user,
-                type: NotificationType::VACCINATION_OVERDUE->value,
-                title: 'Vaccination OVERDUE Warning',
-                message: $message,
-                category: 'system',
-                entityType: 'patient_vaccination',
-                entityId: $vaccination->id,
-                meta: [
-                    'vaccine_name' => $vaccineName,
-                    'due_date' => $dueDate,
-                    'dose_no' => $vaccination->dose_no,
-                    'patient_name' => $patientName,
-                ]
-            );
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Notify patient when a vaccination dose is marked completed.
-     */
-    public static function notifyVaccinationCompleted(PatientVaccination $vaccination)
-    {
-        if ($vaccination->patient && $vaccination->patient->user) {
-            $vaccineName = $vaccination->vaccination?->name ?: 'Vaccine';
-            $completedDate = $vaccination->completed_date ? $vaccination->completed_date->format('M d, Y') : '—';
-            $patientName = trim(($vaccination->patient?->first_name ?? '') . ' ' . ($vaccination->patient?->last_name ?? '')) ?: 'your account';
-
-            $message = "Great news! The vaccination dose for {$vaccineName} ({$patientName}) has been successfully administered and marked completed on {$completedDate}.";
-
-            self::send(
-                user: $vaccination->patient->user,
-                type: NotificationType::VACCINATION_COMPLETED->value,
-                title: 'Vaccination Dose Completed',
-                message: $message,
-                category: 'system',
-                entityType: 'patient_vaccination',
-                entityId: $vaccination->id,
-                meta: [
-                    'vaccine_name' => $vaccineName,
-                    'completed_date' => $completedDate,
-                    'dose_no' => $vaccination->dose_no,
-                    'patient_name' => $patientName,
-                ]
-            );
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Notify patient when a vaccination dose has been missed (past grace period).
-     */
-    public static function notifyVaccinationMissed(PatientVaccination $vaccination)
-    {
-        if ($vaccination->patient && $vaccination->patient->user) {
-            $vaccineName = $vaccination->vaccination?->name ?: 'Vaccine';
-            $dueDate = $vaccination->due_date ? $vaccination->due_date->format('M d, Y') : '—';
-            $patientName = trim(($vaccination->patient?->first_name ?? '') . ' ' . ($vaccination->patient?->last_name ?? '')) ?: 'your account';
-
-            $message = "Alert: The vaccination dose for {$vaccineName} ({$patientName}) due on {$dueDate} has been marked as MISSED. Please contact your doctor to reschedule.";
-
-            self::send(
-                user: $vaccination->patient->user,
-                type: NotificationType::VACCINATION_MISSED->value,
-                title: 'Vaccination Dose Missed',
-                message: $message,
-                category: 'system',
-                entityType: 'patient_vaccination',
-                entityId: $vaccination->id,
-                meta: [
-                    'vaccine_name' => $vaccineName,
-                    'due_date' => $dueDate,
-                    'dose_no' => $vaccination->dose_no,
-                    'patient_name' => $patientName,
-                ]
-            );
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Notify patient and doctor when patient checks in.
-     */
-    public static function notifyPatientCheckedIn(Appointment $appointment)
-    {
-        $queueNo = $appointment->queue_number ?: '—';
-        $patientName = $appointment->patient ? "{$appointment->patient->first_name} {$appointment->patient->last_name}" : 'Patient';
-        $doctorName = $appointment->doctor ? "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}" : 'Doctor';
-
-        // Notify Patient
-        if ($appointment->patient && $appointment->patient->user) {
-            self::send(
-                user: $appointment->patient->user,
-                type: NotificationType::PATIENT_CHECKED_IN->value,
-                title: 'Checked-In Successfully',
-                message: "You have been checked in for your appointment with {$doctorName}. Your queue number is {$queueNo}.",
-                category: 'appointment',
-                entityType: 'appointment',
-                entityId: $appointment->id,
-                meta: [
-                    'queue_number' => $queueNo,
-                    'doctor_name' => $doctorName,
-                ]
-            );
-        }
-
-        // Notify Doctor
-        if ($appointment->doctor && $appointment->doctor->user) {
-            self::send(
-                user: $appointment->doctor->user,
-                type: NotificationType::PATIENT_CHECKED_IN->value,
-                title: 'Patient Checked In',
-                message: "Your patient {$patientName} has checked in (Queue No: {$queueNo}) and is waiting.",
-                category: 'appointment',
-                entityType: 'appointment',
-                entityId: $appointment->id,
-                meta: [
-                    'queue_number' => $queueNo,
-                    'patient_name' => $patientName,
-                ]
-            );
-        }
-    }
-
-    /**
-     * Notify patient when consultation starts (transitions to running status).
-     */
-    public static function notifyConsultationStarted(Appointment $appointment)
-    {
-        $queueNo = $appointment->queue_number ?: '—';
-        $doctorName = $appointment->doctor ? "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}" : 'Doctor';
-        $room = $appointment->doctor?->address_line2 ?: 'doctor\'s room';
-
-        // Notify Patient
-        if ($appointment->patient && $appointment->patient->user) {
-            self::send(
-                user: $appointment->patient->user,
-                type: NotificationType::CONSULTATION_STARTED->value,
-                title: 'Consultation Started',
-                message: "Your consultation with {$doctorName} has started. Please proceed to {$room} or join the video call.",
-                category: 'appointment',
-                entityType: 'appointment',
-                entityId: $appointment->id,
-                meta: [
-                    'queue_number' => $queueNo,
-                    'doctor_name' => $doctorName,
-                ]
-            );
-        }
-    }
-
-    /**
-     * Notify patient when they are skipped.
-     */
-    public static function notifyPatientSkipped(Appointment $appointment, string $remarks = '')
-    {
-        $queueNo = $appointment->queue_number ?: '—';
-        $doctorName = $appointment->doctor ? "Dr. {$appointment->doctor->first_name} {$appointment->doctor->last_name}" : 'Doctor';
-
-        // Notify Patient
-        if ($appointment->patient && $appointment->patient->user) {
-            self::send(
-                user: $appointment->patient->user,
-                type: 'patient_skipped',
-                title: 'Queue Skipped',
-                message: "You have been skipped in the queue for your appointment with {$doctorName}." . ($remarks ? " Note: {$remarks}" : ""),
-                category: 'appointment',
-                entityType: 'appointment',
-                entityId: $appointment->id,
-                meta: [
-                    'queue_number' => $queueNo,
-                    'doctor_name' => $doctorName,
-                    'remarks' => $remarks,
-                ]
-            );
-        }
-    }
-
-    /**
-     * Notify patient when a vaccination is assigned to them.
-     */
-    public static function notifyVaccinationAssigned(PatientVaccination $vaccination)
-    {
-        if ($vaccination->patient && $vaccination->patient->user) {
-            $vaccineName = $vaccination->vaccination?->name ?: 'Vaccine';
-            $dueDate = $vaccination->due_date ? $vaccination->due_date->format('M d, Y') : '—';
-
-            self::send(
-                user: $vaccination->patient->user,
-                type: 'vaccination_assigned',
-                title: 'New Vaccination Assigned',
-                message: "A new vaccination dose for {$vaccineName} has been assigned to you. Due date: {$dueDate}.",
-                category: 'vaccination',
-                entityType: 'patient_vaccination',
-                entityId: $vaccination->id,
-                meta: [
-                    'vaccine_name' => $vaccineName,
-                    'due_date' => $dueDate,
-                    'dose_no' => $vaccination->dose_no,
-                ]
-            );
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Notify patient to take their medicine.
-     */
-    public static function notifyMedicineReminder(Prescription $prescription, string $time)
-    {
-        if ($prescription->patient && $prescription->patient->user) {
-            $medName = $prescription->medicine_name ?: 'Medicine';
-            $dosage = $prescription->dosage ?: '';
-            $timing = $prescription->meal_timing ? " - {$prescription->meal_timing}" : '';
-
-            self::send(
-                user: $prescription->patient->user,
-                type: 'medicine_reminder',
-                title: 'Medicine Intake Reminder',
-                message: "Reminder: It is time to take your medicine: {$medName} {$dosage}{$timing} scheduled for {$time}.",
-                category: 'prescription',
-                entityType: 'prescription',
-                entityId: $prescription->id,
-                meta: [
-                    'medicine_name' => $medName,
-                    'dosage' => $dosage,
-                    'meal_timing' => $prescription->meal_timing,
-                    'time' => $time,
-                ]
-            );
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Notify patient when a doctor assigns a diet plan.
-     */
-    public static function notifyDietPlanAssigned(\App\Models\PatientDietPlan $plan)
-    {
-        // 1. Notify Patient
-        if ($plan->patient && $plan->patient->user) {
-            $doctorName = $plan->doctor ? "Dr. {$plan->doctor->first_name} {$plan->doctor->last_name}" : "your Doctor";
-            $message = "A new diet plan '{$plan->template_name}' has been assigned to you by {$doctorName} starting on " . \Illuminate\Support\Carbon::parse($plan->start_date)->format('M d, Y') . ".";
-
-            self::send(
-                user: $plan->patient->user,
-                type: NotificationType::DIET_PLAN_ASSIGNED->value,
-                title: 'New Diet Plan Assigned',
-                message: $message,
-                category: 'system',
-                entityType: 'patient_diet_plan',
-                entityId: $plan->id,
-                meta: [
-                    'plan_name' => $plan->template_name,
-                    'doctor_name' => $doctorName,
-                    'start_date' => $plan->start_date instanceof \Illuminate\Support\Carbon ? $plan->start_date->toDateString() : (is_string($plan->start_date) ? $plan->start_date : ''),
-                    'duration_days' => $plan->duration_days,
-                ]
-            );
-        }
-
-        // 2. Notify Doctor (creator)
-        if ($plan->doctor && $plan->doctor->user) {
-            $patientName = trim(($plan->patient?->first_name ?? '') . ' ' . ($plan->patient?->last_name ?? '')) ?: 'Patient';
-            $message = "Diet plan '{$plan->template_name}' has been successfully assigned to {$patientName}.";
-
-            self::send(
-                user: $plan->doctor->user,
-                type: NotificationType::DIET_PLAN_ASSIGNED->value,
-                title: 'Diet Plan Assigned Successfully',
-                message: $message,
-                category: 'system',
-                entityType: 'patient_diet_plan',
-                entityId: $plan->id,
-                meta: [
-                    'plan_name' => $plan->template_name,
-                    'patient_name' => $patientName,
-                    'start_date' => $plan->start_date instanceof \Illuminate\Support\Carbon ? $plan->start_date->toDateString() : (is_string($plan->start_date) ? $plan->start_date : ''),
                 ]
             );
         }

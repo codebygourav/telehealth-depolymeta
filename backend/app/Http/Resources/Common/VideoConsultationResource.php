@@ -77,7 +77,7 @@ class VideoConsultationResource extends JsonResource
             'doctor' => $this->when($this->relationLoaded('doctor') && $this->doctor, function () {
                 return [
                     'id' => $this->doctor->id,
-                    'name' => 'Dr. ' . $this->doctor->first_name . ' ' . $this->doctor->last_name,
+                    'name' => $this->doctor->first_name . ' ' . $this->doctor->last_name,
                     'avatar' => storage_url($this->doctor->avatar),
                     'specialty' => $this->doctor->departments->first()?->name ?? null,
                 ];
@@ -91,7 +91,7 @@ class VideoConsultationResource extends JsonResource
     protected function getDisplayName(): string
     {
         if ($this->userType === 'doctor' && $this->doctor) {
-            return 'Dr. ' . $this->doctor->first_name . ' ' . $this->doctor->last_name;
+            return $this->doctor->first_name . ' ' . $this->doctor->last_name;
         }
 
         if ($this->userType === 'patient' && $this->patient) {

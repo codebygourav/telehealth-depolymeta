@@ -144,7 +144,7 @@
     $notifySlotOptions = collect();
     foreach ($notifyAvailableSlots as $availability) {
         $doctorName = $availability->doctor
-            ? 'Dr. ' . trim(($availability->doctor->first_name ?? '') . ' ' . ($availability->doctor->last_name ?? ''))
+            ? trim(($availability->doctor->first_name ?? '') . ' ' . ($availability->doctor->last_name ?? ''))
             : 'Doctor';
 
         $dates = [];
@@ -775,7 +775,7 @@
                                     <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
                                         <div class="text-xs font-semibold text-gray-500">Default Doctor</div>
                                         <div class="mt-1 text-sm font-bold text-gray-900 dark:text-white">
-                                            {{ $notifyReferenceAppointment?->doctor ? 'Dr. ' . trim(($notifyReferenceAppointment->doctor->first_name ?? '') . ' ' . ($notifyReferenceAppointment->doctor->last_name ?? '')) : 'No doctor reference' }}
+                                            {{ $notifyReferenceAppointment?->doctor ? trim(($notifyReferenceAppointment->doctor->first_name ?? '') . ' ' . ($notifyReferenceAppointment->doctor->last_name ?? '')) : 'No doctor reference' }}
                                         </div>
                                     </div>
                                 </div>
@@ -1231,7 +1231,7 @@
                                             <div
                                                 class="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                                 <div class="text-sm text-gray-700 dark:text-gray-200">
-                                                    <div class="font-semibold">Dr. {{ $doctorName }}</div>
+                                                    <div class="font-semibold">{{ $doctorName }}</div>
                                                     <div class="text-gray-600">
                                                         {{ $consultationTypeLabel($appointment->consultation_type) }}
                                                     </div>

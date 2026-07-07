@@ -253,7 +253,7 @@ class DoctorHomeController extends Controller
         // Doctor Profile Info
         $doctorProfile = [
             'id' => $doctor->id,
-            'name' => $doctor->user->name ?? 'Dr. ' . $doctor->first_name . ' ' . $doctor->last_name,
+            'name' => $doctor->user->name ?? $doctor->first_name . ' ' . $doctor->last_name,
             'first_name' => $doctor->first_name,
             'last_name' => $doctor->last_name,
             'slug' => $doctor->slug,

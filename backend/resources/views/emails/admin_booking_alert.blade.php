@@ -48,7 +48,7 @@
                                             <strong style="color: #111827;">Patient Name:</strong> {{ $patientName }}
                                         </p>
                                         <p style="margin: 0 0 12px 0; font-size: 14px; color: #374151;">
-                                            <strong style="color: #111827;">Doctor Name:</strong> Dr. {{ $doctorName }}
+                                            <strong style="color: #111827;">Doctor Name:</strong> {{ $doctorName }}
                                         </p>
                                         <p style="margin: 0 0 12px 0; font-size: 14px; color: #374151;">
                                             <strong style="color: #111827;">Date:</strong> {{ $dateStr }}

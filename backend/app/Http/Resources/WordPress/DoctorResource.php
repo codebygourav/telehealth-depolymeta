@@ -36,9 +36,9 @@ class DoctorResource extends JsonResource
             ? (float) $lowestFeeAvailability->consultation_fee
             : null;
 
+
         return [
             'id' => $this->id,
-
             'user' => new UserResource($this->whenLoaded('user')),
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
@@ -56,6 +56,7 @@ class DoctorResource extends JsonResource
             'availability_info' => $this->availability_info,
             'memberships_info' => $this->memberships_info,
             'bio' => $this->bio,
+            'sub_title' => $this->sub_title,
             'medical_license_number' => $this->medical_license_number,
             'social_links' => $this->social_links,
             'specializations_info' => $this->specializations_info,

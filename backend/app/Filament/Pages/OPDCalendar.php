@@ -993,7 +993,7 @@ class OPDCalendar extends Page implements HasForms
 
             $doctorName = $doctor
                 ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
-                : 'Dr. Unknown';
+                : 'Unknown';
 
             return [
                 'id' => $appointment->id,
@@ -1040,7 +1040,7 @@ class OPDCalendar extends Page implements HasForms
             $doctor = $booking->doctor;
             $doctorName = $doctor
                 ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
-                : ($booking->doctor_name ?? 'Dr. Unknown');
+                : ($booking->doctor_name ?? 'Unknown');
 
             return [
                 'id' => $booking->id,
@@ -1132,7 +1132,7 @@ class OPDCalendar extends Page implements HasForms
             $doctor = $slot->doctor;
             $doctorName = $doctor
                 ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
-                : 'Dr. Unknown';
+                : 'Unknown';
             $doctorId = $doctor?->id ?? null;
             $doctorSlug = $doctor?->slug ?? null;
             $departments = $doctor && $doctor->departments ? $doctor->departments->pluck('name')->join(', ') : '';
@@ -1385,7 +1385,7 @@ class OPDCalendar extends Page implements HasForms
             $doctor = $event->doctor;
             $doctorName = $doctor
                 ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
-                : 'Dr. Unknown';
+                : 'Unknown';
 
             $dayKey = Carbon::parse($event->date)->format('Y-m-d');
             if (isset($days[$dayKey])) {
@@ -1555,7 +1555,7 @@ class OPDCalendar extends Page implements HasForms
             $doctor = $slot->doctor;
             $doctorName = $doctor
                 ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
-                : 'Dr. Unknown';
+                : 'Unknown';
             $departments = $doctor && $doctor->departments ? $doctor->departments->pluck('name')->join(', ') : '';
             $avatar = $doctor && $doctor->user && $doctor->user->avatar
                 ? storage_url($doctor->user->avatar)
@@ -1640,7 +1640,7 @@ class OPDCalendar extends Page implements HasForms
             $doctor = $slot->doctor;
             $doctorName = $doctor
                 ? trim(($doctor->title ? $doctor->title . ' ' : '') . $doctor->first_name . ' ' . $doctor->last_name)
-                : 'Dr. Unknown';
+                : 'Unknown';
             $departments = $doctor && $doctor->departments ? $doctor->departments->pluck('name')->join(', ') : '';
             $avatar = $doctor && $doctor->user && $doctor->user->avatar
                 ? storage_url($doctor->user->avatar)

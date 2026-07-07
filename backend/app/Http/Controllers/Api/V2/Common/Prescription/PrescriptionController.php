@@ -3,10 +3,8 @@
 namespace App\Http\Controllers\Api\V2\Common\Prescription;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Appointment, Medicine, Patient, Prescription, DoctorAddedMedicine, Doctor, PrescriptionDraft};
-use App\Services\PrescriptionDraftParser;
+use App\Models\{Appointment, Medicine, Patient, Prescription, DoctorAddedMedicine, Doctor};
 use App\Services\{ApiResponseService, PrescriptionService, NotificationService};
-use App\Support\PrescriptionDictation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -42,11 +40,9 @@ class PrescriptionController extends Controller
         // 🔹 Inline Validation
         $validator = Validator::make($request->all(), [
             'medicines' => 'required|array|min:1',
-            'draft_id' => 'nullable|uuid|exists:prescription_drafts,id',
 
             'medicines.*.medicine_name' => 'required|string|max:255',
             'medicines.*.medicine_id' => 'nullable|uuid|exists:medicines,id',
-            'medicines.*.medication_type' => 'nullable|string|max:255',
 
             'medicines.*.frequency' => 'required|in:OD,BD,TDS,SOS',
 
@@ -89,7 +85,21 @@ class PrescriptionController extends Controller
         }
 
         // 🔹 Authenticated doctor
-        $doctorId = $this->resolveDoctorId($request->user());
+        $doctor = $request->user();
+        $doctorId = null;
+        if (method_exists($doctor, 'doctor')) {
+            $doctorInstance = $doctor->doctor;
+            if ($doctorInstance) {
+                $doctorId = $doctorInstance->id;
+            }
+        }
+        if (! $doctorId && property_exists($doctor, 'doctor_id')) {
+            $doctorId = $doctor->doctor_id;
+        }
+        // If $doctor->id is actually the Doctor id (not User id), use as-is
+        if (! $doctorId && ! empty($doctor->id)) {
+            $doctorId = $doctor->id;
+        }
         // Ultimately, prevent further progress if we can't determine a valid doctor_id,
         // since this will break the foreign key constraint in the prescriptions table.
         if (! $doctorId) {
@@ -98,15 +108,10 @@ class PrescriptionController extends Controller
 
         // 🔹 Patient comes from appointment
         $patientId = $appointment->patient_id;
-        $draft = $this->resolveDraft($request, $appointment, $doctorId);
-        if ($draft instanceof \Illuminate\Http\JsonResponse) {
-            return $draft;
-        }
 
         $created = [];
 
         foreach ($request->medicines as $item) {
-            $medicineName = trim((string) ($item['medicine_name'] ?? ''));
 
             // Resolve meal_timing from dedicated field, or fall back to before_meal/after_meal flags
             $mealTiming = $item['meal'] ?? null;
@@ -142,27 +147,23 @@ class PrescriptionController extends Controller
                 : null;
             $medicineId = $item['medicine_id'] ?? null;
             $doctorAddedMedicineId = null;
-            $medicineType = $item['medication_type'] ?? null;
+            $medicineType = null;
 
             if ($medicineId) {
                 $medicine = Medicine::with('type')->find($medicineId);
-                $medicineType = $medicine?->type?->name ?? $medicineType;
+                $medicineType = $medicine?->type?->name;
             } else {
                 // If medicine_id is not provided, check if it exists in main medicines table by name
-                $existingMedicine = $this->findMedicineByName($medicineName);
+                $existingMedicine = Medicine::with('type')->where('name', $item['medicine_name'])->first();
                 if ($existingMedicine) {
                     $medicineId = $existingMedicine->id;
-                    $medicineType = $existingMedicine->type?->name ?? $medicineType;
+                    $medicineType = $existingMedicine->type?->name;
                 } else {
-                    $addedMedicine = $this->findDoctorAddedMedicineByName($medicineName, $doctorId);
-
-                    if (! $addedMedicine) {
-                        $addedMedicine = DoctorAddedMedicine::create([
-                            'name' => $medicineName,
-                            'added_by_doctor' => $doctorId,
-                        ]);
-                    }
-
+                    // It's a new medicine, store it in doctor_added_medicines table
+                    $addedMedicine = DoctorAddedMedicine::firstOrCreate(
+                        ['name' => $item['medicine_name']],
+                        ['added_by_doctor' => $doctorId]
+                    );
                     $doctorAddedMedicineId = $addedMedicine->id;
                 }
             }
@@ -175,14 +176,14 @@ class PrescriptionController extends Controller
                 'medicine_id' => $medicineId,
                 'doctor_added_medicine_id' => $doctorAddedMedicineId,
                 'medicine_type' => $medicineType,
-                'medicine_name' => $medicineName,
+                'medicine_name' => $item['medicine_name'],
                 'dosage' => $item['dosage'],
                 'frequency' => $item['frequency'],
                 'frequency_times' => $frequencyTimes,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'instructions' => $item['instructions'] ?? null,
-                'meal_timing' => $mealTiming,
+                'meal_timing' => $item['meal'],
             ]);
 
             $created[] = $prescription;
@@ -199,64 +200,9 @@ class PrescriptionController extends Controller
 
         NotificationService::notifyPrescriptionAdded($appointment);
 
-        if ($draft instanceof PrescriptionDraft) {
-            $draft->update([
-                'status' => PrescriptionDraft::STATUS_APPLIED,
-                'submitted_payload' => $request->all(),
-                'applied_at' => now(),
-            ]);
-        }
-
         return ApiResponseService::created('responses.created', [
             'medicines' => $created,
             'pdf_url' => $this->getPrescriptionPdfUrl($appointmentId),
-        ]);
-    }
-
-    public function parseTextDraft(Request $request, string $appointmentId, PrescriptionDraftParser $parser)
-    {
-        if (! PrescriptionDictation::isDraftParsingEnabled()) {
-            return ApiResponseService::validationError('Prescription dictation is disabled.');
-        }
-
-        $appointment = Appointment::findOrFail($appointmentId);
-        $doctorId = $this->resolveDoctorId($request->user());
-
-        if (! $doctorId || $appointment->doctor_id !== $doctorId) {
-            return ApiResponseService::unauthorized();
-        }
-
-        $settings = PrescriptionDictation::settings();
-        $validator = Validator::make($request->all(), [
-            'input_text' => 'required|string|max:' . ((int) ($settings['text_mode_max_chars'] ?? 1000)),
-        ]);
-
-        if ($validator->fails()) {
-            return ApiResponseService::validationError($validator->errors());
-        }
-
-        $parsed = $parser->parse((string) $request->input('input_text'), $doctorId);
-
-        $draft = PrescriptionDraft::create([
-            'appointment_id' => $appointment->id,
-            'doctor_id' => $doctorId,
-            'patient_id' => $appointment->patient_id,
-            'source_type' => PrescriptionDraft::SOURCE_TEXT,
-            'status' => PrescriptionDraft::STATUS_PARSED,
-            'input_text' => (string) $request->input('input_text'),
-            'parsed_payload' => $parsed['form'],
-            'warnings' => $parsed['warnings'],
-            'missing_fields' => $parsed['missing_fields'],
-            'confidence_score' => $parsed['confidence_score'],
-        ]);
-
-        return ApiResponseService::success(data: [
-            'draft_id' => $draft->id,
-            'form' => $parsed['form'],
-            'warnings' => $parsed['warnings'],
-            'missing_fields' => $parsed['missing_fields'],
-            'confidence_score' => $parsed['confidence_score'],
-            'requires_doctor_review' => true,
         ]);
     }
 
@@ -320,7 +266,7 @@ class PrescriptionController extends Controller
                 if (! isset($groupedData[$apptId])) {
                     $groupedData[$apptId] = [
                         'appointment_id' => $apptId,
-                        'doctor_name' => $doctor ? 'Dr. ' . $doctor->first_name . ' ' . $doctor->last_name : null,
+                        'doctor_name' => $doctor ? $doctor->first_name . ' ' . $doctor->last_name : null,
                         'medician_name' => $item->medicine_name ? $item->medicine_name : null,
                         'problem' => $appointment?->notes ?? 'Consultation',
                         'frequency' => $item->frequency,
@@ -377,7 +323,6 @@ class PrescriptionController extends Controller
                 'medicines' => [],
                 'instructions_by_doctor' => $appointment->instructions_by_doctor,
                 'next_visit_date' => $appointment->next_visit_date ? Carbon::parse($appointment->next_visit_date)->format('Y-m-d') : null,
-                'dictation_assistant' => PrescriptionDictation::settings(),
             ]);
         }
 
@@ -390,7 +335,7 @@ class PrescriptionController extends Controller
 
         $allPrescriptions = $data['prescriptions'];
         $doctor = $data['doctor'] ?? null;
-        $doctorName = $doctor ? 'Dr. ' . $doctor->first_name . ' ' . $doctor->last_name : null;
+        $doctorName = $doctor ? $doctor->first_name . ' ' . $doctor->last_name : null;
         $now = Carbon::now()->startOfDay();
 
         $currentMedicines = [];
@@ -404,9 +349,7 @@ class PrescriptionController extends Controller
                 'BD' => 'Twice a day',
                 'TDS' => '3 times a day',
                 'SOS' => 'As needed',
-                default => str_ends_with((string) $med->frequency, '_TIMES')
-                    ? str_replace('_', ' ', strtolower((string) $med->frequency)) . ' a day'
-                    : $med->frequency,
+                default => $med->frequency,
             };
 
             $instructions = [];
@@ -448,11 +391,6 @@ class PrescriptionController extends Controller
                 'meal' => $med->meal_timing,
                 'status' => $status,
                 'notes' => $med->notes,
-                'use_type' => $med->use_type ?? 'regular',
-                'take_when' => $med->take_when,
-                'min_gap' => $med->min_gap,
-                'max_doses_per_day' => $med->max_doses_per_day,
-                'patient_instruction' => $med->patient_instruction,
             ];
 
             if ($status === 'Ongoing') {
@@ -473,7 +411,6 @@ class PrescriptionController extends Controller
             'medicines' => $medicineList,
             'instructions_by_doctor' => $appointment->instructions_by_doctor,
             'next_visit_date' => $appointment->next_visit_date ? Carbon::parse($appointment->next_visit_date)->format('Y-m-d') : null,
-            'dictation_assistant' => PrescriptionDictation::settings(),
         ]);
     }
 
@@ -491,7 +428,6 @@ class PrescriptionController extends Controller
             return ApiResponseService::notFound(__('responses.prescription.not_found'));
         }
 
-        ini_set('memory_limit', '512M');
         $pdf = Pdf::loadView('Prescription.prescription', $data);
 
         return $pdf->stream('Prescription-' . $appointmentId . '.pdf');
@@ -500,104 +436,6 @@ class PrescriptionController extends Controller
     protected function getPrescriptionPdfUrl($appointmentId)
     {
         return Storage::disk('public')->url('prescriptions/Prescription-' . $appointmentId . '.pdf');
-    }
-
-    private function resolveDoctorId($doctor): ?string
-    {
-        $doctorId = null;
-
-        if (method_exists($doctor, 'doctor')) {
-            $doctorInstance = $doctor->doctor;
-            if ($doctorInstance) {
-                $doctorId = $doctorInstance->id;
-            }
-        }
-        if (! $doctorId && property_exists($doctor, 'doctor_id')) {
-            $doctorId = $doctor->doctor_id;
-        }
-        if (! $doctorId && ! empty($doctor->id)) {
-            $doctorId = $doctor->id;
-        }
-
-        return $doctorId;
-    }
-
-    private function resolveDraft(Request $request, Appointment $appointment, string $doctorId): PrescriptionDraft|\Illuminate\Http\JsonResponse|null
-    {
-        $draftId = $request->input('draft_id');
-
-        if (! $draftId) {
-            return null;
-        }
-
-        $draft = PrescriptionDraft::find($draftId);
-        if (! $draft) {
-            return ApiResponseService::validationError('Prescription draft not found.');
-        }
-
-        if ($draft->appointment_id !== $appointment->id || $draft->doctor_id !== $doctorId) {
-            return ApiResponseService::validationError('Prescription draft does not belong to this appointment.');
-        }
-
-        return $draft;
-    }
-
-    private function findMedicineByName(string $medicineName): ?Medicine
-    {
-        $normalizedName = mb_strtolower(trim($medicineName));
-
-        if ($normalizedName === '') {
-            return null;
-        }
-
-        return Medicine::query()
-            ->with('type')
-            ->whereRaw('LOWER(name) = ?', [$normalizedName])
-            ->first();
-    }
-
-    private function findDoctorAddedMedicineByName(string $medicineName, string $doctorId): ?DoctorAddedMedicine
-    {
-        $normalizedName = mb_strtolower(trim($medicineName));
-
-        if ($normalizedName === '') {
-            return null;
-        }
-
-        return DoctorAddedMedicine::query()
-            ->where('added_by_doctor', $doctorId)
-            ->whereRaw('LOWER(name) = ?', [$normalizedName])
-            ->first();
-    }
-
-    public function destroy(string $id)
-    {
-        $prescription = Prescription::withTrashed()->find($id);
-
-        if (!$prescription) {
-            return ApiResponseService::notFound(__('responses.prescription.not_found'));
-        }
-
-        if ($prescription->trashed()) {
-            return ApiResponseService::success('responses.success');
-        }
-
-        $appointmentId = $prescription->appointment_id;
-
-        $prescription->delete();
-
-        // Delete existing PDF and regenerate
-        $pdfPath = 'prescriptions/Prescription-' . $appointmentId . '.pdf';
-        if (Storage::disk('public')->exists($pdfPath)) {
-            Storage::disk('public')->delete($pdfPath);
-        }
-
-        $remaining = Prescription::where('appointment_id', $appointmentId)->count();
-        if ($remaining > 0) {
-            PrescriptionService::generatePdf($appointmentId);
-        }
-
-        return ApiResponseService::success('responses.success');
     }
 
     protected function resolvePrescriptionData($appointmentId)

@@ -125,7 +125,7 @@
         @if (isset($hospital_logo_url) && $hospital_logo_url)
             <img src="{{ $hospital_logo_url }}" style="max-height: 60px; margin-bottom: 5px;" alt="Hospital Logo"><br>
         @endif
-        <div class="hospital-name">{{ $hospital_name ?? 'Telehealth Deploymeta' }}</div>
+        <div class="hospital-name">{{ $hospital_name ?? 'CMC Telehealth' }}</div>
         <div>{{ $hospital_address ?? '123 Main St, Anytown, USA' }}</div>
         <div>Phone: {{ $hospital_phone ?? '555-555-5555' }} | Email: {{ $hospital_email ?? 'info@cmctelehealth.com' }}
         </div>
@@ -133,7 +133,7 @@
 
     <div class="info-section">
         <div class="doctor-info">
-            <strong>Doctor:</strong> Dr. {{ $doctor->first_name }} {{ $doctor->last_name }}<br>
+            <strong>Doctor:</strong> {{ $doctor->first_name }} {{ $doctor->last_name }}<br>
             {{ $doctor->qualification }}<br>
             License: {{ $doctor->medical_license_number }}
         </div>
@@ -217,7 +217,7 @@
                     @else
                         <div
                             style="font-family: 'Alex Brush', cursive !important; font-size: 24px; color: #000080; -webkit-transform: rotate(-3deg); transform: rotate(-3deg); padding-top: 0px; font-weight: normal !important; font-style: normal !important;">
-                            Dr. {{ $doctor->first_name }} {{ $doctor->last_name }}
+                            {{ $doctor->first_name }} {{ $doctor->last_name }}
                         </div>
                     @endif
 
