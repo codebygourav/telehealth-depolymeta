@@ -42,6 +42,25 @@ return [
                     'address' => ['type' => 'textarea', 'label' => 'Address', 'rows' => 2, 'is_public' => true],
                 ],
             ],
+            'admin_login' => [
+                'label' => 'Admin Login',
+                'description' => 'Custom quote and copy for the admin login screen.',
+                'fields' => [
+                    'admin_login_quote' => [
+                        'type' => 'textarea',
+                        'label' => 'Login Quote',
+                        'rows' => 3,
+                        'default' => "We can make up for lost money, but we can't make up for lost time.",
+                        'is_public' => true,
+                    ],
+                    'admin_login_quote_author' => [
+                        'type' => 'text',
+                        'label' => 'Quote Author',
+                        'default' => '-Simon Sinek',
+                        'is_public' => true,
+                    ],
+                ],
+            ],
         ],
     ],
     /*

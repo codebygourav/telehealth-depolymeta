@@ -80,23 +80,9 @@ class DisplayBoardService
             ])
             ->whereDate('appointment_date', Carbon::today())
             ->whereNotIn('status', [
-                AppointmentStatus::COMPLETED,
-                AppointmentStatus::CANCELLED,
-                AppointmentStatus::NO_SHOW,
-                AppointmentStatus::FAILED,
+                AppointmentStatus::CANCELLED->value,
+                AppointmentStatus::FAILED->value,
             ])
-            ->where(function ($query): void {
-                $query->whereIn('queue_status', ['started', 'checkin'])
-                    ->orWhere(function ($nested): void {
-                        $nested->whereNotNull('appointment_end_time')
-                            ->where('appointment_end_time', '>=', now()->format('H:i:s'));
-                    })
-                    ->orWhere(function ($nested): void {
-                        $nested->whereNull('appointment_end_time')
-                            ->where('appointment_time', '>=', now()->format('H:i:s'));
-                    });
-            })
-            ->orderBy('queue_number')
             ->get();
 
         $appointmentDoctors = $appointmentsToday->pluck('doctor')->filter()->unique('id')->values();
@@ -169,6 +155,8 @@ class DisplayBoardService
                 'is_on_break' => (bool) $doctor->is_on_break,
                 'queue_items' => $queueItems,
                 'queue_summary' => $queueSummary,
+                'current_slot_time' => $queueSummary['current_time_slot'] ?? null,
+                'next_slot_time' => $queueSummary['next_time_slot'] ?? null,
                 'has_ads' => ! empty($doctorAds),
                 'slides' => $this->mergeDoctorSlides($doctorAds, $display),
             ];
@@ -320,27 +308,9 @@ class DisplayBoardService
 
     public function resolveDoctorQueue(Doctor $doctor): array
     {
-        $appointments = Appointment::query()
-            ->with(['patient.user:id,name', 'doctor:id,first_name,last_name', 'availability:id,doctor_room'])
-            ->where('doctor_id', $doctor->id)
-            ->whereDate('appointment_date', Carbon::today())
-            ->whereNotIn('status', [
-                AppointmentStatus::CANCELLED,
-                AppointmentStatus::COMPLETED,
-                AppointmentStatus::NO_SHOW,
-                AppointmentStatus::FAILED,
-            ])
-            ->whereIn('queue_status', ['started', 'checkin'])
-            ->get()
-            ->sortBy(function (Appointment $appointment): int {
-                $queueNumber = $appointment->queue_number ?: '';
-                $digits = preg_replace('/\D+/', '', $queueNumber) ?: '0';
-
-                return (int) $digits;
-            })
-            ->values()
-            ->take(12)
-            ->values();
+        $appointments = $this->queueService()->filterAppointmentsForDisplay(
+            $this->queueService()->getDoctorQueueAppointments($doctor->id, Carbon::today())
+        );
 
         if ($appointments->isEmpty()) {
             return [];
@@ -353,6 +323,14 @@ class DisplayBoardService
         }
 
         if ($currentIndex === false) {
+            $currentIndex = $appointments->search(fn (Appointment $appointment) => $this->queueService()->resolveQueueStatus($appointment) === 'scheduled');
+        }
+
+        if ($currentIndex === false) {
+            $currentIndex = $appointments->search(fn (Appointment $appointment) => $this->queueService()->resolveQueueStatus($appointment) === 'completed');
+        }
+
+        if ($currentIndex === false) {
             return [];
         }
 
@@ -362,18 +340,34 @@ class DisplayBoardService
             ? $this->queueService()->getPopupAppointment($currentAppointment, $appointments)
             : null;
 
-        $nextIndex = null;
+        $nextIndex = $appointments
+            ->map(function (Appointment $appointment, int $index) use ($currentIndex): ?int {
+                if ($index === $currentIndex) {
+                    return null;
+                }
 
-        if (in_array($currentStatus, ['started', 'completed'], true)) {
-            $nextIndex = $appointments->search(function (Appointment $appointment) use ($currentAppointment): bool {
-                return $appointment->id !== $currentAppointment->id
-                    && $this->queueService()->resolveQueueStatus($appointment) === 'checkin';
-            });
-        } elseif ($currentStatus === 'checkin') {
-            $nextIndex = $appointments->search(function (Appointment $appointment) use ($currentAppointment): bool {
-                return $appointment->id !== $currentAppointment->id
-                    && $this->queueService()->resolveQueueStatus($appointment) === 'checkin';
-            });
+                $status = $this->queueService()->resolveQueueStatus($appointment);
+
+                return in_array($status, ['checkin', 'scheduled'], true) ? $index : null;
+            })
+            ->filter(fn (?int $index): bool => $index !== null)
+            ->values()
+            ->first(fn (int $index): bool => $index > $currentIndex);
+
+        if ($nextIndex === null) {
+            $nextIndex = $appointments
+                ->map(function (Appointment $appointment, int $index) use ($currentIndex): ?int {
+                    if ($index === $currentIndex) {
+                        return null;
+                    }
+
+                    $status = $this->queueService()->resolveQueueStatus($appointment);
+
+                    return in_array($status, ['checkin', 'scheduled'], true) ? $index : null;
+                })
+                ->filter(fn (?int $index): bool => $index !== null)
+                ->values()
+                ->first();
         }
 
         return $appointments->map(function (Appointment $appointment, int $index) use ($appointments, $currentIndex, $nextIndex, $popupAppointment): array {
@@ -406,6 +400,12 @@ class DisplayBoardService
                 'status' => $statusLabel,
                 'status_label' => $statusLabel,
                 'status_code' => $rawStatus,
+                'status_pill_class' => match ($rawStatus) {
+                    'completed' => 'status-completed',
+                    'started' => 'status-started',
+                    'scheduled' => 'status-scheduled',
+                    default => 'status-checkin',
+                },
                 'is_active' => $index === $currentIndex,
                 'is_next' => $nextIndex !== null && $index === $nextIndex,
                 'turn' => $turnText,

@@ -726,6 +726,48 @@
         max-width: 72ch;
     }
 
+    .doctor-slot-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .slot-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 36px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        border: 1px solid #d9e4f5;
+        background: #f8fbff;
+        color: #1e3a5f;
+    }
+
+    .slot-chip.current {
+        border-color: rgba(5, 91, 217, 0.18);
+        background: rgba(5, 91, 217, 0.08);
+        color: #0b4fcf;
+    }
+
+    .slot-chip.next {
+        border-color: rgba(34, 197, 94, 0.18);
+        background: rgba(34, 197, 94, 0.09);
+        color: #166534;
+    }
+
+    .slot-chip-label {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: inherit;
+        opacity: 0.78;
+    }
+
     .qual-item {
         font-size: 14px;
         color: #516074;
@@ -986,6 +1028,30 @@
         background: #fffbeb;
         color: #d97706;
         border: 1px solid #fde68a;
+    }
+
+    .status-pill.status-checkin {
+        background: #fffbeb;
+        color: #d97706;
+        border: 1px solid #fde68a;
+    }
+
+    .status-pill.status-started {
+        background: #eef2ff;
+        color: #4338ca;
+        border: 1px solid #c7d2fe;
+    }
+
+    .status-pill.status-completed {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+    }
+
+    .status-pill.status-scheduled {
+        background: #f8fafc;
+        color: #475569;
+        border: 1px solid #cbd5e1;
     }
 
     .queue-row .turn {

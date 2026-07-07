@@ -61,10 +61,11 @@ $doctorDefaultNotice = $doctor['default_notice'] ?? null;
                         <div>
                             <div class="patient" x-text="item.patient"></div>
                             <div class="phone" x-text="item.mobile"></div>
+                            <div class="time-slot" x-show="item.time_slot" x-text="item.time_slot"></div>
                         </div>
                         <div>
                             <div class="status-pill"
-                                :class="item.is_active ? 'active-pill' : 'waiting'"
+                                :class="item.is_active ? 'active-pill' : (item.status_pill_class || 'waiting')"
                                 x-text="item.status_label || item.status"></div>
                         </div>
                         <div class="turn"
@@ -99,7 +100,7 @@ $doctorDefaultNotice = $doctor['default_notice'] ?? null;
                 </div>
                 <div>
                     <div
-                        class="status-pill {{ !empty($item['is_active']) ? 'active-pill' : 'waiting' }}">
+                        class="status-pill {{ !empty($item['is_active']) ? 'active-pill' : ($item['status_pill_class'] ?? 'waiting') }}">
                         {{ $item['status_label'] ?? ($item['status'] ?? '') }}
                     </div>
                 </div>

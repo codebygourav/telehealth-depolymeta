@@ -188,43 +188,45 @@ class AppointmentSeeder extends Seeder
         $today = Carbon::today();
         $totalPatients = max(1, $patients->count());
         $created = 0;
-
-        $queuePattern = array_merge(
-            array_fill(0, 10, [
-                'queue_status' => 'checkin',
-                'status' => AppointmentStatus::CONFIRMED->value,
-            ]),
-            array_fill(0, 4, [
-                'queue_status' => 'completed',
-                'status' => AppointmentStatus::COMPLETED->value,
-            ])
-        );
+        $roundedNow = Carbon::now()->copy()->seconds(0);
+        $minuteRemainder = $roundedNow->minute % 15;
+        if ($minuteRemainder !== 0) {
+            $roundedNow->addMinutes(15 - $minuteRemainder);
+        }
+        $queueEnd = $today->copy()->setTime(20, 0);
 
         foreach ($doctors->values() as $doctorIndex => $doctor) {
             $room = $doctor->address_line2 ?: 'Room ' . str_pad((string) (101 + ($doctorIndex % 20)), 3, '0', STR_PAD_LEFT);
             $availability = $this->upsertScenarioAvailability($doctor, '09:00', '18:00', 'general', $room);
-            $startRaw = (string) ($availability->start_time ?? '09:00:00');
-            $endRaw = (string) ($availability->end_time ?? '18:00:00');
-
-            $availabilityStart = preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $startRaw)
-                ? Carbon::parse($today->toDateString() . ' ' . $startRaw)
-                : Carbon::parse($startRaw)->copy()->setDate($today->year, $today->month, $today->day);
-
-            $availabilityEnd = preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $endRaw)
-                ? Carbon::parse($today->toDateString() . ' ' . $endRaw)
-                : Carbon::parse($endRaw)->copy()->setDate($today->year, $today->month, $today->day);
-
-            if ($availabilityEnd->lessThanOrEqualTo($availabilityStart)) {
-                $availabilityEnd = $availabilityStart->copy()->addHours(8);
+            $slotCursor = $roundedNow->copy();
+            if ($slotCursor->greaterThanOrEqualTo($queueEnd)) {
+                $slotCursor = $queueEnd->copy()->subHours(2);
             }
-            $maxStartOffset = max(0, $availabilityEnd->diffInMinutes($availabilityStart) - 15);
 
-            foreach ($queuePattern as $slotIndex => $slot) {
+            $slotStarts = [];
+            while ($slotCursor->lt($queueEnd)) {
+                $slotStarts[] = $slotCursor->copy();
+                $slotCursor->addMinutes(15);
+            }
+
+            $slotCount = count($slotStarts);
+            if ($slotCount === 0) {
+                continue;
+            }
+
+            $completedCount = min(4, max(1, min($slotCount, 4)));
+            $skippedIndex = $slotCount > $completedCount ? $completedCount : null;
+
+            foreach ($slotStarts as $slotIndex => $startAt) {
                 $patient = $patients[$slotIndex % $totalPatients];
-                $offset = min($slotIndex * 15, $maxStartOffset);
-                $startAt = $availabilityStart->copy()->addMinutes($offset);
                 $endAt = $startAt->copy()->addMinutes(15);
                 $slug = 'opd-load-' . $doctor->id . '-' . $today->format('Ymd') . '-' . str_pad((string) ($slotIndex + 1), 2, '0', STR_PAD_LEFT);
+                $queueStatus = $slotIndex < $completedCount
+                    ? 'completed'
+                    : ($skippedIndex !== null && $slotIndex === $skippedIndex ? 'skipped' : 'checkin');
+                $appointmentStatus = $queueStatus === 'completed'
+                    ? AppointmentStatus::COMPLETED->value
+                    : AppointmentStatus::CONFIRMED->value;
 
                 $appointment = Appointment::firstOrNew(['slug' => $slug]);
                 if (! $appointment->exists) {
@@ -239,10 +241,10 @@ class AppointmentSeeder extends Seeder
                     'appointment_time' => $startAt->format('H:i:s'),
                     'appointment_end_time' => $endAt->format('H:i:s'),
                     'consultation_type' => 'in-person',
-                    'status' => $slot['status'],
-                    'queue_status' => $slot['queue_status'],
+                    'status' => $appointmentStatus,
+                    'queue_status' => $queueStatus,
                     'fee_amount' => 1,
-                    'visit_reason' => ['OPD Display Load Test'],
+                    'visit_reason' => ['OPD Queue Seeder'],
                 ]);
                 $appointment->save();
 
@@ -252,7 +254,7 @@ class AppointmentSeeder extends Seeder
 
                 $this->createPaymentIfMissing($appointment);
 
-                if ($slot['queue_status'] === 'completed' && ! $appointment->prescriptions()->exists()) {
+                if ($queueStatus === 'completed' && ! $appointment->prescriptions()->exists()) {
                     $this->createPrescription($appointment, [
                         'name' => 'Paracetamol',
                         'type' => 'Tablet',
@@ -419,6 +421,16 @@ class AppointmentSeeder extends Seeder
 
             if ((int) ($existingToday->capacity ?? 0) < 20) {
                 $existingToday->capacity = 20;
+                $needsSave = true;
+            }
+
+            if ((string) $existingToday->start_time > $startTime) {
+                $existingToday->start_time = $startTime;
+                $needsSave = true;
+            }
+
+            if ((string) $existingToday->end_time < $endTime) {
+                $existingToday->end_time = $endTime;
                 $needsSave = true;
             }
 

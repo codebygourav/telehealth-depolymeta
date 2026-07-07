@@ -522,6 +522,7 @@
                                 <option value="checkin">Checked-In</option>
                                 <option value="started">Started</option>
                                 <option value="completed">Completed</option>
+                                <option value="passed_completed">Passed / Completed</option>
                                 <option value="skipped">Skipped</option>
                                 <option value="no_show">No Show</option>
                             </select>
