@@ -41,4 +41,6 @@ enum NotificationType: string
     case CONSULTATION_STARTED = 'consultation_started';
     case PATIENT_CHECKED_IN = 'patient_checked_in';
     case DIET_PLAN_ASSIGNED = 'diet_plan_assigned';
+    case PATIENT_SKIPPED = 'patient_skipped';
+    case MEDICINE_REMINDER = 'medicine_reminder';
 }

@@ -69,6 +69,9 @@ class Doctor extends Model
         'deleted_by',
         'avatar',
         'signature',
+        'is_checked_in',
+        'checked_in_at',
+        'is_on_break',
     ];
 
     protected $appends = ['avatar', 'signature'];
@@ -107,6 +110,9 @@ class Doctor extends Model
         'social_links' => 'array',
         'gender' => GenderOption::class,
         'status' => \App\Enums\DoctorStatus::class,
+        'is_checked_in' => 'boolean',
+        'is_on_break' => 'boolean',
+        'checked_in_at' => 'datetime',
     ];
 
     public function externalBookings()

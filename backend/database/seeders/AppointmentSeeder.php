@@ -44,6 +44,11 @@ class AppointmentSeeder extends Seeder
             return;
         }
 
+        $generalDoctors = $doctors->filter(fn (Doctor $doctor) => !$this->isTargetQueueDoctor($doctor));
+        if ($generalDoctors->isEmpty()) {
+            $generalDoctors = $doctors;
+        }
+
         $prescriptionData = [
             ['name' => 'Aspirin', 'type' => 'Oral Pill', 'dosage' => '81mg', 'frequency' => '1 capsule, 3 times a day', 'times' => ['07:00', '12:00', '18:00']],
             ['name' => 'Paracetamol', 'type' => 'Tablet', 'dosage' => '500mg', 'frequency' => '1 tablet, twice a day', 'times' => ['08:00', '20:00']],
@@ -59,7 +64,7 @@ class AppointmentSeeder extends Seeder
         $created = 0;
 
         foreach (self::APPOINTMENT_SPECS as $spec) {
-            $doctor = $doctors->random();
+            $doctor = $generalDoctors->random();
             $patient = $patients->random();
             $availability = $this->resolveAvailability(
                 $doctor,
@@ -116,7 +121,7 @@ class AppointmentSeeder extends Seeder
         }
 
         foreach (self::TODAY_APPOINTMENT_SPECS as $spec) {
-            $doctor = $doctors->random();
+            $doctor = $generalDoctors->random();
             $patient = $patients->random();
             $availability = $this->resolveAvailability(
                 $doctor,
@@ -214,8 +219,9 @@ class AppointmentSeeder extends Seeder
                 continue;
             }
 
-            $completedCount = min(4, max(1, min($slotCount, 4)));
-            $skippedIndex = $slotCount > $completedCount ? $completedCount : null;
+            $isTarget = $this->isTargetQueueDoctor($doctor);
+            $completedCount = $isTarget ? 0 : min(4, max(1, min($slotCount, 4)));
+            $skippedIndex = ($isTarget || $slotCount <= $completedCount) ? null : $completedCount;
 
             foreach ($slotStarts as $slotIndex => $startAt) {
                 $patient = $patients[$slotIndex % $totalPatients];
@@ -273,7 +279,7 @@ class AppointmentSeeder extends Seeder
 
     private function seedDisplayQueueScenarios($doctors, $patients): int
     {
-        $scenarioDoctors = $doctors->take(4)->values();
+        $scenarioDoctors = $doctors->filter(fn (Doctor $doctor) => !$this->isTargetQueueDoctor($doctor))->take(4)->values();
         $scenarioPatients = $patients->take(12)->values();
 
         if ($scenarioDoctors->count() < 4 || $scenarioPatients->count() < 8) {
