@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\{BloodGroupOption, DepartmentRole, GenderOption, MaritalStatus};
+use App\Enums\{LanguageOption};
 use App\Models\{Department, DepartmentDoctor, Doctor, User};
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
