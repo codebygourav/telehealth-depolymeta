@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V2\Common\Prescription;
 use App\Http\Controllers\Controller;
 use App\Models\{Appointment, Medicine, Patient, Prescription, DoctorAddedMedicine, Doctor};
 use App\Services\{ApiResponseService, PrescriptionService, NotificationService};
+use App\Support\PrescriptionDictation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -323,6 +324,7 @@ class PrescriptionController extends Controller
                 'medicines' => [],
                 'instructions_by_doctor' => $appointment->instructions_by_doctor,
                 'next_visit_date' => $appointment->next_visit_date ? Carbon::parse($appointment->next_visit_date)->format('Y-m-d') : null,
+                'dictation_assistant' => PrescriptionDictation::settings(),
             ]);
         }
 
@@ -411,6 +413,7 @@ class PrescriptionController extends Controller
             'medicines' => $medicineList,
             'instructions_by_doctor' => $appointment->instructions_by_doctor,
             'next_visit_date' => $appointment->next_visit_date ? Carbon::parse($appointment->next_visit_date)->format('Y-m-d') : null,
+            'dictation_assistant' => PrescriptionDictation::settings(),
         ]);
     }
 
