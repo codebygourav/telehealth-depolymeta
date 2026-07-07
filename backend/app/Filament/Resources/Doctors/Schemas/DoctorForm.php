@@ -314,6 +314,10 @@ class DoctorForm
                     // 3. Professional Bio
                     Step::make('Professional Bio')
                         ->schema([
+                            TextInput::make('sub_title')
+                                ->label('Sub Title')
+                                ->placeholder('Sub Title')
+                                ->columnSpanFull(),
                             Textarea::make('bio')
                                 ->label('Short Bio (A brief on Professional Experience)')
                                 ->placeholder('Brief professional introduction (max 200 words recommended)')
@@ -360,15 +364,11 @@ class DoctorForm
                                     TextInput::make('institution')
                                         ->label('Institution')
                                         ->maxLength(255),
-                                    DatePicker::make('start_date')
-                                        ->label('Start Date'),
-                                    DatePicker::make('end_date')
-                                        ->label('End Date / Year'),
-                                    Textarea::make('description')
-                                        ->label('Description')
-                                        ->columnSpanFull(),
+                                    TextInput::make('completion_year')
+                                        ->label('Completion Year')
+                                        ->maxLength(255),
                                 ])
-                                ->columns(2)
+                                ->columns(3)
                                 ->visible(fn ($get) => $get('education_info_mode') === 'repeater')
                                 ->afterStateHydrated(function ($component, $state, $record) {
                                     if ($record && is_array($record->education_info)) {
@@ -422,9 +422,6 @@ class DoctorForm
                                 ->schema([
                                     TextInput::make('title')
                                         ->label('Title / Role')
-                                        ->maxLength(255),
-                                    TextInput::make('organization')
-                                        ->label('Organization')
                                         ->maxLength(255),
                                     TextInput::make('year')
                                         ->label('Year')
@@ -503,10 +500,10 @@ class DoctorForm
                                     TextInput::make('organization')
                                         ->label('Organization / Institution')
                                         ->maxLength(255),
-                                    DatePicker::make('issue_date')
-                                        ->label('Issue Date'),
-                                    DatePicker::make('expiry_date')
-                                        ->label('Expiry Date'),
+                                    Textarea::make('description')
+                                        ->label('Description')
+                                        ->maxLength(1000)
+                                        ->columnSpanFull(),
                                     FileUpload::make('certification_image')
                                         ->label('Certificate Image')
                                         ->disk('public')
@@ -569,18 +566,15 @@ class DoctorForm
                             Repeater::make('professional_experience_info_repeater')
                                 ->label('Working Experience Entries')
                                 ->schema([
-                                    DatePicker::make('start_date')
-                                        ->label('Start Date'),
-                                    DatePicker::make('end_date')
-                                        ->label('End Date'),
                                     TextInput::make('association')
                                         ->label('Association / Hospital')
-                                        ->placeholder('e.g., CMC Ludhiana'),
+                                        ->placeholder('e.g., CMC Ludhiana')
+                                        ->maxLength(255),
                                     Textarea::make('description')
-                                        ->label('Short Description')
+                                        ->label('Description')
                                         ->columnSpanFull(),
                                 ])
-                                ->columns(2)
+                                ->columns(1)
                                 ->visible(fn ($get) => $get('professional_experience_info_mode') === 'repeater')
                                 ->afterStateHydrated(function ($component, $state, $record) {
                                     if ($record && is_array($record->professional_experience_info)) {

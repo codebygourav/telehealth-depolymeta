@@ -305,12 +305,11 @@
                                                     {{ $exp['hospital'] ?? ($exp['organization'] ?? ($exp['institution'] ?? '')) }}
                                                 </p>
                                             @endif
-                                            <div
-                                                class="flex items-center gap-1.5 mt-2 text-xs text-gray-500 bg-white dark:bg-gray-900 w-fit px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700">
-                                                <x-heroicon-o-calendar class="w-4 h-4" />
-                                                <span>{{ $exp['start_date'] ?? '' }}
-                                                    {{ isset($exp['end_date']) ? ' - ' . $exp['end_date'] : '' }}</span>
-                                            </div>
+                                            @if (!empty($exp['description']))
+                                                <p class="text-xs text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+                                                    {{ $exp['description'] }}
+                                                </p>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
@@ -332,23 +331,13 @@
                                                 {{ $edu['degree'] ?? '—' }}</h4>
                                             <p class="text-xs text-gray-600 dark:text-gray-300 font-medium mt-1">
                                                 {{ $edu['institution'] ?? '—' }}</p>
-                                            <div
-                                                class="flex items-center gap-1.5 mt-2 text-xs text-gray-500 bg-white dark:bg-gray-900 w-fit px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700">
-                                                <x-heroicon-o-calendar class="w-4 h-4" />
-                                                <span>
-                                                    @if (!empty($edu['start_date']))
-                                                        {{ is_string($edu['start_date']) && strlen(trim($edu['start_date'])) === 4 ? $edu['start_date'] : \Carbon\Carbon::parse($edu['start_date'])->format('Y') }}
-                                                    @endif
-                                                    @if (!empty($edu['start_date']) && !empty($edu['end_date']))
-                                                        -
-                                                    @endif
-                                                    @if (!empty($edu['end_date']))
-                                                        {{ is_string($edu['end_date']) && strlen(trim($edu['end_date'])) === 4 ? $edu['end_date'] : \Carbon\Carbon::parse($edu['end_date'])->format('Y') }}
-                                                    @else
-                                                        Present
-                                                    @endif
-                                                </span>
-                                            </div>
+                                            @if (!empty($edu['completion_year']))
+                                                <div
+                                                    class="flex items-center gap-1.5 mt-2 text-xs text-gray-500 bg-white dark:bg-gray-900 w-fit px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700">
+                                                    <x-heroicon-o-calendar class="w-4 h-4" />
+                                                    <span>Completion Year: {{ $edu['completion_year'] }}</span>
+                                                </div>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
@@ -463,21 +452,11 @@
                                                         {{ $cert['name'] ?? '—' }}</h4>
                                                     <p class="text-xs text-gray-500 mt-1">
                                                         {{ $cert['organization'] ?? '—' }}</p>
-                                                    <div
-                                                        class="flex items-center gap-3 mt-2 text-[11px] text-gray-500 font-medium">
-                                                        @if (!empty($cert['issue_date']))
-                                                            <div class="flex items-center gap-1"><x-heroicon-o-calendar
-                                                                    class="w-4 h-4" /> Issued:
-                                                                {{ is_string($cert['issue_date']) && strlen(trim($cert['issue_date'])) === 4 ? $cert['issue_date'] : \Carbon\Carbon::parse($cert['issue_date'])->format('M Y') }}
-                                                            </div>
-                                                        @endif
-                                                        @if (!empty($cert['expiry_date']))
-                                                            <div class="flex items-center gap-1"><x-heroicon-o-clock
-                                                                    class="w-4 h-4" /> Expires:
-                                                                {{ is_string($cert['expiry_date']) && strlen(trim($cert['expiry_date'])) === 4 ? $cert['expiry_date'] : \Carbon\Carbon::parse($cert['expiry_date'])->format('M Y') }}
-                                                            </div>
-                                                        @endif
-                                                    </div>
+                                                    @if (!empty($cert['description']))
+                                                        <p class="text-xs text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+                                                            {{ $cert['description'] }}
+                                                        </p>
+                                                    @endif
                                                 </div>
                                             @endforeach
                                         </div>
@@ -513,12 +492,14 @@
                                                     <div>
                                                         <h4 class="font-bold text-gray-900 dark:text-white text-sm">
                                                             {{ $award['title'] ?? '—' }}</h4>
-                                                        <p
-                                                            class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5">
-                                                            {{ $award['organization'] ?? '—' }}</p>
                                                         @if (!empty($award['year']))
                                                             <p class="text-[11px] text-gray-400 mt-0.5">
                                                                 {{ $award['year'] }}</p>
+                                                        @endif
+                                                        @if (!empty($award['description']))
+                                                            <p class="text-xs text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
+                                                                {{ $award['description'] }}
+                                                            </p>
                                                         @endif
                                                     </div>
                                                 </div>

@@ -30,7 +30,7 @@ class DoctorProfileResource extends JsonResource
             'user_id' => $this->user_id,
 
             'profile' => [
-                'name' => 'Dr. ' . $this->first_name . ' ' . $this->last_name,
+                'name' => $this->first_name . ' ' . $this->last_name,
                 'avatar' => storage_url($this->avatar),
                 'department' => optional($this->departments->first())->name,
                 'years_experience' => $this->years_experience,
@@ -45,17 +45,14 @@ class DoctorProfileResource extends JsonResource
                 ->filter(function ($edu) {
                     return (
                         !empty($edu['degree']) && $edu['degree'] !== '' &&
-                        !empty($edu['institution']) && $edu['institution'] !== '' &&
-                        (!empty($edu['start_date']) || !empty($edu['from'])) &&
-                        (!empty($edu['end_date']) || !empty($edu['to']))
+                        !empty($edu['institution']) && $edu['institution'] !== ''
                     );
                 })
                 ->map(function ($edu) {
                     return [
                         'degree' => $edu['degree'] ?? null,
                         'institution' => $edu['institution'] ?? null,
-                        'start_date' => $edu['start_date'] ?? $edu['from'] ?? null,
-                        'end_date' => $edu['end_date'] ?? $edu['to'] ?? null,
+                        'completion_year' => $edu['completion_year'] ?? null,
                     ];
                 })
                 ->values(),

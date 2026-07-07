@@ -193,16 +193,12 @@ class ListDoctors extends ListRecords
                 return $this->getJsonField($doctor->education_info, 'degree');
             case 'education_institution':
                 return $this->getJsonField($doctor->education_info, 'institution');
-            case 'education_start_date':
-                return $this->getJsonField($doctor->education_info, 'start_date');
-            case 'education_end_date':
-                return $this->getJsonField($doctor->education_info, 'end_date');
+            case 'education_completion_year':
+                return $this->getJsonField($doctor->education_info, 'completion_year');
 
                 // Awards Info (JSON Repeater)
             case 'award_title':
                 return $this->getJsonField($doctor->awards_info, 'title');
-            case 'award_organization':
-                return $this->getJsonField($doctor->awards_info, 'organization');
             case 'award_year':
                 return $this->getJsonField($doctor->awards_info, 'year');
             case 'award_description':
@@ -213,18 +209,14 @@ class ListDoctors extends ListRecords
                 return $this->getJsonField($doctor->certifications_info, 'name');
             case 'certification_organization':
                 return $this->getJsonField($doctor->certifications_info, 'organization');
-            case 'certification_issue_date':
-                return $this->getJsonField($doctor->certifications_info, 'issue_date');
-            case 'certification_expiry_date':
-                return $this->getJsonField($doctor->certifications_info, 'expiry_date');
+            case 'certification_description':
+                return $this->getJsonField($doctor->certifications_info, 'description');
 
                 // Professional Experience (JSON Repeater)
-            case 'start_date':
-                return $this->getJsonField($doctor->professional_experience_info, 'start_date');
-            case 'end_date':
-                return $this->getJsonField($doctor->professional_experience_info, 'end_date');
             case 'association':
                 return $this->getJsonField($doctor->professional_experience_info, 'association');
+            case 'experience_description':
+                return $this->getJsonField($doctor->professional_experience_info, 'description');
 
                 // Fellowships Info (JSON Repeater)
             case 'fellowship_title':
@@ -288,7 +280,7 @@ class ListDoctors extends ListRecords
     {
         return [
             // ==================== USER TABLE ====================
-            ['label' => 'Full Name', 'key' => 'full_name', 'sample' => 'Dr. John Smith'],
+            ['label' => 'Full Name', 'key' => 'full_name', 'sample' => 'John Smith'],
             ['label' => 'Email', 'key' => 'email', 'sample' => 'john.smith@hospital.com'],
             ['label' => 'Phone', 'key' => 'phone', 'sample' => '+91 9876543210'],
 
@@ -321,25 +313,21 @@ class ListDoctors extends ListRecords
             // ==================== EDUCATION INFO (JSON Repeater) ====================
             ['label' => 'Education Degree', 'key' => 'education_degree', 'sample' => 'MBBS, MD, DM Cardiology'],
             ['label' => 'Education Institution', 'key' => 'education_institution', 'sample' => 'AIIMS New Delhi'],
-            ['label' => 'Education Start Date', 'key' => 'education_start_date', 'sample' => '2000-08-01'],
-            ['label' => 'Education End Date', 'key' => 'education_end_date', 'sample' => '2008-06-30'],
+            ['label' => 'Education Completion Year', 'key' => 'education_completion_year', 'sample' => '2008'],
 
             // ==================== AWARDS INFO (JSON Repeater) ====================
             ['label' => 'Award Title', 'key' => 'award_title', 'sample' => 'Best Doctor Award'],
-            ['label' => 'Award Organization', 'key' => 'award_organization', 'sample' => 'Indian Medical Association'],
             ['label' => 'Award Year', 'key' => 'award_year', 'sample' => '2020'],
             ['label' => 'Award Description', 'key' => 'award_description', 'sample' => 'For excellence in patient care'],
 
             // ==================== CERTIFICATIONS INFO (JSON Repeater) ====================
             ['label' => 'Certification Name', 'key' => 'certification_name', 'sample' => 'Board Certified in Cardiology'],
             ['label' => 'Certification Organization', 'key' => 'certification_organization', 'sample' => 'Medical Council of India'],
-            ['label' => 'Certification Issue Date', 'key' => 'certification_issue_date', 'sample' => '2010-01-15'],
-            ['label' => 'Certification Expiry Date', 'key' => 'certification_expiry_date', 'sample' => '2025-01-15'],
+            ['label' => 'Certification Description', 'key' => 'certification_description', 'sample' => 'Certified by the American Board of Internal Medicine'],
 
             // ==================== PROFESSIONAL EXPERIENCE (JSON Repeater) ====================
-            ['label' => 'Start date', 'key' => 'start_date', 'sample' => '2009'],
-            ['label' => 'End date', 'key' => 'end_date', 'sample' => '2015'],
-            ['label' => 'Past Associations', 'key' => 'past_associations', 'sample' => 'Apollo Hospital, AIIMS Delhi'],
+            ['label' => 'Experience Association', 'key' => 'association', 'sample' => 'CMC Ludhiana'],
+            ['label' => 'Experience Description', 'key' => 'experience_description', 'sample' => 'Senior Resident'],
 
             // ==================== AREAS OF EXPERTISE ====================
             ['label' => 'Specializations', 'key' => 'specializations_info', 'sample' => 'Interventional Cardiology, Heart Failure'],

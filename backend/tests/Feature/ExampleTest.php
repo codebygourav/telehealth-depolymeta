@@ -20,8 +20,7 @@ class ExampleTest extends TestCase
                 [
                     'degree' => 'MBBS',
                     'institution' => 'CMC',
-                    'start_date' => '2010-01-01',
-                    'end_date' => '2015-01-01',
+                    'completion_year' => '2015',
                 ]
             ],
             'education_info_editor' => '<p>ignored html</p>',
@@ -80,8 +79,7 @@ class ExampleTest extends TestCase
                 [
                     'degree' => 'MBBS',
                     'institution' => 'CMC',
-                    'start_date' => '2010-01-01',
-                    'end_date' => '2015-01-01',
+                    'completion_year' => '2015',
                 ]
             ],
         ];

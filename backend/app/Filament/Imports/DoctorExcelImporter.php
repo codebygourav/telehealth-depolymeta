@@ -56,31 +56,27 @@ class DoctorExcelImporter
         'department role' => 'department_role',
 
         // ==================== EDUCATION INFO (JSON Repeater) ====================
-        // Fields: degree, institution, start_date, end_date
+        // Fields: degree, institution, completion_year
         'education degree' => 'education_degree',
         'education institution' => 'education_institution',
-        'education start date' => 'education_start_date',
-        'education end date' => 'education_end_date',
+        'education completion year' => 'education_completion_year',
 
         // ==================== AWARDS INFO (JSON Repeater) ====================
-        // Fields: title, organization, year, description
+        // Fields: title, year, description
         'award title' => 'award_title',
-        'award organization' => 'award_organization',
         'award year' => 'award_year',
         'award description' => 'award_description',
 
         // ==================== CERTIFICATIONS INFO (JSON Repeater) ====================
-        // Fields: name, organization, issue_date, expiry_date
+        // Fields: name, organization, description
         'certification name' => 'certification_name',
         'certification organization' => 'certification_organization',
-        'certification issue date' => 'certification_issue_date',
-        'certification expiry date' => 'certification_expiry_date',
+        'certification description' => 'certification_description',
 
         // ==================== PROFESSIONAL EXPERIENCE (JSON Repeater) ====================
-        // Fields: career_start, past_associations
-        'career start' => 'start_date',
-        'career end' => 'end_date',
-        'past associations' => 'association',
+        // Fields: association, description
+        'experience association' => 'association',
+        'experience description' => 'experience_description',
 
         // ==================== AREAS OF EXPERTISE ====================
         'specializations' => 'specializations_info',
@@ -325,51 +321,46 @@ class DoctorExcelImporter
             $doctor->memberships_info = $this->clean($data['memberships_info'] ?? null);
 
             // ==================== EDUCATION INFO (JSON Repeater) ====================
-            // Fields: degree, institution, start_date, end_date
+            // Fields: degree, institution, completion_year
             $educationDegree = $this->clean($data['education_degree'] ?? null);
             if ($educationDegree) {
                 $doctor->education_info = [[
                     'degree' => $educationDegree,
                     'institution' => $this->clean($data['education_institution'] ?? null),
-                    'start_date' => $this->clean($data['education_start_date'] ?? null),
-                    'end_date' => $this->clean($data['education_end_date'] ?? null),
+                    'completion_year' => $this->clean($data['education_completion_year'] ?? null),
                 ]];
             }
 
             // ==================== AWARDS INFO (JSON Repeater) ====================
-            // Fields: title, organization, year, description
+            // Fields: title, year, description
             $awardTitle = $this->clean($data['award_title'] ?? null);
             if ($awardTitle) {
                 $doctor->awards_info = [[
                     'title' => $awardTitle,
-                    'organization' => $this->clean($data['award_organization'] ?? null),
                     'year' => $this->clean($data['award_year'] ?? null),
                     'description' => $this->clean($data['award_description'] ?? null),
                 ]];
             }
 
             // ==================== CERTIFICATIONS INFO (JSON Repeater) ====================
-            // Fields: name, organization, issue_date, expiry_date
+            // Fields: name, organization, description
             $certName = $this->clean($data['certification_name'] ?? null);
             if ($certName) {
                 $doctor->certifications_info = [[
                     'name' => $certName,
                     'organization' => $this->clean($data['certification_organization'] ?? null),
-                    'issue_date' => $this->clean($data['certification_issue_date'] ?? null),
-                    'expiry_date' => $this->clean($data['certification_expiry_date'] ?? null),
+                    'description' => $this->clean($data['certification_description'] ?? null),
                 ]];
             }
 
             // ==================== PROFESSIONAL EXPERIENCE (JSON Repeater) ====================
-            // Fields: career_start, past_associations
-            $careerStart = $this->clean($data['start_date'] ?? null);
-            $careerEND = $this->clean($data['end_date'] ?? null);
+            // Fields: association, description
             $association = $this->clean($data['association'] ?? null);
-            if ($careerStart || $association || $careerEND) {
+            $expDesc = $this->clean($data['experience_description'] ?? null);
+            if ($association || $expDesc) {
                 $doctor->professional_experience_info = [[
-                    'start_date' => $careerStart,
-                    'end_date' => $careerEND,
                     'association' => $association,
+                    'description' => $expDesc,
                 ]];
             }
 
