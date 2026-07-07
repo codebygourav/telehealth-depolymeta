@@ -9,6 +9,7 @@
     $doctor = is_array($doctor) ? $doctor : [];
     $doctorName = $doctor['name'] ?? 'Dr. Doctor';
     $doctorDepartment = $doctor['department'] ?? 'General Practice';
+    $doctorSubTitle = $doctor['sub_title'] ?? '';
     $doctorExperience = $doctor['experience'] ?? '';
     $doctorInitials = $doctor['initials'] ?? 'DR';
     $doctorAvatar = $doctor['avatar'] ?? '';
@@ -46,7 +47,8 @@
                     <span x-text="{{ $doctorAccessor }}?.experience" style="font-weight: 600; color: #1e293b;"></span>
                 </span>
             </div>
-            {{-- <div class="doctor-bio" x-show="{{ $doctorAccessor }}?.bio" x-text="{{ $doctorAccessor }}?.bio"></div> --}}
+            <div class="doctor-sub-title" x-show="{{ $doctorAccessor }}?.sub_title" x-text="{{ $doctorAccessor }}?.sub_title"></div>
+           
             <div class="doctor-slot-summary" x-show="{{ $doctorAccessor }}?.queue_summary?.current_time_slot || {{ $doctorAccessor }}?.queue_summary?.next_time_slot">
                 <div class="slot-chip current" x-show="{{ $doctorAccessor }}?.queue_summary?.current_time_slot">
                     <span class="slot-chip-label">Current Slot</span>
@@ -70,9 +72,9 @@
                     </span>
                 @endif
             </div>
-            {{-- @if(!empty($doctorBio))
-                <div class="doctor-bio">{{ $doctorBio }}</div>
-            @endif --}}
+               @if(!empty($doctorSubTitle))
+                <div class="doctor-sub-title">{{ $doctorSubTitle }}</div>
+            @endif
             @if(!empty($currentSlotTime) || !empty($nextSlotTime))
                 <div class="doctor-slot-summary">
                     @if(!empty($currentSlotTime))
@@ -89,6 +91,8 @@
                     @endif
                 </div>
             @endif
+            
+        
            
             @if($doctorBreakNote)
                 <div class="doctor-break-note">Doctor is on break</div>

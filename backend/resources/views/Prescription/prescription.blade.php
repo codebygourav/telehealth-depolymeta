@@ -134,6 +134,9 @@
     <div class="info-section">
         <div class="doctor-info">
             <strong>Doctor:</strong> {{ $doctor->first_name }} {{ $doctor->last_name }}<br>
+            @if (!empty($doctor->sub_title))
+                <div class="doctor-sub-title">{{ $doctor->sub_title }}</div>
+            @endif
             {{ $doctor->qualification }}<br>
             License: {{ $doctor->medical_license_number }}
         </div>

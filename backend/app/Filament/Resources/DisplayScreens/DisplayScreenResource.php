@@ -9,7 +9,6 @@ use App\Models\DisplayScreen;
 use App\Models\Doctor;
 use App\Traits\HasCustomSidebar;
 use BackedEnum;
-use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
@@ -268,10 +267,12 @@ class DisplayScreenResource extends Resource
                     ->label('Active')
                     ->boolean(),
                 TextColumn::make('display_url')
-                    ->label('Display URL')
-                    ->state(fn (DisplayScreen $record): string => route('opd-token.screen.display', ['screen' => $record]))
-                    ->copyable()
-                    ->wrap(),
+                    ->label('Display Screen')
+                    ->state(fn (DisplayScreen $record): string => 'Open Screen →')
+                    ->color('primary')
+                    ->weight('bold')
+                    ->url(fn (DisplayScreen $record): string => route('opd-token.screen.display', ['screen' => $record]))
+                    ->openUrlInNewTab(),
             ])
             ->filters([
                 SelectFilter::make('is_active')
@@ -310,11 +311,6 @@ class DisplayScreenResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
-                    Action::make('open')
-                        ->label('Open Screen')
-                        ->icon('heroicon-o-arrow-top-right-on-square')
-                        ->url(fn (DisplayScreen $record): string => route('opd-token.screen.display', ['screen' => $record]))
-                        ->openUrlInNewTab(),
                     DeleteAction::make(),
                     RestoreAction::make(),
                     ForceDeleteAction::make()

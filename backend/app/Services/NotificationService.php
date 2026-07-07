@@ -696,4 +696,98 @@ class NotificationService
             );
         }
     }
+
+    /**
+     * Notify patient when a vaccination is assigned.
+     */
+    public static function notifyVaccinationAssigned($vaccination)
+    {
+        if ($vaccination->patient && $vaccination->patient->user) {
+            $vaccName = $vaccination->vaccination->name ?? 'Vaccination';
+            $dueDateStr = $vaccination->due_date ? \Carbon\Carbon::parse($vaccination->due_date)->format('M d, Y') : 'N/A';
+            self::send(
+                user: $vaccination->patient->user,
+                type: NotificationType::VACCINATION_DUE->value,
+                title: 'New Vaccination Assigned',
+                message: "A new vaccination dose for {$vaccName} has been assigned. Due date: {$dueDateStr}.",
+                category: 'system',
+                entityType: 'vaccination',
+                entityId: $vaccination->id,
+                meta: [
+                    'vaccination_name' => $vaccName,
+                    'dose_no' => $vaccination->dose_no,
+                    'due_date' => $dueDateStr,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Notify patient when a vaccination is completed.
+     */
+    public static function notifyVaccinationCompleted($vaccination)
+    {
+        if ($vaccination->patient && $vaccination->patient->user) {
+            $vaccName = $vaccination->vaccination->name ?? 'Vaccination';
+            self::send(
+                user: $vaccination->patient->user,
+                type: NotificationType::VACCINATION_COMPLETED->value,
+                title: 'Vaccination Dose Completed',
+                message: "Your vaccination dose for {$vaccName} has been marked as completed.",
+                category: 'system',
+                entityType: 'vaccination',
+                entityId: $vaccination->id,
+                meta: [
+                    'vaccination_name' => $vaccName,
+                    'dose_no' => $vaccination->dose_no,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Notify patient when a vaccination is missed.
+     */
+    public static function notifyVaccinationMissed($vaccination)
+    {
+        if ($vaccination->patient && $vaccination->patient->user) {
+            $vaccName = $vaccination->vaccination->name ?? 'Vaccination';
+            self::send(
+                user: $vaccination->patient->user,
+                type: NotificationType::VACCINATION_MISSED->value,
+                title: 'Vaccination Dose Missed',
+                message: "You have missed your scheduled vaccination dose for {$vaccName}.",
+                category: 'system',
+                entityType: 'vaccination',
+                entityId: $vaccination->id,
+                meta: [
+                    'vaccination_name' => $vaccName,
+                    'dose_no' => $vaccination->dose_no,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Notify patient when a vaccination is overdue.
+     */
+    public static function notifyVaccinationOverdue($vaccination)
+    {
+        if ($vaccination->patient && $vaccination->patient->user) {
+            $vaccName = $vaccination->vaccination->name ?? 'Vaccination';
+            self::send(
+                user: $vaccination->patient->user,
+                type: NotificationType::VACCINATION_OVERDUE->value,
+                title: 'Vaccination Dose Overdue',
+                message: "Your vaccination dose for {$vaccName} is now overdue. Please schedule it as soon as possible.",
+                category: 'system',
+                entityType: 'vaccination',
+                entityId: $vaccination->id,
+                meta: [
+                    'vaccination_name' => $vaccName,
+                    'dose_no' => $vaccination->dose_no,
+                ]
+            );
+        }
+    }
 }

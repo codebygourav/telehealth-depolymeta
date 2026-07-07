@@ -143,6 +143,7 @@ class DisplayBoardService
                 'name' => 'Dr. ' . $displayName,
                 'initials' => $this->initialsFromName($displayName),
                 'department' => $department,
+                'sub_title' => $doctor->sub_title,
                 'room' => $room,
                 'experience' => $this->formatExperience($doctor),
                 'bio' => $this->resolveDoctorBio($doctor),
