@@ -31,7 +31,7 @@ class AppointmentVisibilityTest extends TestCase
 
         // 3. Create Doctor User and Doctor Profile
         $this->doctorUser = User::create([
-            'name' => 'Dr. Test Owner',
+            'name' => 'Test Owner',
             'email' => 'dr.test.owner@telehealth.test',
             'phone' => '9800000001',
             'password' => bcrypt('password'),

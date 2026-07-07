@@ -120,7 +120,7 @@
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-1.5 flex-wrap">
                                         <h3 class="text-sm font-bold text-gray-900 dark:text-white truncate">
-                                            {{ $slot['doctor'] ?? 'Dr. Unknown' }}
+                                            {{ $slot['doctor'] ?? 'Unknown' }}
                                         </h3>
                                         @if ($slot['status'] === 'blocked')
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">

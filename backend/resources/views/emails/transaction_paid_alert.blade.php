@@ -1,6 +1,6 @@
 @php
     $primaryColor = primary_color() ?? '#1e3a8a';
-    $appName = app_name() ?? 'Telehealth Deploymeta';
+    $appName = app_name() ?? 'CMC Telehealth';
     $patientName = trim(($appointment->patient->first_name ?? '') . ' ' . ($appointment->patient->last_name ?? ''));
     $doctorName = trim(($appointment->doctor->first_name ?? '') . ' ' . ($appointment->doctor->last_name ?? ''));
     $dateStr = $appointment->appointment_date instanceof \Carbon\Carbon
@@ -84,7 +84,7 @@
                                             <strong style="color: #111827;">Patient Name:</strong> {{ $patientName }}
                                         </p>
                                         <p style="margin: 0 0 12px 0; font-size: 14px; color: #374151;">
-                                            <strong style="color: #111827;">Doctor Name:</strong> Dr. {{ $doctorName }}
+                                            <strong style="color: #111827;">Doctor Name:</strong> {{ $doctorName }}
                                         </p>
                                         <p style="margin: 0 0 12px 0; font-size: 14px; color: #374151;">
                                             <strong style="color: #111827;">Appointment Date:</strong> {{ $dateStr }}

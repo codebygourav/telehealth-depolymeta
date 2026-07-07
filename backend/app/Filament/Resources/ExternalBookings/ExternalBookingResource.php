@@ -108,7 +108,7 @@ class ExternalBookingResource extends Resource
                 SelectFilter::make('doctor_id')
                     ->label('Doctor')
                     ->relationship('doctor', 'first_name')
-                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->user?->name ?: trim("Dr. {$record->first_name} {$record->last_name}"))
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->user?->name ?: trim("{$record->first_name} {$record->last_name}"))
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('start_time')

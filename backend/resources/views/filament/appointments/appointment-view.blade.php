@@ -349,7 +349,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-bold uppercase tracking-wide text-gray-500">Doctor Details</p>
-                            <h2 class="mt-1 break-words text-xl font-bold text-gray-950">Dr. {{ $doctorName }}</h2>
+                            <h2 class="mt-1 break-words text-xl font-bold text-gray-950">{{ $doctorName }}</h2>
                             <p class="mt-1 text-sm text-gray-500">Consulting doctor</p>
                         </div>
                     </div>

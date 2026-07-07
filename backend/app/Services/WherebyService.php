@@ -538,7 +538,7 @@ class WherebyService
 
         $displayName = null;
         if ($userType === 'doctor' && $videoConsultation->doctor) {
-            $displayName = 'Dr. ' . $videoConsultation->doctor->first_name . ' ' . $videoConsultation->doctor->last_name;
+            $displayName = $videoConsultation->doctor->first_name . ' ' . $videoConsultation->doctor->last_name;
         } elseif ($userType === 'patient' && $videoConsultation->patient) {
             $displayName = $videoConsultation->patient->first_name . ' ' . $videoConsultation->patient->last_name;
         }

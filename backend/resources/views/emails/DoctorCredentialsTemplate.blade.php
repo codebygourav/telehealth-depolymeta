@@ -37,7 +37,7 @@
                     <tr>
                         <td style="padding: 40px;">
                             <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                                Dear <strong>Dr. {{ $doctorName }}</strong>,
+                                Dear <strong>{{ $doctorName }}</strong>,
                             </p>
 
                             <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 15px; line-height: 1.6;">

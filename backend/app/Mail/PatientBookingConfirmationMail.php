@@ -29,7 +29,7 @@ class PatientBookingConfirmationMail extends Mailable
     public function envelope(): Envelope
     {
         $doctorName = $this->appointment->doctor
-            ? 'Dr. ' . trim($this->appointment->doctor->first_name . ' ' . $this->appointment->doctor->last_name)
+            ? trim($this->appointment->doctor->first_name . ' ' . $this->appointment->doctor->last_name)
             : 'Doctor';
 
         $dateStr = $this->appointment->appointment_date instanceof \Carbon\Carbon

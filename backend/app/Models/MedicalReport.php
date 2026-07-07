@@ -119,7 +119,7 @@ class MedicalReport extends Model
         }
 
         if ($this->uploader_type === 'Doctor' || $this->uploader instanceof Doctor) {
-            return 'Dr. ' . ($this->uploader->user?->name ?? 'Unknown');
+            return ($this->uploader->user?->name ?? 'Unknown');
         }
 
         if ($this->uploader_type === 'Patient' || $this->uploader instanceof Patient) {

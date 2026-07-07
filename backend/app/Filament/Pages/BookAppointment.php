@@ -283,10 +283,10 @@ class BookAppointment extends Page implements HasForms
                             ->maxLength(255)
                             ->columnSpan(1),
 
-                        TextInput::make('new_patient_father_name')
-                            ->label("Father Name")
-                            ->required(fn(callable $get) => $get('patient_mode') === 'new' && $this->relationshipField($get) === 'father_name')
-                            ->visible(fn(callable $get) => $get('patient_mode') === 'new' && $this->relationshipField($get) === 'father_name')
+                        TextInput::make('new_patient_wife_name')
+                            ->label("Wife Name")
+                            ->required(fn(callable $get) => $get('patient_mode') === 'new' && $this->relationshipField($get) === 'wife_name')
+                            ->visible(fn(callable $get) => $get('patient_mode') === 'new' && $this->relationshipField($get) === 'wife_name')
                             ->maxLength(255)
                             ->columnSpan(1),
 
@@ -748,7 +748,7 @@ class BookAppointment extends Page implements HasForms
             })
             ->get()
             ->mapWithKeys(function (Doctor $doctor) {
-                $name = 'Dr. ' . $doctor->first_name . ' ' . ($doctor->last_name ?? '');
+                $name = $doctor->first_name . ' ' . ($doctor->last_name ?? '');
                 if ($doctor->user) {
                     $name .= ' (' . $doctor->user->email . ')';
                 }
@@ -786,7 +786,7 @@ class BookAppointment extends Page implements HasForms
                 $status = $appointment->status instanceof AppointmentStatus ? $appointment->status->label() : ucfirst((string) $appointment->status);
 
                 return [
-                    $appointment->id => "{$date} {$time} | Dr. {$doctorName} | {$status}",
+                    $appointment->id => "{$date} {$time} | {$doctorName} | {$status}",
                 ];
             })
             ->all();
@@ -1046,7 +1046,7 @@ class BookAppointment extends Page implements HasForms
     private function relationshipFieldFromValues(?string $gender, ?string $maritalStatus): string
     {
         if ($maritalStatus === MaritalStatus::MARRIED->value) {
-            return $gender === GenderOption::FEMALE->value ? 'husband_name' : 'father_name';
+            return $gender === GenderOption::FEMALE->value ? 'husband_name' : 'wife_name';
         }
 
         return 'father_name';
@@ -1159,7 +1159,7 @@ class BookAppointment extends Page implements HasForms
             'is_available' => $effectiveSlot->is_available,
             'source' => $effectiveSlot->source ?? 'availability',
             'availability_override_id' => $effectiveSlot->override_id ?? null,
-            'doctor_name' => $availability->doctor ? 'Dr. ' . $availability->doctor->first_name . ' ' . ($availability->doctor->last_name ?? '') : 'N/A',
+            'doctor_name' => $availability->doctor ? $availability->doctor->first_name . ' ' . ($availability->doctor->last_name ?? '') : 'N/A',
         ];
     }
 }

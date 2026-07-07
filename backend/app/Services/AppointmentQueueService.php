@@ -5,10 +5,92 @@ namespace App\Services;
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class AppointmentQueueService
 {
+    public function doctorQueueQuery(string $doctorId, ?Carbon $date = null): Builder
+    {
+        $targetDate = ($date ?? Carbon::today())->toDateString();
+
+        return Appointment::query()
+            ->with([
+                'patient.user:id,name',
+                'doctor:id,first_name,last_name',
+                'availability:id,doctor_room',
+            ])
+            ->where('doctor_id', $doctorId)
+            ->whereDate('appointment_date', $targetDate)
+            ->whereNotIn('status', [
+                AppointmentStatus::CANCELLED->value,
+                AppointmentStatus::FAILED->value,
+            ]);
+    }
+
+    public function applyStatusFilter(Builder $query, string $statusFilter): Builder
+    {
+        if ($statusFilter === 'all') {
+            return $query;
+        }
+
+        if ($statusFilter === 'scheduled') {
+            return $query->where(function (Builder $builder): void {
+                $builder->whereNull('queue_status')
+                    ->orWhereIn('queue_status', ['scheduled', 'waiting']);
+            });
+        }
+
+        if ($statusFilter === 'passed_completed') {
+            $currentTime = now()->format('H:i:s');
+
+            return $query->where(function (Builder $builder) use ($currentTime): void {
+                $builder->where('queue_status', 'completed')
+                    ->orWhere(function (Builder $passed) use ($currentTime): void {
+                        $passed->where(function (Builder $statusQuery): void {
+                            $statusQuery->whereNull('queue_status')
+                                ->orWhereIn('queue_status', ['scheduled', 'waiting', 'checkin', 'started', 'skipped', 'no_show']);
+                        })->where(function (Builder $timeQuery) use ($currentTime): void {
+                            $timeQuery->where(function (Builder $withEndTime) use ($currentTime): void {
+                                $withEndTime->whereNotNull('appointment_end_time')
+                                    ->where('appointment_end_time', '<', $currentTime);
+                            })->orWhere(function (Builder $withoutEndTime) use ($currentTime): void {
+                                $withoutEndTime->whereNull('appointment_end_time')
+                                    ->where('appointment_time', '<', $currentTime);
+                            });
+                        });
+                    });
+            });
+        }
+
+        return $query->where('queue_status', $statusFilter);
+    }
+
+    public function getDoctorQueueAppointments(string $doctorId, ?Carbon $date = null): Collection
+    {
+        return $this->sortAppointments(
+            $this->doctorQueueQuery($doctorId, $date)->get()
+        );
+    }
+
+    public function filterAppointmentsForDisplay(Collection $appointments): Collection
+    {
+        return $this->sortAppointments($appointments)
+            ->filter(function (Appointment $appointment): bool {
+                $status = $this->resolveQueueStatus($appointment);
+
+                if (in_array($status, ['started', 'checkin', 'completed'], true)) {
+                    return true;
+                }
+
+                return $status === 'scheduled'
+                    && ($this->isWithinScheduledActionWindow($appointment, 60) || $this->isPassed($appointment));
+            })
+            ->values()
+            ->take(12)
+            ->values();
+    }
+
     public function resolveQueueStatus(Appointment $appointment): string
     {
         $queueStatus = strtolower((string) ($appointment->queue_status ?? ''));
@@ -29,17 +111,13 @@ class AppointmentQueueService
         $currentStatus = $this->resolveQueueStatus($currentAppointment);
 
         if ($currentStatus === 'completed') {
-            $next = $allAppointments->first(function (Appointment $appointment): bool {
-                return $this->resolveQueueStatus($appointment) === 'checkin';
-            });
+            $next = $this->findNextCallableAppointment($allAppointments);
 
             return $next ? $next->queue_number : '-';
         }
 
         if ($currentStatus === 'started') {
-            $next = $allAppointments->first(function (Appointment $appointment): bool {
-                return $this->resolveQueueStatus($appointment) === 'checkin';
-            });
+            $next = $this->findNextCallableAppointment($allAppointments);
 
             return $next ? "Next: " . $next->queue_number : '-';
         }
@@ -54,7 +132,7 @@ class AppointmentQueueService
             }
 
             $firstWaiting = $allAppointments->first(function (Appointment $appointment): bool {
-                return $this->resolveQueueStatus($appointment) === 'checkin';
+                return in_array($this->resolveQueueStatus($appointment), ['checkin', 'scheduled'], true);
             });
 
             if ($firstWaiting && $firstWaiting->id === $currentAppointment->id) {
@@ -101,9 +179,7 @@ class AppointmentQueueService
         $currentStatus = $this->resolveQueueStatus($currentAppointment);
 
         if ($currentStatus === 'started' || $currentStatus === 'completed') {
-            return $allAppointments->first(function (Appointment $appointment): bool {
-                return $this->resolveQueueStatus($appointment) === 'checkin';
-            });
+            return $this->findNextCallableAppointment($allAppointments);
         }
 
         if ($currentStatus === 'checkin') {
@@ -148,6 +224,33 @@ class AppointmentQueueService
             && $now->greaterThanOrEqualTo($appointmentDateTime->copy()->subMinutes($minutes));
     }
 
+    public function isPassed(Appointment $appointment): bool
+    {
+        if (! $appointment->appointment_date) {
+            return false;
+        }
+
+        $appointmentDate = $appointment->appointment_date instanceof Carbon
+            ? $appointment->appointment_date->copy()
+            : Carbon::parse($appointment->appointment_date);
+
+        if (! Carbon::today()->isSameDay($appointmentDate)) {
+            return false;
+        }
+
+        if (in_array($this->resolveQueueStatus($appointment), ['completed'], true)) {
+            return false;
+        }
+
+        $endTime = $appointment->appointment_end_time ?: $appointment->appointment_time;
+
+        if (! $endTime) {
+            return false;
+        }
+
+        return Carbon::parse($appointmentDate->toDateString() . ' ' . $endTime)->lt(now());
+    }
+
     protected function getAppointmentDateTime(Appointment $appointment): ?Carbon
     {
         if (! $appointment->appointment_date || ! $appointment->appointment_time) {
@@ -159,5 +262,35 @@ class AppointmentQueueService
             : Carbon::parse($appointment->appointment_date);
 
         return Carbon::parse($date->toDateString() . ' ' . $appointment->appointment_time);
+    }
+
+    protected function findNextCallableAppointment(Collection $appointments): ?Appointment
+    {
+        $checkedIn = $appointments->first(function (Appointment $appointment): bool {
+            return $this->resolveQueueStatus($appointment) === 'checkin';
+        });
+
+        if ($checkedIn) {
+            return $checkedIn;
+        }
+
+        return $appointments->first(function (Appointment $appointment): bool {
+            return $this->resolveQueueStatus($appointment) === 'scheduled';
+        });
+    }
+
+    protected function sortAppointments(Collection $appointments): Collection
+    {
+        return $appointments
+            ->sortBy(function (Appointment $appointment): array {
+                $queueNumber = (string) ($appointment->queue_number ?? '');
+                $digits = preg_replace('/\D+/', '', $queueNumber) ?: '999999';
+
+                return [
+                    (int) $digits,
+                    (string) ($appointment->appointment_time ?? '23:59:59'),
+                ];
+            })
+            ->values();
     }
 }

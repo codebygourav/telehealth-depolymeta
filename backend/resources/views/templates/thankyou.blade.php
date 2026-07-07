@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointment Confirmed - Telehealth Deploymeta</title>
+    <title>Appointment Confirmed - CMC Telehealth</title>
 
     @vite(['resources/css/filament/admin/theme.css'])
 
@@ -94,7 +94,7 @@
                         : 'N/A';
                 $doctorName =
                     $appointment && $appointment->doctor
-                        ? 'Dr. ' . $appointment->doctor->first_name . ' ' . ($appointment->doctor->last_name ?? '')
+                        ? $appointment->doctor->first_name . ' ' . ($appointment->doctor->last_name ?? '')
                         : 'N/A';
                 $appointmentDate = $appointment
                     ? \Carbon\Carbon::parse($appointment->appointment_date)->format('d M Y')

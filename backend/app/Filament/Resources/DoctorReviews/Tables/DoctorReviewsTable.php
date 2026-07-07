@@ -171,7 +171,7 @@ class DoctorReviewsTable
                 SelectFilter::make('doctor_id')
                     ->label('Doctor')
                     ->relationship('doctor', 'first_name', fn($query) => $query->with('user'))
-                    ->getOptionLabelFromRecordUsing(fn($record) => 'Dr. ' . $record->first_name . ' ' . $record->last_name)
+                    ->getOptionLabelFromRecordUsing(fn($record) => $record->first_name . ' ' . $record->last_name)
                     ->searchable()
                     ->preload()
                     ->placeholder('All Doctors'),

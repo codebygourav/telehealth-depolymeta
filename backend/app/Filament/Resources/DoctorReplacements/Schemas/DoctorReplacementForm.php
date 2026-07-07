@@ -33,7 +33,7 @@ class DoctorReplacementForm
                                     ->with('user')
                                     ->get()
                                     ->mapWithKeys(function ($doctor) {
-                                        return [$doctor->id => "Dr. {$doctor->first_name} {$doctor->last_name}"];
+                                        return [$doctor->id => "{$doctor->first_name} {$doctor->last_name}"];
                                     });
                             })
                             ->searchable()
@@ -53,7 +53,7 @@ class DoctorReplacementForm
 
                                 return $query->get()
                                     ->mapWithKeys(function ($doctor) {
-                                        return [$doctor->id => "Dr. {$doctor->first_name} {$doctor->last_name}"];
+                                        return [$doctor->id => "{$doctor->first_name} {$doctor->last_name}"];
                                     });
                             })
                             ->searchable()
@@ -372,7 +372,7 @@ class DoctorReplacementForm
                                 }
 
                                 $html = '<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">';
-                                $html .= '<div class="mb-3"><h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Dr. ' . htmlspecialchars($doctor->first_name) . ' ' . htmlspecialchars($doctor->last_name) . ' - Schedule Preview</h4>';
+                                $html .= '<div class="mb-3"><h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">' . htmlspecialchars($doctor->first_name) . ' ' . htmlspecialchars($doctor->last_name) . ' - Schedule Preview</h4>';
                                 $html .= '<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">' . $start->format('M d, Y') . ' to ' . $end->format('M d, Y') . '</p></div>';
                                 $html .= '<div class="space-y-3 max-h-96 overflow-y-auto">';
 

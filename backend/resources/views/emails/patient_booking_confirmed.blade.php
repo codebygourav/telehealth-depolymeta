@@ -37,15 +37,15 @@
                                 Dear <strong>{{ $patientName }}</strong>,
                             </p>
                             <p style="margin: 0 0 24px 0; color: #374151; font-size: 15px; line-height: 1.6;">
-                                Your appointment with <strong>Dr. {{ $doctorName }}</strong> has been successfully scheduled. Below are the details of your appointment:
-                            </p>
+                                Your appointment with <strong>{{ $doctorName }}</strong> has been successfully scheduled. Below are the details of your appointment:
+                            </p>    
 
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
                                 style="border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 24px;">
                                 <tr>
                                     <td style="padding: 20px;">
                                         <p style="margin: 0 0 12px 0; font-size: 14px; color: #374151;">
-                                            <strong style="color: #111827;">Doctor:</strong> Dr. {{ $doctorName }}
+                                            <strong style="color: #111827;">Doctor:</strong> {{ $doctorName }}
                                         </p>
                                         <p style="margin: 0 0 12px 0; font-size: 14px; color: #374151;">
                                             <strong style="color: #111827;">Date:</strong> {{ $dateStr }}

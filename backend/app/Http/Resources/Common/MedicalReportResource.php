@@ -59,7 +59,7 @@ class MedicalReportResource extends JsonResource
             'uploader_name' => $uploaderName,
             'doctor' => $this->doctor ? [
                 'id' => $this->doctor->id,
-                'name' => 'Dr. ' . $this->doctor->first_name . ' ' . $this->doctor->last_name,
+                'name' => $this->doctor->first_name . ' ' . $this->doctor->last_name,
                 'first_name' => $this->doctor->first_name,
                 'last_name' => $this->doctor->last_name,
                 'appoinment_id' => $this->appointment?->id,

@@ -99,7 +99,7 @@
     ];
 
     $doctorDetails = [
-        ['label' => 'Doctor', 'value' => $doctorName !== 'N/A' ? 'Dr. ' . $doctorName : null],
+        ['label' => 'Doctor', 'value' => $doctorName !== 'N/A' ? $doctorName : null],
         ['label' => 'Email', 'value' => $doctor?->user?->email],
         ['label' => 'Phone Number', 'value' => $doctor?->user?->phone],
         ['label' => 'Experience', 'value' => $doctor?->years_experience ? $doctor->years_experience . ' years' : null],

@@ -181,7 +181,7 @@ class ListExternalBookings extends ListRecords
             ->orderBy('first_name')
             ->get()
             ->mapWithKeys(fn (Doctor $doctor) => [
-                $doctor->id => $doctor->user?->name ?: trim("Dr. {$doctor->first_name} {$doctor->last_name}"),
+                $doctor->id => $doctor->user?->name ?: trim("{$doctor->first_name} {$doctor->last_name}"),
             ])
             ->toArray();
     }

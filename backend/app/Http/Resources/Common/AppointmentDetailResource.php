@@ -127,7 +127,7 @@ class AppointmentDetailResource extends JsonResource
             $displayName = '';
             if ($user && $isDoctor) {
                 $name = $user->doctor ? ($user->doctor->first_name . ' ' . $user->doctor->last_name) : $user->name;
-                $displayName = 'Dr. ' . $name;
+                $displayName = $name;
             } elseif ($user) {
                 $displayName = $user->patient ? ($user->patient->first_name . ' ' . $user->patient->last_name) : $user->name;
             }
@@ -200,7 +200,7 @@ class AppointmentDetailResource extends JsonResource
                 return [
                     'id' => $this->doctor->id,
                     'user_id' => $this->doctor->user?->id,
-                    'name' => 'Dr. ' . trim(($this->doctor->first_name ?? '') . ' ' . ($this->doctor->last_name ?? '')),
+                    'name' => trim(($this->doctor->first_name ?? '') . ' ' . ($this->doctor->last_name ?? '')),
                     'first_name' => $this->doctor->first_name,
                     'last_name' => $this->doctor->last_name,
                     'avatar' => storage_url($this->doctor->avatar ?? null),
@@ -242,7 +242,7 @@ class AppointmentDetailResource extends JsonResource
                         'report_date' => $report->report_date?->format('Y-m-d'),
                         'report_date_formatted' => $report->report_date?->format('D, M d'),
                         'doctor_name' => $canShowDoctor && isset($report->doctor)
-                            ? ('Dr. ' . trim(($report->doctor->first_name ?? '') . ' ' . ($report->doctor->last_name ?? '')))
+                            ? (trim(($report->doctor->first_name ?? '') . ' ' . ($report->doctor->last_name ?? '')))
                             : null,
                         'file_url' => $report->file_url,
                         'status' => $report->status,

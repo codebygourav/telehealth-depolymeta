@@ -40,7 +40,7 @@ class DoctorReviewSeeder extends Seeder
                     'address' => 'Delhi, India'
                 ],
                 'title' => 'Very Compassionate and Skilled',
-                'content' => 'Dr. {doctor} was very compassionate throughout my checkup. Highly recommend!',
+                'content' => '{doctor} was very compassionate throughout my checkup. Highly recommend!',
                 'rating' => 5,
                 'is_featured' => true,
             ],
@@ -51,7 +51,7 @@ class DoctorReviewSeeder extends Seeder
                     'address' => 'Lucknow, UP'
                 ],
                 'title' => 'Quick Diagnosis',
-                'content' => 'Dr. {doctor} quickly diagnosed my issue and prescribed effective treatment.',
+                'content' => '{doctor} quickly diagnosed my issue and prescribed effective treatment.',
                 'rating' => 4,
                 'is_featured' => true,
             ],
@@ -62,7 +62,7 @@ class DoctorReviewSeeder extends Seeder
                     'address' => 'Jalandhar, Punjab'
                 ],
                 'title' => 'Highly Professional',
-                'content' => 'Great experience with Dr. {doctor}. She listened to my concerns patiently.',
+                'content' => 'Great experience with {doctor}. She listened to my concerns patiently.',
                 'rating' => 5,
                 'is_featured' => true,
             ],
@@ -73,7 +73,7 @@ class DoctorReviewSeeder extends Seeder
                     'address' => 'Mumbai, Maharashtra'
                 ],
                 'title' => 'Detailed Explanation',
-                'content' => 'Dr. {doctor} explained every step of the procedure in detail.',
+                'content' => '{doctor} explained every step of the procedure in detail.',
                 'rating' => 4,
                 'is_featured' => false,
             ],
@@ -84,7 +84,7 @@ class DoctorReviewSeeder extends Seeder
                     'address' => 'Ahmedabad, Gujarat'
                 ],
                 'title' => 'Friendly and Helpful',
-                'content' => 'I felt very comfortable with Dr. {doctor}. Would visit again.',
+                'content' => 'I felt very comfortable with {doctor}. Would visit again.',
                 'rating' => 5,
                 'is_featured' => false,
             ],
@@ -94,25 +94,25 @@ class DoctorReviewSeeder extends Seeder
         $customOriginalReviewData = [
             [
                 'title' => 'Outstanding Service',
-                'content' => 'Dr. {doctor} provided outstanding consultation and support!',
+                'content' => '{doctor} provided outstanding consultation and support!',
                 'rating' => 5,
                 'is_featured' => true,
             ],
             [
                 'title' => 'Very Satisfied',
-                'content' => 'It was a great pleasure to meet Dr. {doctor}. My problem was understood well.',
+                'content' => 'It was a great pleasure to meet {doctor}. My problem was understood well.',
                 'rating' => 4,
                 'is_featured' => true,
             ],
             [
                 'title' => 'Efficient and Knowledgeable',
-                'content' => 'Dr. {doctor} handled my appointment with utmost efficiency.',
+                'content' => '{doctor} handled my appointment with utmost efficiency.',
                 'rating' => 5,
                 'is_featured' => false,
             ],
             [
                 'title' => 'Caring Attitude',
-                'content' => 'I appreciated Dr. {doctor}\'s caring attitude during my consultation.',
+                'content' => 'I appreciated {doctor}\'s caring attitude during my consultation.',
                 'rating' => 4,
                 'is_featured' => false,
             ],
@@ -148,7 +148,7 @@ class DoctorReviewSeeder extends Seeder
             $review->updated_at = Carbon::now()->subDays(rand(1, 90));
             $review->save();
 
-            $this->command->line("  ✓ Created FAKE review: {$review->title} for Dr. {$doctor->user->name}");
+            $this->command->line("  ✓ Created FAKE review: {$review->title} for {$doctor->user->name}");
         }
 
         // Create ORIGINAL reviews based on static data and real patients
@@ -183,7 +183,7 @@ class DoctorReviewSeeder extends Seeder
                 $review->save();
 
                 $patientName = $patient->first_name . ' ' . $patient->last_name;
-                $this->command->line("  ✓ Created ORIGINAL review: {$review->title} from {$patientName} for Dr. {$doctor->user->name}");
+                $this->command->line("  ✓ Created ORIGINAL review: {$review->title} from {$patientName} for {$doctor->user->name}");
             }
         }
 

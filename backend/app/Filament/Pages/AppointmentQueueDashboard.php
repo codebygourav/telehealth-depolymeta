@@ -580,22 +580,11 @@ class AppointmentQueueDashboard extends Page
             return Appointment::query()->whereRaw('1 = 0');
         }
 
-        $today = Carbon::today()->toDateString();
-        $query = Appointment::where('doctor_id', $this->selectedDoctorId)
-            ->whereDate('appointment_date', $today)
+        $query = app(AppointmentQueueService::class)
+            ->doctorQueueQuery($this->selectedDoctorId, Carbon::today())
             ->with('patient');
 
-        // Apply filters
-        if ($this->statusFilter !== 'all') {
-            if ($this->statusFilter === 'scheduled') {
-                $query->where(function ($q) {
-                    $q->whereNull('queue_status')
-                        ->orWhereIn('queue_status', ['scheduled', 'waiting']);
-                });
-            } else {
-                $query->where('queue_status', $this->statusFilter);
-            }
-        }
+        app(AppointmentQueueService::class)->applyStatusFilter($query, $this->statusFilter);
 
         if ($this->visitTypeFilter !== 'all') {
             $query->where('consultation_type', $this->visitTypeFilter);
@@ -609,7 +598,9 @@ class AppointmentQueueDashboard extends Page
             });
         }
 
-        return $query->orderBy('queue_number');
+        return $query
+            ->orderBy('appointment_time')
+            ->orderBy('queue_number');
     }
 
     public function getAppointments()

@@ -272,7 +272,6 @@ class BookAppointmentController extends Controller
 
                         if ($adminSkipPayment) {
                             $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
-                            $appointment->assignQueueNumber();
                             NotificationService::notifyAppointmentConfirmed($appointment);
                             $appointment->load(['doctor.user', 'patient.user', 'availability', 'doctor.departments']);
 
@@ -327,7 +326,6 @@ class BookAppointmentController extends Controller
 
                     if ($consultationFee <= 0 || $adminSkipPayment) {
                         $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
-                        $appointment->assignQueueNumber();
                         NotificationService::notifyAppointmentConfirmed($appointment);
 
                         if ($appointment->consultation_type === 'video') {
@@ -921,7 +919,7 @@ class BookAppointmentController extends Controller
                 'payment_status' => $payment->status?->value,
                 'payment_slip_url' => storage_url($payment->receipt_pdf ?? null),
                 'doctor_name' => $appointment->doctor
-                    ? 'Dr. ' . trim(($appointment->doctor->first_name ?? '') . ' ' . ($appointment->doctor->last_name ?? ''))
+                    ? trim(($appointment->doctor->first_name ?? '') . ' ' . ($appointment->doctor->last_name ?? ''))
                     : null,
                 'doctor_department' => optional($appointment->doctor?->departments->first())->name ?? null,
                 'doctor_avatar' => storage_url($appointment->doctor?->avatar ?? null),
@@ -974,7 +972,6 @@ class BookAppointmentController extends Controller
         $appointment->update([
             'status' => AppointmentStatus::CONFIRMED->value,
         ]);
-        $appointment->assignQueueNumber();
 
         if ($forceNotification || ! AppointmentStatus::equals($appointment->status, AppointmentStatus::CONFIRMED)) {
             NotificationService::notifyAppointmentConfirmed($appointment);

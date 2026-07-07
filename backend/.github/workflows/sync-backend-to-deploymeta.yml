@@ -45,67 +45,97 @@ jobs:
 
           chmod 600 ~/.git-credentials
 
-      - name: Clone deploymeta repo manually
+      - name: Clone deploymeta staging branch
         run: |
-          git clone --depth 1 --branch main \
+          git clone --depth 1 --branch staging \
             "https://github.com/codebygourav/telehealth-depolymeta.git" \
             target
 
-      - name: Copy primary code into deploymeta backend folder
+      - name: Sync changed backend files
+        shell: bash
         run: |
-          cd source
-          # Determine changed files
+          set -e
+
           BEFORE_SHA="${{ github.event.before }}"
           AFTER_SHA="${{ github.event.after }}"
+
           if [ -z "$AFTER_SHA" ]; then
             AFTER_SHA="HEAD"
           fi
 
-          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || [ -z "$BEFORE_SHA" ] || ! git cat-file -e "$BEFORE_SHA" 2>/dev/null; then
+          cd source
+
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ] || \
+             [ -z "$BEFORE_SHA" ] || \
+             ! git cat-file -e "$BEFORE_SHA" 2>/dev/null; then
             git diff-tree --no-commit-id --name-only -r "$AFTER_SHA" > ../changed_files.txt
           else
             git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" > ../changed_files.txt
           fi
+
           cd ..
 
-          # Filter the files to exclude deleted files and ignored directories/files
-          touch filtered_files.txt
+          mkdir -p target/backend
+          : > filtered_files.txt
+
           while IFS= read -r file; do
             [ -z "$file" ] && continue
-            if [ ! -f "source/$file" ]; then
-              continue
-            fi
+            [ ! -f "source/$file" ] && continue
+
             case "$file" in
               .git|.git/*) continue ;;
               .github|.github/*) continue ;;
-              .env) continue ;;
+
+              .env|.env.*) continue ;;
+
               vendor|vendor/*) continue ;;
               node_modules|node_modules/*) continue ;;
-              storage/logs|storage/logs/*) continue ;;
-              storage/framework/cache|storage/framework/cache/*) continue ;;
-              storage/framework/sessions|storage/framework/sessions/*) continue ;;
-              storage/framework/views|storage/framework/views/*) continue ;;
-              bootstrap/cache/*.php) continue ;;
+
+              storage|storage/*) continue ;;
+              bootstrap/cache|bootstrap/cache/*) continue ;;
               public/storage|public/storage/*) continue ;;
+
+              *.log) continue ;;
+
+              composer.lock) continue ;;
+              package-lock.json) continue ;;
+              yarn.lock) continue ;;
+              pnpm-lock.yaml) continue ;;
+
+              resources/css/*) continue ;;
+              resources/js/*) continue ;;
+
+              public/*) continue ;;
+
+              config/deploymeta.php) continue ;;
+              routes/deploymeta.php) continue ;;
+              app/Services/DeployMeta/*) continue ;;
             esac
+
             echo "$file" >> filtered_files.txt
           done < changed_files.txt
 
-          if [ -s filtered_files.txt ]; then
-            echo "Found changed files to sync:"
-            cat filtered_files.txt
-            
-            # Create backend directory and clean it completely
-            mkdir -p target/backend
-            rm -rf target/backend/*
-            
-            # Copy only the filtered changed files
-            rsync -a --files-from=filtered_files.txt source/ target/backend/
-          else
-            echo "No relevant changes found."
-            # Ensure target/backend exists but don't delete everything if there are no changes to avoid git status reporting massive deletions
-            mkdir -p target/backend
+          if [ ! -s filtered_files.txt ]; then
+            echo "No files to sync."
+            exit 0
           fi
+
+          echo "Files selected for sync:"
+          cat filtered_files.txt
+
+          while IFS= read -r file; do
+            SOURCE_FILE="source/$file"
+            TARGET_FILE="target/backend/$file"
+
+            mkdir -p "$(dirname "$TARGET_FILE")"
+
+            if [ ! -f "$TARGET_FILE" ] || ! cmp -s "$SOURCE_FILE" "$TARGET_FILE"; then
+              cp -p "$SOURCE_FILE" "$TARGET_FILE"
+              echo "Updated: $file"
+            else
+              echo "Unchanged: $file"
+            fi
+          done < filtered_files.txt
 
       - name: Check changes
         id: changes
@@ -117,52 +147,23 @@ jobs:
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit and push sync branch
+      - name: Commit and push to staging
         if: steps.changes.outputs.has_changes == 'true'
         working-directory: target
         run: |
-          SYNC_BRANCH="sync/cmc-backend"
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git checkout -B "$SYNC_BRANCH"
+          git checkout staging
           git add backend
-          git commit -m "sync: update backend from CMC primary repo"
 
-          git remote set-url origin "https://github.com/codebygourav/telehealth-depolymeta.git"
-          git push origin "$SYNC_BRANCH" --force
-
-          echo "SYNC_BRANCH=$SYNC_BRANCH" >> "$GITHUB_ENV"
-
-      - name: Create or update pull request
-        if: steps.changes.outputs.has_changes == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.DEPLOYMETA_TOKEN }}
-        run: |
-          CLEAN_GH_TOKEN="$(printf '%s' "$GH_TOKEN" | tr -d '[:space:]')"
-          export GH_TOKEN="$CLEAN_GH_TOKEN"
-
-          SYNC_BRANCH="sync/cmc-backend"
-
-          EXISTING_PR=$(gh pr list \
-            --repo codebygourav/telehealth-depolymeta \
-            --head "$SYNC_BRANCH" \
-            --base main \
-            --state open \
-            --json url \
-            --jq '.[0].url')
-
-          if [ -z "$EXISTING_PR" ]; then
-            gh pr create \
-              --repo codebygourav/telehealth-depolymeta \
-              --base main \
-              --head "$SYNC_BRANCH" \
-              --title "Sync backend from CMC primary repo" \
-              --body "This PR syncs the latest CMC primary repo code into the deploymeta backend folder."
-          else
-            echo "PR already exists: $EXISTING_PR"
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
           fi
+
+          git commit -m "sync: update backend from CMC"
+          git push origin staging
 
       - name: No changes found
         if: steps.changes.outputs.has_changes == 'false'

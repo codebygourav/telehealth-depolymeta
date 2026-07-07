@@ -132,7 +132,7 @@ class ManageVideoLinks extends Page implements HasTable
                 TextColumn::make('doctor.first_name')
                     ->label('Doctor')
                     ->formatStateUsing(fn (Appointment $record): string => $record->doctor
-                        ? 'Dr. ' . trim($record->doctor->first_name . ' ' . $record->doctor->last_name)
+                        ? trim($record->doctor->first_name . ' ' . $record->doctor->last_name)
                         : 'N/A')
                     ->searchable(['doctor.first_name', 'doctor.last_name']),
 

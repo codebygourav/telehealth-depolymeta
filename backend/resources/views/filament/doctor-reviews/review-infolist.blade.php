@@ -68,7 +68,7 @@
                             <div class="flex items-center gap-2 text-gray-700">
                                 <x-heroicon-o-user-circle
                                     class="w-5 h-5 {{ $isFake ? 'text-primary-600' : 'text-primary' }}" />
-                                <span class="font-medium">Dr. {{ $doctor->first_name }} {{ $doctor->last_name }}</span>
+                                <span class="font-medium">{{ $doctor->first_name }} {{ $doctor->last_name }}</span>
                             </div>
                         @endif
                     </div>
@@ -237,7 +237,7 @@
                                 <div class="p-4 bg-gray-50 rounded-xl">
                                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Doctor</p>
                                     <p class="text-sm font-semibold text-gray-900">
-                                        Dr. {{ $doctor->first_name }} {{ $doctor->last_name }}
+                                        {{ $doctor->first_name }} {{ $doctor->last_name }}
                                     </p>
                                 </div>
                             @endif
