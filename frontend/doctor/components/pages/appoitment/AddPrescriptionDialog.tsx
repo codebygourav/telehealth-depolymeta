@@ -81,6 +81,7 @@ type DraftResponsePayload = {
   form?: DraftFormPayload;
   warnings?: string[];
   missing_fields?: string[];
+  source_type?: "text" | "speech";
 };
 
 type RequestError = {
@@ -311,6 +312,7 @@ export default function AddPrescriptionDialog({
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const shouldParseAfterStopRef = useRef(false);
   const draftInputRef = useRef("");
+  const hasSpeechInputRef = useRef(false);
   const transcriptBaseRef = useRef("");
   const transcriptFinalRef = useRef("");
   const guidedTranscriptsRef = useRef<Record<number, string>>(
@@ -407,6 +409,7 @@ export default function AddPrescriptionDialog({
       },
       onResetRefs: () => {
         draftInputRef.current = "";
+        hasSpeechInputRef.current = false;
         guidedTranscriptsRef.current = createEmptyGuidedTranscripts();
       },
       defaultSpeechLocale: getInitialVoiceLocale(
@@ -609,6 +612,7 @@ export default function AddPrescriptionDialog({
     parseDraft.mutate(
       {
         input_text: textToParse,
+        source_type: hasSpeechInputRef.current ? "speech" : "text",
       },
       {
         onSuccess: (response: { data?: DraftResponsePayload }) => {
@@ -688,6 +692,7 @@ export default function AddPrescriptionDialog({
     recognitionRef.current?.abort();
 
     const recognition = new SpeechRecognitionApi();
+    hasSpeechInputRef.current = true;
 
     if (dictationMode === "guided") {
       transcriptBaseRef.current = (
