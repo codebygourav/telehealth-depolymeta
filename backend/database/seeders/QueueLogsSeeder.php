@@ -26,7 +26,9 @@ class QueueLogsSeeder extends Seeder
             ->first();
 
         if (!$doctor) {
-            $doctor = Doctor::first();
+            $doctor = Doctor::whereHas('user', function ($q) {
+                $q->whereNotIn('email', ['mjoseph@gmail.com', 'kjoseph@gmail.com']);
+            })->first();
         }
 
         if (!$doctor) {

@@ -30,7 +30,7 @@
         },
         executeConfirm() {
             if (this.confirmAction) {
-                this.confirmAction();
+                this.confirmAction(this.$wire);
             }
             this.confirmOpen = false;
         }
@@ -111,7 +111,7 @@
                                 <div class="flex gap-1 shrink-0">
                                     <!-- Check-In Action Switcher -->
                                     <button
-                                        x-on:click.prevent="triggerConfirm('Doctor Check-In Status', 'Are you sure you want to {{ $doctor['is_checked_in'] ? 'check out' : 'check in' }} this doctor?', () => { $wire.toggleDoctorCheckIn('{{ $doctor['id'] }}') })"
+                                        x-on:click.prevent="triggerConfirm('Doctor Check-In Status', 'Are you sure you want to {{ $doctor['is_checked_in'] ? 'check out' : 'check in' }} this doctor?', $wire => { $wire.toggleDoctorCheckIn('{{ $doctor['id'] }}') })"
                                         title="{{ $doctor['is_checked_in'] ? 'Check Out' : 'Check In' }}"
                                         class="p-2 rounded-lg border {{ $doctor['is_checked_in'] ? 'border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400' : 'border-green-200 text-green-600 hover:bg-green-50 dark:border-green-900 dark:text-green-400' }} transition-colors"
                                     >
@@ -255,14 +255,14 @@
                             <div class="flex items-center gap-2">
                                 <button
                                     @if($doctor->is_checked_in) disabled @endif
-                                    x-on:click.prevent="triggerConfirm('Doctor Check-In', 'Are you sure you want to check in this doctor?', () => { $wire.checkInDoctor('{{ $doctor->id }}') })"
+                                    x-on:click.prevent="triggerConfirm('Doctor Check-In', 'Are you sure you want to check in this doctor?', $wire => { $wire.checkInDoctor('{{ $doctor->id }}') })"
                                     class="px-4 py-2.5 text-xs font-bold rounded-md border transition-all duration-200 {{ $doctor->is_checked_in ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:border-green-900/60 dark:text-green-400' }}"
                                 >
                                     Check-In
                                 </button>
                                 <button
                                     @if(!$doctor->is_checked_in) disabled @endif
-                                    x-on:click.prevent="triggerConfirm('Doctor Check-Out', 'Are you sure you want to check out this doctor?', () => { $wire.checkOutDoctor('{{ $doctor->id }}') })"
+                                    x-on:click.prevent="triggerConfirm('Doctor Check-Out', 'Are you sure you want to check out this doctor?', $wire => { $wire.checkOutDoctor('{{ $doctor->id }}') })"
                                     class="px-4 py-2.5 text-xs font-bold rounded-md border transition-all duration-200 {{ !$doctor->is_checked_in ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:border-red-900/60 dark:text-red-400' }}"
                                 >
                                     Check-Out
@@ -273,14 +273,14 @@
                             <div class="flex items-center gap-2">
                                 <button
                                     @if(!$doctor->is_checked_in || $doctor->is_on_break) disabled @endif
-                                    x-on:click.prevent="triggerConfirm('Doctor Break Status', 'Are you sure you want to start break for this doctor?', () => { $wire.startDoctorBreak('{{ $doctor->id }}') })"
+                                    x-on:click.prevent="triggerConfirm('Doctor Break Status', 'Are you sure you want to start break for this doctor?', $wire => { $wire.startDoctorBreak('{{ $doctor->id }}') })"
                                     class="px-4 py-2.5 text-xs font-bold rounded-md border transition-all duration-200 {{ !$doctor->is_checked_in || $doctor->is_on_break ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/20 dark:border-amber-900/60 dark:text-amber-400' }}"
                                 >
                                     On Break
                                 </button>
                                 <button
                                     @if(!$doctor->is_checked_in || !$doctor->is_on_break) disabled @endif
-                                    x-on:click.prevent="triggerConfirm('Doctor Break Status', 'Are you sure you want to end break for this doctor?', () => { $wire.endDoctorBreak('{{ $doctor->id }}') })"
+                                    x-on:click.prevent="triggerConfirm('Doctor Break Status', 'Are you sure you want to end break for this doctor?', $wire => { $wire.endDoctorBreak('{{ $doctor->id }}') })"
                                     class="px-4 py-2.5 text-xs font-bold rounded-md border transition-all duration-200 {{ !$doctor->is_checked_in || !$doctor->is_on_break ? 'bg-gray-100 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:border-green-900/60 dark:text-green-400' }}"
                                 >
                                     Off Break
@@ -689,7 +689,7 @@
                                                  @foreach($rowActions as $actionKey)
                                                      @if($actionKey === 'mark_checkin')
                                                          <button
-                                                             x-on:click.prevent="triggerConfirm('Mark Patient Checked-in', 'Are you sure you want to mark this patient as checked in?', () => { $wire.markCheckIn('{{ $app->id }}') })"
+                                                             x-on:click.prevent="triggerConfirm('Mark Patient Checked-in', 'Are you sure you want to mark this patient as checked in?', $wire => { $wire.markCheckIn('{{ $app->id }}') })"
                                                              title="Mark Check-in"
                                                              class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['mark_checkin'] }}"
                                                          >
@@ -697,7 +697,7 @@
                                                          </button>
                                                      @elseif($actionKey === 'start')
                                                          <button
-                                                             x-on:click.prevent="triggerConfirm('Start Consultation', 'Are you sure you want to start this consultation?', () => { $wire.startAppointment('{{ $app->id }}') })"
+                                                             x-on:click.prevent="triggerConfirm('Start Consultation', 'Are you sure you want to start this consultation?', $wire => { $wire.startAppointment('{{ $app->id }}') })"
                                                              title="Start Consultation"
                                                              class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['start'] }}"
                                                          >
@@ -729,7 +729,7 @@
                                                          </button>
                                                      @elseif($actionKey === 'recheckin')
                                                          <button
-                                                             x-on:click.prevent="triggerConfirm('Re-check-in Patient', 'Are you sure you want to recheck-in this patient?', () => { $wire.markCheckIn('{{ $app->id }}') })"
+                                                             x-on:click.prevent="triggerConfirm('Re-check-in Patient', 'Are you sure you want to recheck-in this patient?', $wire => { $wire.markCheckIn('{{ $app->id }}') })"
                                                              title="Re-checkin"
                                                              class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['recheckin'] }}"
                                                          >
@@ -745,7 +745,7 @@
                                                          </button>
                                                      @elseif($actionKey === 'revert')
                                                          <button
-                                                             x-on:click.prevent="triggerConfirm('Re-check-in Patient', 'Are you sure you want to check-in this patient again?', () => { $wire.revertAppointment('{{ $app->id }}') })"
+                                                             x-on:click.prevent="triggerConfirm('Re-check-in Patient', 'Are you sure you want to check-in this patient again?', $wire => { $wire.revertAppointment('{{ $app->id }}') })"
                                                              title="Re-checkin"
                                                              class="{{ $actionButtonBaseClass }} {{ $actionButtonStyles['revert'] }}"
                                                          >
