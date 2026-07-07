@@ -318,17 +318,15 @@ class DoctorForm
                                 ->label('Sub Title')
                                 ->placeholder('Sub Title')
                                 ->columnSpanFull(),
-                            Textarea::make('bio')
+                            RichEditor::make('bio')
                                 ->label('Short Bio (A brief on Professional Experience)')
                                 ->placeholder('Brief professional introduction (max 200 words recommended)')
                                 ->required()
-                                ->rows(5)
                                 ->columnSpanFull(),
 
-                            Textarea::make('description')
+                            RichEditor::make('description')
                                 ->label('Detailed Description')
                                 ->placeholder('Background, specializations, and more')
-                                ->rows(8)
                                 ->columnSpanFull(),
                         ]),
 
@@ -673,16 +671,14 @@ class DoctorForm
                     // 9. Extra Info
                     Step::make('Additional Information')
                         ->schema([
-                            Textarea::make('specializations_info')
+                            RichEditor::make('specializations_info')
                                 ->label('Specializations / Subspecialties')
                                 ->placeholder('e.g., MD Pediatrics, fellowship in Comprehensive Hematology Oncology')
-                                ->rows(4)
                                 ->columnSpanFull(),
 
-                            Textarea::make('key_procedures_info')
+                            RichEditor::make('key_procedures_info')
                                 ->label('Key Procedures')
                                 ->placeholder('e.g., Bone marrow, Chemotherapy, Immunotherapy')
-                                ->rows(4)
                                 ->columnSpanFull(),
 
                             RichEditor::make('memberships_info')
@@ -690,16 +686,14 @@ class DoctorForm
                                 ->placeholder('Use editor for memberships or committee roles.')
                                 ->columnSpanFull(),
 
-                            Textarea::make('special_interests')
+                            RichEditor::make('special_interests')
                                 ->label('Special Interests')
                                 ->placeholder('e.g., Thalassemia, supportive care, survivorship...')
-                                ->rows(4)
                                 ->columnSpanFull(),
 
-                            Textarea::make('expertise_info')
+                            RichEditor::make('expertise_info')
                                 ->label('Expertise Info')
                                 ->placeholder('e.g., Complex hematological disorders, childhood malignancies...')
-                                ->rows(4)
                                 ->columnSpanFull(),
                         ]),
 
