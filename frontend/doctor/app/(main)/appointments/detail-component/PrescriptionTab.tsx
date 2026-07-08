@@ -1,37 +1,37 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import {
-  ChevronDown,
-  ChevronUp,
-  FileText,
-  Calendar,
-  Clock,
-  AlertCircle,
-  Download,
-  ExternalLink,
-  ClipboardList,
-  Mic,
-  Trash2,
-} from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import AddConclusionDialog from "@/components/pages/appoitment/AddConclusionDialog";
+import AddPrescriptionDialog from "@/components/pages/appoitment/AddPrescriptionDialog";
+import AssignMedicineTemplateDialog from "@/components/pages/appoitment/AssignMedicineTemplateDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { usePrescriptionByAppointmentId } from "@/queries/usePrescriptionByAppointmentId";
-import { useConclusionByAppointmentId } from "@/queries/useConclusionByAppointmentId";
-import { getStatusColor } from "@/src/utils/getStatusColor";
-import AddPrescriptionDialog from "@/components/pages/appoitment/AddPrescriptionDialog";
-import AddConclusionDialog from "@/components/pages/appoitment/AddConclusionDialog";
-import AssignMedicineTemplateDialog from "@/components/pages/appoitment/AssignMedicineTemplateDialog";
-import { useDeletePrescriptionItem } from "@/queries/useDeletePrescriptionItem";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
   DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
+import { useConclusionByAppointmentId } from "@/queries/useConclusionByAppointmentId";
+import { useDeletePrescriptionItem } from "@/queries/useDeletePrescriptionItem";
+import { usePrescriptionByAppointmentId } from "@/queries/usePrescriptionByAppointmentId";
+import { getStatusColor } from "@/src/utils/getStatusColor";
+import {
+  AlertCircle,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  ClipboardList,
+  Clock,
+  Download,
+  ExternalLink,
+  FileText,
+  Mic,
+  Trash2,
+} from "lucide-react";
+import { useCallback, useState } from "react";
 
 // TypeScript interfaces
 interface Medicine {
@@ -412,6 +412,7 @@ export default function PrescriptionTab({
       <>
         <div className="flex justify-end gap-2 mt-4 mb-4">
           <Button
+            type="button"
             variant="outline"
             onClick={() => setIsAddConclusionOpen(true)}
             className="h-8 sm:h-9 text-xs sm:text-sm"
@@ -419,6 +420,7 @@ export default function PrescriptionTab({
             Add Conclusion
           </Button>
           <Button
+            type="button"
             variant="outline"
             onClick={() => setIsTemplateDialogOpen(true)}
             className="h-8 sm:h-9 text-xs sm:text-sm"
@@ -427,6 +429,7 @@ export default function PrescriptionTab({
             Use Template
           </Button>
           <Button
+            type="button"
             onClick={() => setIsAddDialogOpen(true)}
             className="h-8 sm:h-9 text-xs sm:text-sm"
           >
@@ -469,6 +472,7 @@ export default function PrescriptionTab({
     <div className="space-y-4 sm:space-y-5 md:space-y-6">
       <div className="flex justify-end gap-2">
         <Button
+          type="button"
           variant="outline"
           onClick={() => setIsAddConclusionOpen(true)}
           className="w-full bg-muted sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
@@ -476,6 +480,7 @@ export default function PrescriptionTab({
           Add Conclusion
         </Button>
         <Button
+          type="button"
           variant="outline"
           onClick={() => setIsTemplateDialogOpen(true)}
           className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
@@ -484,6 +489,7 @@ export default function PrescriptionTab({
           Use Template
         </Button>
         <Button
+          type="button"
           onClick={() => setIsAddDialogOpen(true)}
           className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
         >
@@ -580,11 +586,10 @@ export default function PrescriptionTab({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge
-                      className={`text-[10px] sm:text-xs px-1.5 sm:px-2 ${
-                        draft.source_type === "speech"
-                          ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-100"
-                      }`}
+                      className={`text-[10px] sm:text-xs px-1.5 sm:px-2 ${draft.source_type === "speech"
+                        ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-100"
+                        }`}
                     >
                       {draft.source_type === "speech"
                         ? "Voice Draft"
@@ -632,7 +637,7 @@ export default function PrescriptionTab({
                     <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
                       Doctor Input
                     </p>
-                    <p className="text-xs sm:text-sm leading-relaxed break-words">
+                    <p className="text-xs sm:text-sm leading-relaxed wrap-break-word">
                       {draft.input_text}
                     </p>
                   </div>
@@ -710,7 +715,7 @@ export default function PrescriptionTab({
                   <p className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wide">
                     Instructions by Doctor
                   </p>
-                  <p className="text-[11px] sm:text-sm mt-1 leading-relaxed break-words">
+                  <p className="text-[11px] sm:text-sm mt-1 leading-relaxed wrap-break-word">
                     {instructionsByDoctor}
                   </p>
                 </div>
@@ -726,7 +731,7 @@ export default function PrescriptionTab({
                   <p className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wide">
                     Next Visit Date
                   </p>
-                  <p className="text-[11px] sm:text-sm font-medium mt-1 break-words">
+                  <p className="text-[11px] sm:text-sm font-medium mt-1 wrap-break-word">
                     {new Date(nextVisitDate).toLocaleDateString("en-US", {
                       weekday: "long",
                       year: "numeric",

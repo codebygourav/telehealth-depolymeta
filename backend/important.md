@@ -11,6 +11,9 @@ For Backend - docker compose -f docker-compose.prod.yml up -d --build db app web
 
 ## Seeder
 
+docker exec -it tele-backend-app php artisan notification:test-webpush patient6@example.com
+
+docker exec -it laravel-app cat /usr/local/etc/php/conf.d/uploads.ini
 docker exec -it tele-backend-app php artisan migrate:fresh --seed
 
 ## Queue

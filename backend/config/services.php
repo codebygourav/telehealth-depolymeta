@@ -66,4 +66,12 @@ return [
         'webhook_secret' => env('WHEREBY_WEBHOOK_SECRET', 'd7c5t2ncbde95wgx7ehanwbjr23fx0ta'),
     ],
 
+    'webpush' => [
+        'vapid' => [
+            'subject' => env('VAPID_SUBJECT', 'mailto:webclouddeveloper@gmail.com'),
+            'public_key' => env('VAPID_PUBLIC_KEY'),
+            'private_key' => env('VAPID_PRIVATE_KEY'),
+        ],
+    ],
+
 ];

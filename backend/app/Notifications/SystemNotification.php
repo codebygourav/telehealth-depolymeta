@@ -8,6 +8,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Expo\ExpoChannel;
 use NotificationChannels\Expo\ExpoMessage;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class SystemNotification extends Notification
 {
@@ -91,7 +93,7 @@ class SystemNotification extends Notification
 
     public function via($notifiable)
     {
-        return [\App\Channels\CustomDatabaseChannel::class, ExpoChannel::class];
+        return [\App\Channels\CustomDatabaseChannel::class, ExpoChannel::class, WebPushChannel::class];
     }
 
     public function toExpo($notifiable)
@@ -101,6 +103,21 @@ class SystemNotification extends Notification
             ->playSound()
             ->title($this->title)
             ->body($this->message)
+            ->data([
+                'type' => $this->type,
+                'entityType' => $this->entityType,
+                'entityId' => $this->entityId,
+                'meta' => $this->meta
+            ]);
+    }
+
+    public function toWebPush($notifiable, $notification)
+    {
+        return (new WebPushMessage)
+            ->title($this->title)
+            ->body($this->message)
+            ->icon('/logo.png')
+            ->badge('/badge.png')
             ->data([
                 'type' => $this->type,
                 'entityType' => $this->entityType,
