@@ -4,23 +4,10 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login as CustomLogin;
 use Filament\Enums\DatabaseNotificationsPosition;
-use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, CronSettings, Dashboard, DisplayAdsSettings, DisplayScreenSettings, DoctorReport, ManageVideoLinks, OPDCalendar, PrescriptionVoiceSettings, QueueLogsDashboard, RolePermissionMatrix, Settings};
-use App\Filament\Resources\DisplayScreens\DisplayScreenResource;
+use App\Filament\Pages\{BookAppointment, Dashboard, DoctorReport, ManageVideoLinks, OPDCalendar, RolePermissionMatrix, Settings};
 use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\EmailLogs\EmailLogResource;
-use App\Filament\Resources\DoctorAdvertisements\DoctorAdvertisementResource;
-use App\Filament\Resources\PrescriptionDrafts\PrescriptionDraftResource;
 use App\Filament\Resources\{Appointments\AppointmentResource, DoctorDepartments\DoctorDepartmentResource, DoctorReplacements\DoctorReplacementResource, DoctorReviews\DoctorReviewResource, Doctors\DoctorAvailabilityResource, Doctors\DoctorResource, ContactUs\ContactUsResource, ExternalBookings\ExternalBookingResource, Leaves\LeaveResource, MedicalReports\MedicalReportResource, Medicines\MedicineResource, ModuleDocuments\ModuleDocumentResource, Patients\PatientResource, Payments\PaymentResource, Symptoms\SymptomResource, Users\UserResource, Vendors\VendorResource};
-use App\Filament\Resources\DietTemplates\DietTemplateResource;
-use App\Filament\Resources\MedicineTemplates\MedicineTemplateResource;
-use App\Filament\Resources\PatientDietPlans\PatientDietPlanResource;
-use App\Filament\Resources\PatientVaccinations\PatientVaccinationResource;
-use App\Filament\Resources\VaccinationClinicalInsights\VaccinationClinicalInsightResource;
-use App\Filament\Resources\VaccinationDocuments\VaccinationDocumentResource;
-use App\Filament\Resources\VaccinationGeneralFaqs\VaccinationGeneralFaqResource;
-use App\Filament\Resources\VaccinationTemplates\VaccinationTemplateResource;
-use App\Filament\Resources\Vaccinations\VaccinationResource;
-use App\Filament\Resources\CustomCronJobResource;
 use App\Models\Setting;
 use Filament\Http\Middleware\{Authenticate, AuthenticateSession, DisableBladeIconComponents, DispatchServingFilamentEvent};
 use Filament\Navigation\NavigationBuilder;
@@ -64,15 +51,9 @@ class AdminPanelProvider extends PanelProvider
                 OPDCalendar::class,
                 RolePermissionMatrix::class,
                 Settings::class,
-                PrescriptionVoiceSettings::class,
-                CronSettings::class,
-                DisplayScreenSettings::class,
-                DisplayAdsSettings::class,
                 BookAppointment::class,
                 DoctorReport::class,
                 ManageVideoLinks::class,
-                AppointmentQueueDashboard::class,
-                QueueLogsDashboard::class,
             ])
             ->resources([
                 AppointmentResource::class,
@@ -83,30 +64,17 @@ class AdminPanelProvider extends PanelProvider
                 ContactUsResource::class,
                 DoctorDepartmentResource::class,
                 MedicineResource::class,
-                MedicineTemplateResource::class,
                 SymptomResource::class,
                 LeaveResource::class,
                 VendorResource::class,
                 UserResource::class,
-                DisplayScreenResource::class,
                 AdvertisementResource::class,
-                DoctorAdvertisementResource::class,
                 DoctorReviewResource::class,
                 DoctorReplacementResource::class,
                 PaymentResource::class,
                 MedicalReportResource::class,
                 ModuleDocumentResource::class,
                 EmailLogResource::class,
-                PrescriptionDraftResource::class,
-                DietTemplateResource::class,
-                PatientDietPlanResource::class,
-                PatientVaccinationResource::class,
-                VaccinationClinicalInsightResource::class,
-                VaccinationDocumentResource::class,
-                VaccinationGeneralFaqResource::class,
-                VaccinationTemplateResource::class,
-                VaccinationResource::class,
-                CustomCronJobResource::class,
             ])
             ->navigation(fn(NavigationBuilder $builder): NavigationBuilder => \App\Filament\CustomSidebarManager::buildFilamentNavigation($builder))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
@@ -135,9 +103,14 @@ class AdminPanelProvider extends PanelProvider
                 fn(): string => view('filament.partial.footer')->render(),
             )
             ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn(): string => view('filament.partial.webpush-loader')->render(),
+            )
+            ->renderHook(
                 PanelsRenderHook::SIDEBAR_FOOTER,
                 fn(): string => view('filament.components.sidebar-user-menu')->render(),
             )
+
             ->databaseNotifications(position: DatabaseNotificationsPosition::Sidebar)
             ->authMiddleware([
                 Authenticate::class,
@@ -152,27 +125,27 @@ class AdminPanelProvider extends PanelProvider
     protected function getPrimaryColor(): string
     {
         try {
-            return Setting::getValue('app', 'primary_color', '#055bd9') ?? '#055bd9';
+            return Setting::getValue('app', 'primary_color', '#073827') ?? '#073827';
         } catch (\Exception $e) {
-            return '#055bd9';
+            return '#073827';
         }
     }
 
     protected function getSecondaryColor(): string
     {
         try {
-            return Setting::getValue('app', 'secondary_color', '#055bd9') ?? '#055bd9';
+            return Setting::getValue('app', 'secondary_color', '#073827') ?? '#073827';
         } catch (\Exception $e) {
-            return '#055bd9';
+            return '#073827';
         }
     }
 
     protected function getBrandLogo(): \Illuminate\Contracts\View\View
     {
         // Default Assets
-        $logo = asset('images/white-logo.png');
-        $black_logo = asset('images/deploymeta.png');
-        $icon = asset('images/deploymeta.png');
+        $logo = asset('images/cmc-telehealth.png');
+        $black_logo = asset('images/cmc-telehealth-black.png');
+        $icon = asset('images/cmc-telehealth-black.png');
 
         try {
             // Check for dynamic logo from Settings
@@ -204,15 +177,16 @@ class AdminPanelProvider extends PanelProvider
         } catch (\Exception $e) {
             // Fallback to default
         }
-        return asset('images/fav-icon.png');
+
+        return asset('favicon.ico');
     }
 
     protected function getAppName(): string
     {
         try {
-            return Setting::getValue('app', 'name', config('app.name', 'Telehealth Deploymeta')) ?? 'Telehealth Deploymeta';
+            return Setting::getValue('app', 'name', config('app.name', 'CMC Telehealth')) ?? 'CMC Telehealth';
         } catch (\Exception $e) {
-            return config('app.name', 'Telehealth Deploymeta');
+            return config('app.name', 'CMC Telehealth');
         }
     }
 }

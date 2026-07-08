@@ -14,10 +14,12 @@ use Filament\Panel;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
+
 // dsjklfdsjklfdsjkldfjslkfdjslkfjdslkfjds
 class User extends Authenticatable implements FilamentUser, HasName
 {
     use HasFactory, Notifiable, SoftDeletes, HasRoles, HasApiTokens, HasPushSubscriptions;
+
     use \App\Traits\InteractsWithModuleDocuments;
 
     public $incrementing = false;
