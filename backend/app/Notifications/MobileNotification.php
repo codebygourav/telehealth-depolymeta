@@ -5,6 +5,8 @@ namespace App\Notifications;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Expo\ExpoChannel;
 use NotificationChannels\Expo\ExpoMessage;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class MobileNotification extends Notification
 {
@@ -23,7 +25,7 @@ class MobileNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', ExpoChannel::class];
+        return ['database', ExpoChannel::class, WebPushChannel::class];
     }
 
     public function toExpo($notifiable)
@@ -31,6 +33,16 @@ class MobileNotification extends Notification
         return ExpoMessage::create()
             ->title($this->title)
             ->body($this->body)
+            ->data($this->payload);
+    }
+
+    public function toWebPush($notifiable, $notification)
+    {
+        return (new WebPushMessage)
+            ->title($this->title)
+            ->body($this->body)
+            ->icon('/logo.png')
+            ->badge('/badge.png')
             ->data($this->payload);
     }
 

@@ -25,3 +25,15 @@ export const markNotificationAsRead = async (notificationId: string) => {
     const { data } = await api.post(`/notifications/${notificationId}/read`);
     return data;
 };
+
+//! store push subscription
+export const storePushSubscription = async (subscription: any) => {
+    const { data } = await api.post("/notifications/push-subscription", subscription);
+    return data;
+};
+
+//! delete push subscription
+export const deletePushSubscription = async (endpoint: string) => {
+    const { data } = await api.post("/notifications/push-subscription/delete", { endpoint });
+    return data;
+};

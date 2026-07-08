@@ -12,6 +12,8 @@ import { useNotifications, useUnreadCount } from "@/queries/useNotifications";
 import { useQueryClient } from "@tanstack/react-query";
 import { CircleCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { Bell, BellOff, Loader2 } from "lucide-react";
 
 
 
@@ -44,8 +46,20 @@ export default function Notifications() {
     const [activeTab, setActiveTab] = useState("all");
     const [allNotifications, setAllNotifications] = useState<Notification[]>([]);
     const [totalPages, setTotalPages] = useState(1);
+    const [mounted, setMounted] = useState(false);
+    
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     const { data: totalUnread = 0 } = useUnreadCount();
     const queryClient = useQueryClient();
+    const {
+        subscription,
+        loading: pushLoading,
+        subscribeToPush,
+        unsubscribeFromPush,
+        isSupported
+    } = usePushNotifications();
 
     const handleMarkAsRead = async (notificationId: string | number) => {
         try {
@@ -164,16 +178,41 @@ export default function Notifications() {
                 onTabChange={setActiveTab}
                 tabsListClassName="w-full max-w-md! mt-1"
                 rightSlot={
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-10 px-2 text-sm text-primary bg-transparent shadow-none hover:bg-transparent underline-offset-4 hover:underline decoration-primary flex items-center gap-1 whitespace-nowrap shrink-0"
-                        onClick={handleMarkAllRead}
-                        disabled={totalUnread === 0}
-                    >
-                        <CircleCheck className="h-4 w-4" />
-                        Mark all as read
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        {mounted && isSupported && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-10 px-3 text-sm flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-xl"
+                                onClick={subscription ? unsubscribeFromPush : subscribeToPush}
+                                disabled={pushLoading}
+                            >
+                                {pushLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : subscription ? (
+                                    <>
+                                        <BellOff className="h-4 w-4 text-red-500" />
+                                        Disable Desktop Push
+                                    </>
+                                ) : (
+                                    <>
+                                        <Bell className="h-4 w-4 text-primary" />
+                                        Enable Desktop Push
+                                    </>
+                                )}
+                            </Button>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-10 px-2 text-sm text-primary bg-transparent shadow-none hover:bg-transparent underline-offset-4 hover:underline decoration-primary flex items-center gap-1 whitespace-nowrap shrink-0"
+                            onClick={handleMarkAllRead}
+                            disabled={totalUnread === 0}
+                        >
+                            <CircleCheck className="h-4 w-4" />
+                            Mark all as read
+                        </Button>
+                    </div>
                 }
             />
             {content}

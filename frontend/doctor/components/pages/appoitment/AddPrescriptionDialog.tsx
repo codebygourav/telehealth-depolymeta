@@ -1,63 +1,34 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Undo2, X } from "lucide-react";
+import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Mic, Search, Stethoscope, Undo2, X } from "lucide-react";
-import { useParams } from "next/navigation";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioField } from "@/components/custom/RadioField";
+import type { VoiceTranscriptionResult } from "@/api/voice-transcription";
 
+import { getMedicines } from "@/api/medicines";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/context/userContext";
 import { useAddPrescription } from "@/queries/useAddPrescription";
 import { useMedicines } from "@/queries/useMedicines";
 import { useParsePrescriptionDraft } from "@/queries/useParsePrescriptionDraft";
-import { getMedicines } from "@/api/medicines";
 
-const PrescriptionSchema = z.object({
-  medicine_id: z.string().optional(),
-  medicine_name: z.string().min(2, "Medication required"),
-  medication_type: z.string().min(1, "Medication type required"),
-  dosage: z.string().min(1, "Dosage required"),
-  frequency: z.string().min(1, "Frequency required"),
-  timing_morning: z.boolean().optional(),
-  timing_afternoon: z.boolean().optional(),
-  timing_evening: z.boolean().optional(),
-  timing_night: z.boolean().optional(),
-  meal: z.enum(["before_meal", "after_meal", "with_meal"], {
-    message: "Please select a meal option",
-  }),
-  instructions: z.string().optional(),
-  stamp_preference: z.string().min(1, "Stamp preference required"),
-});
-
-export type PrescriptionForm = z.infer<typeof PrescriptionSchema>;
-
-type MedicineItem = {
-  id: string;
-  name: string;
-  type?: string | null;
-  source?: "inventory" | "doctor_added";
-};
+import PrescriptionEntryModeSelector from "./PrescriptionEntryModeSelector";
+import PrescriptionListPanel from "./PrescriptionListPanel";
+import PrescriptionMedicineForm from "./PrescriptionMedicineForm";
+import PrescriptionSuccessDialog from "./PrescriptionSuccessDialog";
+import PrescriptionVoiceAssistantPanel from "./PrescriptionVoiceAssistantPanel";
+import {
+  PrescriptionSchema,
+  type AddedMedicine,
+  type EntryMode,
+  type MedicineItem,
+  type MedicineSource,
+  type PrescriptionForm,
+  type VoiceLocale,
+} from "./prescription-dialog-types";
 
 type DraftFormPayload = {
   medicine_id?: string | null;
@@ -95,9 +66,6 @@ type RequestError = {
   };
   message?: string;
 };
-
-type EntryMode = "voice" | "manual" | null;
-type VoiceLocale = "en-IN" | "hi-IN" | "pa-IN";
 
 type BrowserSpeechRecognitionAlternative = {
   transcript: string;
@@ -150,6 +118,7 @@ interface AddPrescriptionDialogProps {
     supported_locales?: string[];
     allow_custom_locale?: boolean;
     requires_doctor_review?: boolean;
+    deepgram_enabled?: boolean;
   } | null;
 }
 
@@ -236,22 +205,6 @@ const guidedVoiceSteps = [
   },
 ];
 
-type AddedMedicine = {
-  medicine_id?: string | null;
-  medicine_name: string;
-  medication_type: string;
-  dosage: string;
-  frequency: string;
-  timing_morning: boolean;
-  timing_afternoon: boolean;
-  timing_evening: boolean;
-  timing_night: boolean;
-  meal: PrescriptionForm["meal"];
-  instructions?: string;
-  start_date?: string | null;
-  end_date?: string | null;
-};
-
 export default function AddPrescriptionDialog({
   open,
   onOpenChange,
@@ -269,6 +222,12 @@ export default function AddPrescriptionDialog({
     Boolean(assistantConfig?.enabled) &&
     (assistantMode === "text" || assistantMode === "speech");
 
+  const deepgramEnabled = Boolean(assistantConfig?.deepgram_enabled);
+
+  const [voiceSubMode, setVoiceSubMode] = useState<"deepgram" | "browser">(
+    deepgramEnabled ? "deepgram" : "browser"
+  );
+
   const [entryMode, setEntryMode] = useState<EntryMode>(
     getDefaultEntryMode(dictationEnabled)
   );
@@ -278,9 +237,9 @@ export default function AddPrescriptionDialog({
   const [startDate, setStartDate] = useState<string>(getTodayDate());
   const [endDate, setEndDate] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const [guidedTranscripts, setGuidedTranscripts] = useState<
-    Record<number, string>
-  >(createEmptyGuidedTranscripts());
+  const [guidedTranscripts, setGuidedTranscripts] = useState<Record<number, string>>(
+    createEmptyGuidedTranscripts()
+  );
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draftWarnings, setDraftWarnings] = useState<string[]>([]);
   const [draftMissingFields, setDraftMissingFields] = useState<string[]>([]);
@@ -292,13 +251,16 @@ export default function AddPrescriptionDialog({
 
   const [addedMedicines, setAddedMedicines] = useState<AddedMedicine[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [selectedMedicineSource, setSelectedMedicineSource] = useState<"inventory" | "doctor_added" | "custom" | null>(null);
+  const [selectedMedicineSource, setSelectedMedicineSource] = useState<MedicineSource>(null);
 
   const [voiceDraftMedicine, setVoiceDraftMedicine] = useState<DraftFormPayload | null>(null);
   const [missingFieldsList, setMissingFieldsList] = useState<string[]>([]);
 
   const [isSearchingMedicine, setIsSearchingMedicine] = useState(false);
   const [showCustomConfirm, setShowCustomConfirm] = useState<{ name: string } | null>(null);
+
+  const [mobileTab, setMobileTab] = useState<"form" | "list">("form");
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const shouldParseAfterStopRef = useRef(false);
@@ -322,10 +284,16 @@ export default function AddPrescriptionDialog({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
   const {
     handleSubmit,
     reset,
-    resetField,
     setValue,
     getValues,
     control,
@@ -336,7 +304,7 @@ export default function AddPrescriptionDialog({
     defaultValues: defaultFormValues,
   });
 
-  const selectedMedicineName = useWatch({ control, name: "medicine_name" });
+  const selectedMedicineName = useWatch({ control, name: "medicine_name" }) || "";
   const medicationType = useWatch({ control, name: "medication_type" });
   const meal = useWatch({ control, name: "meal" });
   const dosage = useWatch({ control, name: "dosage" });
@@ -375,18 +343,14 @@ export default function AddPrescriptionDialog({
       return;
     }
 
-    // Stop listening
-    shouldParseAfterStopRef.current = false;
     recognitionRef.current?.abort();
     recognitionRef.current = null;
     setIsListening(false);
 
-    // Reset refs
     draftInputRef.current = "";
     hasSpeechInputRef.current = false;
     guidedTranscriptsRef.current = createEmptyGuidedTranscripts();
 
-    // Reset states
     reset(defaultFormValues);
     setDraftInput("");
     setDraftId(null);
@@ -408,6 +372,8 @@ export default function AddPrescriptionDialog({
     setMissingFieldsList([]);
     setIsSearchingMedicine(false);
     setShowCustomConfirm(null);
+    setMobileTab("form");
+    setToastMessage(null);
   }, [open, dictationEnabled, assistantConfig?.speech_locale, reset]);
 
   useEffect(() => {
@@ -449,13 +415,9 @@ export default function AddPrescriptionDialog({
   }, [selectedMedicineSource, selectedMedicineName]);
 
   const handleSelectMedicine = (medicine: MedicineItem) => {
-    setValue(
-      "medicine_id",
-      medicine.source === "inventory" ? medicine.id : "",
-      {
-        shouldValidate: true,
-      }
-    );
+    setValue("medicine_id", medicine.source === "inventory" ? medicine.id : "", {
+      shouldValidate: true,
+    });
     setValue("medicine_name", medicine.name, { shouldValidate: true });
     setValue("medication_type", medicine.type || medicationType || "tablet", {
       shouldValidate: true,
@@ -509,7 +471,7 @@ export default function AddPrescriptionDialog({
       } else {
         setShowCustomConfirm({ name: trimmed });
       }
-    } catch (error) {
+    } catch {
       setShowCustomConfirm({ name: trimmed });
     } finally {
       setIsSearchingMedicine(false);
@@ -519,7 +481,7 @@ export default function AddPrescriptionDialog({
   const handleAddOrUpdateMedicine = async () => {
     const fieldsToValidate = voiceDraftMedicine !== null
       ? (missingFieldsList as Array<keyof PrescriptionForm>)
-      : ["medicine_name", "medication_type", "dosage", "frequency", "meal"] as Array<keyof PrescriptionForm>;
+      : (["medicine_name", "medication_type", "dosage", "frequency", "meal"] as Array<keyof PrescriptionForm>);
 
     const isValid = await trigger(fieldsToValidate);
 
@@ -529,28 +491,28 @@ export default function AddPrescriptionDialog({
 
     const medicineName = getValues("medicine_name");
     const medicineId = getValues("medicine_id");
-    const medicationType = getValues("medication_type");
-    const dosage = getValues("dosage");
-    const frequency = getValues("frequency");
-    const timingMorning = getValues("timing_morning");
-    const timingAfternoon = getValues("timing_afternoon");
-    const timingEvening = getValues("timing_evening");
-    const timingNight = getValues("timing_night");
-    const meal = getValues("meal");
-    const instructions = getValues("instructions");
+    const medicationTypeValue = getValues("medication_type");
+    const dosageValue = getValues("dosage");
+    const frequencyValue = getValues("frequency");
+    const timingMorningValue = getValues("timing_morning");
+    const timingAfternoonValue = getValues("timing_afternoon");
+    const timingEveningValue = getValues("timing_evening");
+    const timingNightValue = getValues("timing_night");
+    const mealValue = getValues("meal");
+    const instructionsValue = getValues("instructions");
 
     const newMedicine: AddedMedicine = {
       medicine_id: medicineId || null,
       medicine_name: medicineName.trim(),
-      medication_type: medicationType,
-      dosage: dosage,
-      frequency: frequency,
-      timing_morning: !!timingMorning,
-      timing_afternoon: !!timingAfternoon,
-      timing_evening: !!timingEvening,
-      timing_night: !!timingNight,
-      meal: meal,
-      instructions: instructions || "",
+      medication_type: medicationTypeValue,
+      dosage: dosageValue,
+      frequency: frequencyValue,
+      timing_morning: !!timingMorningValue,
+      timing_afternoon: !!timingAfternoonValue,
+      timing_evening: !!timingEveningValue,
+      timing_night: !!timingNightValue,
+      meal: mealValue,
+      instructions: instructionsValue || "",
       start_date: startDate || null,
       end_date: endDate || null,
     };
@@ -562,11 +524,12 @@ export default function AddPrescriptionDialog({
         return updated;
       });
       setEditingIndex(null);
+      setToastMessage({ text: `Updated ${newMedicine.medicine_name} successfully.`, type: "success" });
     } else {
       setAddedMedicines((prev) => [...prev, newMedicine]);
+      setToastMessage({ text: `Added ${newMedicine.medicine_name} to prescription list.`, type: "success" });
     }
 
-    // Reset voice draft completion state
     setVoiceDraftMedicine(null);
     setMissingFieldsList([]);
 
@@ -580,7 +543,6 @@ export default function AddPrescriptionDialog({
     setSearchQuery("");
     setSelectedMedicineSource(null);
 
-    // Reset transcripts and refs for next voice input to be completely empty
     setGuidedTranscripts(createEmptyGuidedTranscripts());
     guidedTranscriptsRef.current = createEmptyGuidedTranscripts();
     setGuidedStep(1);
@@ -630,11 +592,16 @@ export default function AddPrescriptionDialog({
 
     setVoiceDraftMedicine(null);
     setMissingFieldsList([]);
-    // Stay in the current entryMode (Voice or Manual)
+    setMobileTab("form");
   };
 
   const handleDeleteMedicine = (index: number) => {
+    const med = addedMedicines[index];
     setAddedMedicines((prev) => prev.filter((_, i) => i !== index));
+    if (med) {
+      setToastMessage({ text: `Removed ${med.medicine_name} from list.`, type: "success" });
+    }
+
     if (editingIndex === index) {
       handleCancelEdit();
     } else if (editingIndex !== null && editingIndex > index) {
@@ -724,7 +691,6 @@ export default function AddPrescriptionDialog({
     let te = Boolean(form.timing_evening);
     let tn = Boolean(form.timing_night);
 
-    // If all timings are false but we have a frequency, set default timings based on frequency
     if (!tm && !ta && !te && !tn && normFreq) {
       if (normFreq === "OD") {
         tn = true;
@@ -810,7 +776,6 @@ export default function AddPrescriptionDialog({
           }
 
           if (missing.length === 0) {
-            // Apply timings to the new medicine based on current form inputs (which are normalized/defaulted)
             const newMedicine: AddedMedicine = {
               medicine_id: form.medicine_id || null,
               medicine_name: form.medicine_name!.trim(),
@@ -827,6 +792,7 @@ export default function AddPrescriptionDialog({
               end_date: form.end_date || null,
             };
             setAddedMedicines((prev) => [...prev, newMedicine]);
+            setToastMessage({ text: `Added ${newMedicine.medicine_name} to prescription list.`, type: "success" });
 
             const currentStamp = getValues("stamp_preference");
             reset({
@@ -855,8 +821,15 @@ export default function AddPrescriptionDialog({
             "Failed to parse prescription text."
           );
         },
-      },
+      }
     );
+  };
+
+  const handleDeepgramResult = (result: VoiceTranscriptionResult) => {
+    if (result.transcript) {
+      setDraftInput(result.transcript);
+      handleParseDraft(result.transcript);
+    }
   };
 
   const buildGuidedDraftText = () => {
@@ -946,16 +919,18 @@ export default function AddPrescriptionDialog({
 
       transcriptFinalRef.current = finalTranscript;
 
-      const nextText = combineTranscript(
+      const nextText = mergeTranscripts(
         transcriptBaseRef.current,
         finalTranscript,
         interimTranscript
       );
 
+      const cleanedText = cleanDuplicateWords(nextText);
+
       setGuidedTranscripts((prev) => {
         const updated = {
           ...prev,
-          [guidedStep]: nextText,
+          [guidedStep]: cleanedText,
         };
         guidedTranscriptsRef.current = updated;
         return updated;
@@ -1014,13 +989,31 @@ export default function AddPrescriptionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-4xl! rounded-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <DialogContent className="w-[95vw] sm:max-w-5xl! rounded-2xl p-0 overflow-hidden flex flex-col gap-0! fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          {toastMessage && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-100 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold shadow-lg border ${toastMessage.type === "success" ? "bg-green-600 text-white border-green-700" : "bg-red-600 text-white border-red-700"}`}>
+                <span>{toastMessage.text}</span>
+                <button type="button" onClick={() => setToastMessage(null)} className="rounded-full hover:bg-white/10 p-0.5">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          )}
+
           <DialogHeader className="border-b px-5 py-4 pr-14 sm:pr-20 shrink-0">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <DialogTitle className="text-lg sm:text-xl font-bold">
                   Add Prescription
                 </DialogTitle>
+                <DialogDescription className="sr-only">
+                  {entryMode === "voice"
+                    ? "Dictate medicine details. Unknown medicine names will be saved as custom medicines."
+                    : entryMode === "manual"
+                      ? "Fill in medicine details. Unknown medicine names will be saved as custom medicines."
+                      : "Choose how you want to add this prescription."}
+                </DialogDescription>
                 <p className="text-xs text-muted-foreground">
                   {entryMode === "voice"
                     ? "Dictate medicine details. Unknown medicine names will be saved as custom medicines."
@@ -1051,1259 +1044,268 @@ export default function AddPrescriptionDialog({
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 min-h-0 bg-muted/5">
             <form onSubmit={(e) => e.preventDefault()} className="h-full">
               {entryMode === null ? (
-                /* 1. Select Entry Mode screen */
-                <div className="flex flex-col items-center justify-center py-10 max-w-2xl mx-auto space-y-6">
-                  <div className="text-center space-y-1.5">
-                    <h3 className="text-base font-bold text-foreground">Select Entry Method</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Choose Voice Prescription to dictate or Manual Entry to type the details.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2 w-full">
-                    <button
-                      type="button"
-                      onClick={() => setEntryMode("voice")}
-                      disabled={!dictationEnabled}
-                      className={`rounded-2xl border p-5 text-left transition-all ${dictationEnabled
-                          ? "border-border bg-background hover:border-primary hover:bg-primary/5 shadow-sm hover:shadow"
-                          : "cursor-not-allowed border-dashed bg-muted/30 opacity-60"
-                        }`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-xl bg-primary/10 p-3 text-primary shrink-0">
-                          <Mic className="h-6 w-6" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-bold text-foreground">Voice Prescription</p>
-                          <p className="text-xs text-muted-foreground leading-normal">
-                            Dictate medicine details. AI assistant will parse and construct the prescription.
-                          </p>
-                          {!dictationEnabled && (
-                            <p className="text-[10px] text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded mt-2 border border-amber-200 inline-block">
-                              Voice prescription is unavailable for this account.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        stopListening(false);
-                        setEntryMode("manual");
-                      }}
-                      className="rounded-2xl border border-border bg-background p-5 text-left transition-all hover:border-primary hover:bg-primary/5 shadow-sm hover:shadow"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-xl bg-primary/10 p-3 text-primary shrink-0">
-                          <Stethoscope className="h-6 w-6" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-bold text-foreground">Manual Prescription</p>
-                          <p className="text-xs text-muted-foreground leading-normal">
-                            Type medicine details manually. Fill in fields in a single compact screen.
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
+                <PrescriptionEntryModeSelector
+                  dictationEnabled={dictationEnabled}
+                  onSelectVoice={() => setEntryMode("voice")}
+                  onSelectManual={() => {
+                    stopListening(false);
+                    setEntryMode("manual");
+                  }}
+                />
               ) : (
-                /* 2. Active Mode (Voice or Manual) layout */
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-
-                  {/* Left Column: Form / Assistant Card */}
-                  <div className="md:col-span-7 bg-background border rounded-2xl p-4 sm:p-5 shadow-sm">
-                    {entryMode === "voice" ? (
-                      editingIndex !== null ? (
-                        /* Voice Mode: Prefilled Edit Form */
-                        <div className="space-y-4">
-                          <div className="font-semibold text-xs text-muted-foreground border-b pb-1.5 flex items-center justify-between">
-                            <span>Edit Medicine Details</span>
-                            <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold uppercase tracking-wider">
-                              Editing Item #{editingIndex + 1}
-                            </span>
-                          </div>
-
-                          {/* Field 1: Medicine Selection */}
-                          <div className="space-y-1 relative">
-                            <Label className="text-xs font-semibold">Medicine Name *</Label>
-                            {selectedMedicineName ? (
-                              <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-1.5">
-                                <div className="space-y-0.5">
-                                  <p className="text-xs font-bold text-foreground">{selectedMedicineName}</p>
-                                  <p className="text-[10px] text-muted-foreground font-medium">
-                                    {selectedMedicineSource === "inventory"
-                                      ? "Main Medicine Inventory"
-                                      : selectedMedicineSource === "doctor_added"
-                                        ? "Doctor-added Database"
-                                        : "Custom Medicine Name"}
-                                  </p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={clearSelectedMedicine}
-                                  className="rounded-md p-1 hover:bg-muted text-muted-foreground transition-colors"
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="space-y-1">
-                                <div className="relative">
-                                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                                  <Input
-                                    placeholder="Search database or type custom medicine name..."
-                                    value={searchQuery}
-                                    onChange={(event) => setSearchQuery(event.target.value)}
-                                    className="pl-8 h-8.5 text-xs rounded-lg"
-                                  />
-                                </div>
-
-                                {searchQuery.trim() !== "" && (
-                                  <div className="max-h-48 overflow-y-auto rounded-lg border bg-background text-xs shadow-lg absolute z-20 w-full left-0 mt-1">
-                                    <button
-                                      key="use-custom-btn"
-                                      type="button"
-                                      onClick={() => handleUseCustomMedicine(searchQuery)}
-                                      className="flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-muted/40 font-semibold text-primary"
-                                    >
-                                      <span>Use custom: &quot;{searchQuery.trim()}&quot;</span>
-                                      <Stethoscope className="h-3.5 w-3.5" />
-                                    </button>
-                                    {medicinesQuery.isLoading ? (
-                                      <div className="px-3 py-2.5 text-muted-foreground text-[11px]">Searching database...</div>
-                                    ) : medicineList.length > 0 ? (
-                                      medicineList.map((medicine: MedicineItem) => (
-                                        <button
-                                          key={`${medicine.source}-${medicine.id}`}
-                                          type="button"
-                                          onClick={() => handleSelectMedicine(medicine)}
-                                          className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-muted/40 transition-colors"
-                                        >
-                                          <span>{medicine.name}</span>
-                                          <span className="text-[10px] text-muted-foreground bg-muted px-1 py-0.5 rounded">
-                                            {medicine.source === "inventory" ? "stock" : "custom"}
-                                          </span>
-                                        </button>
-                                      ))
-                                    ) : (
-                                      <div className="px-3 py-2.5 text-muted-foreground text-[11px]">No medicines found. Use &quot;Use custom&quot; above.</div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {errors.medicine_name && (
-                              <p className="text-[11px] text-red-500 font-medium">{errors.medicine_name.message}</p>
-                            )}
-                          </div>
-
-                          {/* Status Card */}
-                          {medicineStatus && (
-                            <MedicineStatusCard
-                              tone={medicineStatus.tone}
-                              title={medicineStatus.title}
-                              description={medicineStatus.description}
-                            />
-                          )}
-
-                          {/* Fields 2 & 3: Type & Dosage */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label className="text-xs font-semibold">Medication Type *</Label>
-                              <Select
-                                value={medicationType}
-                                onValueChange={(value) => setValue("medication_type", value, { shouldValidate: true })}
-                              >
-                                <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {medicationTypeOptions.map((item) => (
-                                    <SelectItem key={item.value} value={item.value} className="text-xs">
-                                      {item.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {errors.medication_type && (
-                                <p className="text-[11px] text-red-500 font-medium">{errors.medication_type.message}</p>
-                              )}
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-semibold">Dosage *</Label>
-                              <Select
-                                value={dosage}
-                                onValueChange={(value) => setValue("dosage", value, { shouldValidate: true })}
-                              >
-                                <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                  <SelectValue placeholder="Select dosage" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {dosageOptions.map((item) => (
-                                    <SelectItem key={item.value} value={item.value} className="text-xs">
-                                      {item.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {errors.dosage && (
-                                <p className="text-[11px] text-red-500 font-medium">{errors.dosage.message}</p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Fields 4 & 5: Frequency & Meal Relation */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label className="text-xs font-semibold">Frequency *</Label>
-                              <Select
-                                value={frequency}
-                                onValueChange={(value) => setValue("frequency", value, { shouldValidate: true })}
-                              >
-                                <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                  <SelectValue placeholder="Select frequency" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {frequencyOptions.map((item) => (
-                                    <SelectItem key={item.value} value={item.value} className="text-xs">
-                                      {item.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {errors.frequency && (
-                                <p className="text-[11px] text-red-500 font-medium">{errors.frequency.message}</p>
-                              )}
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-semibold">Meal Relation *</Label>
-                              <Select
-                                value={meal || ""}
-                                onValueChange={(value) => setValue("meal", value as PrescriptionForm["meal"], { shouldValidate: true })}
-                              >
-                                <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                  <SelectValue placeholder="Select meal timing" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {mealOptions.map((item) => (
-                                    <SelectItem key={item.value} value={item.value} className="text-xs">
-                                      {item.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {errors.meal && (
-                                <p className="text-[11px] text-red-500 font-medium">{errors.meal.message}</p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Field 6: Timings Tag Grid */}
-                          <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold">Timings</Label>
-                            <div className="grid grid-cols-4 gap-2">
-                              {[
-                                { label: "Morning", name: "timing_morning" as const, val: timingMorning },
-                                { label: "Afternoon", name: "timing_afternoon" as const, val: timingAfternoon },
-                                { label: "Evening", name: "timing_evening" as const, val: timingEvening },
-                                { label: "Night", name: "timing_night" as const, val: timingNight },
-                              ].map((item) => (
-                                <button
-                                  key={item.label}
-                                  type="button"
-                                  onClick={() => setValue(item.name, !item.val)}
-                                  className={`py-1.5 px-2 text-[10px] sm:text-[11px] font-semibold border rounded-lg text-center transition-all ${item.val
-                                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                      : "bg-background text-muted-foreground border-border hover:bg-muted/50"
-                                    }`}
-                                >
-                                  {item.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Fields 7 & 8: Start & End Dates */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label className="text-xs font-semibold">Start Date</Label>
-                              <Input
-                                type="date"
-                                min={getTodayDate()}
-                                value={startDate}
-                                onChange={(event) => setStartDate(event.target.value)}
-                                className="h-8.5 text-xs rounded-lg"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <Label className="text-xs font-semibold">End Date</Label>
-                              <Input
-                                type="date"
-                                min={startDate || getTodayDate()}
-                                value={endDate}
-                                onChange={(event) => setEndDate(event.target.value)}
-                                className="h-8.5 text-xs rounded-lg"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Field 9: Instructions Notes */}
-                          <div className="space-y-1">
-                            <Label className="text-xs font-semibold">Instructions / Notes</Label>
-                            <Textarea
-                              rows={2}
-                              value={instructions || ""}
-                              onChange={(event) => setValue("instructions", event.target.value, { shouldValidate: true })}
-                              placeholder="e.g. Take after food with warm water"
-                              className="text-xs resize-none rounded-lg"
-                            />
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex gap-2 pt-2 border-t mt-3">
-                            <Button
-                              type="button"
-                              onClick={handleAddOrUpdateMedicine}
-                              className="flex-1 h-9 text-xs rounded-lg font-semibold shadow-sm"
-                            >
-                              Update Medicine
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={handleCancelEdit}
-                              className="h-9 text-xs rounded-lg"
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : voiceDraftMedicine !== null ? (
-                        /* Voice: Mini Form for Missing Fields */
-                        <div className="space-y-4">
-                          <div className="border-b pb-2">
-                            <h3 className="font-bold text-sm text-foreground">Complete Missing Details</h3>
-                            <p className="text-[11px] text-muted-foreground leading-normal">
-                              The AI assistant parsed your dictation but needs you to clarify the following fields.
-                            </p>
-                          </div>
-
-                          {/* Dictation Summary */}
-                          <div className="bg-muted/30 border rounded-xl p-3 text-[11px] space-y-1.5">
-                            <p className="font-semibold text-muted-foreground uppercase tracking-wider text-[9px]">Captured Details</p>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              {voiceDraftMedicine.medicine_name && (
-                                <div>
-                                  <span className="font-medium text-muted-foreground">Medicine:</span> {voiceDraftMedicine.medicine_name}
-                                </div>
-                              )}
-                              {voiceDraftMedicine.medication_type && (
-                                <div>
-                                  <span className="font-medium text-muted-foreground">Type:</span> {voiceDraftMedicine.medication_type}
-                                </div>
-                              )}
-                              {voiceDraftMedicine.dosage && (
-                                <div>
-                                  <span className="font-medium text-muted-foreground">Dosage:</span> {voiceDraftMedicine.dosage}
-                                </div>
-                              )}
-                              {voiceDraftMedicine.frequency && (
-                                <div>
-                                  <span className="font-medium text-muted-foreground">Frequency:</span> {voiceDraftMedicine.frequency}
-                                </div>
-                              )}
-                              {voiceDraftMedicine.meal && (
-                                <div>
-                                  <span className="font-medium text-muted-foreground">Meal:</span> {voiceDraftMedicine.meal?.replace("_", " ")}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Missing Inputs */}
-                          <div className="space-y-3 pt-1">
-                            {missingFieldsList.includes("medicine_name") && (
-                              <div className="space-y-1 relative">
-                                <Label className="text-xs font-semibold">Medicine Name *</Label>
-                                {selectedMedicineName ? (
-                                  <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-1.5">
-                                    <span className="text-xs font-bold">{selectedMedicineName}</span>
-                                    <button type="button" onClick={clearSelectedMedicine} className="text-muted-foreground hover:text-foreground">
-                                      <X className="h-3.5 w-3.5" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-1">
-                                    <div className="relative">
-                                      <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                                      <Input
-                                        placeholder="Search or type custom medicine name..."
-                                        value={searchQuery}
-                                        onChange={(event) => setSearchQuery(event.target.value)}
-                                        className="pl-8 h-8.5 text-xs rounded-lg"
-                                      />
-                                    </div>
-                                    {searchQuery.trim() !== "" && (
-                                      <div className="max-h-40 overflow-y-auto rounded-lg border bg-background text-xs shadow-lg absolute z-20 w-full left-0 mt-1">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleUseCustomMedicine(searchQuery)}
-                                          className="flex w-full items-center justify-between border-b px-3 py-1.5 text-left hover:bg-muted/40 font-semibold text-primary"
-                                        >
-                                          <span>Use custom: &quot;{searchQuery.trim()}&quot;</span>
-                                          <Stethoscope className="h-3.5 w-3.5" />
-                                        </button>
-                                        {medicinesQuery.isLoading ? (
-                                          <div className="px-3 py-2 text-muted-foreground text-[10px]">Searching...</div>
-                                        ) : medicineList.length > 0 ? (
-                                          medicineList.map((medicine: MedicineItem) => (
-                                            <button
-                                              key={`${medicine.source}-${medicine.id}`}
-                                              type="button"
-                                              onClick={() => handleSelectMedicine(medicine)}
-                                              className="flex w-full items-center justify-between px-3 py-1.5 text-left hover:bg-muted/40 font-medium"
-                                            >
-                                              <span>{medicine.name}</span>
-                                            </button>
-                                          ))
-                                        ) : (
-                                          <div className="px-3 py-2 text-muted-foreground text-[10px]">No medicines found</div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                                {errors.medicine_name && (
-                                  <p className="text-[11px] text-red-500 font-medium">{errors.medicine_name.message}</p>
-                                )}
-                              </div>
-                            )}
-
-                            {missingFieldsList.includes("medication_type") && (
-                              <div className="space-y-1">
-                                <Label className="text-xs font-semibold">Medication Type *</Label>
-                                <Select
-                                  value={medicationType}
-                                  onValueChange={(value) => setValue("medication_type", value, { shouldValidate: true })}
-                                >
-                                  <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                    <SelectValue placeholder="Select type" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {medicationTypeOptions.map((item) => (
-                                      <SelectItem key={item.value} value={item.value} className="text-xs">
-                                        {item.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                {errors.medication_type && (
-                                  <p className="text-[11px] text-red-500 font-medium">{errors.medication_type.message}</p>
-                                )}
-                              </div>
-                            )}
-
-                            {missingFieldsList.includes("dosage") && (
-                              <div className="space-y-1">
-                                <Label className="text-xs font-semibold">Dosage *</Label>
-                                <Select
-                                  value={dosage}
-                                  onValueChange={(value) => setValue("dosage", value, { shouldValidate: true })}
-                                >
-                                  <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                    <SelectValue placeholder="Select dosage" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {dosageOptions.map((item) => (
-                                      <SelectItem key={item.value} value={item.value} className="text-xs">
-                                        {item.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                {errors.dosage && (
-                                  <p className="text-[11px] text-red-500 font-medium">{errors.dosage.message}</p>
-                                )}
-                              </div>
-                            )}
-
-                            {missingFieldsList.includes("frequency") && (
-                              <div className="space-y-1">
-                                <Label className="text-xs font-semibold">Frequency *</Label>
-                                <Select
-                                  value={frequency}
-                                  onValueChange={(value) => setValue("frequency", value, { shouldValidate: true })}
-                                >
-                                  <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                    <SelectValue placeholder="Select frequency" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {frequencyOptions.map((item) => (
-                                      <SelectItem key={item.value} value={item.value} className="text-xs">
-                                        {item.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                {errors.frequency && (
-                                  <p className="text-[11px] text-red-500 font-medium">{errors.frequency.message}</p>
-                                )}
-                              </div>
-                            )}
-
-                            {missingFieldsList.includes("meal") && (
-                              <div className="space-y-1">
-                                <Label className="text-xs font-semibold">Meal Relation *</Label>
-                                <Select
-                                  value={meal || ""}
-                                  onValueChange={(value) => setValue("meal", value as PrescriptionForm["meal"], { shouldValidate: true })}
-                                >
-                                  <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                    <SelectValue placeholder="Select meal timing" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {mealOptions.map((item) => (
-                                      <SelectItem key={item.value} value={item.value} className="text-xs">
-                                        {item.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                {errors.meal && (
-                                  <p className="text-[11px] text-red-500 font-medium">{errors.meal.message}</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Mini Form Actions */}
-                          <div className="flex gap-2 pt-2 border-t mt-3">
-                            <Button type="button" onClick={handleAddOrUpdateMedicine} className="flex-1 h-9 text-xs rounded-lg font-semibold shadow-sm">
-                              Confirm & Add
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                setVoiceDraftMedicine(null);
-                                setMissingFieldsList([]);
-                                const currentStamp = getValues("stamp_preference");
-                                reset({ ...defaultFormValues, stamp_preference: currentStamp });
-                                setStartDate(getTodayDate());
-                                setEndDate("");
-                              }}
-                              className="h-9 text-xs rounded-lg text-destructive border-destructive/20 hover:bg-destructive/5"
-                            >
-                              Discard
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* Voice assistant recording panel */
-                        <div className="space-y-4">
-                          <div className="font-semibold text-xs text-muted-foreground border-b pb-1.5 flex items-center justify-between">
-                            <span>Voice Dictation Assistant</span>
-                            <span className="text-[10px] text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/20 font-semibold uppercase tracking-wider">
-                              Voice Mode
-                            </span>
-                          </div>
-
-                          <div className="space-y-4 bg-muted/10 border border-muted/50 rounded-xl p-0">
-                            {/* Language Selection */}
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs text-muted-foreground font-medium">Select Language:</span>
-                              <div className="flex items-center gap-1 rounded-lg border bg-background p-0.5">
-                                {voiceLanguageOptions.map((option) => (
-                                  <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() => setSelectedSpeechLocale(option.value)}
-                                    className={`rounded-md px-2.5 py-1 text-[10px] font-medium transition ${selectedSpeechLocale === option.value
-                                        ? "bg-primary text-primary-foreground"
-                                        : "text-muted-foreground hover:text-foreground"
-                                      }`}
-                                  >
-                                    {option.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Step selectors */}
-                            <div className="grid grid-cols-4 gap-1.5">
-                              {guidedVoiceSteps.map((step) => {
-                                const isActive = guidedStep === step.id;
-                                const isComplete = normalizeValue(guidedTranscripts[step.id]) !== "";
-
-                                return (
-                                  <button
-                                    key={step.id}
-                                    type="button"
-                                    onClick={() => {
-                                      stopListening(false);
-                                      setGuidedStep(step.id);
-                                    }}
-                                    className={`rounded-lg border p-1.5 text-left transition flex flex-col justify-between h-[52px] ${isActive
-                                        ? "border-primary bg-primary/5 text-primary"
-                                        : "border-border bg-background text-foreground"
-                                      }`}
-                                  >
-                                    <p className="text-[9px] font-semibold opacity-70 leading-none">Step {step.id}</p>
-                                    <p className="text-[10px] font-semibold truncate leading-tight w-full">{step.title}</p>
-                                    <p className={`text-[8px] leading-none ${isComplete ? "text-green-600 font-medium" : "text-muted-foreground"}`}>
-                                      {isComplete ? "Captured" : "Pending"}
-                                    </p>
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {/* Speech active area */}
-                            <div className="rounded-xl border bg-background p-3.5 space-y-3 shadow-inner relative">
-                              <div className="flex justify-between items-start gap-2">
-                                <div className="space-y-0.5">
-                                  <p className="text-xs font-semibold text-foreground">
-                                    {guidedVoiceSteps[guidedStep - 1]?.title}
-                                  </p>
-                                  <p className="text-[10px] text-muted-foreground leading-normal font-medium italic">
-                                    {guidedVoiceSteps[guidedStep - 1]?.hint}
-                                  </p>
-                                </div>
-
-                                {isListening && (
-                                  <div className="flex items-center gap-1 shrink-0 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping" />
-                                    <span className="text-[9px] text-red-600 font-medium">Recording</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-2">
-                                {speechSupported ? (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={isListening ? "destructive" : "secondary"}
-                                    onClick={() => (isListening ? stopListening(false) : startListening())}
-                                    className="h-8 text-xs font-medium"
-                                  >
-                                    {isListening ? (
-                                      <>
-                                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                                        Stop Listening
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Mic className="mr-1.5 h-3.5 w-3.5" />
-                                        Start Speaking
-                                      </>
-                                    )}
-                                  </Button>
-                                ) : (
-                                  <p className="text-[10px] text-red-500">Dictation not supported in browser</p>
-                                )}
-                              </div>
-
-                              <div className="space-y-1">
-                                <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                  Transcription
-                                </Label>
-                                <Textarea
-                                  value={guidedTranscripts[guidedStep] || ""}
-                                  onChange={(event) => {
-                                    const nextValue = event.target.value;
-                                    setGuidedTranscripts((prev) => {
-                                      const updated = {
-                                        ...prev,
-                                        [guidedStep]: nextValue,
-                                      };
-                                      guidedTranscriptsRef.current = updated;
-                                      return updated;
-                                    });
-                                  }}
-                                  rows={3}
-                                  className="text-xs resize-none rounded-lg"
-                                  placeholder="Speak now or type custom text here..."
-                                  disabled={isListening}
-                                />
-                              </div>
-
-                              {/* Loading / Searching database spinner */}
-                              {isSearchingMedicine && guidedStep === 1 && (
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2 bg-muted/20 px-3 py-1.5 rounded-lg border border-dashed animate-pulse">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                                  Searching database...
-                                </div>
-                              )}
-
-                              {/* Medicine selection visual preview */}
-                              {selectedMedicineName && guidedStep === 1 && (
-                                <div className="flex items-center justify-between rounded-lg border bg-green-50/50 border-green-200 px-3 py-1.5 mt-2 text-xs">
-                                  <div className="space-y-0.5">
-                                    <p className="font-semibold text-green-950">Medicine Selected: {selectedMedicineName}</p>
-                                    <p className="text-[10px] text-green-700">
-                                      {selectedMedicineSource === "inventory"
-                                        ? "Found in stock database"
-                                        : selectedMedicineSource === "doctor_added"
-                                          ? "Found in doctor-added database"
-                                          : "Custom medicine added"}
-                                    </p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={clearSelectedMedicine}
-                                    className="rounded-md p-1 hover:bg-green-100 text-green-700 transition-colors"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              )}
-
-                              {/* Prompt asking to use custom medicine if not found */}
-                              {showCustomConfirm && guidedStep === 1 && (
-                                <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-3 mt-2 text-xs text-amber-950 shadow-sm">
-                                  <p className="font-bold flex items-center gap-1.5 text-amber-800">
-                                    <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                    Medicine Not Found
-                                  </p>
-                                  <p className="text-[11px] leading-relaxed">
-                                    &ldquo;{showCustomConfirm.name}&rdquo; was not found in the database. Do you want to add it as a custom medicine?
-                                  </p>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      onClick={() => {
-                                        handleUseCustomMedicine(showCustomConfirm.name);
-                                        setShowCustomConfirm(null);
-                                        setGuidedStep(2);
-                                      }}
-                                      className="h-7 text-[10px] px-3 font-semibold bg-primary hover:bg-primary/90 text-white rounded-lg shadow-sm"
-                                    >
-                                      Yes, Add Custom
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setShowCustomConfirm(null);
-                                        setGuidedTranscripts((prev) => {
-                                          const updated = { ...prev, 1: "" };
-                                          guidedTranscriptsRef.current = updated;
-                                          return updated;
-                                        });
-                                      }}
-                                      className="h-7 text-[10px] px-3 font-semibold border-amber-300 text-amber-900 hover:bg-amber-100/50 rounded-lg"
-                                    >
-                                      No, Record Again
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Voice action buttons */}
-                            <div className="flex items-center justify-between gap-3">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  stopListening(false);
-                                  setShowCustomConfirm(null);
-                                  setGuidedStep((prev) => Math.max(prev - 1, 1));
-                                }}
-                                disabled={guidedStep === 1 || isListening}
-                                className="h-8 text-xs font-medium"
-                              >
-                                Back
-                              </Button>
-
-                              {guidedStep < guidedVoiceSteps.length ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  onClick={() => {
-                                    stopListening(false);
-                                    if (guidedStep === 1) {
-                                      const text = (guidedTranscripts[1] || "").trim();
-                                      if (text) {
-                                        handleStep1Complete(text);
-                                      } else {
-                                        setGuidedStep(2);
-                                      }
-                                    } else {
-                                      setGuidedStep((prev) => Math.min(prev + 1, guidedVoiceSteps.length));
-                                    }
-                                  }}
-                                  disabled={isListening}
-                                  className="h-8 text-xs font-medium"
-                                >
-                                  Next Step
-                                </Button>
-                              ) : (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  onClick={handleFinishGuidedPrefill}
-                                  disabled={
-                                    parseDraft.isPending ||
-                                    !Object.values(guidedTranscripts).some((val) => Boolean(val.trim()))
-                                  }
-                                  className="h-8 text-xs font-medium"
-                                >
-                                  {parseDraft.isPending ? (
-                                    <>
-                                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                                      Parsing...
-                                    </>
-                                  ) : (
-                                    "Prefill Form Fields"
-                                  )}
-                                </Button>
-                              )}
-                            </div>
-
-                            {speechError && (
-                              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
-                                {speechError}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    ) : (
-                      /* Manual Entry Mode Form fields */
-                      <div className="space-y-4">
-                        <div className="font-semibold text-xs text-muted-foreground border-b pb-1.5 flex items-center justify-between">
-                          <span>{editingIndex !== null ? "Edit Medicine Details" : "Add Medicine Details"}</span>
-                          {editingIndex !== null && (
-                            <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold uppercase tracking-wider">
-                              Editing Item #{editingIndex + 1}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Field 1: Medicine Selection */}
-                        <div className="space-y-1 relative">
-                          <Label className="text-xs font-semibold">Medicine Name *</Label>
-                          {selectedMedicineName ? (
-                            <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-1.5">
-                              <div className="space-y-0.5">
-                                <p className="text-xs font-bold text-foreground">{selectedMedicineName}</p>
-                                <p className="text-[10px] text-muted-foreground font-medium">
-                                  {selectedMedicineSource === "inventory"
-                                    ? "Main Medicine Inventory"
-                                    : selectedMedicineSource === "doctor_added"
-                                      ? "Doctor-added Database"
-                                      : "Custom Medicine Name"}
-                                </p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={clearSelectedMedicine}
-                                className="rounded-md p-1 hover:bg-muted text-muted-foreground transition-colors"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <div className="relative">
-                                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                  placeholder="Search database or type custom medicine name..."
-                                  value={searchQuery}
-                                  onChange={(event) => setSearchQuery(event.target.value)}
-                                  className="pl-8 h-8.5 text-xs rounded-lg"
-                                />
-                              </div>
-
-                              {searchQuery.trim() !== "" && (
-                                <div className="max-h-48 overflow-y-auto rounded-lg border bg-background text-xs shadow-lg absolute z-20 w-full left-0 mt-1">
-                                  <button
-                                    key="use-custom-btn"
-                                    type="button"
-                                    onClick={() => handleUseCustomMedicine(searchQuery)}
-                                    className="flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-muted/40 font-semibold text-primary"
-                                  >
-                                    <span>Use custom: &quot;{searchQuery.trim()}&quot;</span>
-                                    <Stethoscope className="h-3.5 w-3.5" />
-                                  </button>
-                                  {medicinesQuery.isLoading ? (
-                                    <div className="px-3 py-2.5 text-muted-foreground text-[11px]">Searching database...</div>
-                                  ) : medicineList.length > 0 ? (
-                                    medicineList.map((medicine: MedicineItem) => (
-                                      <button
-                                        key={`${medicine.source}-${medicine.id}`}
-                                        type="button"
-                                        onClick={() => handleSelectMedicine(medicine)}
-                                        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-muted/40 transition-colors"
-                                      >
-                                        <span>{medicine.name}</span>
-                                        <span className="text-[10px] text-muted-foreground bg-muted px-1 py-0.5 rounded">
-                                          {medicine.source === "inventory" ? "stock" : "custom"}
-                                        </span>
-                                      </button>
-                                    ))
-                                  ) : (
-                                    <div className="px-3 py-2.5 text-muted-foreground text-[11px]">No medicines found. Use &quot;Use custom&quot; above.</div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          {errors.medicine_name && (
-                            <p className="text-[11px] text-red-500 font-medium">{errors.medicine_name.message}</p>
-                          )}
-                        </div>
-
-                        {/* Status Card */}
-                        {medicineStatus && (
-                          <MedicineStatusCard
-                            tone={medicineStatus.tone}
-                            title={medicineStatus.title}
-                            description={medicineStatus.description}
-                          />
-                        )}
-
-                        {/* Fields 2 & 3: Type & Dosage */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs font-semibold">Medication Type *</Label>
-                            <Select
-                              value={medicationType}
-                              onValueChange={(value) => setValue("medication_type", value, { shouldValidate: true })}
-                            >
-                              <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {medicationTypeOptions.map((item) => (
-                                  <SelectItem key={item.value} value={item.value} className="text-xs">
-                                    {item.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {errors.medication_type && (
-                              <p className="text-[11px] text-red-500 font-medium">{errors.medication_type.message}</p>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs font-semibold">Dosage *</Label>
-                            <Select
-                              value={dosage}
-                              onValueChange={(value) => setValue("dosage", value, { shouldValidate: true })}
-                            >
-                              <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                <SelectValue placeholder="Select dosage" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {dosageOptions.map((item) => (
-                                  <SelectItem key={item.value} value={item.value} className="text-xs">
-                                    {item.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {errors.dosage && (
-                              <p className="text-[11px] text-red-500 font-medium">{errors.dosage.message}</p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Fields 4 & 5: Frequency & Meal Relation */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs font-semibold">Frequency *</Label>
-                            <Select
-                              value={frequency}
-                              onValueChange={(value) => setValue("frequency", value, { shouldValidate: true })}
-                            >
-                              <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                <SelectValue placeholder="Select frequency" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {frequencyOptions.map((item) => (
-                                  <SelectItem key={item.value} value={item.value} className="text-xs">
-                                    {item.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {errors.frequency && (
-                              <p className="text-[11px] text-red-500 font-medium">{errors.frequency.message}</p>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs font-semibold">Meal Relation *</Label>
-                            <Select
-                              value={meal || ""}
-                              onValueChange={(value) => setValue("meal", value as PrescriptionForm["meal"], { shouldValidate: true })}
-                            >
-                              <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                                <SelectValue placeholder="Select meal timing" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {mealOptions.map((item) => (
-                                  <SelectItem key={item.value} value={item.value} className="text-xs">
-                                    {item.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {errors.meal && (
-                              <p className="text-[11px] text-red-500 font-medium">{errors.meal.message}</p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Field 6: Timings Tag Grid */}
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold">Timings</Label>
-                          <div className="grid grid-cols-4 gap-2">
-                            {[
-                              { label: "Morning", name: "timing_morning" as const, val: timingMorning },
-                              { label: "Afternoon", name: "timing_afternoon" as const, val: timingAfternoon },
-                              { label: "Evening", name: "timing_evening" as const, val: timingEvening },
-                              { label: "Night", name: "timing_night" as const, val: timingNight },
-                            ].map((item) => (
-                              <button
-                                key={item.label}
-                                type="button"
-                                onClick={() => setValue(item.name, !item.val)}
-                                className={`py-1.5 px-2 text-[10px] sm:text-[11px] font-semibold border rounded-lg text-center transition-all ${item.val
-                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                    : "bg-background text-muted-foreground border-border hover:bg-muted/50"
-                                  }`}
-                              >
-                                {item.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Fields 7 & 8: Start & End Dates */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs font-semibold">Start Date</Label>
-                            <Input
-                              type="date"
-                              min={getTodayDate()}
-                              value={startDate}
-                              onChange={(event) => setStartDate(event.target.value)}
-                              className="h-8.5 text-xs rounded-lg"
-                            />
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs font-semibold">End Date</Label>
-                            <Input
-                              type="date"
-                              min={startDate || getTodayDate()}
-                              value={endDate}
-                              onChange={(event) => setEndDate(event.target.value)}
-                              className="h-8.5 text-xs rounded-lg"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Field 9: Instructions Notes */}
-                        <div className="space-y-1">
-                          <Label className="text-xs font-semibold">Instructions / Notes</Label>
-                          <Textarea
-                            rows={2}
-                            value={instructions || ""}
-                            onChange={(event) => setValue("instructions", event.target.value, { shouldValidate: true })}
-                            placeholder="e.g. Take after food with warm water"
-                            className="text-xs resize-none rounded-lg"
-                          />
-                        </div>
-
-                        {/* Action button to add to local list */}
-                        <div className="flex gap-2 pt-2 border-t mt-3">
-                          {editingIndex !== null ? (
-                            <>
-                              <Button
-                                type="button"
-                                onClick={handleAddOrUpdateMedicine}
-                                className="flex-1 h-9 text-xs rounded-lg font-semibold shadow-sm"
-                              >
-                                Update Medicine
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleCancelEdit}
-                                className="h-9 text-xs rounded-lg"
-                              >
-                                Cancel
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              type="button"
-                              onClick={handleAddOrUpdateMedicine}
-                              className="w-full h-9 text-xs rounded-lg font-semibold shadow-sm"
-                            >
-                              + Add to Prescription List
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                <div className="space-y-4">
+                  <div className="flex md:hidden border-b mb-4 bg-muted/20 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setMobileTab("form")}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg text-center transition-all ${mobileTab === "form" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                    >
+                      {entryMode === "voice" ? "Voice Assistant" : "Manual Form"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobileTab("list")}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg text-center transition-all relative ${mobileTab === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                    >
+                      Prescription List
+                      {addedMedicines.length > 0 && (
+                        <span className="absolute top-1/2 -translate-y-1/2 right-2.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow-sm">
+                          {addedMedicines.length}
+                        </span>
+                      )}
+                    </button>
                   </div>
 
-                  {/* Right Panel: Prescription List Card */}
-                  <div className="md:col-span-5 bg-background border rounded-2xl p-4 sm:p-5 shadow-sm space-y-4 self-start">
-
-                    <div className="font-semibold text-xs text-muted-foreground border-b pb-2 flex items-center justify-between">
-                      <span>Prescription Items</span>
-                      <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full border border-primary/20 shadow-sm">
-                        {addedMedicines.length} {addedMedicines.length === 1 ? "Item" : "Items"}
-                      </span>
-                    </div>
-
-                    {/* Empty list state */}
-                    {addedMedicines.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-14 text-center border-2 border-dashed rounded-xl p-4 bg-muted/5">
-                        <Stethoscope className="h-10 w-10 text-muted-foreground/50 mb-2 stroke-[1.2]" />
-                        <p className="text-xs font-semibold text-muted-foreground">No medicines added</p>
-                        <p className="text-[10px] text-muted-foreground/80 mt-1 max-w-[180px] leading-relaxed">
-                          Fill and add details using the form on the left to build the prescription.
-                        </p>
-                      </div>
-                    ) : (
-
-                      /* Scrollable list of medicines */
-                      <div className="max-h-[380px] overflow-y-auto space-y-3 pr-1 min-h-0">
-                        {addedMedicines.map((med, index) => {
-                          const timingsList = [
-                            med.timing_morning ? "Morning" : null,
-                            med.timing_afternoon ? "Afternoon" : null,
-                            med.timing_evening ? "Evening" : null,
-                            med.timing_night ? "Night" : null,
-                          ].filter(Boolean);
-
-                          return (
-                            <div key={index} className="p-3 border rounded-xl bg-background hover:shadow-md hover:border-muted-foreground/30 transition-all text-xs space-y-2 relative group shadow-sm">
-                              <div className="flex justify-between items-start gap-2">
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-foreground text-sm leading-tight">{med.medicine_name}</span>
-                                    <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-semibold uppercase tracking-wider">
-                                      {med.medication_type}
-                                    </span>
-                                  </div>
-                                  <p className="text-[10px] sm:text-[11px] text-muted-foreground">
-                                    {med.dosage} • {frequencyOptions.find((f) => f.value === med.frequency)?.label || med.frequency}
-                                  </p>
-                                </div>
-
-                                <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditMedicine(index)}
-                                    className="p-1 hover:bg-muted rounded text-primary transition-colors"
-                                    title="Edit medicine"
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteMedicine(index)}
-                                    className="p-1 hover:bg-destructive/10 rounded text-destructive transition-colors"
-                                    title="Remove medicine"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-y-1.5 gap-x-2 text-[10px] text-muted-foreground pt-2 border-t mt-1 leading-normal">
-                                <div>
-                                  <span className="font-semibold text-foreground">Timing:</span>{" "}
-                                  {timingsList.length > 0 ? timingsList.join(", ") : "As needed"}
-                                </div>
-                                <div>
-                                  <span className="font-semibold text-foreground">Meal:</span>{" "}
-                                  {mealOptions.find((m) => m.value === med.meal)?.label || med.meal?.replace("_", " ")}
-                                </div>
-                                {med.start_date && (
-                                  <div className="col-span-2">
-                                    <span className="font-semibold text-foreground">Duration:</span>{" "}
-                                    {med.start_date} {med.end_date ? `to ${med.end_date}` : "(Ongoing)"}
-                                  </div>
-                                )}
-                                {med.instructions && (
-                                  <div className="col-span-2 italic bg-muted/40 p-1.5 rounded-lg border text-[10px] leading-relaxed break-words font-medium">
-                                    &ldquo;{med.instructions}&rdquo;
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Stamp Preference and Final Submit */}
-                    <div className="pt-4 border-t space-y-3 bg-background">
-                      <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Stamp Preference *</Label>
-                        <Select
-                          value={stampPreference}
-                          onValueChange={(value) => setValue("stamp_preference", value, { shouldValidate: true })}
-                        >
-                          <SelectTrigger className="h-8.5 text-xs rounded-lg">
-                            <SelectValue placeholder="Select stamp preference" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {stampOptions.map((item) => (
-                              <SelectItem key={item.value} value={item.value} className="text-xs">
-                                {item.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {errors.stamp_preference && (
-                          <p className="text-[11px] text-red-500 font-medium">{errors.stamp_preference.message}</p>
-                        )}
-                      </div>
-
-                      <Button
-                        type="button"
-                        onClick={handleFinalSubmit}
-                        disabled={addPrescription.isPending || addedMedicines.length === 0}
-                        className="w-full h-10 text-xs sm:text-sm font-semibold rounded-lg shadow-sm"
-                      >
-                        {addPrescription.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving Prescription...
-                          </>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                    <div className={`md:col-span-7 bg-background border rounded-2xl p-4 sm:p-5 shadow-sm ${mobileTab === "form" ? "block" : "hidden md:block"}`}>
+                      {entryMode === "voice" ? (
+                        editingIndex !== null ? (
+                          <PrescriptionMedicineForm
+                            title="Edit Medicine Details"
+                            editingIndex={editingIndex}
+                            selectedMedicineName={selectedMedicineName}
+                            selectedMedicineSource={selectedMedicineSource}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            medicineList={medicineList}
+                            isSearchingMedicine={isSearchingMedicine}
+                            medicineStatus={medicineStatus}
+                            errors={errors as Record<string, { message?: string } | undefined>}
+                            medicationType={medicationType}
+                            dosage={dosage}
+                            frequency={frequency}
+                            meal={meal}
+                            timingMorning={timingMorning}
+                            timingAfternoon={timingAfternoon}
+                            timingEvening={timingEvening}
+                            timingNight={timingNight}
+                            startDate={startDate}
+                            endDate={endDate}
+                            instructions={instructions}
+                            medicationTypeOptions={medicationTypeOptions}
+                            frequencyOptions={frequencyOptions}
+                            mealOptions={mealOptions}
+                            dosageOptions={dosageOptions}
+                            onSelectMedicine={handleSelectMedicine}
+                            onUseCustomMedicine={handleUseCustomMedicine}
+                            onClearSelectedMedicine={clearSelectedMedicine}
+                            onMedicationTypeChange={(value) => setValue("medication_type", value, { shouldValidate: true })}
+                            onDosageChange={(value) => setValue("dosage", value, { shouldValidate: true })}
+                            onFrequencyChange={(value) => setValue("frequency", value, { shouldValidate: true })}
+                            onMealChange={(value) => setValue("meal", value as PrescriptionForm["meal"], { shouldValidate: true })}
+                            onTimingChange={(name, value) => setValue(name, value)}
+                            onStartDateChange={setStartDate}
+                            onEndDateChange={setEndDate}
+                            onInstructionsChange={(value) => setValue("instructions", value, { shouldValidate: true })}
+                            onSubmit={handleAddOrUpdateMedicine}
+                            onCancel={handleCancelEdit}
+                            submitLabel="Update Medicine"
+                            cancelLabel="Cancel"
+                          />
+                        ) : voiceDraftMedicine !== null ? (
+                          <PrescriptionMedicineForm
+                            title="Complete Missing Details"
+                            subtitle="The AI assistant parsed your dictation but needs you to clarify the following fields."
+                            editingIndex={editingIndex}
+                            selectedMedicineName={selectedMedicineName}
+                            selectedMedicineSource={selectedMedicineSource}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            medicineList={medicineList}
+                            isSearchingMedicine={isSearchingMedicine}
+                            medicineStatus={medicineStatus}
+                            errors={errors as Record<string, { message?: string } | undefined>}
+                            medicationType={medicationType}
+                            dosage={dosage}
+                            frequency={frequency}
+                            meal={meal}
+                            timingMorning={timingMorning}
+                            timingAfternoon={timingAfternoon}
+                            timingEvening={timingEvening}
+                            timingNight={timingNight}
+                            startDate={startDate}
+                            endDate={endDate}
+                            instructions={instructions}
+                            medicationTypeOptions={medicationTypeOptions}
+                            frequencyOptions={frequencyOptions}
+                            mealOptions={mealOptions}
+                            dosageOptions={dosageOptions}
+                            visibleFields={missingFieldsList as Array<"medicine_name" | "medication_type" | "dosage" | "frequency" | "meal">}
+                            mode="compact"
+                            onSelectMedicine={handleSelectMedicine}
+                            onUseCustomMedicine={handleUseCustomMedicine}
+                            onClearSelectedMedicine={clearSelectedMedicine}
+                            onMedicationTypeChange={(value) => setValue("medication_type", value, { shouldValidate: true })}
+                            onDosageChange={(value) => setValue("dosage", value, { shouldValidate: true })}
+                            onFrequencyChange={(value) => setValue("frequency", value, { shouldValidate: true })}
+                            onMealChange={(value) => setValue("meal", value as PrescriptionForm["meal"], { shouldValidate: true })}
+                            onTimingChange={(name, value) => setValue(name, value)}
+                            onStartDateChange={setStartDate}
+                            onEndDateChange={setEndDate}
+                            onInstructionsChange={(value) => setValue("instructions", value, { shouldValidate: true })}
+                            onSubmit={handleAddOrUpdateMedicine}
+                            submitLabel="Confirm & Add"
+                            cancelLabel="Discard"
+                            onCancel={() => {
+                              setVoiceDraftMedicine(null);
+                              setMissingFieldsList([]);
+                              const currentStamp = getValues("stamp_preference");
+                              reset({ ...defaultFormValues, stamp_preference: currentStamp });
+                              setStartDate(getTodayDate());
+                              setEndDate("");
+                            }}
+                          />
                         ) : (
-                          `Save & Submit Prescription (${addedMedicines.length})`
-                        )}
-                      </Button>
+                          <PrescriptionVoiceAssistantPanel
+                            appointmentId={appointmentId}
+                            deepgramEnabled={deepgramEnabled}
+                            voiceSubMode={voiceSubMode}
+                            setVoiceSubMode={setVoiceSubMode}
+                            onDeepgramResult={handleDeepgramResult}
+                            voiceLanguageOptions={voiceLanguageOptions}
+                            selectedSpeechLocale={selectedSpeechLocale}
+                            setSelectedSpeechLocale={setSelectedSpeechLocale}
+                            guidedVoiceSteps={guidedVoiceSteps}
+                            guidedStep={guidedStep}
+                            onGuidedStepChange={(step) => {
+                              stopListening(false);
+                              setGuidedStep(step);
+                            }}
+                            guidedTranscripts={guidedTranscripts}
+                            onGuidedTranscriptChange={(step, value) => {
+                              setGuidedTranscripts((prev) => {
+                                const updated = { ...prev, [step]: value };
+                                guidedTranscriptsRef.current = updated;
+                                return updated;
+                              });
+                            }}
+                            speechSupported={speechSupported}
+                            isListening={isListening}
+                            speechError={speechError}
+                            isSearchingMedicine={isSearchingMedicine}
+                            selectedMedicineName={selectedMedicineName}
+                            selectedMedicineSource={selectedMedicineSource}
+                            showCustomConfirm={showCustomConfirm}
+                            parseDraftPending={parseDraft.isPending}
+                            onStartListening={startListening}
+                            onStopListening={() => stopListening(false)}
+                            onBack={() => {
+                              stopListening(false);
+                              setShowCustomConfirm(null);
+                              setGuidedStep((prev) => Math.max(prev - 1, 1));
+                            }}
+                            onNext={() => {
+                              stopListening(false);
+                              if (guidedStep === 1) {
+                                const text = (guidedTranscripts[1] || "").trim();
+                                if (text) {
+                                  handleStep1Complete(text);
+                                } else {
+                                  setGuidedStep(2);
+                                }
+                              } else {
+                                setGuidedStep((prev) => Math.min(prev + 1, guidedVoiceSteps.length));
+                              }
+                            }}
+                            onFinish={handleFinishGuidedPrefill}
+                            onUseCustomMedicine={handleUseCustomMedicine}
+                            onClearSelectedMedicine={clearSelectedMedicine}
+                            onCustomConfirmAccept={() => {
+                              handleUseCustomMedicine(showCustomConfirm?.name || "");
+                              setShowCustomConfirm(null);
+                              setGuidedStep(2);
+                            }}
+                            onCustomConfirmDismiss={() => {
+                              setShowCustomConfirm(null);
+                              setGuidedTranscripts((prev) => {
+                                const updated = { ...prev, 1: "" };
+                                guidedTranscriptsRef.current = updated;
+                                return updated;
+                              });
+                            }}
+                          />
+                        )
+                      ) : (
+                        <PrescriptionMedicineForm
+                          title={editingIndex !== null ? "Edit Medicine Details" : "Add Medicine Details"}
+                          editingIndex={editingIndex}
+                          selectedMedicineName={selectedMedicineName}
+                          selectedMedicineSource={selectedMedicineSource}
+                          searchQuery={searchQuery}
+                          setSearchQuery={setSearchQuery}
+                          medicineList={medicineList}
+                          isSearchingMedicine={isSearchingMedicine}
+                          medicineStatus={medicineStatus}
+                          errors={errors as Record<string, { message?: string } | undefined>}
+                          medicationType={medicationType}
+                          dosage={dosage}
+                          frequency={frequency}
+                          meal={meal}
+                          timingMorning={timingMorning}
+                          timingAfternoon={timingAfternoon}
+                          timingEvening={timingEvening}
+                          timingNight={timingNight}
+                          startDate={startDate}
+                          endDate={endDate}
+                          instructions={instructions}
+                          medicationTypeOptions={medicationTypeOptions}
+                          frequencyOptions={frequencyOptions}
+                          mealOptions={mealOptions}
+                          dosageOptions={dosageOptions}
+                          onSelectMedicine={handleSelectMedicine}
+                          onUseCustomMedicine={handleUseCustomMedicine}
+                          onClearSelectedMedicine={clearSelectedMedicine}
+                          onMedicationTypeChange={(value) => setValue("medication_type", value, { shouldValidate: true })}
+                          onDosageChange={(value) => setValue("dosage", value, { shouldValidate: true })}
+                          onFrequencyChange={(value) => setValue("frequency", value, { shouldValidate: true })}
+                          onMealChange={(value) => setValue("meal", value as PrescriptionForm["meal"], { shouldValidate: true })}
+                          onTimingChange={(name, value) => setValue(name, value)}
+                          onStartDateChange={setStartDate}
+                          onEndDateChange={setEndDate}
+                          onInstructionsChange={(value) => setValue("instructions", value, { shouldValidate: true })}
+                          onSubmit={handleAddOrUpdateMedicine}
+                          onCancel={editingIndex !== null ? handleCancelEdit : undefined}
+                          submitLabel={editingIndex !== null ? "Update Medicine" : "+ Add to Prescription List"}
+                          fullWidthButton={editingIndex === null}
+                        />
+                      )}
                     </div>
-                  </div>
 
+                    <PrescriptionListPanel
+                      addedMedicines={addedMedicines}
+                      onEditMedicine={handleEditMedicine}
+                      onDeleteMedicine={handleDeleteMedicine}
+                      stampPreference={stampPreference}
+                      stampOptions={stampOptions}
+                      onStampChange={(value) => setValue("stamp_preference", value, { shouldValidate: true })}
+                      onFinalSubmit={handleFinalSubmit}
+                      addPrescriptionPending={addPrescription.isPending}
+                      errors={errors as Record<string, { message?: string } | undefined>}
+                      frequencyOptions={frequencyOptions}
+                      mealOptions={mealOptions}
+                      mobileTab={mobileTab}
+                    />
+                  </div>
                 </div>
               )}
             </form>
@@ -2311,83 +1313,8 @@ export default function AddPrescriptionDialog({
         </DialogContent>
       </Dialog>
 
-      <SuccessDialog open={showSuccess} onClose={handleSuccessClose} />
+      <PrescriptionSuccessDialog open={showSuccess} onClose={handleSuccessClose} />
     </>
-  );
-}
-
-function CheckboxField({
-  label,
-  checked,
-  onCheckedChange,
-}: {
-  label: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center space-x-2 rounded-xl border p-3">
-      <Checkbox checked={checked} onCheckedChange={onCheckedChange} />
-      <Label className="text-sm">{label}</Label>
-    </div>
-  );
-}
-
-function MedicineStatusCard({
-  tone,
-  title,
-  description,
-}: {
-  tone: "green" | "amber" | "blue";
-  title: string;
-  description: string;
-}) {
-  const toneClasses = {
-    green: "border-green-200 bg-green-50 text-green-800",
-    amber: "border-amber-200 bg-amber-50 text-amber-800",
-    blue: "border-blue-200 bg-blue-50 text-blue-800",
-  }[tone];
-
-  return (
-    <div className={`rounded-2xl border p-4 ${toneClasses}`}>
-      <p className="text-sm font-semibold">{title}</p>
-      <p className="mt-1 text-xs sm:text-sm">{description}</p>
-    </div>
-  );
-}
-
-function ReviewRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="text-sm">{value}</p>
-    </div>
-  );
-}
-
-function SuccessDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[90vw] max-w-sm rounded-xl">
-        <DialogHeader>
-          <DialogTitle>Prescription Added</DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          The prescription has been added successfully.
-        </p>
-        <Button onClick={onClose} className="mt-4 w-full">
-          OK
-        </Button>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -2415,6 +1342,63 @@ function combineTranscript(...parts: Array<string | null | undefined>) {
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function mergeTranscripts(base: string, final: string, interim: string): string {
+  const b = base.trim();
+  const f = final.trim();
+  const i = interim.trim();
+
+  if (!b) {
+    return combineTranscript(f, i);
+  }
+
+  if (!f) {
+    return combineTranscript(b, i);
+  }
+
+  const bLower = b.toLowerCase();
+  const fLower = f.toLowerCase();
+
+  if (fLower.startsWith(bLower)) {
+    return combineTranscript(f, i);
+  }
+
+  const baseWords = b.split(/\s+/);
+  const finalWords = f.split(/\s+/);
+
+  let overlapLength = 0;
+  const maxOverlap = Math.min(baseWords.length, finalWords.length);
+
+  for (let len = maxOverlap; len > 0; len--) {
+    const baseTail = baseWords.slice(-len).map((w) => w.toLowerCase()).join(" ");
+    const finalHead = finalWords.slice(0, len).map((w) => w.toLowerCase()).join(" ");
+    if (baseTail === finalHead) {
+      overlapLength = len;
+      break;
+    }
+  }
+
+  if (overlapLength > 0) {
+    const uniqueFinal = finalWords.slice(overlapLength).join(" ");
+    return combineTranscript(b, uniqueFinal, i);
+  }
+
+  return combineTranscript(b, f, i);
+}
+
+function cleanDuplicateWords(text: string): string {
+  if (!text) return "";
+  const words = text.split(/\s+/);
+  const result: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    if (i > 0 && word.toLowerCase() === words[i - 1].toLowerCase()) {
+      continue;
+    }
+    result.push(word);
+  }
+  return result.join(" ");
 }
 
 function isVoiceLocale(value?: string | null): value is VoiceLocale {

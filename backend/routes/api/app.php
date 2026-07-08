@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\V2\Common\ContactUs\ContactUsController;
 use App\Http\Controllers\Api\V2\Common\Department\DepartmentController;
 use App\Http\Controllers\Api\V2\Common\Leave\LeaveController;
 use App\Http\Controllers\Api\V2\Common\Notification\NotificationController;
+use App\Http\Controllers\Api\V2\Common\Notification\PushSubscriptionController;
 use App\Http\Controllers\Api\V2\Common\Prescription\PrescriptionController;
+use App\Http\Controllers\Api\V2\Common\Prescription\VoiceTranscriptionController;
 use App\Http\Controllers\Api\V2\Common\Review\ReviewController;
 use App\Http\Controllers\Api\V2\Common\VideoConsultation\WherebyWebhookController;
 use App\Http\Controllers\Api\V2\Doctor\DoctorController;
@@ -88,6 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/departments', [DepartmentController::class, 'index']);
         Route::post('{appointmentId}/prescriptions', [PrescriptionController::class, 'store']);
         Route::post('{appointmentId}/prescription-drafts/text', [PrescriptionController::class, 'parseTextDraft']);
+        Route::post('{appointmentId}/prescription-drafts/voice', [VoiceTranscriptionController::class, 'transcribeAndParse']);
         Route::get('/medicine-templates', [MedicineTemplateController::class, 'index']);
         Route::get('/medicine-templates/{id}', [MedicineTemplateController::class, 'show']);
         Route::post('/{appointmentId}/assign-medicine-template', [MedicineTemplateController::class, 'assign']);
@@ -176,6 +179,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{notificationId}/archive', [NotificationController::class, 'archive']);
         Route::post('/{notificationId}/unarchive', [NotificationController::class, 'unarchive']);
         Route::post('/archive-all', [NotificationController::class, 'archiveAll']);
+        
+        // WebPush subscription endpoints
+        Route::post('/push-subscription', [PushSubscriptionController::class, 'update']);
+        Route::post('/push-subscription/delete', [PushSubscriptionController::class, 'destroy']);
     });
 
     Route::prefix('devices')->group(function () {
