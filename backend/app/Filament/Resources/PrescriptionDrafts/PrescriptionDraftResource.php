@@ -172,7 +172,8 @@ class PrescriptionDraftResource extends Resource
                     ]),
             ])
             ->actions([
-                ViewAction::make()->modal(),
+                ViewAction::make()
+                    ->modalWidth('4xl'),
             ])
             ->striped()
             ->paginated([25, 50, 100]);
@@ -228,6 +229,9 @@ class PrescriptionDraftResource extends Resource
                     TextEntry::make('input_text')
                         ->label('')
                         ->columnSpanFull()
+                        ->extraAttributes([
+                            'class' => 'max-h-[120px] overflow-y-auto block bg-gray-50/50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-white/10 text-sm leading-relaxed scrollbar-thin'
+                        ])
                         ->placeholder('No transcription captured.'),
                 ]),
 
@@ -238,6 +242,9 @@ class PrescriptionDraftResource extends Resource
                         ->columnSpanFull()
                         ->formatStateUsing(fn($state) => is_array($state) ? json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : $state)
                         ->fontFamily('monospace')
+                        ->extraAttributes([
+                            'class' => 'max-h-[250px] overflow-y-auto block bg-gray-50/50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-white/10 text-xs font-mono scrollbar-thin'
+                        ])
                         ->placeholder('No parsed payload available.'),
                 ]),
 
@@ -247,11 +254,17 @@ class PrescriptionDraftResource extends Resource
                     TextEntry::make('warnings')
                         ->label('Warnings')
                         ->formatStateUsing(fn($state) => is_array($state) && count($state) > 0 ? implode("\n", $state) : 'None')
+                        ->extraAttributes([
+                            'class' => 'max-h-[100px] overflow-y-auto block scrollbar-thin'
+                        ])
                         ->placeholder('No warnings.'),
 
                     TextEntry::make('missing_fields')
                         ->label('Missing Fields')
                         ->formatStateUsing(fn($state) => is_array($state) && count($state) > 0 ? implode(', ', $state) : 'None')
+                        ->extraAttributes([
+                            'class' => 'max-h-[100px] overflow-y-auto block scrollbar-thin'
+                        ])
                         ->placeholder('No missing fields.'),
                 ]),
 
@@ -262,6 +275,9 @@ class PrescriptionDraftResource extends Resource
                         ->columnSpanFull()
                         ->formatStateUsing(fn($state) => is_array($state) ? json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : $state)
                         ->fontFamily('monospace')
+                        ->extraAttributes([
+                            'class' => 'max-h-[250px] overflow-y-auto block bg-gray-50/50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-white/10 text-xs font-mono scrollbar-thin'
+                        ])
                         ->placeholder('Not submitted/applied yet.'),
                 ])
                 ->visible(fn($record) => !empty($record->submitted_payload)),
@@ -291,6 +307,9 @@ class PrescriptionDraftResource extends Resource
                                 ->implode("\n");
                         })
                         ->columnSpanFull()
+                        ->extraAttributes([
+                            'class' => 'max-h-[150px] overflow-y-auto block bg-gray-50/50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-white/10 text-xs leading-relaxed whitespace-pre-line scrollbar-thin'
+                        ])
                         ->placeholder('No saved medicines recorded.'),
                 ])
                 ->visible(fn (PrescriptionDraft $record): bool => static::extractCreatedMedicines($record)->isNotEmpty()),

@@ -27,7 +27,7 @@
                 <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Recently Applied Voice Prescriptions</h3>
             </div>
 
-            <div class="max-w-full overflow-x-auto">
+            <div class="max-w-full overflow-x-auto max-h-[380px] overflow-y-auto scrollbar-thin">
                 <table class="min-w-full table-auto text-left text-sm">
                     <thead class="bg-gray-50 text-gray-700 dark:bg-white/5 dark:text-gray-200">
                         <tr>
@@ -81,7 +81,7 @@
                 <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Doctor-Added Medicine Names</h3>
             </div>
 
-            <div class="max-w-full overflow-x-auto">
+            <div class="max-w-full overflow-x-auto max-h-[380px] overflow-y-auto scrollbar-thin">
                 <table class="min-w-full table-auto text-left text-sm">
                     <thead class="bg-gray-50 text-gray-700 dark:bg-white/5 dark:text-gray-200">
                         <tr>
