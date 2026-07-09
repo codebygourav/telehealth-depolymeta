@@ -857,7 +857,7 @@
         }
     </style>
 
-    <div class="availability-shell" wire:key="availability-shell-{{ $this->availabilityRefreshVersion }}">
+    <div class="availability-shell">
         <div class="availability-kpis">
             <div class="availability-kpi" style="--kpi-dot: #073827">
                 <div class="availability-kpi__top">
@@ -1115,7 +1115,7 @@
                         $dateTotalBooked = $dateRows->sum('total_booked');
                     @endphp
                     <details class="availability-date-card {{ $date === $todayDate ? 'is-today' : '' }}"
-                        wire:key="availability-date-{{ $date }}-{{ $this->availabilityRefreshVersion }}"
+                        wire:key="availability-date-{{ $date }}"
                         style="min-width: {{ $slotTableMinWidth }};" @if ($date === $openDate) open @endif>
                         <summary>
                             <div class="availability-date-summary">
@@ -1184,7 +1184,7 @@
                                                 style="color: var(--av-primary); font-weight: 700; text-decoration: none;">Profile</a>
                                         @endif
                                     </div>
-                                    
+
                                 @endif
                                 <div>
                                     <div class="availability-main">
