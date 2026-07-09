@@ -32,6 +32,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Collection;
+use Illuminate\Support\HtmlString;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Url;
 
@@ -1872,7 +1873,7 @@ class ManageDoctorAvailability extends Page
                 ->schema([
                     Placeholder::make('slot_review')
                         ->label('Review details')
-                        ->content(fn($get): string => $this->slotReviewHtml($get)),
+                        ->content(fn($get): HtmlString => new HtmlString($this->slotReviewHtml($get))),
                 ]),
         ];
     }
