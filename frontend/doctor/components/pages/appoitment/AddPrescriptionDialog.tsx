@@ -9,7 +9,13 @@ import { useForm, useWatch } from "react-hook-form";
 import type { VoiceTranscriptionResult } from "@/api/voice-transcription";
 
 import { getMedicines } from "@/api/medicines";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/context/userContext";
 import { useAddPrescription } from "@/queries/useAddPrescription";
 import { useMedicines } from "@/queries/useMedicines";
@@ -119,8 +125,13 @@ interface AddPrescriptionDialogProps {
     allow_custom_locale?: boolean;
     requires_doctor_review?: boolean;
     deepgram_enabled?: boolean;
+    browser_speech_enabled?: boolean;
   } | null;
 }
+
+type AssistantConfig = NonNullable<
+  AddPrescriptionDialogProps["assistantConfig"]
+>;
 
 const defaultFormValues: PrescriptionForm = {
   medicine_id: "",
@@ -176,12 +187,6 @@ const mealOptions = [
   { label: "With Meal", value: "with_meal" },
 ];
 
-const voiceLanguageOptions: Array<{ label: string; value: VoiceLocale }> = [
-  { label: "English", value: "en-IN" },
-  { label: "Hindi", value: "hi-IN" },
-  { label: "Punjabi", value: "pa-IN" },
-];
-
 const guidedVoiceSteps = [
   {
     id: 1,
@@ -223,13 +228,14 @@ export default function AddPrescriptionDialog({
     (assistantMode === "text" || assistantMode === "speech");
 
   const deepgramEnabled = Boolean(assistantConfig?.deepgram_enabled);
+  const browserVoiceEnabled = Boolean(assistantConfig?.browser_speech_enabled);
 
   const [voiceSubMode, setVoiceSubMode] = useState<"deepgram" | "browser">(
-    deepgramEnabled ? "deepgram" : "browser"
+    getDefaultVoiceSubMode(deepgramEnabled, browserVoiceEnabled),
   );
 
   const [entryMode, setEntryMode] = useState<EntryMode>(
-    getDefaultEntryMode(dictationEnabled)
+    getDefaultEntryMode(dictationEnabled),
   );
   const [guidedStep, setGuidedStep] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -237,30 +243,40 @@ export default function AddPrescriptionDialog({
   const [startDate, setStartDate] = useState<string>(getTodayDate());
   const [endDate, setEndDate] = useState<string>("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const [guidedTranscripts, setGuidedTranscripts] = useState<Record<number, string>>(
-    createEmptyGuidedTranscripts()
-  );
+  const [guidedTranscripts, setGuidedTranscripts] = useState<
+    Record<number, string>
+  >(createEmptyGuidedTranscripts());
   const [draftId, setDraftId] = useState<string | null>(null);
-  const [draftWarnings, setDraftWarnings] = useState<string[]>([]);
-  const [draftMissingFields, setDraftMissingFields] = useState<string[]>([]);
   const [isListening, setIsListening] = useState(false);
+  const [isDeepgramProcessing, setIsDeepgramProcessing] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [selectedSpeechLocale, setSelectedSpeechLocale] = useState<VoiceLocale>(
-    () => getInitialVoiceLocale(assistantConfig?.speech_locale)
+    () => getInitialVoiceLocale(assistantConfig?.speech_locale),
+  );
+  const voiceLanguageOptions = useMemo(
+    () => buildVoiceLanguageOptions(assistantConfig),
+    [assistantConfig],
   );
 
   const [addedMedicines, setAddedMedicines] = useState<AddedMedicine[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [selectedMedicineSource, setSelectedMedicineSource] = useState<MedicineSource>(null);
+  const [selectedMedicineSource, setSelectedMedicineSource] =
+    useState<MedicineSource>(null);
 
-  const [voiceDraftMedicine, setVoiceDraftMedicine] = useState<DraftFormPayload | null>(null);
+  const [voiceDraftMedicine, setVoiceDraftMedicine] =
+    useState<DraftFormPayload | null>(null);
   const [missingFieldsList, setMissingFieldsList] = useState<string[]>([]);
 
   const [isSearchingMedicine, setIsSearchingMedicine] = useState(false);
-  const [showCustomConfirm, setShowCustomConfirm] = useState<{ name: string } | null>(null);
+  const [showCustomConfirm, setShowCustomConfirm] = useState<{
+    name: string;
+  } | null>(null);
 
   const [mobileTab, setMobileTab] = useState<"form" | "list">("form");
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [toastMessage, setToastMessage] = useState<{
+    text: string;
+    type: "success" | "error";
+  } | null>(null);
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const shouldParseAfterStopRef = useRef(false);
@@ -269,7 +285,7 @@ export default function AddPrescriptionDialog({
   const transcriptBaseRef = useRef("");
   const transcriptFinalRef = useRef("");
   const guidedTranscriptsRef = useRef<Record<number, string>>(
-    createEmptyGuidedTranscripts()
+    createEmptyGuidedTranscripts(),
   );
 
   const setDraftInput = (value: string) => {
@@ -292,7 +308,6 @@ export default function AddPrescriptionDialog({
   }, [toastMessage]);
 
   const {
-    handleSubmit,
     reset,
     setValue,
     getValues,
@@ -304,7 +319,8 @@ export default function AddPrescriptionDialog({
     defaultValues: defaultFormValues,
   });
 
-  const selectedMedicineName = useWatch({ control, name: "medicine_name" }) || "";
+  const selectedMedicineName =
+    useWatch({ control, name: "medicine_name" }) || "";
   const medicationType = useWatch({ control, name: "medication_type" });
   const meal = useWatch({ control, name: "meal" });
   const dosage = useWatch({ control, name: "dosage" });
@@ -325,7 +341,7 @@ export default function AddPrescriptionDialog({
   });
   const medicineList = useMemo(
     () => medicinesQuery.data?.data || [],
-    [medicinesQuery.data?.data]
+    [medicinesQuery.data?.data],
   );
   const speechSupported =
     typeof window !== "undefined" &&
@@ -354,15 +370,19 @@ export default function AddPrescriptionDialog({
     reset(defaultFormValues);
     setDraftInput("");
     setDraftId(null);
-    setDraftWarnings([]);
-    setDraftMissingFields([]);
     setSearchQuery("");
     setShowSuccess(false);
+    setVoiceSubMode(
+      getDefaultVoiceSubMode(deepgramEnabled, browserVoiceEnabled),
+    );
     setEntryMode(getDefaultEntryMode(dictationEnabled));
     setGuidedStep(1);
     setGuidedTranscripts(createEmptyGuidedTranscripts());
+    setIsDeepgramProcessing(false);
     setSpeechError(null);
-    setSelectedSpeechLocale(getInitialVoiceLocale(assistantConfig?.speech_locale));
+    setSelectedSpeechLocale(
+      getInitialVoiceLocale(assistantConfig?.speech_locale),
+    );
     setStartDate(getTodayDate());
     setEndDate("");
     setAddedMedicines([]);
@@ -374,13 +394,34 @@ export default function AddPrescriptionDialog({
     setShowCustomConfirm(null);
     setMobileTab("form");
     setToastMessage(null);
-  }, [open, dictationEnabled, assistantConfig?.speech_locale, reset]);
+  }, [
+    open,
+    dictationEnabled,
+    assistantConfig?.speech_locale,
+    deepgramEnabled,
+    browserVoiceEnabled,
+    reset,
+  ]);
 
   useEffect(() => {
     if (!dictationEnabled && entryMode === "voice") {
       setEntryMode("manual");
     }
   }, [dictationEnabled, entryMode]);
+
+  useEffect(() => {
+    setVoiceSubMode((current) => {
+      if (current === "deepgram" && deepgramEnabled) {
+        return current;
+      }
+
+      if (current === "browser" && browserVoiceEnabled) {
+        return current;
+      }
+
+      return getDefaultVoiceSubMode(deepgramEnabled, browserVoiceEnabled);
+    });
+  }, [browserVoiceEnabled, deepgramEnabled]);
 
   const dosageOptions = useMemo(() => {
     return getDosageOptions(medicationType);
@@ -410,14 +451,19 @@ export default function AddPrescriptionDialog({
     return {
       tone: "blue" as const,
       title: "New custom medicine",
-      description: "This name is not in the database. It will be saved as a custom medicine.",
+      description:
+        "This name is not in the database. It will be saved as a custom medicine.",
     };
   }, [selectedMedicineSource, selectedMedicineName]);
 
   const handleSelectMedicine = (medicine: MedicineItem) => {
-    setValue("medicine_id", medicine.source === "inventory" ? medicine.id : "", {
-      shouldValidate: true,
-    });
+    setValue(
+      "medicine_id",
+      medicine.source === "inventory" ? medicine.id : "",
+      {
+        shouldValidate: true,
+      },
+    );
     setValue("medicine_name", medicine.name, { shouldValidate: true });
     setValue("medication_type", medicine.type || medicationType || "tablet", {
       shouldValidate: true,
@@ -462,7 +508,7 @@ export default function AddPrescriptionDialog({
 
       const list = response?.data || [];
       const matched = list.find(
-        (m: MedicineItem) => m.name.toLowerCase() === trimmed.toLowerCase()
+        (m: MedicineItem) => m.name.toLowerCase() === trimmed.toLowerCase(),
       );
 
       if (matched) {
@@ -479,9 +525,16 @@ export default function AddPrescriptionDialog({
   };
 
   const handleAddOrUpdateMedicine = async () => {
-    const fieldsToValidate = voiceDraftMedicine !== null
-      ? (missingFieldsList as Array<keyof PrescriptionForm>)
-      : (["medicine_name", "medication_type", "dosage", "frequency", "meal"] as Array<keyof PrescriptionForm>);
+    const fieldsToValidate =
+      voiceDraftMedicine !== null
+        ? (missingFieldsList as Array<keyof PrescriptionForm>)
+        : ([
+            "medicine_name",
+            "medication_type",
+            "dosage",
+            "frequency",
+            "meal",
+          ] as Array<keyof PrescriptionForm>);
 
     const isValid = await trigger(fieldsToValidate);
 
@@ -524,10 +577,16 @@ export default function AddPrescriptionDialog({
         return updated;
       });
       setEditingIndex(null);
-      setToastMessage({ text: `Updated ${newMedicine.medicine_name} successfully.`, type: "success" });
+      setToastMessage({
+        text: `Updated ${newMedicine.medicine_name} successfully.`,
+        type: "success",
+      });
     } else {
       setAddedMedicines((prev) => [...prev, newMedicine]);
-      setToastMessage({ text: `Added ${newMedicine.medicine_name} to prescription list.`, type: "success" });
+      setToastMessage({
+        text: `Added ${newMedicine.medicine_name} to prescription list.`,
+        type: "success",
+      });
     }
 
     setVoiceDraftMedicine(null);
@@ -599,7 +658,10 @@ export default function AddPrescriptionDialog({
     const med = addedMedicines[index];
     setAddedMedicines((prev) => prev.filter((_, i) => i !== index));
     if (med) {
-      setToastMessage({ text: `Removed ${med.medicine_name} from list.`, type: "success" });
+      setToastMessage({
+        text: `Removed ${med.medicine_name} from list.`,
+        type: "success",
+      });
     }
 
     if (editingIndex === index) {
@@ -656,8 +718,8 @@ export default function AddPrescriptionDialog({
       onError: (error: RequestError) => {
         alert(
           error?.response?.data?.errors?.message ||
-          error?.message ||
-          "Failed to add prescription. Please try again."
+            error?.message ||
+            "Failed to add prescription. Please try again.",
         );
       },
     });
@@ -688,7 +750,7 @@ export default function AddPrescriptionDialog({
 
     let tm = Boolean(form.timing_morning);
     let ta = Boolean(form.timing_afternoon);
-    let te = Boolean(form.timing_evening);
+    const te = Boolean(form.timing_evening);
     let tn = Boolean(form.timing_night);
 
     if (!tm && !ta && !te && !tn && normFreq) {
@@ -719,11 +781,90 @@ export default function AddPrescriptionDialog({
     setEndDate(form.end_date || "");
     setSearchQuery("");
 
-    if (form.medicine_id) {
+    if (form.medicine_source === "doctor_added") {
+      setSelectedMedicineSource("doctor_added");
+    } else if (form.medicine_id) {
       setSelectedMedicineSource("inventory");
     } else if (form.medicine_name) {
       setSelectedMedicineSource("custom");
+    } else {
+      setSelectedMedicineSource(null);
     }
+  };
+
+  const consumeParsedDraftPayload = (payload: DraftResponsePayload) => {
+    setDraftId(payload.draft_id || null);
+    applyDraftToForm(payload);
+
+    const form = payload?.form || {};
+
+    const normType = normalizeMedicationType(form.medication_type);
+    const normDosage = normalizeDosage(form.dosage, normType);
+    const normFreq = normalizeFrequency(form.frequency);
+    const normMeal = normalizeMealRelation(form.meal);
+
+    const missing: string[] = [];
+    if (!form.medicine_name || form.medicine_name.trim().length < 2) {
+      missing.push("medicine_name");
+    }
+    if (!normType) {
+      missing.push("medication_type");
+    }
+    if (!normDosage) {
+      missing.push("dosage");
+    }
+    if (!normFreq) {
+      missing.push("frequency");
+    }
+    if (!normMeal) {
+      missing.push("meal");
+    }
+
+    if (missing.length === 0) {
+      const medicineName = form.medicine_name?.trim() || "";
+      const newMedicine: AddedMedicine = {
+        medicine_id: form.medicine_id || null,
+        medicine_name: medicineName,
+        medication_type: normType,
+        dosage: normDosage,
+        frequency: normFreq,
+        timing_morning: !!getValues("timing_morning"),
+        timing_afternoon: !!getValues("timing_afternoon"),
+        timing_evening: !!getValues("timing_evening"),
+        timing_night: !!getValues("timing_night"),
+        meal: normMeal,
+        instructions: form.instructions || "",
+        start_date: form.start_date || getTodayDate(),
+        end_date: form.end_date || null,
+      };
+      setAddedMedicines((prev) => [...prev, newMedicine]);
+      setToastMessage({
+        text: `Added ${newMedicine.medicine_name} to prescription list.`,
+        type: "success",
+      });
+
+      const currentStamp = getValues("stamp_preference");
+      reset({
+        ...defaultFormValues,
+        stamp_preference: currentStamp,
+      });
+      setStartDate(getTodayDate());
+      setEndDate("");
+      setSearchQuery("");
+      setSelectedMedicineSource(null);
+
+      setGuidedTranscripts(createEmptyGuidedTranscripts());
+      guidedTranscriptsRef.current = createEmptyGuidedTranscripts();
+      setGuidedStep(1);
+      draftInputRef.current = "";
+      hasSpeechInputRef.current = false;
+      setVoiceDraftMedicine(null);
+      setMissingFieldsList([]);
+      return;
+    }
+
+    setVoiceDraftMedicine(form);
+    setMissingFieldsList(missing);
   };
 
   const handleParseDraft = (inputText?: string) => {
@@ -745,90 +886,55 @@ export default function AddPrescriptionDialog({
       },
       {
         onSuccess: (response: { data?: DraftResponsePayload }) => {
-          const payload = response?.data || {};
-          setDraftId(payload.draft_id || null);
-          setDraftWarnings(payload.warnings || []);
-          setDraftMissingFields(payload.missing_fields || []);
-          applyDraftToForm(payload);
-
-          const form = payload?.form || {};
-
-          const normType = normalizeMedicationType(form.medication_type);
-          const normDosage = normalizeDosage(form.dosage, normType);
-          const normFreq = normalizeFrequency(form.frequency);
-          const normMeal = normalizeMealRelation(form.meal);
-
-          const missing: string[] = [];
-          if (!form.medicine_name || form.medicine_name.trim().length < 2) {
-            missing.push("medicine_name");
-          }
-          if (!normType) {
-            missing.push("medication_type");
-          }
-          if (!normDosage) {
-            missing.push("dosage");
-          }
-          if (!normFreq) {
-            missing.push("frequency");
-          }
-          if (!normMeal) {
-            missing.push("meal");
-          }
-
-          if (missing.length === 0) {
-            const newMedicine: AddedMedicine = {
-              medicine_id: form.medicine_id || null,
-              medicine_name: form.medicine_name!.trim(),
-              medication_type: normType,
-              dosage: normDosage,
-              frequency: normFreq,
-              timing_morning: !!getValues("timing_morning"),
-              timing_afternoon: !!getValues("timing_afternoon"),
-              timing_evening: !!getValues("timing_evening"),
-              timing_night: !!getValues("timing_night"),
-              meal: normMeal,
-              instructions: form.instructions || "",
-              start_date: form.start_date || getTodayDate(),
-              end_date: form.end_date || null,
-            };
-            setAddedMedicines((prev) => [...prev, newMedicine]);
-            setToastMessage({ text: `Added ${newMedicine.medicine_name} to prescription list.`, type: "success" });
-
-            const currentStamp = getValues("stamp_preference");
-            reset({
-              ...defaultFormValues,
-              stamp_preference: currentStamp,
-            });
-            setStartDate(getTodayDate());
-            setEndDate("");
-            setSearchQuery("");
-            setSelectedMedicineSource(null);
-
-            setGuidedTranscripts(createEmptyGuidedTranscripts());
-            guidedTranscriptsRef.current = createEmptyGuidedTranscripts();
-            setGuidedStep(1);
-            draftInputRef.current = "";
-            hasSpeechInputRef.current = false;
-          } else {
-            setVoiceDraftMedicine(form);
-            setMissingFieldsList(missing);
-          }
+          consumeParsedDraftPayload(response?.data || {});
         },
         onError: (error: RequestError) => {
           alert(
             error?.response?.data?.errors?.message ||
-            error?.message ||
-            "Failed to parse prescription text."
+              error?.message ||
+              "Failed to parse prescription text.",
           );
         },
-      }
+      },
     );
   };
 
   const handleDeepgramResult = (result: VoiceTranscriptionResult) => {
-    if (result.transcript) {
-      setDraftInput(result.transcript);
-      handleParseDraft(result.transcript);
+    const transcript = cleanDuplicateWords((result.transcript || "").trim());
+
+    if (!transcript) {
+      setSpeechError("No speech detected. Please speak clearly and try again.");
+      return;
+    }
+
+    hasSpeechInputRef.current = true;
+    setSpeechError(null);
+
+    setGuidedTranscripts((prev) => {
+      const updated = {
+        ...prev,
+        [guidedStep]: transcript,
+      };
+      guidedTranscriptsRef.current = updated;
+      return updated;
+    });
+
+    if (guidedStep === 1) {
+      void handleStep1Complete(transcript);
+    } else if (guidedStep < 4) {
+      setGuidedStep((prev) => prev + 1);
+    } else {
+      const combined = guidedVoiceSteps
+        .map((step) =>
+          step.id === guidedStep
+            ? transcript
+            : guidedTranscriptsRef.current[step.id] || "",
+        )
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .join(" ");
+      setDraftInput(combined);
+      handleParseDraft(combined);
     }
   };
 
@@ -895,14 +1001,21 @@ export default function AddPrescriptionDialog({
 
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = selectedSpeechLocale;
+    recognition.lang = getBrowserSpeechLocale(
+      selectedSpeechLocale,
+      assistantConfig?.speech_locale,
+    );
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      let finalTranscript = "";
+      let finalTranscript = transcriptFinalRef.current;
       let interimTranscript = "";
 
-      for (let index = 0; index < event.results.length; index += 1) {
+      for (
+        let index = event.resultIndex;
+        index < event.results.length;
+        index += 1
+      ) {
         const result = event.results[index];
         const transcript = result?.[0]?.transcript?.trim();
 
@@ -917,12 +1030,12 @@ export default function AddPrescriptionDialog({
         }
       }
 
-      transcriptFinalRef.current = finalTranscript;
+      transcriptFinalRef.current = cleanDuplicateWords(finalTranscript);
 
       const nextText = mergeTranscripts(
         transcriptBaseRef.current,
-        finalTranscript,
-        interimTranscript
+        transcriptFinalRef.current,
+        interimTranscript,
       );
 
       const cleanedText = cleanDuplicateWords(nextText);
@@ -943,7 +1056,7 @@ export default function AddPrescriptionDialog({
       setSpeechError(
         event.error === "not-allowed"
           ? "Microphone permission was blocked."
-          : "Voice capture failed. Please try again."
+          : "Voice capture failed. Please try again.",
       );
     };
 
@@ -960,7 +1073,9 @@ export default function AddPrescriptionDialog({
           handleParseDraft(combined);
         }
       } else {
-        const currentTranscript = (guidedTranscriptsRef.current[guidedStep] || "").trim();
+        const currentTranscript = (
+          guidedTranscriptsRef.current[guidedStep] || ""
+        ).trim();
         if (currentTranscript) {
           if (guidedStep === 1) {
             handleStep1Complete(currentTranscript);
@@ -992,9 +1107,15 @@ export default function AddPrescriptionDialog({
         <DialogContent className="w-[95vw] sm:max-w-5xl! rounded-2xl p-0 overflow-hidden flex flex-col gap-0! fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           {toastMessage && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-100 animate-in fade-in slide-in-from-top-4 duration-300">
-              <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold shadow-lg border ${toastMessage.type === "success" ? "bg-green-600 text-white border-green-700" : "bg-red-600 text-white border-red-700"}`}>
+              <div
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold shadow-lg border ${toastMessage.type === "success" ? "bg-green-600 text-white border-green-700" : "bg-red-600 text-white border-red-700"}`}
+              >
                 <span>{toastMessage.text}</span>
-                <button type="button" onClick={() => setToastMessage(null)} className="rounded-full hover:bg-white/10 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setToastMessage(null)}
+                  className="rounded-full hover:bg-white/10 p-0.5"
+                >
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -1060,7 +1181,9 @@ export default function AddPrescriptionDialog({
                       onClick={() => setMobileTab("form")}
                       className={`flex-1 py-2 text-xs font-bold rounded-lg text-center transition-all ${mobileTab === "form" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
                     >
-                      {entryMode === "voice" ? "Voice Assistant" : "Manual Form"}
+                      {entryMode === "voice"
+                        ? "Voice Assistant"
+                        : "Manual Form"}
                     </button>
                     <button
                       type="button"
@@ -1077,7 +1200,9 @@ export default function AddPrescriptionDialog({
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-                    <div className={`md:col-span-7 bg-background border rounded-2xl p-4 sm:p-5 shadow-sm ${mobileTab === "form" ? "block" : "hidden md:block"}`}>
+                    <div
+                      className={`md:col-span-7 bg-background border rounded-2xl p-4 sm:p-5 shadow-sm ${mobileTab === "form" ? "block" : "hidden md:block"}`}
+                    >
                       {entryMode === "voice" ? (
                         editingIndex !== null ? (
                           <PrescriptionMedicineForm
@@ -1090,7 +1215,12 @@ export default function AddPrescriptionDialog({
                             medicineList={medicineList}
                             isSearchingMedicine={isSearchingMedicine}
                             medicineStatus={medicineStatus}
-                            errors={errors as Record<string, { message?: string } | undefined>}
+                            errors={
+                              errors as Record<
+                                string,
+                                { message?: string } | undefined
+                              >
+                            }
                             medicationType={medicationType}
                             dosage={dosage}
                             frequency={frequency}
@@ -1109,14 +1239,38 @@ export default function AddPrescriptionDialog({
                             onSelectMedicine={handleSelectMedicine}
                             onUseCustomMedicine={handleUseCustomMedicine}
                             onClearSelectedMedicine={clearSelectedMedicine}
-                            onMedicationTypeChange={(value) => setValue("medication_type", value, { shouldValidate: true })}
-                            onDosageChange={(value) => setValue("dosage", value, { shouldValidate: true })}
-                            onFrequencyChange={(value) => setValue("frequency", value, { shouldValidate: true })}
-                            onMealChange={(value) => setValue("meal", value as PrescriptionForm["meal"], { shouldValidate: true })}
-                            onTimingChange={(name, value) => setValue(name, value)}
+                            onMedicationTypeChange={(value) =>
+                              setValue("medication_type", value, {
+                                shouldValidate: true,
+                              })
+                            }
+                            onDosageChange={(value) =>
+                              setValue("dosage", value, {
+                                shouldValidate: true,
+                              })
+                            }
+                            onFrequencyChange={(value) =>
+                              setValue("frequency", value, {
+                                shouldValidate: true,
+                              })
+                            }
+                            onMealChange={(value) =>
+                              setValue(
+                                "meal",
+                                value as PrescriptionForm["meal"],
+                                { shouldValidate: true },
+                              )
+                            }
+                            onTimingChange={(name, value) =>
+                              setValue(name, value)
+                            }
                             onStartDateChange={setStartDate}
                             onEndDateChange={setEndDate}
-                            onInstructionsChange={(value) => setValue("instructions", value, { shouldValidate: true })}
+                            onInstructionsChange={(value) =>
+                              setValue("instructions", value, {
+                                shouldValidate: true,
+                              })
+                            }
                             onSubmit={handleAddOrUpdateMedicine}
                             onCancel={handleCancelEdit}
                             submitLabel="Update Medicine"
@@ -1134,7 +1288,12 @@ export default function AddPrescriptionDialog({
                             medicineList={medicineList}
                             isSearchingMedicine={isSearchingMedicine}
                             medicineStatus={medicineStatus}
-                            errors={errors as Record<string, { message?: string } | undefined>}
+                            errors={
+                              errors as Record<
+                                string,
+                                { message?: string } | undefined
+                              >
+                            }
                             medicationType={medicationType}
                             dosage={dosage}
                             frequency={frequency}
@@ -1150,27 +1309,63 @@ export default function AddPrescriptionDialog({
                             frequencyOptions={frequencyOptions}
                             mealOptions={mealOptions}
                             dosageOptions={dosageOptions}
-                            visibleFields={missingFieldsList as Array<"medicine_name" | "medication_type" | "dosage" | "frequency" | "meal">}
+                            visibleFields={
+                              missingFieldsList as Array<
+                                | "medicine_name"
+                                | "medication_type"
+                                | "dosage"
+                                | "frequency"
+                                | "meal"
+                              >
+                            }
                             mode="compact"
                             onSelectMedicine={handleSelectMedicine}
                             onUseCustomMedicine={handleUseCustomMedicine}
                             onClearSelectedMedicine={clearSelectedMedicine}
-                            onMedicationTypeChange={(value) => setValue("medication_type", value, { shouldValidate: true })}
-                            onDosageChange={(value) => setValue("dosage", value, { shouldValidate: true })}
-                            onFrequencyChange={(value) => setValue("frequency", value, { shouldValidate: true })}
-                            onMealChange={(value) => setValue("meal", value as PrescriptionForm["meal"], { shouldValidate: true })}
-                            onTimingChange={(name, value) => setValue(name, value)}
+                            onMedicationTypeChange={(value) =>
+                              setValue("medication_type", value, {
+                                shouldValidate: true,
+                              })
+                            }
+                            onDosageChange={(value) =>
+                              setValue("dosage", value, {
+                                shouldValidate: true,
+                              })
+                            }
+                            onFrequencyChange={(value) =>
+                              setValue("frequency", value, {
+                                shouldValidate: true,
+                              })
+                            }
+                            onMealChange={(value) =>
+                              setValue(
+                                "meal",
+                                value as PrescriptionForm["meal"],
+                                { shouldValidate: true },
+                              )
+                            }
+                            onTimingChange={(name, value) =>
+                              setValue(name, value)
+                            }
                             onStartDateChange={setStartDate}
                             onEndDateChange={setEndDate}
-                            onInstructionsChange={(value) => setValue("instructions", value, { shouldValidate: true })}
+                            onInstructionsChange={(value) =>
+                              setValue("instructions", value, {
+                                shouldValidate: true,
+                              })
+                            }
                             onSubmit={handleAddOrUpdateMedicine}
                             submitLabel="Confirm & Add"
                             cancelLabel="Discard"
                             onCancel={() => {
                               setVoiceDraftMedicine(null);
                               setMissingFieldsList([]);
-                              const currentStamp = getValues("stamp_preference");
-                              reset({ ...defaultFormValues, stamp_preference: currentStamp });
+                              const currentStamp =
+                                getValues("stamp_preference");
+                              reset({
+                                ...defaultFormValues,
+                                stamp_preference: currentStamp,
+                              });
                               setStartDate(getTodayDate());
                               setEndDate("");
                             }}
@@ -1179,9 +1374,13 @@ export default function AddPrescriptionDialog({
                           <PrescriptionVoiceAssistantPanel
                             appointmentId={appointmentId}
                             deepgramEnabled={deepgramEnabled}
+                            browserVoiceEnabled={browserVoiceEnabled}
                             voiceSubMode={voiceSubMode}
                             setVoiceSubMode={setVoiceSubMode}
                             onDeepgramResult={handleDeepgramResult}
+                            onDeepgramRecordingChange={setIsListening}
+                            onDeepgramProcessingChange={setIsDeepgramProcessing}
+                            onDeepgramErrorChange={setSpeechError}
                             voiceLanguageOptions={voiceLanguageOptions}
                             selectedSpeechLocale={selectedSpeechLocale}
                             setSelectedSpeechLocale={setSelectedSpeechLocale}
@@ -1217,21 +1416,26 @@ export default function AddPrescriptionDialog({
                             onNext={() => {
                               stopListening(false);
                               if (guidedStep === 1) {
-                                const text = (guidedTranscripts[1] || "").trim();
+                                const text = (
+                                  guidedTranscripts[1] || ""
+                                ).trim();
                                 if (text) {
                                   handleStep1Complete(text);
                                 } else {
                                   setGuidedStep(2);
                                 }
                               } else {
-                                setGuidedStep((prev) => Math.min(prev + 1, guidedVoiceSteps.length));
+                                setGuidedStep((prev) =>
+                                  Math.min(prev + 1, guidedVoiceSteps.length),
+                                );
                               }
                             }}
                             onFinish={handleFinishGuidedPrefill}
-                            onUseCustomMedicine={handleUseCustomMedicine}
                             onClearSelectedMedicine={clearSelectedMedicine}
                             onCustomConfirmAccept={() => {
-                              handleUseCustomMedicine(showCustomConfirm?.name || "");
+                              handleUseCustomMedicine(
+                                showCustomConfirm?.name || "",
+                              );
                               setShowCustomConfirm(null);
                               setGuidedStep(2);
                             }}
@@ -1243,11 +1447,16 @@ export default function AddPrescriptionDialog({
                                 return updated;
                               });
                             }}
+                            isDeepgramProcessing={isDeepgramProcessing}
                           />
                         )
                       ) : (
                         <PrescriptionMedicineForm
-                          title={editingIndex !== null ? "Edit Medicine Details" : "Add Medicine Details"}
+                          title={
+                            editingIndex !== null
+                              ? "Edit Medicine Details"
+                              : "Add Medicine Details"
+                          }
                           editingIndex={editingIndex}
                           selectedMedicineName={selectedMedicineName}
                           selectedMedicineSource={selectedMedicineSource}
@@ -1256,7 +1465,12 @@ export default function AddPrescriptionDialog({
                           medicineList={medicineList}
                           isSearchingMedicine={isSearchingMedicine}
                           medicineStatus={medicineStatus}
-                          errors={errors as Record<string, { message?: string } | undefined>}
+                          errors={
+                            errors as Record<
+                              string,
+                              { message?: string } | undefined
+                            >
+                          }
                           medicationType={medicationType}
                           dosage={dosage}
                           frequency={frequency}
@@ -1275,17 +1489,45 @@ export default function AddPrescriptionDialog({
                           onSelectMedicine={handleSelectMedicine}
                           onUseCustomMedicine={handleUseCustomMedicine}
                           onClearSelectedMedicine={clearSelectedMedicine}
-                          onMedicationTypeChange={(value) => setValue("medication_type", value, { shouldValidate: true })}
-                          onDosageChange={(value) => setValue("dosage", value, { shouldValidate: true })}
-                          onFrequencyChange={(value) => setValue("frequency", value, { shouldValidate: true })}
-                          onMealChange={(value) => setValue("meal", value as PrescriptionForm["meal"], { shouldValidate: true })}
-                          onTimingChange={(name, value) => setValue(name, value)}
+                          onMedicationTypeChange={(value) =>
+                            setValue("medication_type", value, {
+                              shouldValidate: true,
+                            })
+                          }
+                          onDosageChange={(value) =>
+                            setValue("dosage", value, { shouldValidate: true })
+                          }
+                          onFrequencyChange={(value) =>
+                            setValue("frequency", value, {
+                              shouldValidate: true,
+                            })
+                          }
+                          onMealChange={(value) =>
+                            setValue(
+                              "meal",
+                              value as PrescriptionForm["meal"],
+                              { shouldValidate: true },
+                            )
+                          }
+                          onTimingChange={(name, value) =>
+                            setValue(name, value)
+                          }
                           onStartDateChange={setStartDate}
                           onEndDateChange={setEndDate}
-                          onInstructionsChange={(value) => setValue("instructions", value, { shouldValidate: true })}
+                          onInstructionsChange={(value) =>
+                            setValue("instructions", value, {
+                              shouldValidate: true,
+                            })
+                          }
                           onSubmit={handleAddOrUpdateMedicine}
-                          onCancel={editingIndex !== null ? handleCancelEdit : undefined}
-                          submitLabel={editingIndex !== null ? "Update Medicine" : "+ Add to Prescription List"}
+                          onCancel={
+                            editingIndex !== null ? handleCancelEdit : undefined
+                          }
+                          submitLabel={
+                            editingIndex !== null
+                              ? "Update Medicine"
+                              : "+ Add to Prescription List"
+                          }
                           fullWidthButton={editingIndex === null}
                         />
                       )}
@@ -1297,10 +1539,19 @@ export default function AddPrescriptionDialog({
                       onDeleteMedicine={handleDeleteMedicine}
                       stampPreference={stampPreference}
                       stampOptions={stampOptions}
-                      onStampChange={(value) => setValue("stamp_preference", value, { shouldValidate: true })}
+                      onStampChange={(value) =>
+                        setValue("stamp_preference", value, {
+                          shouldValidate: true,
+                        })
+                      }
                       onFinalSubmit={handleFinalSubmit}
                       addPrescriptionPending={addPrescription.isPending}
-                      errors={errors as Record<string, { message?: string } | undefined>}
+                      errors={
+                        errors as Record<
+                          string,
+                          { message?: string } | undefined
+                        >
+                      }
                       frequencyOptions={frequencyOptions}
                       mealOptions={mealOptions}
                       mobileTab={mobileTab}
@@ -1313,7 +1564,10 @@ export default function AddPrescriptionDialog({
         </DialogContent>
       </Dialog>
 
-      <PrescriptionSuccessDialog open={showSuccess} onClose={handleSuccessClose} />
+      <PrescriptionSuccessDialog
+        open={showSuccess}
+        onClose={handleSuccessClose}
+      />
     </>
   );
 }
@@ -1327,12 +1581,23 @@ function createEmptyGuidedTranscripts() {
   };
 }
 
-function normalizeValue(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
-
 function getDefaultEntryMode(dictationEnabled: boolean): EntryMode {
   return dictationEnabled ? null : "manual";
+}
+
+function getDefaultVoiceSubMode(
+  deepgramEnabled: boolean,
+  browserVoiceEnabled: boolean,
+): "deepgram" | "browser" {
+  if (deepgramEnabled) {
+    return "deepgram";
+  }
+
+  if (browserVoiceEnabled) {
+    return "browser";
+  }
+
+  return "deepgram";
 }
 
 function combineTranscript(...parts: Array<string | null | undefined>) {
@@ -1344,7 +1609,11 @@ function combineTranscript(...parts: Array<string | null | undefined>) {
     .trim();
 }
 
-function mergeTranscripts(base: string, final: string, interim: string): string {
+function mergeTranscripts(
+  base: string,
+  final: string,
+  interim: string,
+): string {
   const b = base.trim();
   const f = final.trim();
   const i = interim.trim();
@@ -1371,8 +1640,14 @@ function mergeTranscripts(base: string, final: string, interim: string): string 
   const maxOverlap = Math.min(baseWords.length, finalWords.length);
 
   for (let len = maxOverlap; len > 0; len--) {
-    const baseTail = baseWords.slice(-len).map((w) => w.toLowerCase()).join(" ");
-    const finalHead = finalWords.slice(0, len).map((w) => w.toLowerCase()).join(" ");
+    const baseTail = baseWords
+      .slice(-len)
+      .map((w) => w.toLowerCase())
+      .join(" ");
+    const finalHead = finalWords
+      .slice(0, len)
+      .map((w) => w.toLowerCase())
+      .join(" ");
     if (baseTail === finalHead) {
       overlapLength = len;
       break;
@@ -1401,12 +1676,76 @@ function cleanDuplicateWords(text: string): string {
   return result.join(" ");
 }
 
-function isVoiceLocale(value?: string | null): value is VoiceLocale {
-  return value === "en-IN" || value === "hi-IN" || value === "pa-IN";
+function buildVoiceLanguageOptions(
+  config?: AssistantConfig | null,
+): Array<{ label: string; value: VoiceLocale }> {
+  const locales = normalizeSupportedLocales(
+    config?.supported_locales,
+    config?.speech_locale,
+    config?.allow_custom_locale,
+  ).filter((locale) => locale.toLowerCase() !== "auto");
+
+  const availableLocales =
+    locales.length > 0 ? locales : ["en-IN", "en-US", "hi-IN", "pa-IN"];
+
+  return availableLocales.map((locale) => ({
+    label: getVoiceLocaleLabel(locale),
+    value: locale,
+  }));
 }
 
 function getInitialVoiceLocale(value?: string | null): VoiceLocale {
-  return isVoiceLocale(value) ? value : "en-IN";
+  const normalized = normalizeLocale(value);
+  return normalized === "auto" ? "en-IN" : normalized;
+}
+
+function getBrowserSpeechLocale(
+  selectedLocale?: string | null,
+  fallbackLocale?: string | null,
+): string {
+  const normalized = normalizeLocale(selectedLocale);
+
+  if (normalized !== "auto") {
+    return normalized;
+  }
+
+  return getInitialVoiceLocale(fallbackLocale);
+}
+
+function normalizeSupportedLocales(
+  locales?: string[] | null,
+  speechLocale?: string | null,
+  allowCustomLocale?: boolean,
+): string[] {
+  const normalized = (locales || [])
+    .map((locale) => normalizeLocale(locale))
+    .filter(Boolean);
+
+  if (allowCustomLocale) {
+    normalized.push(normalizeLocale(speechLocale));
+  }
+
+  const deduped = Array.from(new Set(normalized));
+  return deduped.length > 0 ? deduped : ["en-IN", "en-US", "hi-IN", "pa-IN"];
+}
+
+function normalizeLocale(value?: string | null): string {
+  const normalized = String(value || "").trim();
+  return normalized || "en-IN";
+}
+
+function getVoiceLocaleLabel(locale: string): string {
+  const normalized = locale.trim();
+
+  return (
+    {
+      auto: "Auto Detect",
+      "en-IN": "English (India)",
+      "en-US": "English (US)",
+      "hi-IN": "Hindi",
+      "pa-IN": "Punjabi",
+    }[normalized] ?? normalized
+  );
 }
 
 function getTodayDate() {
@@ -1482,8 +1821,14 @@ function normalizeMedicationType(value?: string | null): string {
   if (!val) return "tablet";
   if (val.includes("tablet") || val.includes("tab")) return "tablet";
   if (val.includes("capsule") || val.includes("cap")) return "capsule";
-  if (val.includes("syrup") || val.includes("syp") || val.includes("liquid")) return "syrup";
-  if (val.includes("drop") || val.includes("eye drop") || val.includes("ear drop")) return "drop";
+  if (val.includes("syrup") || val.includes("syp") || val.includes("liquid"))
+    return "syrup";
+  if (
+    val.includes("drop") ||
+    val.includes("eye drop") ||
+    val.includes("ear drop")
+  )
+    return "drop";
   if (val.includes("injection") || val.includes("inj")) return "injection";
   if (val.includes("cream")) return "cream";
   if (val.includes("ointment")) return "ointment";
@@ -1497,18 +1842,43 @@ function normalizeDosage(value?: string | null, type?: string | null): string {
 
   if (medType.includes("tablet") || medType.includes("capsule")) {
     if (val.includes("0.5") || val.includes("half")) return "0.5 tablet";
-    if (val.includes("1.5") || val.includes("one and a half")) return "1.5 tablets";
+    if (val.includes("1.5") || val.includes("one and a half"))
+      return "1.5 tablets";
     if (val.includes("2") || val.includes("two")) return "2 tablets";
     if (val.includes("3") || val.includes("three")) return "3 tablets";
     if (val.includes("1") || val.includes("one")) return "1 tablet";
     return "1 tablet";
   }
-  if (medType.includes("syrup") || medType.includes("liquid") || medType.includes("suspension")) {
+  if (
+    medType.includes("syrup") ||
+    medType.includes("liquid") ||
+    medType.includes("suspension")
+  ) {
     if (val.includes("2.5") || val.includes("half spoon")) return "2.5 ml";
-    if (val.includes("5") || val.includes("1 spoon") || val.includes("one spoon")) return "5 ml";
-    if (val.includes("10") || val.includes("2 spoon") || val.includes("two spoon")) return "10 ml";
-    if (val.includes("15") || val.includes("3 spoon") || val.includes("three spoon")) return "15 ml";
-    if (val.includes("20") || val.includes("4 spoon") || val.includes("four spoon")) return "20 ml";
+    if (
+      val.includes("5") ||
+      val.includes("1 spoon") ||
+      val.includes("one spoon")
+    )
+      return "5 ml";
+    if (
+      val.includes("10") ||
+      val.includes("2 spoon") ||
+      val.includes("two spoon")
+    )
+      return "10 ml";
+    if (
+      val.includes("15") ||
+      val.includes("3 spoon") ||
+      val.includes("three spoon")
+    )
+      return "15 ml";
+    if (
+      val.includes("20") ||
+      val.includes("4 spoon") ||
+      val.includes("four spoon")
+    )
+      return "20 ml";
     return "5 ml";
   }
   if (medType.includes("drop")) {
@@ -1518,9 +1888,14 @@ function normalizeDosage(value?: string | null, type?: string | null): string {
     if (val.includes("4") || val.includes("four")) return "4 drops";
     return "1 drop";
   }
-  if (medType.includes("cream") || medType.includes("ointment") || medType.includes("gel")) {
+  if (
+    medType.includes("cream") ||
+    medType.includes("ointment") ||
+    medType.includes("gel")
+  ) {
     if (val.includes("thin") || val.includes("layer")) return "thin layer";
-    if (val.includes("pea") || val.includes("amount")) return "pea-sized amount";
+    if (val.includes("pea") || val.includes("amount"))
+      return "pea-sized amount";
     return "as prescribed";
   }
   if (val.includes("1") || val.includes("one")) return "1 unit";
@@ -1531,10 +1906,37 @@ function normalizeDosage(value?: string | null, type?: string | null): string {
 function normalizeFrequency(value?: string | null): string {
   const val = (value || "").trim().toLowerCase();
   if (!val) return "";
-  if (val === "od" || val.includes("once a day") || val.includes("once daily") || val.includes("daily") || val === "1") return "OD";
-  if (val === "bd" || val.includes("twice a day") || val.includes("twice daily") || val.includes("twice") || val === "2") return "BD";
-  if (val === "tds" || val.includes("three times") || val.includes("thrice daily") || val.includes("thrice") || val === "3") return "TDS";
-  if (val === "sos" || val.includes("as needed") || val.includes("when needed") || val.includes("whenever")) return "SOS";
+  if (
+    val === "od" ||
+    val.includes("once a day") ||
+    val.includes("once daily") ||
+    val.includes("daily") ||
+    val === "1"
+  )
+    return "OD";
+  if (
+    val === "bd" ||
+    val.includes("twice a day") ||
+    val.includes("twice daily") ||
+    val.includes("twice") ||
+    val === "2"
+  )
+    return "BD";
+  if (
+    val === "tds" ||
+    val.includes("three times") ||
+    val.includes("thrice daily") ||
+    val.includes("thrice") ||
+    val === "3"
+  )
+    return "TDS";
+  if (
+    val === "sos" ||
+    val.includes("as needed") ||
+    val.includes("when needed") ||
+    val.includes("whenever")
+  )
+    return "SOS";
 
   const upper = val.toUpperCase();
   if (["OD", "BD", "TDS", "SOS"].includes(upper)) return upper;
@@ -1542,11 +1944,15 @@ function normalizeFrequency(value?: string | null): string {
   return "OD";
 }
 
-function normalizeMealRelation(value?: string | null): PrescriptionForm["meal"] {
+function normalizeMealRelation(
+  value?: string | null,
+): PrescriptionForm["meal"] {
   const val = (value || "").trim().toLowerCase();
   if (!val) return "after_meal";
-  if (val.includes("before") || val.includes("empty") || val.includes("ac")) return "before_meal";
-  if (val.includes("after") || val.includes("post") || val.includes("pc")) return "after_meal";
+  if (val.includes("before") || val.includes("empty") || val.includes("ac"))
+    return "before_meal";
+  if (val.includes("after") || val.includes("post") || val.includes("pc"))
+    return "after_meal";
   if (val.includes("with") || val.includes("during")) return "with_meal";
   return "after_meal";
 }

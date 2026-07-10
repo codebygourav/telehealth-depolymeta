@@ -1,69 +1,157 @@
 "use client";
 
-/**
- * DeepgramVoiceRecorder
- * Reusable component — records audio via MediaRecorder, sends to backend Deepgram endpoint,
- * returns the transcript + parsed prescription fields to the parent via onResult().
- *
- * Usage:
- *   <DeepgramVoiceRecorder
- *     appointmentId={id}
- *     onResult={(result) => { ... }}
- *     language="en"
- *   />
- */
-
 import type { VoiceTranscriptionResult } from "@/api/voice-transcription";
-import { Button } from "@/components/ui/button";
 import { useVoiceTranscription } from "@/queries/useVoiceTranscription";
-import { AlertCircle, CheckCircle2, Loader2, Mic, MicOff } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { Loader2, Mic } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-type RecorderState = "idle" | "recording" | "processing" | "done" | "error";
+type BrowserSpeechRecognitionAlternative = {
+  transcript: string;
+};
 
-type Language = { label: string; value: string };
+type BrowserSpeechRecognitionResult = {
+  isFinal: boolean;
+  0: BrowserSpeechRecognitionAlternative;
+};
 
-const LANGUAGES: Language[] = [
-  { label: "English", value: "en" },
-  { label: "Hindi", value: "hi" },
-  { label: "Punjabi", value: "pa" },
-];
+type BrowserSpeechRecognitionEvent = {
+  resultIndex: number;
+  results: ArrayLike<BrowserSpeechRecognitionResult>;
+};
+
+type BrowserSpeechRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+};
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
 
 interface DeepgramVoiceRecorderProps {
   appointmentId: string;
+  selectedLanguage: string;
+  transcriptValue: string;
+  onTranscriptChange: (value: string) => void;
   onResult: (result: VoiceTranscriptionResult) => void;
-  defaultLanguage?: string;
+  onRecordingChange: (value: boolean) => void;
+  onProcessingChange: (value: boolean) => void;
+  onErrorChange: (value: string | null) => void;
 }
 
 export default function DeepgramVoiceRecorder({
   appointmentId,
+  selectedLanguage,
+  transcriptValue,
+  onTranscriptChange,
   onResult,
-  defaultLanguage = "en",
+  onRecordingChange,
+  onProcessingChange,
+  onErrorChange,
 }: DeepgramVoiceRecorderProps) {
-  const [state, setState] = useState<RecorderState>("idle");
-  const [language, setLanguage] = useState(defaultLanguage);
-  const [transcript, setTranscript] = useState("");
-  const [duration, setDuration] = useState(0);
-  const [creditsUsed, setCreditsUsed] = useState<number | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [confidence, setConfidence] = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [warnings, setWarnings] = useState<string[]>([]);
+  const [duration, setDuration] = useState<number | null>(null);
+  const [creditsUsed, setCreditsUsed] = useState<number | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const startTimeRef = useRef<number>(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [elapsed, setElapsed] = useState(0);
+  const baseTranscriptRef = useRef("");
+  const liveFinalTranscriptRef = useRef("");
 
   const transcribeMutation = useVoiceTranscription(appointmentId);
 
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort();
+    };
+  }, []);
+
+  const startSpeechPreview = useCallback(() => {
+    const SpeechRecognitionApi = getSpeechRecognitionApi();
+
+    if (!SpeechRecognitionApi) {
+      return;
+    }
+
+    recognitionRef.current?.abort();
+
+    const recognition = new SpeechRecognitionApi();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = mapLocaleToBrowserSpeechLanguage(selectedLanguage);
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      let finalTranscript = liveFinalTranscriptRef.current;
+      let interimTranscript = "";
+
+      for (
+        let index = event.resultIndex;
+        index < event.results.length;
+        index += 1
+      ) {
+        const result = event.results[index];
+        const nextPart = result?.[0]?.transcript?.trim();
+
+        if (!nextPart) {
+          continue;
+        }
+
+        if (result.isFinal) {
+          finalTranscript = combineTranscript(finalTranscript, nextPart);
+        } else {
+          interimTranscript = combineTranscript(interimTranscript, nextPart);
+        }
+      }
+
+      liveFinalTranscriptRef.current = cleanDuplicateWords(finalTranscript);
+
+      onTranscriptChange(
+        cleanDuplicateWords(
+          combineTranscript(
+            baseTranscriptRef.current,
+            liveFinalTranscriptRef.current,
+            interimTranscript,
+          ),
+        ),
+      );
+    };
+
+    recognition.onerror = () => {
+      // Live preview is optional. Keep Deepgram recording active.
+    };
+
+    recognition.onend = () => {
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null;
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+    }
+  }, [onTranscriptChange, selectedLanguage]);
+
   const startRecording = useCallback(async () => {
-    setErrorMsg(null);
-    setTranscript("");
-    setWarnings([]);
-    setCreditsUsed(null);
+    onErrorChange(null);
     setConfidence(null);
-    setElapsed(0);
+    setDuration(null);
+    setCreditsUsed(null);
+    baseTranscriptRef.current = (transcriptValue || "").trim();
+    liveFinalTranscriptRef.current = "";
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -74,250 +162,230 @@ export default function DeepgramVoiceRecorder({
       });
 
       chunksRef.current = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
       };
 
       recorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach((track) => track.stop());
+        recognitionRef.current?.stop();
+        recognitionRef.current = null;
+
         const audioBlob = new Blob(chunksRef.current, {
           type: recorder.mimeType,
         });
-        setDuration(Math.round((Date.now() - startTimeRef.current) / 1000));
-        setState("processing");
+
+        setIsRecording(false);
+        onRecordingChange(false);
+        setIsProcessing(true);
+        onProcessingChange(true);
 
         try {
           const result = await transcribeMutation.mutateAsync({
             audioBlob,
-            language,
+            language: mapLocaleToDeepgramLanguage(selectedLanguage),
           });
-          setTranscript(result.transcript);
-          setCreditsUsed(result.credits_used);
-          setConfidence(result.confidence);
-          setWarnings(result.warnings ?? []);
-          setState("done");
-          onResult(result);
-        } catch (err: unknown) {
-          const msg =
-            (err as { response?: { data?: { errors?: { message?: string } } } })
-              ?.response?.data?.errors?.message ??
-            (err instanceof Error ? err.message : "Transcription failed.");
-          setErrorMsg(msg);
-          setState("error");
+
+          const mergedTranscript = cleanDuplicateWords(
+            combineTranscript(
+              baseTranscriptRef.current,
+              result.transcript || liveFinalTranscriptRef.current,
+            ),
+          );
+
+          setConfidence(result.confidence ?? null);
+          setDuration(result.duration_seconds ?? null);
+          setCreditsUsed(
+            typeof result.credits_used === "number"
+              ? result.credits_used
+              : null,
+          );
+          onTranscriptChange(mergedTranscript);
+          onResult({
+            ...result,
+            transcript: mergedTranscript,
+          });
+          onErrorChange(null);
+        } catch (error: unknown) {
+          const message =
+            (
+              error as {
+                response?: { data?: { errors?: { message?: string } } };
+              }
+            )?.response?.data?.errors?.message ??
+            (error instanceof Error
+              ? error.message
+              : "Transcription failed. Please try again.");
+          onErrorChange(message);
+        } finally {
+          setIsProcessing(false);
+          onProcessingChange(false);
         }
       };
 
       recorder.start();
       mediaRecorderRef.current = recorder;
-      startTimeRef.current = Date.now();
-      setState("recording");
-
-      timerRef.current = setInterval(() => {
-        setElapsed(Math.round((Date.now() - startTimeRef.current) / 1000));
-      }, 1000);
+      setIsRecording(true);
+      onRecordingChange(true);
+      startSpeechPreview();
     } catch {
-      setErrorMsg("Microphone access denied. Please allow microphone access.");
-      setState("error");
+      onErrorChange(
+        "Microphone access denied. Please allow microphone access.",
+      );
     }
-  }, [language, transcribeMutation, onResult]);
+  }, [
+    onErrorChange,
+    onProcessingChange,
+    onRecordingChange,
+    onResult,
+    onTranscriptChange,
+    selectedLanguage,
+    startSpeechPreview,
+    transcriptValue,
+    transcribeMutation,
+  ]);
 
   const stopRecording = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
     mediaRecorderRef.current?.stop();
-    setState("processing");
-  }, []);
-
-  const reset = useCallback(() => {
-    setState("idle");
-    setTranscript("");
-    setCreditsUsed(null);
-    setConfidence(null);
-    setWarnings([]);
-    setErrorMsg(null);
-    setElapsed(0);
-    setDuration(0);
   }, []);
 
   return (
-    <div className="rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-white p-5 space-y-4">
-      {/* Language selector */}
-      <div className="flex gap-2 flex-wrap">
-        {LANGUAGES.map((lang) => (
-          <button
-            key={lang.value}
-            type="button"
-            onClick={() => setLanguage(lang.value)}
-            disabled={state === "recording" || state === "processing"}
-            className={[
-              "rounded-full px-4 py-1.5 text-sm font-bold border transition-colors",
-              language === lang.value
-                ? "bg-blue-600 border-blue-600 text-white"
-                : "bg-white border-gray-200 text-gray-600 hover:border-blue-400",
-              (state === "recording" || state === "processing")
-                ? "opacity-50 cursor-not-allowed"
-                : "",
-            ].join(" ")}
-          >
-            {lang.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Main mic button area */}
-      <div className="flex gap-4 items-center">
-        {state === "idle" && (
-          <button
-            type="button"
-            onClick={startRecording}
-            className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:bg-blue-700 active:scale-95 transition-all"
-            title="Start recording"
-          >
-            <Mic size={26} />
-          </button>
+    <div className="flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        onClick={isRecording ? stopRecording : startRecording}
+        disabled={isProcessing}
+        className={[
+          "flex h-16 w-16 items-center justify-center rounded-full text-white shadow-lg transition-all active:scale-95",
+          isRecording
+            ? "bg-red-500 hover:bg-red-600 animate-pulse"
+            : isProcessing
+              ? "bg-blue-200 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700",
+        ].join(" ")}
+        title={isRecording ? "Stop recording" : "Start recording"}
+      >
+        {isProcessing ? (
+          <Loader2 className="h-6 w-6 animate-spin" />
+        ) : isRecording ? (
+          <Loader2 className="h-6 w-6 animate-spin" />
+        ) : (
+          <Mic className="h-6 w-6" />
         )}
+      </button>
 
-        {state === "recording" && (
-          <button
-            type="button"
-            onClick={stopRecording}
-            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 active:scale-95 transition-all animate-pulse"
-            title="Stop recording"
-          >
-            <MicOff size={26} />
-          </button>
-        )}
-
-        {state === "processing" && (
-          <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-            <Loader2 size={26} className="text-blue-600 animate-spin" />
-          </div>
-        )}
-
-        {state === "done" && (
-          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-            <CheckCircle2 size={26} className="text-green-600" />
-          </div>
-        )}
-
-        {state === "error" && (
-          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
-            <AlertCircle size={26} className="text-red-500" />
-          </div>
-        )}
-
-        <div className="flex-1">
-          {state === "idle" && (
-            <>
-              <p className="font-bold text-gray-800">Voice AI Prescription</p>
-              <p className="text-sm text-gray-500">
-                Tap the mic and speak your prescription. AI will extract the
-                medicine fields automatically.
-              </p>
-            </>
-          )}
-
-          {state === "recording" && (
-            <>
-              <p className="font-bold text-red-600 flex items-center gap-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                Recording… {elapsed}s
-              </p>
-              <p className="text-sm text-gray-500">
-                Speak clearly. Tap the button again to stop.
-              </p>
-            </>
-          )}
-
-          {state === "processing" && (
-            <>
-              <p className="font-bold text-blue-600">Transcribing…</p>
-              <p className="text-sm text-gray-500">
-                Deepgram AI is processing your voice. This takes 2–5 seconds.
-              </p>
-            </>
-          )}
-
-          {state === "done" && (
-            <>
-              <p className="font-bold text-green-700">Transcript ready</p>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                {duration > 0 && (
-                  <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">
-                    {duration}s
-                  </span>
-                )}
-                {confidence !== null && (
-                  <span
-                    className={[
-                      "text-xs rounded-full px-2 py-0.5 font-bold",
-                      confidence >= 85
-                        ? "bg-green-100 text-green-700"
-                        : confidence >= 60
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-600",
-                    ].join(" ")}
-                  >
-                    {confidence}% confidence
-                  </span>
-                )}
-                {creditsUsed !== null && (
-                  <span className="text-xs bg-blue-50 text-blue-600 rounded-full px-2 py-0.5">
-                    ~${creditsUsed.toFixed(5)} used
-                  </span>
-                )}
-              </div>
-            </>
-          )}
-
-          {state === "error" && (
-            <p className="text-sm text-red-600 font-medium">
-              {errorMsg ?? "Something went wrong."}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Transcript display */}
-      {state === "done" && transcript && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-gray-800 leading-relaxed">
-          <p className="text-xs font-bold text-blue-700 mb-2 uppercase tracking-wide">
-            Transcript
-          </p>
-          <p>{transcript}</p>
-        </div>
-      )}
-
-      {/* Warnings */}
-      {warnings.length > 0 && (
-        <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 space-y-1">
-          {warnings.map((w, i) => (
-            <p key={i} className="text-xs text-orange-700">
-              ⚠ {w}
-            </p>
-          ))}
-        </div>
-      )}
-
-      {/* Actions */}
-      {(state === "done" || state === "error") && (
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={reset}
-            className="text-xs"
-          >
-            Record Again
-          </Button>
-        </div>
-      )}
-
-      {state === "idle" && (
-        <p className="text-xs text-gray-400 text-center">
-          Example: "Paracetamol 650 mg tablet, SOS after meal for 3 days."
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="text-sm font-bold text-gray-800">
+          {isRecording
+            ? "Recording current step..."
+            : isProcessing
+              ? "Transcribing current step..."
+              : "Deepgram Cloud AI"}
         </p>
-      )}
+        <p className="text-xs text-gray-500">
+          {isRecording
+            ? "Speak only this step, then tap again to stop."
+            : isProcessing
+              ? "Deepgram is checking the speech and filling this step."
+              : "Tap the mic and speak only the current step."}
+        </p>
+
+        {(confidence !== null || duration !== null || creditsUsed !== null) && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {confidence !== null && (
+              <span
+                className={[
+                  "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                  confidence >= 85
+                    ? "bg-green-100 text-green-700"
+                    : confidence >= 60
+                      ? "bg-yellow-100 text-yellow-700"
+                      : "bg-red-100 text-red-600",
+                ].join(" ")}
+              >
+                {confidence}% accuracy
+              </span>
+            )}
+            {duration !== null && duration > 0 && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600">
+                {duration.toFixed(1)}s
+              </span>
+            )}
+            {typeof creditsUsed === "number" &&
+              Number.isFinite(creditsUsed) && (
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] text-blue-600">
+                  ~${creditsUsed.toFixed(5)}
+                </span>
+              )}
+          </div>
+        )}
+      </div>
     </div>
   );
+}
+
+function getSpeechRecognitionApi(): BrowserSpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const speechWindow = window as Window & {
+    SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+  };
+
+  return (
+    speechWindow.SpeechRecognition ||
+    speechWindow.webkitSpeechRecognition ||
+    null
+  );
+}
+
+function mapLocaleToDeepgramLanguage(locale: string): string {
+  const normalized = String(locale || "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized || normalized === "auto") {
+    return "multi";
+  }
+
+  const [language] = normalized.split("-");
+  return language || "en";
+}
+
+function mapLocaleToBrowserSpeechLanguage(locale: string): string {
+  const normalized = String(locale || "").trim();
+  return normalized && normalized.toLowerCase() !== "auto"
+    ? normalized
+    : "en-IN";
+}
+
+function combineTranscript(...parts: Array<string | null | undefined>) {
+  return parts
+    .map((part) => (part || "").trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanDuplicateWords(text: string): string {
+  if (!text) return "";
+
+  const words = text.split(/\s+/);
+  const result: string[] = [];
+
+  for (let index = 0; index < words.length; index += 1) {
+    const word = words[index];
+    if (index > 0 && word.toLowerCase() === words[index - 1].toLowerCase()) {
+      continue;
+    }
+    result.push(word);
+  }
+
+  return result.join(" ");
 }

@@ -94,9 +94,11 @@ class Settings extends Page
         // Then, for fields with env_key, use .env value if database value is empty
         foreach ($config as $groupKey => $group) {
             foreach (($group['sections'] ?? []) as $section) {
+                $dbGroup = $section['db_group'] ?? $groupKey;
+
                 foreach (($section['fields'] ?? []) as $fieldKey => $field) {
                     if (isset($field['env_key'])) {
-                        $fullKey = "{$groupKey}.{$fieldKey}";
+                        $fullKey = "{$dbGroup}.{$fieldKey}";
                         $envValue = env($field['env_key']);
 
                         // If database value is empty but .env has a value, use .env value

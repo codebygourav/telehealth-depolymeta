@@ -51,7 +51,7 @@ class VoiceTranscriptionController extends Controller
         $doctor    = $request->user();
         $doctorId  = $this->resolveDoctorId($doctor);
         $patientId = $appointment->patient_id;
-        $language  = $request->input('language', 'en');
+        $language  = (string) $request->input('language', config('deepgram.language', 'en'));
 
         try {
             $result = $this->deepgram->transcribeAudio(

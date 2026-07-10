@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Appointment, Medicine, Patient, Prescription, PrescriptionDraft, DoctorAddedMedicine, Doctor};
 use App\Services\{ApiResponseService, PrescriptionDraftParser, PrescriptionService, NotificationService};
 use App\Services\DeepgramService;
-use App\Support\PrescriptionDictation;
+use App\Support\{PrescriptionDictation, PrescriptionSpeech};
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -422,7 +422,10 @@ class PrescriptionController extends Controller
                 'next_visit_date' => $appointment->next_visit_date ? Carbon::parse($appointment->next_visit_date)->format('Y-m-d') : null,
                 'dictation_assistant' => array_merge(
                     PrescriptionDictation::settings(),
-                    ['deepgram_enabled' => app(DeepgramService::class)->isEnabled()]
+                    [
+                        'deepgram_enabled' => app(DeepgramService::class)->isEnabled(),
+                        'browser_speech_enabled' => (bool) (PrescriptionSpeech::settings()['enabled'] ?? false),
+                    ]
                 ),
                 'draft_history' => $this->mapDraftHistory($appliedDrafts),
             ]);
@@ -517,7 +520,13 @@ class PrescriptionController extends Controller
             'medicines' => $medicineList,
             'instructions_by_doctor' => $appointment->instructions_by_doctor,
             'next_visit_date' => $appointment->next_visit_date ? Carbon::parse($appointment->next_visit_date)->format('Y-m-d') : null,
-            'dictation_assistant' => PrescriptionDictation::settings(),
+            'dictation_assistant' => array_merge(
+                PrescriptionDictation::settings(),
+                [
+                    'deepgram_enabled' => app(DeepgramService::class)->isEnabled(),
+                    'browser_speech_enabled' => (bool) (PrescriptionSpeech::settings()['enabled'] ?? false),
+                ]
+            ),
             'draft_history' => $this->mapDraftHistory($appliedDrafts),
         ]);
     }
