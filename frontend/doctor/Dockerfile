@@ -1,9 +1,12 @@
+# syntax=docker/dockerfile:1.7
+
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --prefer-offline
 COPY . .
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_API_URL
@@ -32,4 +35,3 @@ RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 
 USER nextjs
 CMD ["node", "server.js"]
-
