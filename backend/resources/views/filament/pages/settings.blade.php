@@ -2,7 +2,7 @@
     <style>
         .settings-container {
             display: grid;
-            grid-template-columns: 280px 1fr;
+            grid-template-columns: 370px 1fr;
             gap: 2rem;
             align-items: start;
         }
@@ -158,12 +158,10 @@
     </style>
 
     <div class="settings-container">
+    
         {{-- Sidebar Navigation --}}
         <aside class="settings-sidebar">
-            <div class="mb-6 px-1">
-                <h2 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Settings</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Configure your application preferences</p>
-            </div>
+            
 
             <nav>
                 @foreach (config('settings') as $key => $group)

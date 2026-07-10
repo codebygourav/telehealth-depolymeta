@@ -46,6 +46,8 @@ class DeepgramService
             throw new \RuntimeException('Deepgram speech-to-text is not enabled. Enable it from admin settings.');
         }
 
+        $language = $this->normalizeLanguage($language);
+
         $url = 'https://api.deepgram.com/v1/listen?' . http_build_query([
             'model'      => $this->model,
             'language'   => $language,
@@ -119,6 +121,21 @@ class DeepgramService
             'model'            => $this->model,
             'log_id'           => $log->id,
         ];
+    }
+
+    private function normalizeLanguage(string $language): string
+    {
+        $normalized = strtolower(trim($language));
+
+        if ($normalized === '' || $normalized === 'auto') {
+            $normalized = strtolower((string) config('deepgram.language', 'en'));
+        }
+
+        if (str_contains($normalized, '-')) {
+            $normalized = explode('-', $normalized, 2)[0];
+        }
+
+        return $normalized !== '' ? $normalized : 'en';
     }
 
     /**

@@ -13,6 +13,7 @@ use NotificationChannels\WebPush\WebPushMessage;
 
 class SystemNotification extends Notification
 {
+
     use Queueable;
 
     public function __construct(
@@ -116,8 +117,6 @@ class SystemNotification extends Notification
         return (new WebPushMessage)
             ->title($this->title)
             ->body($this->message)
-            ->icon('/logo.png')
-            ->badge('/badge.png')
             ->data([
                 'type' => $this->type,
                 'entityType' => $this->entityType,
@@ -125,6 +124,7 @@ class SystemNotification extends Notification
                 'meta' => $this->meta
             ]);
     }
+
 
     public function toArray($notifiable)
     {

@@ -82,6 +82,8 @@ type DictationAssistantConfig = {
   supported_locales?: string[];
   allow_custom_locale?: boolean;
   requires_doctor_review?: boolean;
+  deepgram_enabled?: boolean;
+  browser_speech_enabled?: boolean;
 };
 type ConclusionReportFile = {
   id: string;
@@ -586,10 +588,11 @@ export default function PrescriptionTab({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge
-                      className={`text-[10px] sm:text-xs px-1.5 sm:px-2 ${draft.source_type === "speech"
-                        ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-100"
-                        }`}
+                      className={`text-[10px] sm:text-xs px-1.5 sm:px-2 ${
+                        draft.source_type === "speech"
+                          ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-100"
+                      }`}
                     >
                       {draft.source_type === "speech"
                         ? "Voice Draft"

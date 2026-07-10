@@ -45,7 +45,7 @@ export type AddedMedicine = {
 };
 
 export type EntryMode = "voice" | "manual" | null;
-export type VoiceLocale = "en-IN" | "hi-IN" | "pa-IN";
+export type VoiceLocale = string;
 
 export type MedicineStatus = {
   tone: "green" | "amber" | "blue";

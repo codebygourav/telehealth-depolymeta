@@ -1,10 +1,34 @@
 /* Adjust padding for the main content area in Filament 4 */
 
 .fi-main {
-    padding: 2rem !important; /* You can change to 1rem, 3rem, etc. */
+    padding: 1rem !important;
+    /* You can change to 1rem, 3rem, etc. */
 }
 
 /* Optionally adjust page container too */
 .fi-main-content {
     padding: 2rem !important;
+}
+
+.settings-container {
+    height: calc(100vh - var(--header-height, 70px));
+    overflow: hidden;
+}
+
+.settings-sidebar {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.settings-container>main {
+    height: 100%;
+    overflow-y: auto;
+}
+
+aside.settings-sidebar {
+    background: white;
+    border-radius: 1rem;
+    border: 1px solid rgb(var(--gray-200));
+    overflow: hidden;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
 }

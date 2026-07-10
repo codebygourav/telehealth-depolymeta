@@ -2,10 +2,13 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Setting;
 use App\Support\PrescriptionDictation;
 use App\Traits\HasCustomSidebar;
+use Filament\Notifications\Notification;
 use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Section;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\HtmlString;
 
 class PrescriptionVoiceSettings extends Settings
@@ -58,6 +61,59 @@ class PrescriptionVoiceSettings extends Settings
                     ->columnSpanFull()
             ]
         );
+    }
+
+    public function save(): void
+    {
+        $data = $this->form->getState();
+        $envUpdates = [];
+
+        foreach (config('settings.prescription_voice.sections', []) as $section) {
+            $dbGroup = $section['db_group'] ?? 'prescription_voice';
+
+            foreach (($section['fields'] ?? []) as $fieldKey => $field) {
+                $value = data_get($data, "{$dbGroup}.{$fieldKey}");
+
+                $type = 'string';
+                if (is_bool($value)) {
+                    $type = 'boolean';
+                } elseif (is_int($value)) {
+                    $type = 'integer';
+                } elseif (is_array($value)) {
+                    $type = 'json';
+                }
+
+                Setting::setValue(
+                    group: $dbGroup,
+                    key: $fieldKey,
+                    value: $value,
+                    type: $type,
+                    isPublic: (bool) ($field['is_public'] ?? false),
+                );
+
+                if (isset($field['env_key']) && $value !== null && $value !== '') {
+                    $envValue = is_array($value) ? implode(',', $value) : $value;
+
+                    if (is_bool($value)) {
+                        $envValue = $value ? 'true' : 'false';
+                    }
+
+                    $envUpdates[$field['env_key']] = $envValue;
+                }
+            }
+        }
+
+        if (! empty($envUpdates)) {
+            $this->updateEnvFile($envUpdates);
+        }
+
+        Setting::clearCache();
+        Artisan::call('config:clear');
+
+        Notification::make()
+            ->title('Settings saved successfully')
+            ->success()
+            ->send();
     }
 
     private function dictationStatusHtml(array $settings): string

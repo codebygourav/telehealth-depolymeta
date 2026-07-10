@@ -2,9 +2,7 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Appointment;
 use App\Models\Setting;
-use App\Models\Doctor;
 use Filament\Forms\Components\{
     ColorPicker,
     DatePicker,
@@ -31,7 +29,6 @@ use Illuminate\Support\Facades\{
     File
 };
 use Illuminate\Support\Str;
-use Carbon\Carbon;
 use Livewire\Attributes\Url;
 use App\Traits\HasCustomSidebar;
 
@@ -40,6 +37,7 @@ class Settings extends Page
     use HasCustomSidebar;
     protected string $view = 'filament.pages.settings';
     protected static ?string $title = 'Settings';
+protected static ?string $description = 'Settings';
     protected static ?string $slug = 'settings';
 
     public static function getSidebarOptions(): array
@@ -94,34 +92,17 @@ class Settings extends Page
         // Then, for fields with env_key, use .env value if database value is empty
         foreach ($config as $groupKey => $group) {
             foreach (($group['sections'] ?? []) as $section) {
+                $dbGroup = $section['db_group'] ?? $groupKey;
+
                 foreach (($section['fields'] ?? []) as $fieldKey => $field) {
                     if (isset($field['env_key'])) {
-                        $fullKey = "{$groupKey}.{$fieldKey}";
+                        $fullKey = "{$dbGroup}.{$fieldKey}";
                         $envValue = env($field['env_key']);
 
                         // If database value is empty but .env has a value, use .env value
                         if ((empty(data_get($data, $fullKey)) || data_get($data, $fullKey) === '') && $envValue !== null) {
                             data_set($data, $fullKey, $envValue);
                         }
-                    }
-                }
-            }
-        }
-
-        foreach ($config as $groupKey => $group) {
-            foreach (($group['sections'] ?? []) as $section) {
-                $dbGroup = $section['db_group'] ?? $groupKey;
-
-                foreach (($section['fields'] ?? []) as $fieldKey => $field) {
-                    if (! array_key_exists('default', $field)) {
-                        continue;
-                    }
-
-                    $fullKey = "{$dbGroup}.{$fieldKey}";
-                    $currentValue = data_get($data, $fullKey);
-
-                    if ($currentValue === null || $currentValue === '') {
-                        data_set($data, $fullKey, $field['default']);
                     }
                 }
             }
@@ -137,21 +118,12 @@ class Settings extends Page
             ->statePath('data');
     }
 
-    public static function getHiddenSettingsGroups(): array
-    {
-        return ['display', 'display_ads', 'prescription_voice'];
-    }
-
     protected function buildFormSchema(): array
     {
         $schema = [];
         $config = config('settings', []);
 
         foreach ($config as $groupKey => $group) {
-            if (in_array($groupKey, static::getHiddenSettingsGroups(), true)) {
-                continue;
-            }
-
             // Skip if 'label' key does not exist (prevent undefined key error)
             if (!isset($group['label'])) {
                 continue;
@@ -337,51 +309,13 @@ class Settings extends Page
                 ->label($field['label'])
                 ->default($field['default'] ?? []),
 
-            'doctor_select' => Select::make($key)
-                ->label($field['label'])
-                ->multiple()
-                ->searchable()
-                ->preload()
-                ->options($this->todayDoctorOptions())
-                ->default($field['default'] ?? [])
-                ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
-                ->columnSpanFull(),
-
             default => null,
         };
     }
-
-    protected function todayDoctorOptions(): array
+    public static function getHiddenSettingsGroups(): array
     {
-        $doctorIds = Appointment::query()
-            ->whereDate('appointment_date', Carbon::today())
-            ->whereNotNull('doctor_id')
-            ->distinct()
-            ->pluck('doctor_id')
-            ->all();
-
-        if (empty($doctorIds)) {
-            return [];
-        }
-
-        return Doctor::query()
-            ->with('user:id,name')
-            ->whereIn('id', $doctorIds)
-            ->active()
-            ->withoutTestDoctors()
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get()
-            ->mapWithKeys(function (Doctor $doctor): array {
-                $name = trim(($doctor->first_name ?? '') . ' ' . ($doctor->last_name ?? ''));
-                $label = $name !== '' ? $name : ($doctor->user?->name ?? 'Doctor');
-                $suffix = $doctor->doctor_code ? " ({$doctor->doctor_code})" : '';
-
-                return [$doctor->id => "Dr. {$label}{$suffix}"];
-            })
-            ->toArray();
+        return ['display', 'display_ads', 'prescription_voice'];
     }
-
     protected function shouldPairField(string $type): bool
     {
         return in_array($type, ['text', 'email', 'tel', 'url', 'number', 'password', 'select', 'color', 'time', 'richtext']);
@@ -443,8 +377,7 @@ class Settings extends Page
                     ->label($field['label'])
                     ->placeholder($field['placeholder'] ?? null)
                     ->helperText($field['helper'] ?? $field['helper_text'] ?? null)
-                    ->rows($field['rows'] ?? 3)
-                    ->default($field['default'] ?? null),
+                    ->rows($field['rows'] ?? 3),
                 function ($component) use ($field) {
                     if (isset($field['maxLength'])) {
                         $component->maxLength($field['maxLength']);
@@ -526,6 +459,22 @@ class Settings extends Page
 
             default => null,
         };
+
+        // If this is the wordpress secret field, render a small regenerate button next to it
+        if ($field['type'] === 'password' && str_ends_with($key, 'wordpress_api_secret')) {
+            $placeholder = \Filament\Forms\Components\Placeholder::make($key . '_regen')
+                ->content(fn() => new \Illuminate\Support\HtmlString(view('filament.components.wp-secret-regen-button')->render()))
+                ->columnSpan(1);
+
+            // Render the secret input and regenerate button as a 50/50 split
+            $component->columnSpan(1);
+            $placeholder->columnSpan(1);
+
+            return \Filament\Schemas\Components\Grid::make(2)->schema([
+                $component,
+                $placeholder,
+            ])->columnSpanFull();
+        }
 
         if ($component && isset($field['depends_on'])) {
             $component->visible(function ($get) use ($field, $groupKey) {
@@ -722,6 +671,38 @@ class Settings extends Page
             ->title('View cache cleared')
             ->success()
             ->send();
+    }
+
+    public function regenerateWordpressSecret(): void
+    {
+        try {
+            $secret = bin2hex(random_bytes(32));
+
+            Setting::updateOrCreate(
+                ['group' => 'wordpress_api_setting', 'key' => 'wordpress_api_secret'],
+                ['value' => $secret, 'type' => 'string', 'is_public' => false]
+            );
+
+            // Update .env as well
+            $this->updateEnvFile(['WP_TELEHEALTH_SECRET' => $secret]);
+
+            Setting::clearCache();
+            Artisan::call('config:clear');
+
+            Notification::make()
+                ->title('WordPress API secret regenerated')
+                ->body('New secret has been saved and .env updated.')
+                ->success()
+                ->send();
+
+            $this->redirect(static::getUrl(), navigate: true);
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Error generating secret')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     public static function canAccess(): bool
