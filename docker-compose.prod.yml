@@ -44,13 +44,6 @@ services:
 
     container_name: tele-backend-app
 
-    working_dir: /var/www/html
-
-    volumes:
-      - ./backend:/var/www/html
-      - ./backend/docker/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
-      - vendor_data:/var/www/html/vendor
-
     depends_on:
       - db
 
@@ -115,4 +108,3 @@ services:
 
 volumes:
   tele_db_data:
-  vendor_data:
