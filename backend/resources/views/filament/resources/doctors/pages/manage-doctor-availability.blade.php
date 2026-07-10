@@ -11,15 +11,15 @@
         $groupedRows = $this->rows->groupBy('date');
         $activeFilterCount = $this->activeFilterCount;
         $slotGridColumns = $showDoctorContext
-            ? '32px minmax(70px, 1fr) minmax(60px, 1.1fr) minmax(66px, .5fr) minmax(220px, 1.25fr) minmax(100px, 0.6fr) minmax(70px, .75fr) minmax(0px, .5fr) minmax(210px, 1fr)'
-            : '32px minmax(70px, 1fr) minmax(60px, 1.1fr) minmax(66px, .5fr) minmax(220px, 1.25fr) minmax(100px, 0.6fr) minmax(70px, .75fr) minmax(0px, .5fr) minmax(210px, 1fr)';
+            ? '32px minmax(70px, 1fr) minmax(60px, 1.1fr) minmax(66px, .5fr) minmax(90px, 0.5fr) minmax(100px, 0.6fr) minmax(70px, .75fr) minmax(150px, 0.9fr) minmax(210px, 1fr)'
+            : '32px minmax(70px, 1fr) minmax(60px, 1.1fr) minmax(66px, .5fr) minmax(90px, 0.5fr) minmax(100px, 0.6fr) minmax(70px, .75fr) minmax(150px, 0.9fr) minmax(210px, 1fr)';
         $slotTableMinWidth = $showDoctorContext ? '1260px' : '1080px';
         $openDate = $groupedRows->has($todayDate) ? $todayDate : $groupedRows->keys()->first() ?? null;
     @endphp
 
     <style>
         .availability-shell {
-            --av-primary: #073827;
+            --av-primary: #055bd9;
             --av-primary-hover: #052a1f;
             --av-border: #e2e8f0;
             --av-border-strong: #cbd5e1;
@@ -58,7 +58,7 @@
             width: 8px;
             height: 8px;
             border-radius: 999px;
-            background: var(--kpi-dot, var(--av-primary));
+            background: var(--kpi-dot, var(--app-primary-hex));
             flex-shrink: 0;
         }
 
@@ -162,7 +162,7 @@
         }
 
         .availability-tab.is-active {
-            background: var(--av-primary);
+            background: var(--app-primary-hex);
             color: #fff;
             box-shadow: 0 1px 3px rgb(7 56 39 / 25%);
         }
@@ -190,8 +190,8 @@
 
         .availability-filter-toggle.is-active,
         .availability-filter-toggle:hover {
-            border-color: var(--av-primary);
-            color: var(--av-primary);
+            border-color: var(--app-primary-hex);
+            color: var(--app-primary-hex);
         }
 
         .availability-panel__header {
@@ -233,8 +233,8 @@
         }
 
         .availability-clear:hover {
-            border-color: var(--av-primary);
-            color: var(--av-primary);
+            border-color: var(--app-primary-hex);
+            color: var(--app-primary-hex);
             background: var(--av-primary-soft);
         }
 
@@ -272,7 +272,7 @@
         }
 
         .availability-input:focus {
-            border-color: var(--av-primary);
+            border-color: var(--app-primary-hex);
             box-shadow: 0 0 0 3px var(--av-primary-ring);
         }
 
@@ -302,15 +302,15 @@
         }
 
         .availability-day.is-active {
-            border-color: var(--av-primary);
-            background: var(--av-primary);
+            border-color: var(--app-primary-hex);
+            background: var(--app-primary-hex);
             color: #fff;
         }
 
         .availability-day.is-today:not(.is-active) {
-            border-color: var(--av-primary);
+            border-color: var(--app-primary-hex);
             background: var(--av-surface);
-            color: var(--av-primary);
+            color: var(--app-primary-hex);
             box-shadow: inset 0 0 0 1px rgb(7 56 39 / 12%);
         }
 
@@ -350,9 +350,9 @@
         }
 
         .availability-save {
-            border: 1px solid var(--av-primary);
+            border: 1px solid var(--app-primary-hex);
             border-radius: 8px;
-            background: var(--av-primary);
+            background: var(--app-primary-hex);
             color: #fff;
             font-size: 13px;
             font-weight: 720;
@@ -378,11 +378,11 @@
             line-height: 1.5;
         }
 
-        /* Filament modal toggles — #073827 on, gray off */
+        /* Filament modal toggles — #055bd9 on, gray off */
         .fi-modal .fi-fo-toggle[aria-checked="true"] .fi-toggle,
         .fi-modal .fi-fo-toggle[aria-checked="true"] {
-            background-color: #073827 !important;
-            border-color: #073827 !important;
+            background-color: #055bd9 !important;
+            border-color: #055bd9 !important;
         }
 
         .fi-modal .fi-fo-toggle[aria-checked="false"] .fi-toggle,
@@ -461,10 +461,14 @@
             width: 100%;
             max-height: 72vh;
             overflow: auto;
+            will-change: scroll-position;
+            -webkit-overflow-scrolling: touch;
         }
 
         .availability-date-card {
             border-bottom: 1px solid var(--av-border);
+            contain: content;
+            will-change: auto;
         }
 
         .availability-date-card:last-child {
@@ -474,9 +478,22 @@
         .availability-date-card summary {
             list-style: none;
             cursor: pointer;
+            display: block;
+            will-change: background-color, border-color;
+        }
+
+        .availability-date-summary-wrapper {
+            list-style: none;
+            cursor: pointer;
+            display: block;
+            will-change: none;
         }
 
         .availability-date-card summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .availability-date-summary-wrapper::-webkit-details-marker {
             display: none;
         }
 
@@ -488,12 +505,13 @@
             padding: 14px 20px;
             background: var(--av-surface);
             border-left: 3px solid transparent;
-            transition: background 0.15s ease, border-color 0.15s ease;
+            transition: background 0.12s ease, border-color 0.12s ease;
+            user-select: none;
         }
 
         .availability-date-card[open] .availability-date-summary {
             background: var(--av-surface-muted);
-            border-left-color: var(--av-primary);
+            border-left-color: var(--app-primary-hex);
         }
 
         .availability-date-card.is-today:not([open]) .availability-date-summary {
@@ -513,7 +531,8 @@
             height: 32px;
             border-radius: 10px;
             flex-shrink: 0;
-            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+            will-change: transform;
         }
 
         .availability-expand-btn {
@@ -523,15 +542,15 @@
         }
 
         .availability-date-card[open] .availability-expand-btn {
-            border-color: var(--av-primary);
-            background: var(--av-primary);
+            border-color: var(--app-primary-hex);
+            background: var(--app-primary-hex);
             color: #fff;
         }
 
         .availability-expand-btn svg {
             width: 16px;
             height: 16px;
-            transition: transform 0.2s ease;
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .availability-date-card[open] .availability-expand-btn svg {
@@ -565,7 +584,7 @@
         }
 
         .availability-date-card.is-today .availability-date-count {
-            color: var(--av-primary);
+            color: var(--app-primary-hex);
             background: rgb(7 56 39 / 6%);
             border-color: rgb(7 56 39 / 15%);
         }
@@ -577,6 +596,8 @@
             padding: 14px 20px;
             border-top: 1px solid var(--av-border);
             background: var(--av-surface);
+            will-change: auto;
+            contain: layout style paint;
         }
 
         .availability-slot-row:nth-child(even) {
@@ -585,6 +606,7 @@
 
         .availability-slot-row:hover {
             background: var(--av-surface-muted);
+            transition: background 0.1s ease;
         }
 
         .availability-main {
@@ -624,13 +646,28 @@
 
         .availability-badge--active {
             background: rgb(7 56 39 / 8%);
-            color: var(--av-primary);
+            color: var(--app-primary-hex);
             border: 1px solid rgb(7 56 39 / 18%);
         }
 
         .availability-badge--blocked {
             background: rgb(254 243 199);
             color: rgb(180 83 9);
+        }
+
+        .availability-note {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 8px;
+            margin-top: 4px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1;
+            color: rgb(120 53 15);
+            background: rgb(254 243 199);
+            border: 1px solid rgb(251 191 36 / 0.4);
         }
 
         .availability-badge--deleted {
@@ -695,8 +732,8 @@
         }
 
         .availability-bulk-trigger:hover {
-            border-color: var(--av-primary);
-            color: var(--av-primary);
+            border-color: var(--app-primary-hex);
+            color: var(--app-primary-hex);
         }
 
         .availability-filter-chip {
@@ -733,7 +770,7 @@
             width: 16px;
             height: 16px;
             border-radius: 4px;
-            accent-color: var(--av-primary);
+            accent-color: var(--app-primary-hex);
         }
 
         .availability-slot-row.is-blocked {
@@ -768,9 +805,9 @@
         }
 
         .availability-action:hover {
-            border-color: var(--av-primary);
+            border-color: var(--app-primary-hex);
             background: var(--av-primary-soft);
-            color: var(--av-primary);
+            color: var(--app-primary-hex);
         }
 
         .availability-action:disabled {
@@ -789,20 +826,20 @@
         }
 
         .availability-action--success {
-            border-color: rgb(7 56 39 / 25%);
+            border-color:rgba(5, 90, 217, 0.28);
             background: rgb(7 56 39 / 6%);
-            color: var(--av-primary);
+            color: var(--app-primary-hex);
         }
 
         .availability-action--success:hover {
-            border-color: var(--av-primary);
-            background: var(--av-primary);
+            border-color: var(--app-primary-hex);
+            background: var(--app-primary-hex);
             color: #fff;
         }
 
         .availability-action--primary:hover {
-            border-color: var(--av-primary);
-            color: var(--av-primary);
+            border-color: var(--app-primary-hex);
+            color: var(--app-primary-hex);
         }
 
         .availability-empty {
@@ -857,16 +894,16 @@
         }
     </style>
 
-    <div class="availability-shell" wire:key="availability-shell-{{ $this->availabilityRefreshVersion }}">
+    <div class="availability-shell">
         <div class="availability-kpis">
-            <div class="availability-kpi" style="--kpi-dot: #073827">
+            <div class="availability-kpi" style="--kpi-dot: #055bd9">
                 <div class="availability-kpi__top">
                     <span class="availability-kpi__label">Total slots</span>
                     <span class="availability-kpi__dot"></span>
                 </div>
                 <div class="availability-kpi__value">{{ $summary['total'] }}</div>
             </div>
-            <div class="availability-kpi" style="--kpi-dot: #073827; --kpi-value-color: #073827">
+            <div class="availability-kpi" style="--kpi-dot: #055bd9; --kpi-value-color: #055bd9">
                 <div class="availability-kpi__top">
                     <span class="availability-kpi__label">Available</span>
                     <span class="availability-kpi__dot"></span>
@@ -1067,6 +1104,19 @@
                     {{ count($selectedRows) }} selected
                 </div>
                 <div class="availability-bulkbar__actions" style="display: flex; gap: 8px;">
+                    <button type="button" wire:click="toggleAllDates" class="availability-bulk-trigger" title="{{ $this->allDatesExpanded ? 'Collapse all date groups' : 'Expand all date groups' }}">
+                        @if ($this->allDatesExpanded)
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 16px; height: 16px; display: inline; margin-right: 4px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6" />
+                            </svg>
+                            Collapse All
+                        @else
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 16px; height: 16px; display: inline; margin-right: 4px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
+                            </svg>
+                            Expand All
+                        @endif
+                    </button>
                     <button type="button" wire:click="mountAction('editParentSeries')" class="availability-bulk-trigger">
                         Edit Series
                     </button>
@@ -1115,9 +1165,11 @@
                         $dateTotalBooked = $dateRows->sum('total_booked');
                     @endphp
                     <details class="availability-date-card {{ $date === $todayDate ? 'is-today' : '' }}"
-                        wire:key="availability-date-{{ $date }}-{{ $this->availabilityRefreshVersion }}"
-                        style="min-width: {{ $slotTableMinWidth }};" @if ($date === $openDate) open @endif>
-                        <summary>
+                        wire:key="availability-date-{{ $date }}"
+                        data-date="{{ $date }}"
+                        style="min-width: {{ $slotTableMinWidth }};"
+                        @if ($this->allDatesExpanded || in_array($date, $this->openDates) || (empty($this->openDates) && $date === $openDate)) open @endif>
+                        <summary class="availability-date-summary-wrapper">
                             <div class="availability-date-summary">
                                 <div class="availability-date-left">
                                     <span class="availability-expand-btn" aria-hidden="true">
@@ -1126,6 +1178,15 @@
                                                 stroke-linecap="round" stroke-linejoin="round" />
                                         </svg>
                                     </span>
+                                    <input type="checkbox" class="availability-check" style="margin-right: 8px;"
+                                        wire:click="toggleSelectDay('{{ $date }}')"
+                                        @php
+                                            $daysRowKeys = $dateRows->pluck('row_key')->toArray();
+                                            $daysSelectedCount = count(array_intersect($this->selectedRows, $daysRowKeys));
+                                            $allDaySelected = $daysSelectedCount === count($daysRowKeys) && count($daysRowKeys) > 0;
+                                        @endphp
+                                        @if($allDaySelected) checked @endif
+                                        title="Select all slots for this day" />
                                     <div class="availability-date-title"
                                         style="display: flex; align-items: center; gap: 10px;">
                                         <span>{{ \Carbon\Carbon::parse($date)->format('d M Y') }}</span>
@@ -1181,10 +1242,10 @@
                                         <div class="availability-main">{{ $row['doctor_name'] }}</div>
                                         @if ($row['doctor_profile_url'])
                                             <a href="{{ $row['doctor_profile_url'] }}" class="availability-sub 12"
-                                                style="color: var(--av-primary); font-weight: 700; text-decoration: none;">Profile</a>
+                                                style="color: var(--app-primary-hex); font-weight: 700; text-decoration: none;">Profile</a>
                                         @endif
                                     </div>
-                                    
+
                                 @endif
                                 <div>
                                     <div class="availability-main">
@@ -1207,18 +1268,27 @@
                                 </div>
                                 <div>
                                     <div class="availability-main" style="font-weight: 600;">
-                                        @if ($row['total_booked'] > 0)
-                                            {{ $row['internal_booked'] }} Online / {{ $row['external_booked'] }}
-                                            external <span
-                                                style="font-size: 11px; font-weight: 700; color: var(--av-primary);">({{ $row['total_booked'] }}
-                                                total)</span>
-                                        @else
-                                            <span style="color: var(--av-muted);">0</span>
-                                        @endif
+                                        {{ $row['total_booked'] }}
+                                    </div>
+                                    <div class="availability-sub" style="font-size: 11px;">
+                                        {{ $row['total_booked'] > 1 ? 'booked' : ($row['total_booked'] === 1 ? 'booked' : '0 booked') }}
                                     </div>
                                 </div>
                                 <div>
-                                    <div class="availability-main">{{ ucfirst($row['type']) }}</div>
+                                    @php
+                                        $consultationType = trim(strtolower($row['consultation_type'] ?? 'in-person'));
+                                        $consultationType = str_contains($consultationType, 'video') ? 'video' : 'in-person';
+                                        $opdType = trim((string) ($row['opd_type'] ?? ''));
+                                        $opdType = $opdType !== '' ? ucfirst($opdType) : 'General';
+                                        if ($consultationType === 'video') {
+                                            $typeLabel = 'Video';
+                                        } else {
+                                            $typeLabel = 'In person' . ($opdType !== 'General' ? ' / ' . $opdType : '');
+                                        }
+                                    @endphp
+                                    <div class="availability-main">
+                                        <span>{{ $typeLabel }}</span>
+                                    </div>
                                     <div class="availability-sub 14">
                                         {{ $row['room'] ?: ($row['opd_type'] ?: 'No room') }}
                                         @if ($row['is_child_only'])
@@ -1240,6 +1310,10 @@
                                         <span class="availability-badge availability-badge--deleted">Deleted</span>
                                     @else
                                         <span class="availability-badge availability-badge--blocked">Blocked</span>
+                                    @endif
+
+                                    @if (! empty($row['blocked_parent']))
+                                        <span class="availability-note">Parent blocked. Use Edit Series.</span>
                                     @endif
                                 </div>
                                 <div>
@@ -1361,12 +1435,6 @@
                                         }
                                     </style>
 
-
-
-
-
-
-
                                 </div>
                             </div>
                         @endforeach
@@ -1378,5 +1446,5 @@
         </div>
     </div>
 
-    <x-filament-actions::modals />
 </x-filament-panels::page>
+

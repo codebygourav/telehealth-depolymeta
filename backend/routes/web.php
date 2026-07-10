@@ -71,6 +71,14 @@ Route::post('/admin/patients/{patient}/notify-next', [PatientNotificationControl
     ->middleware(['web', 'auth'])
     ->name('admin.patients.notify-next');
 
+// Admin: Web Push Notification Subscriptions
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::post('/admin/webpush/subscribe', [\App\Http\Controllers\WebPushController::class, 'store'])
+        ->name('admin.webpush.subscribe');
+    Route::post('/admin/webpush/unsubscribe', [\App\Http\Controllers\WebPushController::class, 'destroy'])
+        ->name('admin.webpush.unsubscribe');
+});
+
 //  to make the storage symlink work, run the following command on live using SSH:
 // cd public
 // rm -rf storage

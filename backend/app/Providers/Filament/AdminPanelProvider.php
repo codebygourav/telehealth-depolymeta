@@ -131,6 +131,10 @@ class AdminPanelProvider extends PanelProvider
                 fn(): string => view('filament.partial.theme-colors')->render(),
             )
             ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn(): string => view('filament.partial.webpush-loader')->render(),
+            )
+            ->renderHook(
                 PanelsRenderHook::FOOTER,
                 fn(): string => view('filament.partial.footer')->render(),
             )

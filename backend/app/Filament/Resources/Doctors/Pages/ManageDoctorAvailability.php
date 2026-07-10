@@ -32,7 +32,10 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Collection;
+use Illuminate\Support\HtmlString;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Url;
 
 class ManageDoctorAvailability extends Page
@@ -76,6 +79,15 @@ class ManageDoctorAvailability extends Page
     public bool $allDaysSelected = false;
 
     public bool $doctorScopedFromUrl = false;
+
+    public ?string $activeDate = null;
+
+    public bool $hasOpenDatesState = false;
+
+    // Track which date-groups are open to avoid accordion collapsing on Livewire updates
+    public array $openDates = [];
+
+    public bool $allDatesExpanded = false;
 
     public string $slotView = 'upcoming';
 
@@ -337,17 +349,20 @@ class ManageDoctorAvailability extends Page
             ->extraModalWindowAttributes(['class' => 'availability-slot-modal-window'])
             ->mountUsing(function (Schema $schema, array $arguments): void {
                 $date = $arguments['date'] ?? null;
+                $this->activeDate = filled($date) ? Carbon::parse($date)->toDateString() : null;
                 $isRecurring = isset($arguments['date']) ? '0' : '1';
                 $dayOfWeek = $date ? strtolower(Carbon::parse($date)->format('l')) : strtolower(now()->format('l'));
 
                 $schema->fill([
                     'is_recurring' => $isRecurring,
                     'date' => $date,
-                    'day_of_week' => $dayOfWeek,
+                    'days_of_week' => [$dayOfWeek],
                     'doctor_id' => $arguments['doctor_id'] ?? $this->doctorFilter,
+                    'is_available' => true,
                 ]);
             })
             ->form($this->availabilityFormSchema(includeStatus: true))
+            ->modalSubmitActionLabel('Save slot')
             ->action(function (array $data): void {
                 $availability = $this->saveParentAvailability($data);
 
@@ -366,7 +381,7 @@ class ManageDoctorAvailability extends Page
             ->modalWidth('3xl')
             ->modalHeading('Edit availability date')
             ->extraModalWindowAttributes(['class' => 'availability-slot-modal-window'])
-            ->modalDescription(fn(array $arguments = []): ?string => $this->appointmentWarningForArguments($arguments, 'edit'))
+            ->modalDescription(fn(array $arguments = []): string => $this->editOccurrenceModalDescription($arguments))
             ->mountUsing(function (Schema $schema, array $arguments): void {
                 $availability = $this->findAvailability($arguments['availability'] ?? null);
                 $date = Carbon::parse($arguments['date'] ?? $availability->date)->toDateString();
@@ -410,6 +425,8 @@ class ManageDoctorAvailability extends Page
             ->form($this->editOccurrenceFormSchema())
             ->action(function (array $data): void {
                 $availability = $this->findAvailability($data['availability_id'] ?? null);
+                $date = Carbon::parse($data['override_date'] ?? $availability->date)->toDateString();
+                $this->activeDate = $date;
 
                 if (! $this->isRecurringTemplate($availability)) {
                     $this->saveParentAvailability([
@@ -427,6 +444,18 @@ class ManageDoctorAvailability extends Page
                     $this->updateChildOnlySettings($availability, $data);
                     $this->saveOverride($availability, $data['override_date'], $data);
                 }
+
+                if ($this->isRecurringTemplate($availability) && ! $availability->is_available && ($data['status'] ?? '') === 'active') {
+                    Notification::make()
+                        ->warning()
+                        ->title('Blocked weekly series')
+                        ->body('This date belongs to a blocked weekly series. Use Edit Weekly Series on the parent slot to make it available.')
+                        ->send();
+                }
+
+                $this->openDates = [$date];
+                $this->hasOpenDatesState = true;
+                $this->refreshAvailabilityRows();
 
                 Notification::make()
                     ->success()
@@ -446,12 +475,12 @@ class ManageDoctorAvailability extends Page
             ->extraModalWindowAttributes(['class' => 'availability-slot-modal-window'])
             ->mountUsing(function (Schema $schema, array $arguments): void {
                 $availability = $this->findAvailability($arguments['availability'] ?? null);
-                
+
                 $rules = $availability->booking_cutoff_rules ?? [];
                 $firstRule = is_array($rules) && count($rules) > 0 ? $rules[0] : null;
                 $cutoffValue = $firstRule['value'] ?? null;
                 $cutoffUnit = $firstRule['unit'] ?? 'hours';
-                
+
                 $schema->fill([
                     'availability_id' => $availability->id,
                     'start_time' => $this->formatTime($availability->start_time),
@@ -459,6 +488,7 @@ class ManageDoctorAvailability extends Page
                     'capacity' => $availability->capacity,
                     'consultation_type' => $availability->consultation_type ?? 'in-person',
                     'opd_type' => $availability->opd_type ?? 'general',
+                    'status' => $availability->is_available ? 'active' : 'blocked',
                     'consultation_fee' => $availability->consultation_fee,
                     'doctor_room' => $availability->doctor_room,
                     'is_child_only' => (bool) $availability->is_child_only,
@@ -487,7 +517,7 @@ class ManageDoctorAvailability extends Page
                 Section::make('Consultation type')
                     ->columns(1)
                     ->schema([
-                        Grid::make(2)->schema([
+                        Grid::make(3)->schema([
                             Select::make('consultation_type')
                                 ->label('Mode')
                                 ->options(['in-person' => 'In-Person', 'video' => 'Video'])
@@ -507,6 +537,14 @@ class ManageDoctorAvailability extends Page
                                 ->default('general')
                                 ->visible(fn($get) => ($get('consultation_type') ?? 'in-person') === 'in-person')
                                 ->required(fn($get) => ($get('consultation_type') ?? 'in-person') === 'in-person'),
+                            Select::make('status')
+                                ->label('Status')
+                                ->options([
+                                    'active' => 'Active',
+                                    'blocked' => 'Blocked',
+                                ])
+                                ->default('active')
+                                ->required(),
                         ]),
                     ]),
                 Section::make('Capacity & details')
@@ -542,11 +580,24 @@ class ManageDoctorAvailability extends Page
                     ]),
             ])
             ->action(function (array $data): void {
-                $availability = $this->findAvailability($data['availability_id'] ?? null);
-                $data['consultation_type'] = $data['consultation_type'] ?? $availability->consultation_type;
-                $data['opd_type'] = $data['opd_type'] ?? $availability->opd_type;
-                $this->validateParentSeriesUpdate($availability, $data);
-                $this->updateParentAvailabilitySeries($availability, $data);
+                try {
+                    $availability = $this->findAvailability($data['availability_id'] ?? null);
+                    $data['consultation_type'] = $data['consultation_type'] ?? $availability->consultation_type;
+                    $data['opd_type'] = $data['opd_type'] ?? $availability->opd_type;
+                    $this->validateParentSeriesUpdate($availability, $data);
+                    $this->updateParentAvailabilitySeries($availability, $data);
+                } catch (\Illuminate\Validation\ValidationException $e) {
+                    // `validateParentSeriesUpdate` already shows a notification; rethrow to surface the error
+                    throw $e;
+                } catch (\Exception $e) {
+                    Notification::make()
+                        ->danger()
+                        ->title('Error updating series')
+                        ->body($e->getMessage())
+                        ->send();
+
+                    throw $e;
+                }
             });
     }
 
@@ -565,19 +616,42 @@ class ManageDoctorAvailability extends Page
                         Select::make('availability_id')
                             ->label('Weekly Series')
                             ->options(function () {
-                                return $this->baseAvailabilityQuery()
-                                    ->where('is_recurring', true)
+                                $query = DoctorAvailability::query()
+                                    ->with('doctor.user')
+                                    ->where(function ($query) {
+                                        $query->where('is_recurring', true)
+                                            ->orWhere(function ($query) {
+                                                $query->where(function ($query) {
+                                                    $query->whereNull('date')
+                                                        ->orWhere('date', '');
+                                                })
+                                                    ->whereNotNull('day_of_week')
+                                                    ->where('day_of_week', '<>', '');
+                                            });
+                                    });
+
+                                if ($this->hasDoctorRecord()) {
+                                    $query->where('doctor_id', $this->getRecord()->id);
+                                } elseif ($this->doctorFilter) {
+                                    $query->where('doctor_id', $this->doctorFilter);
+                                }
+
+                                return $query
+                                    ->orderBy('doctor_id')
+                                    ->orderBy('day_of_week')
+                                    ->orderBy('start_time')
                                     ->get()
                                     ->mapWithKeys(function (DoctorAvailability $availability) {
                                         $startTime = \Carbon\Carbon::parse($availability->start_time)->format('h:i A');
                                         $endTime = \Carbon\Carbon::parse($availability->end_time)->format('h:i A');
                                         $type = ucfirst($availability->day_of_week);
-                                        $doctorPrefix = $this->isAllDoctorsManager() ? $this->doctorName($availability->doctor) . ' - ' : '';
-                                        
+                                        $doctorPrefix = $this->doctorName($availability->doctor) . ' - ';
                                         $label = "{$doctorPrefix}{$type} | {$startTime} - {$endTime} | " . ucfirst($availability->consultation_type);
                                         return [$availability->id => $label];
                                     });
                             })
+                            ->searchable()
+                            ->placeholder('Search doctor, day, or time')
                             ->live()
                             ->required()
                             ->afterStateUpdated(function ($state, $set): void {
@@ -597,6 +671,8 @@ class ManageDoctorAvailability extends Page
                                     $set('consultation_fee', $availability->consultation_fee);
                                     $set('doctor_room', $availability->doctor_room);
                                     $set('is_child_only', (bool) $availability->is_child_only);
+                                    $set('is_available', $availability->is_available);
+                                    $set('status', $availability->is_available ? 'active' : 'blocked');
                                     $set('is_auto_recurring', (bool) $availability->is_auto_recurring);
                                     $set('inherit_booking_cutoff_rules', ($availability->booking_cutoff_rules === null));
                                     $set('booking_cutoff_value', $cutoffValue);
@@ -616,6 +692,25 @@ class ManageDoctorAvailability extends Page
                                 ->default(now()->toDateString()),
                             TimePicker::make('start_time')->label('Start Time')->seconds(false)->required(),
                             TimePicker::make('end_time')->label('End Time')->seconds(false)->required(),
+                        ]),
+                        Grid::make(2)->schema([
+                            Select::make('status')
+                                ->label('Status')
+                                ->options([
+                                    'active' => 'Active',
+                                    'blocked' => 'Blocked',
+                                ])
+                                ->default('active')
+                                ->afterStateUpdated(function ($state, $set): void {
+                                    $set('is_available', $state === 'active' || $state === true || $state === '1');
+                                })
+                                ->required(),
+                            Toggle::make('is_auto_recurring')
+                                ->label('Auto Recur')
+                                ->helperText('Automatically extend this weekly recurrence when it is close to the end date.')
+                                ->onColor('primary')
+                                ->offColor('gray')
+                                ->inline(false),
                         ]),
                     ]),
                 Section::make('Consultation type')
@@ -661,7 +756,7 @@ class ManageDoctorAvailability extends Page
                                 ->offColor('gray')
                                 ->visible(fn($get) => ($get('consultation_type') ?? 'in-person') === 'in-person'),
                         ]),
-                        Grid::make(1)->schema([
+                        Grid::make(2)->schema([
                             Toggle::make('is_auto_recurring')
                                 ->label('Auto Recur')
                                 ->helperText('Automatically extend this weekly recurrence when it is close to the end date.')
@@ -679,6 +774,15 @@ class ManageDoctorAvailability extends Page
                     ]),
             ])
             ->action(function (array $data): void {
+                if (!filled($data['availability_id'])) {
+                    Notification::make()
+                        ->danger()
+                        ->title('Validation Error')
+                        ->body('Please select a weekly series to edit.')
+                        ->send();
+                    return;
+                }
+
                 $availability = $this->findAvailability($data['availability_id'] ?? null);
                 $data['consultation_type'] = $data['consultation_type'] ?? $availability->consultation_type;
                 $data['opd_type'] = $data['opd_type'] ?? $availability->opd_type;
@@ -700,10 +804,10 @@ class ManageDoctorAvailability extends Page
         if ($timingChanged) {
             $effectiveDate = Carbon::parse($data['effective_date'])->startOfDay();
             $fromAfter = $effectiveDate->copy();
-            $toAfter = $availability->recurring_end_date 
-                ? Carbon::parse($availability->recurring_end_date)->endOfDay() 
+            $toAfter = $availability->recurring_end_date
+                ? Carbon::parse($availability->recurring_end_date)->endOfDay()
                 : now()->addYears(5)->endOfDay();
-            
+
             $rowsAfter = $this->recurringRows($availability, $fromAfter, $toAfter);
             $hasBookings = false;
             foreach ($rowsAfter as $row) {
@@ -716,7 +820,7 @@ class ManageDoctorAvailability extends Page
             if ($hasBookings) {
                 $nextWeekDate = Carbon::parse($data['effective_date'])->addWeek()->toDateString();
                 $message = "This slot already has booked appointments. To change the timing, the Effective From Date must be from next week (on or after {$nextWeekDate}).";
-                
+
                 Notification::make()
                     ->danger()
                     ->title('Validation Error')
@@ -737,12 +841,12 @@ class ManageDoctorAvailability extends Page
         // 1. Lock original values for dates before effective_date using overrides
         $from = $availability->recurring_start_date ? Carbon::parse($availability->recurring_start_date)->startOfDay() : now()->subYears(5)->startOfDay();
         $to = $effectiveDate->copy()->subDay()->endOfDay();
-        
+
         $rowsBefore = $this->recurringRows($availability, $from, $to);
         foreach ($rowsBefore as $row) {
             $date = $row['date'];
             $effective = app(DoctorAvailabilityService::class)->effectiveValuesForDate($availability, Carbon::parse($date));
-            
+
             $this->saveOverride($availability, $date, [
                 'start_time' => $this->formatTime($effective['start_time']),
                 'end_time' => $this->formatTime($effective['end_time']),
@@ -759,7 +863,7 @@ class ManageDoctorAvailability extends Page
         // 2. Lock future dates on/after effective_date that have booked appointments
         $fromAfter = $effectiveDate->copy();
         $toAfter = $availability->recurring_end_date ? Carbon::parse($availability->recurring_end_date)->endOfDay() : now()->addYears(5)->endOfDay();
-        
+
         $rowsAfter = $this->recurringRows($availability, $fromAfter, $toAfter);
         $lockedDates = [];
         foreach ($rowsAfter as $row) {
@@ -767,7 +871,7 @@ class ManageDoctorAvailability extends Page
             $bookedCount = $row['booked'];
             if ($bookedCount > 0) {
                 $effective = app(DoctorAvailabilityService::class)->effectiveValuesForDate($availability, Carbon::parse($date));
-                
+
                 $this->saveOverride($availability, $date, [
                     'start_time' => $this->formatTime($effective['start_time']),
                     'end_time' => $this->formatTime($effective['end_time']),
@@ -796,7 +900,7 @@ class ManageDoctorAvailability extends Page
             'day_of_week' => $availability->day_of_week,
             'consultation_type' => $data['consultation_type'] ?? $availability->consultation_type,
             'opd_type' => $data['opd_type'] ?? $availability->opd_type,
-            'is_available' => $availability->is_available ? '1' : '0',
+            'is_available' => ($data['status'] ?? 'active') === 'active' ? '1' : '0',
         ], $availability);
 
         $body = 'Parent series updated successfully starting ' . $effectiveDate->format('d M Y') . '.';
@@ -866,6 +970,7 @@ class ManageDoctorAvailability extends Page
             ->action(function (array $arguments): void {
                 $availability = $this->findAvailability($arguments['availability'] ?? null);
                 $date = Carbon::parse($arguments['date'] ?? $availability->date)->toDateString();
+                $this->activeDate = $date;
 
                 if ($this->isRecurringTemplate($availability)) {
                     $this->saveOverride($availability, $date, ['status' => 'blocked']);
@@ -888,6 +993,7 @@ class ManageDoctorAvailability extends Page
             ->action(function (array $arguments): void {
                 $availability = $this->findAvailability($arguments['availability'] ?? null);
                 $date = Carbon::parse($arguments['date'] ?? $availability->date)->toDateString();
+                $this->activeDate = $date;
 
                 if ($this->isRecurringTemplate($availability)) {
                     DoctorAvailabilityOverride::query()
@@ -916,6 +1022,7 @@ class ManageDoctorAvailability extends Page
             ->action(function (array $arguments): void {
                 $availability = $this->findAvailability($arguments['availability'] ?? null);
                 $date = Carbon::parse($arguments['date'] ?? $availability->date)->toDateString();
+                $this->activeDate = $date;
 
                 if ($this->isRecurringTemplate($availability)) {
                     $override = DoctorAvailabilityOverride::query()
@@ -938,6 +1045,7 @@ class ManageDoctorAvailability extends Page
             });
     }
 
+
     public function resetOccurrenceAction(): Action
     {
         return Action::make('resetOccurrence')
@@ -949,6 +1057,7 @@ class ManageDoctorAvailability extends Page
             ->action(function (array $arguments): void {
                 $availability = $this->findAvailability($arguments['availability'] ?? null);
                 $date = Carbon::parse($arguments['date'] ?? null)->toDateString();
+                $this->activeDate = $date;
 
                 DoctorAvailabilityOverride::query()
                     ->where('doctor_availability_id', $availability->id)
@@ -970,6 +1079,7 @@ class ManageDoctorAvailability extends Page
             ->action(function (array $arguments): void {
                 $availability = $this->findAvailability($arguments['availability'] ?? null);
                 $date = Carbon::parse($arguments['date'] ?? $availability->date)->toDateString();
+                $this->activeDate = $date;
 
                 $this->deleteDate($availability, $date);
 
@@ -983,7 +1093,7 @@ class ManageDoctorAvailability extends Page
             ->label('Bulk Edit')
             ->icon('heroicon-o-pencil-square')
             ->modalWidth('2xl')
-            ->modalDescription(fn(): string => $this->bulkAppointmentWarning('edit') ?: 'Only filled fields will be changed. Recurring dates are updated as date-specific overrides.')
+            ->modalDescription(fn(): string => $this->bulkEditSelectedModalDescription())
             ->form([
                 Grid::make(2)->schema([
                     TimePicker::make('start_time')->label('Start Time')->seconds(false),
@@ -1003,6 +1113,14 @@ class ManageDoctorAvailability extends Page
                 Textarea::make('note')->rows(3)->placeholder('Optional note for overrides'),
             ])
             ->action(function (array $data): void {
+                if (isset($data['status']) && $data['status'] === 'active' && $this->selectedRowsContainBlockedParentSeries()) {
+                    Notification::make()
+                        ->warning()
+                        ->title('Blocked weekly series')
+                        ->body('Some selected dates belong to a blocked weekly series. Use Edit Weekly Series on the parent slot to make the slot available.')
+                        ->send();
+                }
+
                 $count = $this->bulkUpdateSelected($data);
 
                 Notification::make()
@@ -1027,6 +1145,51 @@ class ManageDoctorAvailability extends Page
             ->title("{$count} selected date(s) deleted")
             ->body($warning)
             ->send();
+    }
+
+    public function bulkEditSelectedModalDescription(): string
+    {
+        $message = $this->bulkAppointmentWarning('edit');
+
+        if ($this->selectedRowsContainBlockedParentSeries()) {
+            $message = ($message ? $message . ' ' : '') . 'Some selected dates belong to a blocked weekly series. Use Edit Weekly Series on the parent slot to make the slot available before changing child dates.';
+        }
+
+        return $message ?: 'Only filled fields will be changed. Recurring dates are updated as date-specific overrides.';
+    }
+
+    public function selectedRowsContainBlockedParentSeries(): bool
+    {
+        foreach ($this->selectedRows as $rowKey) {
+            [$availabilityId, $date] = array_pad(explode('|', (string) $rowKey, 2), 2, null);
+            if (! $availabilityId || ! $date) {
+                continue;
+            }
+
+            $availability = $this->baseAvailabilityQuery()->where('id', $availabilityId)->first();
+            if (! $availability || ! $this->isRecurringTemplate($availability)) {
+                continue;
+            }
+
+            if (! $availability->is_available) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function editOccurrenceModalDescription(array $arguments = []): string
+    {
+        $message = $this->appointmentWarningForArguments($arguments, 'edit') ?: '';
+        $availability = $this->baseAvailabilityQuery()->where('id', $arguments['availability'] ?? null)->first();
+
+        if ($availability && $this->isRecurringTemplate($availability) && ! $availability->is_available) {
+            $note = 'This date belongs to a blocked weekly series. Use Edit Weekly Series on the parent slot to make it available.';
+            $message = trim(($message ? $message . ' ' : '') . $note);
+        }
+
+        return $message ?: 'Only filled fields will be changed.';
     }
 
     public function bulkBlockSelected(): void
@@ -1091,6 +1254,92 @@ class ManageDoctorAvailability extends Page
             ->pluck('row_key')
             ->values()
             ->all();
+
+        // keep the visible date groups open when selecting visible rows
+        $this->openDates = $this->rows->groupBy('date')->keys()->all();
+        $this->hasOpenDatesState = true;
+    }
+
+    public function toggleDate(string $date): void
+    {
+        $this->hasOpenDatesState = true;
+
+        if (in_array($date, $this->openDates, true)) {
+            $this->openDates = array_values(array_filter($this->openDates, fn($d) => $d !== $date));
+
+            return;
+        }
+
+        $this->openDates[] = $date;
+    }
+
+    public function openAllDates(): void
+    {
+        $this->openDates = $this->rows->groupBy('date')->keys()->all();
+        $this->allDatesExpanded = true;
+        $this->hasOpenDatesState = true;
+    }
+
+    public function closeAllDates(): void
+    {
+        $this->openDates = [];
+        $this->allDatesExpanded = false;
+        $this->hasOpenDatesState = true;
+    }
+
+    public function toggleAllDates(): void
+    {
+        if ($this->allDatesExpanded) {
+            $this->closeAllDates();
+        } else {
+            $this->openAllDates();
+        }
+    }
+
+    #[\Livewire\Attributes\On('setOpenDates')]
+    public function setOpenDates(array $dates = []): void
+    {
+        $this->openDates = $dates;
+        $this->hasOpenDatesState = true;
+        $this->allDatesExpanded = count($dates) === $this->rows->groupBy('date')->count();
+    }
+
+    public function toggleSelectAll(): void
+    {
+        $visibleKeys = $this->rows->pluck('row_key')->values()->all();
+
+        // if all visible are selected, clear; otherwise select all visible and open date groups
+        if (count(array_intersect($visibleKeys, $this->selectedRows)) === count($visibleKeys) && count($visibleKeys) > 0) {
+            $this->selectedRows = [];
+            $this->openDates = [];
+            $this->hasOpenDatesState = true;
+
+            return;
+        }
+
+        $this->selectedRows = $visibleKeys;
+        $this->openDates = $this->rows->groupBy('date')->keys()->all();
+        $this->hasOpenDatesState = true;
+    }
+
+    public function toggleSelectDay(string $date): void
+    {
+        $dayRowKeys = $this->rows->where('date', $date)->pluck('row_key')->toArray();
+
+        if (empty($dayRowKeys)) {
+            return;
+        }
+
+        // Check if all rows for this day are already selected
+        $allDaySelected = count(array_intersect($dayRowKeys, $this->selectedRows)) === count($dayRowKeys);
+
+        if ($allDaySelected) {
+            // Deselect all rows for this day
+            $this->selectedRows = array_diff($this->selectedRows, $dayRowKeys);
+        } else {
+            // Select all rows for this day
+            $this->selectedRows = array_unique(array_merge($this->selectedRows, $dayRowKeys));
+        }
     }
 
     public function getAvailabilityOptionsProperty(): array
@@ -1192,6 +1441,11 @@ class ManageDoctorAvailability extends Page
             ->values();
     }
 
+    public function getGroupedRowsProperty(): Collection
+    {
+        return $this->rows->groupBy('date');
+    }
+
     public function getSummaryProperty(): array
     {
         $rows = $this->rows;
@@ -1279,6 +1533,10 @@ class ManageDoctorAvailability extends Page
             }
         }
 
+        $normalizedConsultationType = trim(strtolower($availability->consultation_type ?? 'in-person'));
+        $normalizedConsultationType = str_contains($normalizedConsultationType, 'video') ? 'video' : 'in-person';
+        $normalizedOpdType = trim((string) ($availability->opd_type ?? ''));
+
         return [
             'row_key' => $availability->id . '|' . $date->toDateString(),
             'availability_id' => $availability->id,
@@ -1289,19 +1547,21 @@ class ManageDoctorAvailability extends Page
             'end_time' => $this->formatTime($effective['end_time']),
             'base_capacity' => $availability->capacity ?? 1,
             'capacity' => $effective['capacity'],
-            'booked' => $this->bookedCount($availability, $date, $effective['start_time'], $availability->consultation_type),
+            'booked' => $this->bookedCount($availability, $date, $effective['start_time'], $normalizedConsultationType),
             'internal_booked' => $bookedDetails['internal'],
             'external_booked' => $bookedDetails['external'],
             'total_booked' => $bookedDetails['total'],
             'is_passed' => $this->isRowPassed($date, $effective['end_time']),
             'source' => $override ? 'override' : ($isRecurring ? 'recurring' : 'one-time'),
             'status' => $status,
+            'blocked_parent' => $isRecurring && ! $availability->is_available,
             'is_recurring' => $isRecurring,
             'is_ending_soon' => $isEndingSoon,
             'ending_soon_date' => $endingSoonDate,
             'is_auto_recurring' => (bool) $availability->is_auto_recurring,
-            'type' => $availability->consultation_type,
-            'opd_type' => $availability->opd_type,
+            'type' => $normalizedConsultationType,
+            'consultation_type' => $normalizedConsultationType,
+            'opd_type' => $normalizedOpdType,
             'is_child_only' => (bool) $availability->is_child_only,
             'child_age' => $availability->is_child_only ? $this->globalChildAgeLimit() : null,
             'fee' => $effective['consultation_fee'],
@@ -1402,9 +1662,31 @@ class ManageDoctorAvailability extends Page
             ]);
         }
 
-        $isRecurring = ($data['is_recurring'] ?? '0') === '1' || ($data['is_recurring'] ?? false) === true;
+        // Normalize days selection early so presence of days implies recurring
+        $selectedDays = null;
+        if (array_key_exists('days_of_week', $data)) {
+            $raw = $data['days_of_week'];
+
+            if (is_array($raw)) {
+                $arr = $raw;
+            } elseif (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $arr = $decoded;
+                } else {
+                    $arr = array_filter(array_map('trim', explode(',', $raw)));
+                }
+            } else {
+                $arr = [$raw];
+            }
+
+            $arr = array_values(array_filter(array_map(fn($d) => strtolower((string) $d), $arr)));
+            $selectedDays = count($arr) ? $arr : null;
+        }
+
+        $isRecurring = ($data['is_recurring'] ?? '0') === '1' || ($data['is_recurring'] ?? false) === true || (is_array($selectedDays) && count($selectedDays) > 0);
         $date = $isRecurring ? null : ($data['date'] ?? null);
-        $day = strtolower($data['day_of_week'] ?? ($date ? Carbon::parse($date)->format('l') : 'monday'));
+        $day = strtolower($data['day_of_week'] ?? ($date ? Carbon::parse($date)->format('l') : ($selectedDays[0] ?? 'monday')));
         $consultationType = strtolower($data['consultation_type'] ?? 'in-person') === 'video' ? 'video' : 'in-person';
         $recurringStartDate = $isRecurring ? $this->nextDateForDay($day)->toDateString() : null;
         $recurringEndDate = $isRecurring
@@ -1421,6 +1703,28 @@ class ManageDoctorAvailability extends Page
                     ]
                 ];
             }
+        }
+
+        // Normalize days selection (support array, JSON string, or comma-separated string)
+        $selectedDays = null;
+        if ($isRecurring && array_key_exists('days_of_week', $data)) {
+            $raw = $data['days_of_week'];
+
+            if (is_array($raw)) {
+                $arr = $raw;
+            } elseif (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $arr = $decoded;
+                } else {
+                    $arr = array_filter(array_map('trim', explode(',', $raw)));
+                }
+            } else {
+                $arr = [$raw];
+            }
+
+            $arr = array_values(array_filter(array_map(fn($d) => strtolower((string) $d), $arr)));
+            $selectedDays = count($arr) ? $arr : null;
         }
 
         $payload = [
@@ -1442,18 +1746,65 @@ class ManageDoctorAvailability extends Page
             'is_auto_recurring' => $isRecurring ? (bool) ($data['is_auto_recurring'] ?? false) : false,
             'recurring_start_date' => $recurringStartDate,
             'recurring_end_date' => $recurringEndDate,
-            'is_available' => ($data['is_available'] ?? '1') === '1' || ($data['is_available'] ?? true) === true,
             'booking_cutoff_rules' => $cutoffRules,
         ];
+
+        if (array_key_exists('status', $data)) {
+            $payload['is_available'] = ($data['status'] === 'active' || $data['status'] === true || $data['status'] === '1');
+        } else {
+            $payload['is_available'] = ($data['is_available'] ?? '1') === '1' || ($data['is_available'] ?? true) === true;
+        }
 
         if ($isRecurring && ! empty($payload['recurring_start_date']) && ! empty($payload['recurring_end_date'])) {
             $payload['recurring_months'] = Carbon::parse($payload['recurring_start_date'])->diffInMonths(Carbon::parse($payload['recurring_end_date'])) ?: 1;
         }
 
+        // If the form submitted a days_of_week array (single or multiple), ensure the payload has a primary day_of_week for single-entry cases
+        if (is_array($selectedDays) && count($selectedDays) > 0) {
+            $payload['day_of_week'] = $selectedDays[0];
+        } elseif (isset($data['days_of_week']) && is_array($data['days_of_week']) && count($data['days_of_week']) > 0) {
+            $payload['day_of_week'] = strtolower((string) $data['days_of_week'][0]);
+        }
+
+        // Log input for debugging multi-day creation issues
+        Log::debug('[ManageDoctorAvailability] saveParentAvailability input', [
+            'doctor_id' => $doctorId,
+            'is_recurring' => $isRecurring,
+            'raw_days' => $data['days_of_week'] ?? null,
+            'selectedDays' => $selectedDays,
+        ]);
+
         if ($availability) {
             $availability->update($payload);
 
             return $availability;
+        }
+
+        // If creating a new recurring availability for multiple days, create one availability per day
+        if ($isRecurring && is_array($selectedDays) && count($selectedDays) > 1) {
+            $created = [];
+
+            DB::transaction(function () use ($selectedDays, $payload, $data, &$created) {
+                foreach ($selectedDays as $d) {
+                    $payloadPer = $payload;
+                    $payloadPer['day_of_week'] = $d;
+                    $payloadPer['recurring_start_date'] = $this->nextDateForDay($d)->toDateString();
+                    $payloadPer['recurring_end_date'] = Carbon::parse($payloadPer['recurring_start_date'])->addMonths((int) ($data['recurring_months'] ?? 3))->subDay()->toDateString();
+
+                    if (! empty($payloadPer['recurring_start_date']) && ! empty($payloadPer['recurring_end_date'])) {
+                        $payloadPer['recurring_months'] = Carbon::parse($payloadPer['recurring_start_date'])->diffInMonths(Carbon::parse($payloadPer['recurring_end_date'])) ?: 1;
+                    }
+
+                    $created[] = DoctorAvailability::create($payloadPer);
+                }
+            });
+
+            // return the first created availability for callers that expect a single object
+            // log created ids
+            $ids = array_map(fn($c) => $c->id, $created);
+            Log::debug('[ManageDoctorAvailability] created availabilities', ['ids' => $ids]);
+
+            return $created[0] ?? DoctorAvailability::create($payload);
         }
 
         return DoctorAvailability::create($payload);
@@ -1486,7 +1837,11 @@ class ManageDoctorAvailability extends Page
         }
 
         if (array_key_exists('status', $data)) {
-            $payload['status'] = $data['status'] ?: 'active';
+            $status = $data['status'] ?: 'active';
+            if ($status === 'active' && $availability->is_recurring && ! $availability->is_available) {
+                $status = 'blocked';
+            }
+            $payload['status'] = $status;
         }
 
         if (array_key_exists('note', $data)) {
@@ -1673,23 +2028,49 @@ class ManageDoctorAvailability extends Page
     {
         return [
             ...($includeId ? [Hidden::make('availability_id')] : []),
-            ...($this->isAllDoctorsManager() ? [
-                Select::make('doctor_id')
-                    ->label('Doctor')
-                    ->options(fn(): array => $this->doctorOptions)
-                    ->searchable()
-                    ->required()
-                    ->default(fn(): ?string => $this->doctorFilter),
-            ] : []),
-            ...($this->isGlobalManager() && ! $this->isAllDoctorsManager() && filled($this->doctorFilter) ? [
-                Hidden::make('doctor_id')
-                    ->default(fn(): ?string => $this->doctorFilter)
-                    ->dehydrated(),
+            Section::make('Doctor')
+                ->description('Select the doctor for this availability slot.')
+                ->columns(1)
+                ->schema(array_filter([
+                    ...($this->isAllDoctorsManager() ? [
+                        Select::make('doctor_id')
+                            ->label('Doctor')
+                            ->options(fn(): array => $this->doctorOptions)
+                            ->searchable()
+                            ->reactive()
+                            ->required()
+                            ->default(fn(): ?string => $this->doctorFilter)
+                            ->helperText('Choose the doctor first. The rest of the availability fields will appear below.'),
+                    ] : []),
+                    ...($this->isGlobalManager() && ! $this->isAllDoctorsManager() && filled($this->doctorFilter) ? [
+                        Hidden::make('doctor_id')
+                            ->default(fn(): ?string => $this->doctorFilter)
+                            ->dehydrated(),
+                        Placeholder::make('selected_doctor')
+                            ->label('Selected doctor')
+                            ->content(fn(): string => $this->doctorName(Doctor::query()->find($this->doctorFilter)))
+                            ->columnSpanFull(),
+                    ] : []),
+                ])),
+            ...($includeStatus ? [
+                Section::make('Availability Status')
+                    ->description('Enable or disable the slot before filling in the rest of the details.')
+                    ->columns(1)
+                    ->schema([
+                        Toggle::make('is_available')
+                            ->label('Active')
+                            ->default(true)
+                            ->inline(false)
+                            ->onColor('primary')
+                            ->offColor('gray')
+                            ->required(),
+                    ]),
             ] : []),
             Section::make('Schedule')
-                ->description('Choose recurring weekly or a single date, then set the time window.')
+                ->description('Choose recurring weekly or a one-time date, then set the time window.')
                 ->icon('heroicon-o-calendar-days')
                 ->columns(1)
+                ->visible(fn($get) => filled($get('doctor_id')) || ($this->isGlobalManager() && filled($this->doctorFilter)))
                 ->schema([
                     Grid::make(4)->schema([
                         Select::make('is_recurring')
@@ -1698,10 +2079,12 @@ class ManageDoctorAvailability extends Page
                             ->default('1')
                             ->live()
                             ->required(),
-                        Select::make('day_of_week')
-                            ->label('Day')
+                        Select::make('days_of_week')
+                            ->label('Days')
                             ->options(DayOfWeek::labels())
-                            ->default(strtolower(now()->format('l')))
+                            ->multiple()
+                            ->reactive()
+                            ->helperText('Select one or more days. When only one day is selected this acts like a single "Day" field.')
                             ->visible(fn($get) => (string) ($get('is_recurring') ?? '1') === '1')
                             ->required(fn($get) => (string) ($get('is_recurring') ?? '1') === '1'),
                         DatePicker::make('date')
@@ -1711,7 +2094,7 @@ class ManageDoctorAvailability extends Page
                             ->live()
                             ->afterStateUpdated(function ($state, $set): void {
                                 if ($state) {
-                                    $set('day_of_week', strtolower(Carbon::parse($state)->format('l')));
+                                    $set('days_of_week', [strtolower(Carbon::parse($state)->format('l'))]);
                                 }
                             }),
                         Select::make('recurring_months')
@@ -1741,6 +2124,7 @@ class ManageDoctorAvailability extends Page
                 ->description('Consultation details and optional rules for how long before the slot starts booking closes.')
                 ->icon('heroicon-o-clipboard-document-list')
                 ->columns(1)
+                ->visible(fn($get) => filled($get('doctor_id')) || ($this->isGlobalManager() && filled($this->doctorFilter)))
                 ->schema([
                     Grid::make(2)->schema([
                         Select::make('consultation_type')
@@ -1785,15 +2169,16 @@ class ManageDoctorAvailability extends Page
                             ->placeholder('e.g., Room 101')
                             ->visible(fn($get) => ($get('consultation_type') ?? 'in-person') === 'in-person'),
                         ...$this->bookingCutoffRulesFormFields(forOverride: false),
-                        ...($includeStatus ? [
-                            Toggle::make('is_available')
-                                ->label('Active')
-                                ->default(true)
-                                ->inline(false)
-                                ->onColor('primary')
-                                ->offColor('gray'),
-                        ] : []),
                     ]),
+                ]),
+            Section::make('Review slot details')
+                ->description('Confirm the selected doctor, time, and slot settings before saving.')
+                ->columns(1)
+                ->visible(fn($get) => (filled($get('doctor_id')) || ($this->isGlobalManager() && filled($this->doctorFilter))) && filled($get('start_time')) && filled($get('end_time')))
+                ->schema([
+                    Placeholder::make('slot_review')
+                        ->label('Review details')
+                        ->content(fn($get): HtmlString => new HtmlString($this->slotReviewHtml($get))),
                 ]),
         ];
     }
@@ -1864,6 +2249,96 @@ class ManageDoctorAvailability extends Page
     private function globalChildAgeLimit(): int
     {
         return SettingService::getChildAgeLimit();
+    }
+
+    public function setActiveDate(?string $date): void
+    {
+        $this->activeDate = $date;
+    }
+
+    private function slotReviewSummary($get): string
+    {
+        $doctor = null;
+        if ($this->isAllDoctorsManager()) {
+            $doctor = Doctor::query()->find($get('doctor_id'))?->user?->name;
+        } elseif ($this->isGlobalManager() && filled($this->doctorFilter)) {
+            $doctor = $this->doctorName(Doctor::query()->find($this->doctorFilter));
+        }
+
+        $scheduleType = (string) ($get('is_recurring') ?? '1') === '1' ? 'Recurring weekly' : 'One-time date';
+        $date = $get('date') ? Carbon::parse($get('date'))->format('d M Y') : 'N/A';
+        $time = $get('start_time') && $get('end_time') ? Carbon::parse($get('start_time'))->format('h:i A') . ' - ' . Carbon::parse($get('end_time'))->format('h:i A') : 'Not set';
+        $status = ($get('is_available') ?? true) ? 'Active' : 'Blocked';
+        $consultation = ucfirst($get('consultation_type') ?? 'in-person');
+        $opd = ($get('opd_type') ?? 'general') === 'general' ? 'General' : 'Private';
+        $childOnly = ($get('is_child_only') ?? false) ? 'Yes' : 'No';
+        $fee = filled($get('consultation_fee')) ? number_format($get('consultation_fee'), 2) : '0.00';
+        $capacity = $get('capacity') ?? '1';
+        $room = $get('doctor_room') ?: 'N/A';
+        $autoRecur = ($get('is_auto_recurring') ?? false) ? 'Enabled' : 'Disabled';
+
+        return "Doctor: " . ($doctor ?? 'Please select a doctor') . "\n"
+            . "Schedule: {$scheduleType}\n"
+            . "Date: {$date}\n"
+            . "Time: {$time}\n"
+            . "Status: {$status}\n"
+            . "Consultation mode: {$consultation}\n"
+            . "OPD type: {$opd}\n"
+            . "Child only: {$childOnly}\n"
+            . "Capacity: {$capacity}\n"
+            . "Fee: ₹{$fee}\n"
+            . "Room: {$room}\n"
+            . "Auto recur: {$autoRecur}";
+    }
+
+    private function slotReviewHtml($get)
+    {
+        $doctor = null;
+        if ($this->isAllDoctorsManager()) {
+            $doctor = Doctor::query()->find($get('doctor_id'))?->user?->name;
+        } elseif ($this->isGlobalManager() && filled($this->doctorFilter)) {
+            $doctor = $this->doctorName(Doctor::query()->find($this->doctorFilter));
+        }
+
+        $isRecurring = (string) ($get('is_recurring') ?? '1') === '1';
+        $scheduleType = $isRecurring ? 'Recurring weekly' : 'One-time date';
+        $date = $get('date') ? Carbon::parse($get('date'))->format('d M Y') : null;
+        $start = $get('start_time') ? Carbon::parse($get('start_time'))->format('h:i A') : null;
+        $end = $get('end_time') ? Carbon::parse($get('end_time'))->format('h:i A') : null;
+        $time = ($start && $end) ? "{$start} - {$end}" : 'Not set';
+        $status = ($get('is_available') ?? true) ? 'Active' : 'Blocked';
+        $consultation = ucfirst($get('consultation_type') ?? 'in-person');
+        $opd = ($get('opd_type') ?? 'general') === 'general' ? 'General' : 'Private';
+        $childOnly = ($get('is_child_only') ?? false) ? 'Yes' : 'No';
+        $fee = filled($get('consultation_fee')) ? number_format($get('consultation_fee'), 2) : '0.00';
+        $capacity = $get('capacity') ?? '1';
+        $room = $get('doctor_room') ?: 'N/A';
+        $autoRecur = ($get('is_auto_recurring') ?? false) ? 'Enabled' : 'Disabled';
+
+        $rows = [];
+        $rows[] = ['label' => 'Doctor', 'value' => $doctor ?? 'Please select a doctor'];
+        $rows[] = ['label' => 'Schedule', 'value' => $scheduleType];
+        if (! $isRecurring) {
+            $rows[] = ['label' => 'Date', 'value' => $date ?? 'N/A'];
+        } else {
+            $selected = $get('days_of_week') ?? ($get('day_of_week') ? [$get('day_of_week')] : [now()->format('l')]);
+            $labels = is_array($selected) ? array_map(fn($d) => ucfirst($d), $selected) : [ucfirst((string)$selected)];
+            $rows[] = ['label' => 'Days', 'value' => implode(', ', $labels)];
+            $rows[] = ['label' => 'Duration', 'value' => ($get('recurring_months') ?? '') ? ($get('recurring_months') . ' months') : ''];
+        }
+        $rows[] = ['label' => 'Time', 'value' => $time];
+        $rows[] = ['label' => 'Status', 'value' => $status];
+        $rows[] = ['label' => 'Consultation mode', 'value' => $consultation];
+        if ($consultation === 'In-person') {
+            $rows[] = ['label' => 'OPD type', 'value' => $opd];
+            $rows[] = ['label' => 'Child only', 'value' => $childOnly];
+            $rows[] = ['label' => 'Room', 'value' => $room];
+        }
+        $rows[] = ['label' => 'Capacity', 'value' => $capacity];
+        $rows[] = ['label' => 'Fee', 'value' => "₹{$fee}"];
+        $rows[] = ['label' => 'Auto recur', 'value' => $autoRecur];
+
+        return view('filament.resources.doctors.components.slot-review', ['rows' => $rows]);
     }
 
     private function hasDoctorRecord(): bool
