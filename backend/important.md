@@ -9,6 +9,33 @@ For Patient - docker compose -f docker-compose.prod.yml up -d --build patient
 For Doctor - docker compose -f docker-compose.prod.yml up -d --build doctor
 For Backend - docker compose -f docker-compose.prod.yml up -d --build db app web
 
+## Build doctor locally and push image to VPS
+
+Build on local machine for Linux AMD64:
+
+docker buildx build --platform linux/amd64 -t tele-doctor:latest \
+ --build-arg NEXT_PUBLIC_API_BASE_URL=https://superadmin.deploymeta.com/api/v2 \
+ --build-arg NEXT_PUBLIC_API_URL=https://superadmin.deploymeta.com/api/v2 \
+ ./frontend/doctor --load
+
+Export image:
+
+docker save tele-doctor:latest -o tele-doctor.tar
+
+Copy to VPS:
+
+scp tele-doctor.tar root@your-vps-ip:~/telehealth-depolymeta/
+
+Load and run on VPS without building:
+
+docker load -i ~/telehealth-depolymeta/tele-doctor.tar
+cd ~/telehealth-depolymeta
+docker compose -f docker-compose.prod.yml up -d --no-build doctor
+
+If the image is already loaded and you only want restart:
+
+docker compose -f docker-compose.prod.yml up -d --no-build doctor
+
 ## Seeder
 
 docker exec -it tele-backend-app php artisan notification:test-webpush patient6@example.com
