@@ -7,6 +7,9 @@ node_modules/
 .next/
 out/
 
+/tele-doctor.tar
+tele-doctor.tar
+tele-doctor.tar*
 # Build
 dist/
 build/
