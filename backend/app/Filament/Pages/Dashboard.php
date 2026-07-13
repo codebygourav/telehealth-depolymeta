@@ -34,7 +34,7 @@ class Dashboard extends Page
      */
     public static function canAccess(): bool
     {
-        return Auth::check();
+        return Auth::check() && ! Auth::user()?->hasRole('patient');
     }
 
     /**

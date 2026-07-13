@@ -16,7 +16,7 @@ class NotificationIndexResource extends JsonResource
             'title' => $data['title'] ?? null,
             'desc' => $data['message'] ?? null,
             'is_read' => $this->read_at !== null,
-            'created_at' => $this->created_at->diffForHumans(),
+            'created_at' => $this->created_at?->toIso8601String(),
             'group' => $this->category ?? 'system',
             'event_type' => $this->event_type,
         ];

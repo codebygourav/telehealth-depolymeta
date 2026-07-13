@@ -6,8 +6,6 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
-import type { VoiceTranscriptionResult } from "@/api/voice-transcription";
-
 import { getMedicines } from "@/api/medicines";
 import {
   Dialog,
@@ -19,7 +17,6 @@ import {
 import { useAuth } from "@/context/userContext";
 import { useAddPrescription } from "@/queries/useAddPrescription";
 import { useMedicines } from "@/queries/useMedicines";
-import { useParsePrescriptionDraft } from "@/queries/useParsePrescriptionDraft";
 
 import PrescriptionEntryModeSelector from "./PrescriptionEntryModeSelector";
 import PrescriptionListPanel from "./PrescriptionListPanel";
@@ -52,14 +49,6 @@ type DraftFormPayload = {
   start_date?: string | null;
   end_date?: string | null;
   stamp_preference?: string | null;
-};
-
-type DraftResponsePayload = {
-  draft_id?: string | null;
-  form?: DraftFormPayload;
-  warnings?: string[];
-  missing_fields?: string[];
-  source_type?: "text" | "speech";
 };
 
 type RequestError = {
@@ -124,7 +113,6 @@ interface AddPrescriptionDialogProps {
     supported_locales?: string[];
     allow_custom_locale?: boolean;
     requires_doctor_review?: boolean;
-    deepgram_enabled?: boolean;
     browser_speech_enabled?: boolean;
   } | null;
 }
@@ -220,19 +208,13 @@ export default function AddPrescriptionDialog({
   const appointmentId = params?.id as string;
 
   const addPrescription = useAddPrescription(appointmentId || "", token!);
-  const parseDraft = useParsePrescriptionDraft(appointmentId || "");
 
   const assistantMode = assistantConfig?.input_mode || "off";
   const dictationEnabled =
     Boolean(assistantConfig?.enabled) &&
     (assistantMode === "text" || assistantMode === "speech");
 
-  const deepgramEnabled = Boolean(assistantConfig?.deepgram_enabled);
   const browserVoiceEnabled = Boolean(assistantConfig?.browser_speech_enabled);
-
-  const [voiceSubMode, setVoiceSubMode] = useState<"deepgram" | "browser">(
-    getDefaultVoiceSubMode(deepgramEnabled, browserVoiceEnabled),
-  );
 
   const [entryMode, setEntryMode] = useState<EntryMode>(
     getDefaultEntryMode(dictationEnabled),
@@ -248,7 +230,7 @@ export default function AddPrescriptionDialog({
   >(createEmptyGuidedTranscripts());
   const [draftId, setDraftId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
-  const [isDeepgramProcessing, setIsDeepgramProcessing] = useState(false);
+  const [isApplyingVoiceStep, setIsApplyingVoiceStep] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [selectedSpeechLocale, setSelectedSpeechLocale] = useState<VoiceLocale>(
     () => getInitialVoiceLocale(assistantConfig?.speech_locale),
@@ -280,17 +262,11 @@ export default function AddPrescriptionDialog({
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const shouldParseAfterStopRef = useRef(false);
-  const draftInputRef = useRef("");
-  const hasSpeechInputRef = useRef(false);
-  const transcriptBaseRef = useRef("");
   const transcriptFinalRef = useRef("");
+  const liveTranscriptRef = useRef("");
   const guidedTranscriptsRef = useRef<Record<number, string>>(
     createEmptyGuidedTranscripts(),
   );
-
-  const setDraftInput = (value: string) => {
-    draftInputRef.current = value;
-  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -363,22 +339,18 @@ export default function AddPrescriptionDialog({
     recognitionRef.current = null;
     setIsListening(false);
 
-    draftInputRef.current = "";
-    hasSpeechInputRef.current = false;
+    liveTranscriptRef.current = "";
+    transcriptFinalRef.current = "";
     guidedTranscriptsRef.current = createEmptyGuidedTranscripts();
 
     reset(defaultFormValues);
-    setDraftInput("");
     setDraftId(null);
     setSearchQuery("");
     setShowSuccess(false);
-    setVoiceSubMode(
-      getDefaultVoiceSubMode(deepgramEnabled, browserVoiceEnabled),
-    );
     setEntryMode(getDefaultEntryMode(dictationEnabled));
     setGuidedStep(1);
     setGuidedTranscripts(createEmptyGuidedTranscripts());
-    setIsDeepgramProcessing(false);
+    setIsApplyingVoiceStep(false);
     setSpeechError(null);
     setSelectedSpeechLocale(
       getInitialVoiceLocale(assistantConfig?.speech_locale),
@@ -394,34 +366,13 @@ export default function AddPrescriptionDialog({
     setShowCustomConfirm(null);
     setMobileTab("form");
     setToastMessage(null);
-  }, [
-    open,
-    dictationEnabled,
-    assistantConfig?.speech_locale,
-    deepgramEnabled,
-    browserVoiceEnabled,
-    reset,
-  ]);
+  }, [open, dictationEnabled, assistantConfig?.speech_locale, reset]);
 
   useEffect(() => {
     if (!dictationEnabled && entryMode === "voice") {
       setEntryMode("manual");
     }
   }, [dictationEnabled, entryMode]);
-
-  useEffect(() => {
-    setVoiceSubMode((current) => {
-      if (current === "deepgram" && deepgramEnabled) {
-        return current;
-      }
-
-      if (current === "browser" && browserVoiceEnabled) {
-        return current;
-      }
-
-      return getDefaultVoiceSubMode(deepgramEnabled, browserVoiceEnabled);
-    });
-  }, [browserVoiceEnabled, deepgramEnabled]);
 
   const dosageOptions = useMemo(() => {
     return getDosageOptions(medicationType);
@@ -492,9 +443,24 @@ export default function AddPrescriptionDialog({
     setSearchQuery("");
   };
 
-  const handleStep1Complete = async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
+  const setGuidedTranscriptValue = (step: number, value: string) => {
+    const cleanedValue = value.trim();
+    setGuidedTranscripts((prev) => {
+      const updated = {
+        ...prev,
+        [step]: cleanedValue,
+      };
+      guidedTranscriptsRef.current = updated;
+      return updated;
+    });
+  };
+
+  const handleStep1Complete = async (text: string, shouldAdvance = true) => {
+    const candidate = extractMedicineSearchCandidate(text);
+    if (!candidate) {
+      setSpeechError("Speak or type a medicine name.");
+      return false;
+    }
 
     setIsSearchingMedicine(true);
     setShowCustomConfirm(null);
@@ -502,26 +468,35 @@ export default function AddPrescriptionDialog({
       const response = await getMedicines({
         page: 1,
         per_page: 20,
-        search: trimmed,
+        search: candidate,
         include_doctor_added: true,
       });
 
       const list = response?.data || [];
-      const matched = list.find(
-        (m: MedicineItem) => m.name.toLowerCase() === trimmed.toLowerCase(),
-      );
+      const matched = findMedicineMatch(list, candidate);
 
       if (matched) {
         handleSelectMedicine(matched);
-        setGuidedStep(2);
+        setGuidedTranscriptValue(1, matched.name);
+        setSpeechError(null);
+        if (shouldAdvance) {
+          setGuidedStep(2);
+        }
+        return true;
       } else {
-        setShowCustomConfirm({ name: trimmed });
+        clearSelectedMedicine();
+        setGuidedTranscriptValue(1, "");
+        setShowCustomConfirm({ name: candidate });
       }
     } catch {
-      setShowCustomConfirm({ name: trimmed });
+      clearSelectedMedicine();
+      setGuidedTranscriptValue(1, "");
+      setShowCustomConfirm({ name: candidate });
     } finally {
       setIsSearchingMedicine(false);
     }
+
+    return false;
   };
 
   const handleAddOrUpdateMedicine = async () => {
@@ -605,8 +580,8 @@ export default function AddPrescriptionDialog({
     setGuidedTranscripts(createEmptyGuidedTranscripts());
     guidedTranscriptsRef.current = createEmptyGuidedTranscripts();
     setGuidedStep(1);
-    draftInputRef.current = "";
-    hasSpeechInputRef.current = false;
+    liveTranscriptRef.current = "";
+    transcriptFinalRef.current = "";
   };
 
   const handleCancelEdit = () => {
@@ -730,233 +705,271 @@ export default function AddPrescriptionDialog({
     onOpenChange(false);
   };
 
-  const applyDraftToForm = (payload: DraftResponsePayload) => {
-    const form = payload?.form || {};
+  const getCurrentVoiceDraftPayload = (): DraftFormPayload => ({
+    medicine_id: getValues("medicine_id") || null,
+    medicine_name: getValues("medicine_name") || null,
+    medicine_source:
+      selectedMedicineSource === "inventory" ||
+      selectedMedicineSource === "doctor_added"
+        ? selectedMedicineSource
+        : selectedMedicineSource === "custom"
+          ? null
+          : null,
+    medication_type: getValues("medication_type") || null,
+    dosage: getValues("dosage") || null,
+    frequency: getValues("frequency") || null,
+    timing_morning: !!getValues("timing_morning"),
+    timing_afternoon: !!getValues("timing_afternoon"),
+    timing_evening: !!getValues("timing_evening"),
+    timing_night: !!getValues("timing_night"),
+    meal: getValues("meal") || null,
+    instructions: getValues("instructions") || null,
+    start_date: startDate || null,
+    end_date: endDate || null,
+    stamp_preference: getValues("stamp_preference") || null,
+  });
 
-    const normType = normalizeMedicationType(form.medication_type);
-    const normDosage = normalizeDosage(form.dosage, normType);
-    const normFreq = normalizeFrequency(form.frequency);
-    const normMeal = normalizeMealRelation(form.meal);
-
-    setValue("medicine_id", form.medicine_id || "", { shouldValidate: true });
-    setValue("medicine_name", form.medicine_name || "", {
-      shouldValidate: true,
-    });
-    setValue("medication_type", normType, {
-      shouldValidate: true,
-    });
-    setValue("dosage", normDosage, { shouldValidate: true });
-    setValue("frequency", normFreq, { shouldValidate: true });
-
-    let tm = Boolean(form.timing_morning);
-    let ta = Boolean(form.timing_afternoon);
-    const te = Boolean(form.timing_evening);
-    let tn = Boolean(form.timing_night);
-
-    if (!tm && !ta && !te && !tn && normFreq) {
-      if (normFreq === "OD") {
-        tn = true;
-      } else if (normFreq === "BD") {
-        tm = true;
-        tn = true;
-      } else if (normFreq === "TDS") {
-        tm = true;
-        ta = true;
-        tn = true;
-      }
-    }
-
-    setValue("timing_morning", tm);
-    setValue("timing_afternoon", ta);
-    setValue("timing_evening", te);
-    setValue("timing_night", tn);
-    setValue("meal", normMeal, { shouldValidate: true });
-
-    setValue("instructions", form.instructions || "", { shouldValidate: true });
-    setValue("stamp_preference", form.stamp_preference || "only_global", {
-      shouldValidate: true,
-    });
-
-    setStartDate(form.start_date || getTodayDate());
-    setEndDate(form.end_date || "");
-    setSearchQuery("");
-
-    if (form.medicine_source === "doctor_added") {
-      setSelectedMedicineSource("doctor_added");
-    } else if (form.medicine_id) {
-      setSelectedMedicineSource("inventory");
-    } else if (form.medicine_name) {
-      setSelectedMedicineSource("custom");
-    } else {
-      setSelectedMedicineSource(null);
-    }
-  };
-
-  const consumeParsedDraftPayload = (payload: DraftResponsePayload) => {
-    setDraftId(payload.draft_id || null);
-    applyDraftToForm(payload);
-
-    const form = payload?.form || {};
-
-    const normType = normalizeMedicationType(form.medication_type);
-    const normDosage = normalizeDosage(form.dosage, normType);
-    const normFreq = normalizeFrequency(form.frequency);
-    const normMeal = normalizeMealRelation(form.meal);
-
+  const getMissingVoiceFields = (): string[] => {
     const missing: string[] = [];
-    if (!form.medicine_name || form.medicine_name.trim().length < 2) {
+
+    if (!(getValues("medicine_name") || "").trim()) {
       missing.push("medicine_name");
     }
-    if (!normType) {
+    if (!(getValues("medication_type") || "").trim()) {
       missing.push("medication_type");
     }
-    if (!normDosage) {
+    if (!(getValues("dosage") || "").trim()) {
       missing.push("dosage");
     }
-    if (!normFreq) {
+    if (!(getValues("frequency") || "").trim()) {
       missing.push("frequency");
     }
-    if (!normMeal) {
+    if (!getValues("meal")) {
       missing.push("meal");
     }
 
+    return missing;
+  };
+
+  const commitTypeAndDosageStep = (
+    transcript: string,
+    shouldAdvance = true,
+  ) => {
+    const parsedType = parseMedicationTypeFromSpeech(transcript);
+    const dosageSourceType = parsedType || getValues("medication_type") || "";
+    const parsedDosage = parseDosageFromSpeech(transcript, dosageSourceType);
+
+    if (!parsedType && !parsedDosage) {
+      setSpeechError("Could not confirm the medicine type or dosage.");
+      return false;
+    }
+
+    if (parsedType) {
+      setValue("medication_type", parsedType, { shouldValidate: true });
+    }
+    if (parsedDosage) {
+      setValue("dosage", parsedDosage, { shouldValidate: true });
+    }
+
+    setGuidedTranscriptValue(
+      2,
+      combineSummaryParts([
+        parsedType ? getMedicationTypeLabel(parsedType) : "",
+        parsedDosage,
+      ]),
+    );
+    setSpeechError(null);
+
+    if (shouldAdvance) {
+      setGuidedStep(3);
+    }
+
+    return true;
+  };
+
+  const commitFrequencyAndTimingsStep = (
+    transcript: string,
+    shouldAdvance = true,
+  ) => {
+    let parsedFrequency = parseFrequencyFromSpeech(transcript);
+    const parsedTimings = parseTimingFlagsFromSpeech(transcript);
+
+    if (!parsedFrequency) {
+      parsedFrequency = inferFrequencyFromTimings(parsedTimings);
+    }
+
+    if (!parsedFrequency && countActiveTimings(parsedTimings) === 0) {
+      setSpeechError("Could not confirm the frequency or timing.");
+      return false;
+    }
+
+    const resolvedTimings = applyFrequencyDefaults(
+      parsedFrequency,
+      parsedTimings,
+    );
+
+    if (parsedFrequency) {
+      setValue("frequency", parsedFrequency, { shouldValidate: true });
+    }
+    setValue("timing_morning", resolvedTimings.timing_morning);
+    setValue("timing_afternoon", resolvedTimings.timing_afternoon);
+    setValue("timing_evening", resolvedTimings.timing_evening);
+    setValue("timing_night", resolvedTimings.timing_night);
+
+    setGuidedTranscriptValue(
+      3,
+      combineSummaryParts([
+        parsedFrequency ? getFrequencyLabel(parsedFrequency) : "",
+        getTimingLabels(resolvedTimings).join(", "),
+      ]),
+    );
+    setSpeechError(null);
+
+    if (shouldAdvance) {
+      setGuidedStep(4);
+    }
+
+    return true;
+  };
+
+  const commitMealDurationNotesStep = (
+    transcript: string,
+    shouldAdvance = false,
+  ) => {
+    const parsedMeal = parseMealRelationFromSpeech(transcript);
+    const parsedDuration = parseDurationFromSpeech(transcript, startDate);
+    const parsedInstructions = extractVoiceInstructions(transcript);
+
+    if (!parsedMeal && !parsedDuration && !parsedInstructions) {
+      setSpeechError("Could not confirm the meal instructions or notes.");
+      return false;
+    }
+
+    if (parsedMeal) {
+      setValue("meal", parsedMeal, { shouldValidate: true });
+    }
+    if (parsedInstructions) {
+      setValue("instructions", parsedInstructions, { shouldValidate: true });
+    }
+    if (parsedDuration) {
+      setStartDate(parsedDuration.startDate);
+      setEndDate(parsedDuration.endDate);
+    }
+
+    setGuidedTranscriptValue(
+      4,
+      combineSummaryParts([
+        parsedMeal ? getMealLabel(parsedMeal) : "",
+        parsedDuration?.label || "",
+        parsedInstructions,
+      ]),
+    );
+    setSpeechError(null);
+
+    if (shouldAdvance) {
+      setGuidedStep(4);
+    }
+
+    return true;
+  };
+
+  const commitGuidedStep = async (
+    step: number,
+    transcript: string,
+    shouldAdvance = true,
+  ) => {
+    const trimmed = cleanDuplicateWords(transcript.trim());
+
+    if (!trimmed) {
+      return true;
+    }
+
+    if (step === 1) {
+      return handleStep1Complete(trimmed, shouldAdvance);
+    }
+
+    if (step === 2) {
+      return commitTypeAndDosageStep(trimmed, shouldAdvance);
+    }
+
+    if (step === 3) {
+      return commitFrequencyAndTimingsStep(trimmed, shouldAdvance);
+    }
+
+    if (step === 4) {
+      return commitMealDurationNotesStep(trimmed, shouldAdvance);
+    }
+
+    return true;
+  };
+
+  const openVoiceReview = async () => {
+    const missing = getMissingVoiceFields();
+
     if (missing.length === 0) {
-      const medicineName = form.medicine_name?.trim() || "";
-      const newMedicine: AddedMedicine = {
-        medicine_id: form.medicine_id || null,
-        medicine_name: medicineName,
-        medication_type: normType,
-        dosage: normDosage,
-        frequency: normFreq,
-        timing_morning: !!getValues("timing_morning"),
-        timing_afternoon: !!getValues("timing_afternoon"),
-        timing_evening: !!getValues("timing_evening"),
-        timing_night: !!getValues("timing_night"),
-        meal: normMeal,
-        instructions: form.instructions || "",
-        start_date: form.start_date || getTodayDate(),
-        end_date: form.end_date || null,
-      };
-      setAddedMedicines((prev) => [...prev, newMedicine]);
-      setToastMessage({
-        text: `Added ${newMedicine.medicine_name} to prescription list.`,
-        type: "success",
-      });
-
-      const currentStamp = getValues("stamp_preference");
-      reset({
-        ...defaultFormValues,
-        stamp_preference: currentStamp,
-      });
-      setStartDate(getTodayDate());
-      setEndDate("");
-      setSearchQuery("");
-      setSelectedMedicineSource(null);
-
-      setGuidedTranscripts(createEmptyGuidedTranscripts());
-      guidedTranscriptsRef.current = createEmptyGuidedTranscripts();
-      setGuidedStep(1);
-      draftInputRef.current = "";
-      hasSpeechInputRef.current = false;
-      setVoiceDraftMedicine(null);
-      setMissingFieldsList([]);
+      await handleAddOrUpdateMedicine();
       return;
     }
 
-    setVoiceDraftMedicine(form);
+    setVoiceDraftMedicine(getCurrentVoiceDraftPayload());
     setMissingFieldsList(missing);
   };
 
-  const handleParseDraft = (inputText?: string) => {
-    if (!dictationEnabled) {
-      setSpeechError("Voice prescription is not enabled for this account.");
+  const handleNextGuidedStep = async () => {
+    const currentTranscript = (
+      guidedTranscriptsRef.current[guidedStep] || ""
+    ).trim();
+
+    if (!currentTranscript) {
+      if (guidedStep === 1) {
+        setSpeechError("Speak or type a medicine name.");
+        return;
+      }
+
+      setSpeechError(null);
+      setGuidedStep((prev) => Math.min(prev + 1, guidedVoiceSteps.length));
       return;
     }
 
-    const textToParse = (inputText ?? draftInputRef.current).trim();
-
-    if (!textToParse) {
-      return;
-    }
-
-    parseDraft.mutate(
-      {
-        input_text: textToParse,
-        source_type: hasSpeechInputRef.current ? "speech" : "text",
-      },
-      {
-        onSuccess: (response: { data?: DraftResponsePayload }) => {
-          consumeParsedDraftPayload(response?.data || {});
-        },
-        onError: (error: RequestError) => {
-          alert(
-            error?.response?.data?.errors?.message ||
-              error?.message ||
-              "Failed to parse prescription text.",
-          );
-        },
-      },
-    );
+    await commitGuidedStep(guidedStep, currentTranscript, true);
   };
 
-  const handleDeepgramResult = (result: VoiceTranscriptionResult) => {
-    const transcript = cleanDuplicateWords((result.transcript || "").trim());
-
-    if (!transcript) {
-      setSpeechError("No speech detected. Please speak clearly and try again.");
-      return;
-    }
-
-    hasSpeechInputRef.current = true;
-    setSpeechError(null);
-
-    setGuidedTranscripts((prev) => {
-      const updated = {
-        ...prev,
-        [guidedStep]: transcript,
-      };
-      guidedTranscriptsRef.current = updated;
-      return updated;
-    });
-
-    if (guidedStep === 1) {
-      void handleStep1Complete(transcript);
-    } else if (guidedStep < 4) {
-      setGuidedStep((prev) => prev + 1);
-    } else {
-      const combined = guidedVoiceSteps
-        .map((step) =>
-          step.id === guidedStep
-            ? transcript
-            : guidedTranscriptsRef.current[step.id] || "",
-        )
-        .map((value) => value.trim())
-        .filter(Boolean)
-        .join(" ");
-      setDraftInput(combined);
-      handleParseDraft(combined);
-    }
-  };
-
-  const buildGuidedDraftText = () => {
-    return guidedVoiceSteps
-      .map((step) => guidedTranscriptsRef.current[step.id] || "")
-      .map((value) => value.trim())
-      .filter(Boolean)
-      .join(" ");
-  };
-
-  const handleFinishGuidedPrefill = () => {
-    const combined = buildGuidedDraftText();
-    setDraftInput(combined);
-
+  const handleFinishGuidedPrefill = async () => {
     if (isListening) {
       shouldParseAfterStopRef.current = true;
       recognitionRef.current?.stop();
       return;
     }
 
-    handleParseDraft(combined);
+    setIsApplyingVoiceStep(true);
+
+    try {
+      const currentTranscript = (
+        guidedTranscriptsRef.current[guidedStep] || ""
+      ).trim();
+
+      if (currentTranscript) {
+        const didCommit = await commitGuidedStep(
+          guidedStep,
+          currentTranscript,
+          false,
+        );
+
+        if (!didCommit) {
+          return;
+        }
+      }
+
+      if (!(getValues("medicine_name") || "").trim()) {
+        setSpeechError("Add a medicine name before applying the voice draft.");
+        return;
+      }
+
+      setSpeechError(null);
+      await openVoiceReview();
+    } finally {
+      setIsApplyingVoiceStep(false);
+    }
   };
 
   function stopListening(shouldPrefill: boolean) {
@@ -964,10 +977,7 @@ export default function AddPrescriptionDialog({
 
     if (!recognitionRef.current) {
       if (shouldPrefill) {
-        const combined = buildGuidedDraftText();
-        if (combined) {
-          handleParseDraft(combined);
-        }
+        void handleFinishGuidedPrefill();
       }
       return;
     }
@@ -991,12 +1001,8 @@ export default function AddPrescriptionDialog({
     recognitionRef.current?.abort();
 
     const recognition = new SpeechRecognitionApi();
-    hasSpeechInputRef.current = true;
-    transcriptBaseRef.current = (
-      guidedTranscriptsRef.current[guidedStep] || ""
-    ).trim();
-
     transcriptFinalRef.current = "";
+    liveTranscriptRef.current = "";
     shouldParseAfterStopRef.current = false;
 
     recognition.continuous = true;
@@ -1031,23 +1037,9 @@ export default function AddPrescriptionDialog({
       }
 
       transcriptFinalRef.current = cleanDuplicateWords(finalTranscript);
-
-      const nextText = mergeTranscripts(
-        transcriptBaseRef.current,
-        transcriptFinalRef.current,
-        interimTranscript,
+      liveTranscriptRef.current = cleanDuplicateWords(
+        combineTranscript(transcriptFinalRef.current, interimTranscript),
       );
-
-      const cleanedText = cleanDuplicateWords(nextText);
-
-      setGuidedTranscripts((prev) => {
-        const updated = {
-          ...prev,
-          [guidedStep]: cleanedText,
-        };
-        guidedTranscriptsRef.current = updated;
-        return updated;
-      });
 
       setSpeechError(null);
     };
@@ -1062,28 +1054,25 @@ export default function AddPrescriptionDialog({
 
     recognition.onend = () => {
       const shouldPrefill = shouldParseAfterStopRef.current;
+      const spokenTranscript = cleanDuplicateWords(
+        combineTranscript(
+          liveTranscriptRef.current,
+          transcriptFinalRef.current,
+        ),
+      );
 
       shouldParseAfterStopRef.current = false;
       setIsListening(false);
       recognitionRef.current = null;
 
       if (shouldPrefill) {
-        const combined = buildGuidedDraftText();
-        if (combined) {
-          handleParseDraft(combined);
+        if (spokenTranscript) {
+          setGuidedTranscriptValue(guidedStep, spokenTranscript);
         }
+        void handleFinishGuidedPrefill();
       } else {
-        const currentTranscript = (
-          guidedTranscriptsRef.current[guidedStep] || ""
-        ).trim();
-        if (currentTranscript) {
-          if (guidedStep === 1) {
-            handleStep1Complete(currentTranscript);
-          } else if (guidedStep < 4) {
-            setGuidedStep((prev) => prev + 1);
-          } else if (guidedStep === 4) {
-            handleFinishGuidedPrefill();
-          }
+        if (spokenTranscript) {
+          void commitGuidedStep(guidedStep, spokenTranscript, guidedStep < 4);
         }
       }
     };
@@ -1372,15 +1361,7 @@ export default function AddPrescriptionDialog({
                           />
                         ) : (
                           <PrescriptionVoiceAssistantPanel
-                            appointmentId={appointmentId}
-                            deepgramEnabled={deepgramEnabled}
                             browserVoiceEnabled={browserVoiceEnabled}
-                            voiceSubMode={voiceSubMode}
-                            setVoiceSubMode={setVoiceSubMode}
-                            onDeepgramResult={handleDeepgramResult}
-                            onDeepgramRecordingChange={setIsListening}
-                            onDeepgramProcessingChange={setIsDeepgramProcessing}
-                            onDeepgramErrorChange={setSpeechError}
                             voiceLanguageOptions={voiceLanguageOptions}
                             selectedSpeechLocale={selectedSpeechLocale}
                             setSelectedSpeechLocale={setSelectedSpeechLocale}
@@ -1392,11 +1373,7 @@ export default function AddPrescriptionDialog({
                             }}
                             guidedTranscripts={guidedTranscripts}
                             onGuidedTranscriptChange={(step, value) => {
-                              setGuidedTranscripts((prev) => {
-                                const updated = { ...prev, [step]: value };
-                                guidedTranscriptsRef.current = updated;
-                                return updated;
-                              });
+                              setGuidedTranscriptValue(step, value);
                             }}
                             speechSupported={speechSupported}
                             isListening={isListening}
@@ -1405,7 +1382,7 @@ export default function AddPrescriptionDialog({
                             selectedMedicineName={selectedMedicineName}
                             selectedMedicineSource={selectedMedicineSource}
                             showCustomConfirm={showCustomConfirm}
-                            parseDraftPending={parseDraft.isPending}
+                            isFinishing={isApplyingVoiceStep}
                             onStartListening={startListening}
                             onStopListening={() => stopListening(false)}
                             onBack={() => {
@@ -1415,39 +1392,28 @@ export default function AddPrescriptionDialog({
                             }}
                             onNext={() => {
                               stopListening(false);
-                              if (guidedStep === 1) {
-                                const text = (
-                                  guidedTranscripts[1] || ""
-                                ).trim();
-                                if (text) {
-                                  handleStep1Complete(text);
-                                } else {
-                                  setGuidedStep(2);
-                                }
-                              } else {
-                                setGuidedStep((prev) =>
-                                  Math.min(prev + 1, guidedVoiceSteps.length),
-                                );
-                              }
+                              void handleNextGuidedStep();
                             }}
-                            onFinish={handleFinishGuidedPrefill}
+                            onFinish={() => {
+                              void handleFinishGuidedPrefill();
+                            }}
                             onClearSelectedMedicine={clearSelectedMedicine}
                             onCustomConfirmAccept={() => {
                               handleUseCustomMedicine(
                                 showCustomConfirm?.name || "",
                               );
+                              setGuidedTranscriptValue(
+                                1,
+                                showCustomConfirm?.name || "",
+                              );
+                              setSpeechError(null);
                               setShowCustomConfirm(null);
                               setGuidedStep(2);
                             }}
                             onCustomConfirmDismiss={() => {
                               setShowCustomConfirm(null);
-                              setGuidedTranscripts((prev) => {
-                                const updated = { ...prev, 1: "" };
-                                guidedTranscriptsRef.current = updated;
-                                return updated;
-                              });
+                              setGuidedTranscriptValue(1, "");
                             }}
-                            isDeepgramProcessing={isDeepgramProcessing}
                           />
                         )
                       ) : (
@@ -1585,21 +1551,6 @@ function getDefaultEntryMode(dictationEnabled: boolean): EntryMode {
   return dictationEnabled ? null : "manual";
 }
 
-function getDefaultVoiceSubMode(
-  deepgramEnabled: boolean,
-  browserVoiceEnabled: boolean,
-): "deepgram" | "browser" {
-  if (deepgramEnabled) {
-    return "deepgram";
-  }
-
-  if (browserVoiceEnabled) {
-    return "browser";
-  }
-
-  return "deepgram";
-}
-
 function combineTranscript(...parts: Array<string | null | undefined>) {
   return parts
     .map((part) => (part || "").trim())
@@ -1607,59 +1558,6 @@ function combineTranscript(...parts: Array<string | null | undefined>) {
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function mergeTranscripts(
-  base: string,
-  final: string,
-  interim: string,
-): string {
-  const b = base.trim();
-  const f = final.trim();
-  const i = interim.trim();
-
-  if (!b) {
-    return combineTranscript(f, i);
-  }
-
-  if (!f) {
-    return combineTranscript(b, i);
-  }
-
-  const bLower = b.toLowerCase();
-  const fLower = f.toLowerCase();
-
-  if (fLower.startsWith(bLower)) {
-    return combineTranscript(f, i);
-  }
-
-  const baseWords = b.split(/\s+/);
-  const finalWords = f.split(/\s+/);
-
-  let overlapLength = 0;
-  const maxOverlap = Math.min(baseWords.length, finalWords.length);
-
-  for (let len = maxOverlap; len > 0; len--) {
-    const baseTail = baseWords
-      .slice(-len)
-      .map((w) => w.toLowerCase())
-      .join(" ");
-    const finalHead = finalWords
-      .slice(0, len)
-      .map((w) => w.toLowerCase())
-      .join(" ");
-    if (baseTail === finalHead) {
-      overlapLength = len;
-      break;
-    }
-  }
-
-  if (overlapLength > 0) {
-    const uniqueFinal = finalWords.slice(overlapLength).join(" ");
-    return combineTranscript(b, uniqueFinal, i);
-  }
-
-  return combineTranscript(b, f, i);
 }
 
 function cleanDuplicateWords(text: string): string {
@@ -1816,143 +1714,372 @@ function getDosageOptions(type: string) {
   ];
 }
 
-function normalizeMedicationType(value?: string | null): string {
-  const val = (value || "").trim().toLowerCase();
-  if (!val) return "tablet";
-  if (val.includes("tablet") || val.includes("tab")) return "tablet";
-  if (val.includes("capsule") || val.includes("cap")) return "capsule";
-  if (val.includes("syrup") || val.includes("syp") || val.includes("liquid"))
-    return "syrup";
-  if (
-    val.includes("drop") ||
-    val.includes("eye drop") ||
-    val.includes("ear drop")
-  )
-    return "drop";
-  if (val.includes("injection") || val.includes("inj")) return "injection";
-  if (val.includes("cream")) return "cream";
-  if (val.includes("ointment")) return "ointment";
-  return "tablet";
+function combineSummaryParts(parts: Array<string | null | undefined>) {
+  return parts
+    .map((part) => (part || "").trim())
+    .filter(Boolean)
+    .join(" | ");
 }
 
-function normalizeDosage(value?: string | null, type?: string | null): string {
-  const val = (value || "").trim().toLowerCase();
+function normalizeSearchText(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function extractMedicineSearchCandidate(text: string) {
+  return text
+    .replace(
+      /\b(?:please|add|medicine|name|prescribe|start|give|patient|take|tab|tablet|capsule|cap|syrup|drop|drops|injection|cream|ointment)\b/gi,
+      " ",
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findMedicineMatch(list: MedicineItem[], query: string) {
+  const normalizedQuery = normalizeSearchText(query);
+
+  return (
+    list.find(
+      (medicine) => normalizeSearchText(medicine.name) === normalizedQuery,
+    ) ||
+    list.find((medicine) =>
+      normalizeSearchText(medicine.name).includes(normalizedQuery),
+    ) ||
+    list.find((medicine) =>
+      normalizedQuery.includes(normalizeSearchText(medicine.name)),
+    ) ||
+    null
+  );
+}
+
+function parseMedicationTypeFromSpeech(text: string) {
+  const value = text.trim().toLowerCase();
+
+  if (/\b(?:tablet|tab)\b/.test(value)) return "tablet";
+  if (/\b(?:capsule|cap)\b/.test(value)) return "capsule";
+  if (/\b(?:syrup|syp|liquid|suspension)\b/.test(value)) return "syrup";
+  if (/\b(?:drop|drops|eye drop|ear drop)\b/.test(value)) return "drop";
+  if (/\b(?:injection|inj)\b/.test(value)) return "injection";
+  if (/\bcream\b/.test(value)) return "cream";
+  if (/\bointment\b/.test(value)) return "ointment";
+
+  return "";
+}
+
+function getMedicationTypeLabel(value: string) {
+  return (
+    {
+      tablet: "Tablet",
+      capsule: "Capsule",
+      syrup: "Syrup",
+      drop: "Drop",
+      injection: "Injection",
+      cream: "Cream",
+      ointment: "Ointment",
+      other: "Other",
+    }[value] ?? value
+  );
+}
+
+function parseDosageFromSpeech(text: string, type?: string | null): string {
+  const value = text.trim().toLowerCase();
   const medType = (type || "").trim().toLowerCase();
-  if (!val) return "";
 
-  if (medType.includes("tablet") || medType.includes("capsule")) {
-    if (val.includes("0.5") || val.includes("half")) return "0.5 tablet";
-    if (val.includes("1.5") || val.includes("one and a half"))
-      return "1.5 tablets";
-    if (val.includes("2") || val.includes("two")) return "2 tablets";
-    if (val.includes("3") || val.includes("three")) return "3 tablets";
-    if (val.includes("1") || val.includes("one")) return "1 tablet";
-    return "1 tablet";
+  if (!value) {
+    return "";
   }
-  if (
-    medType.includes("syrup") ||
-    medType.includes("liquid") ||
-    medType.includes("suspension")
-  ) {
-    if (val.includes("2.5") || val.includes("half spoon")) return "2.5 ml";
-    if (
-      val.includes("5") ||
-      val.includes("1 spoon") ||
-      val.includes("one spoon")
-    )
-      return "5 ml";
-    if (
-      val.includes("10") ||
-      val.includes("2 spoon") ||
-      val.includes("two spoon")
-    )
-      return "10 ml";
-    if (
-      val.includes("15") ||
-      val.includes("3 spoon") ||
-      val.includes("three spoon")
-    )
-      return "15 ml";
-    if (
-      val.includes("20") ||
-      val.includes("4 spoon") ||
-      val.includes("four spoon")
-    )
-      return "20 ml";
-    return "5 ml";
+
+  if (medType === "tablet" || medType === "capsule") {
+    if (/\b(?:half|0\.5|1\/2)\b/.test(value)) return "0.5 tablet";
+    if (/\b(?:1\.5|one and a half)\b/.test(value)) return "1.5 tablets";
+    if (/\b(?:3|three)\b/.test(value)) return "3 tablets";
+    if (/\b(?:2|two)\b/.test(value)) return "2 tablets";
+    if (/\b(?:1|one|single)\b/.test(value)) return "1 tablet";
+    return "";
   }
-  if (medType.includes("drop")) {
-    if (val.includes("1") || val.includes("one")) return "1 drop";
-    if (val.includes("2") || val.includes("two")) return "2 drops";
-    if (val.includes("3") || val.includes("three")) return "3 drops";
-    if (val.includes("4") || val.includes("four")) return "4 drops";
-    return "1 drop";
+
+  if (medType === "syrup") {
+    if (/(?:\b2\.5\b|half spoon)/.test(value)) return "2.5 ml";
+    if (/(?:\b20\b|four spoon)/.test(value)) return "20 ml";
+    if (/(?:\b15\b|three spoon)/.test(value)) return "15 ml";
+    if (/(?:\b10\b|two spoon)/.test(value)) return "10 ml";
+    if (/(?:\b5\b|one spoon|1 spoon)/.test(value)) return "5 ml";
+    return "";
   }
-  if (
-    medType.includes("cream") ||
-    medType.includes("ointment") ||
-    medType.includes("gel")
-  ) {
-    if (val.includes("thin") || val.includes("layer")) return "thin layer";
-    if (val.includes("pea") || val.includes("amount"))
-      return "pea-sized amount";
-    return "as prescribed";
+
+  if (medType === "drop") {
+    if (/\b(?:4|four)\b/.test(value)) return "4 drops";
+    if (/\b(?:3|three)\b/.test(value)) return "3 drops";
+    if (/\b(?:2|two)\b/.test(value)) return "2 drops";
+    if (/\b(?:1|one)\b/.test(value)) return "1 drop";
+    return "";
   }
-  if (val.includes("1") || val.includes("one")) return "1 unit";
-  if (val.includes("2") || val.includes("two")) return "2 units";
-  return "as prescribed";
+
+  if (medType === "cream" || medType === "ointment") {
+    if (/pea/.test(value)) return "pea-sized amount";
+    if (/(?:thin|layer)/.test(value)) return "thin layer";
+    return "";
+  }
+
+  if (medType === "injection") {
+    if (/\b(?:2|two)\b/.test(value)) return "2 units";
+    if (/\b(?:1|one)\b/.test(value)) return "1 unit";
+  }
+
+  return "";
 }
 
-function normalizeFrequency(value?: string | null): string {
-  const val = (value || "").trim().toLowerCase();
-  if (!val) return "";
+function parseFrequencyFromSpeech(text: string) {
+  const value = text.trim().toLowerCase();
+
+  if (!value) {
+    return "";
+  }
+
   if (
-    val === "od" ||
-    val.includes("once a day") ||
-    val.includes("once daily") ||
-    val.includes("daily") ||
-    val === "1"
-  )
+    /\bod\b/.test(value) ||
+    /\bonce a day\b/.test(value) ||
+    /\bonce daily\b/.test(value)
+  ) {
     return "OD";
+  }
+
   if (
-    val === "bd" ||
-    val.includes("twice a day") ||
-    val.includes("twice daily") ||
-    val.includes("twice") ||
-    val === "2"
-  )
+    /\bbd\b/.test(value) ||
+    /\btwice a day\b/.test(value) ||
+    /\btwice daily\b/.test(value)
+  ) {
     return "BD";
+  }
+
   if (
-    val === "tds" ||
-    val.includes("three times") ||
-    val.includes("thrice daily") ||
-    val.includes("thrice") ||
-    val === "3"
-  )
+    /\btds\b/.test(value) ||
+    /\bthree times\b/.test(value) ||
+    /\bthrice\b/.test(value)
+  ) {
     return "TDS";
+  }
+
   if (
-    val === "sos" ||
-    val.includes("as needed") ||
-    val.includes("when needed") ||
-    val.includes("whenever")
-  )
+    /\bsos\b/.test(value) ||
+    /\bas needed\b/.test(value) ||
+    /\bwhen needed\b/.test(value)
+  ) {
     return "SOS";
+  }
 
-  const upper = val.toUpperCase();
-  if (["OD", "BD", "TDS", "SOS"].includes(upper)) return upper;
-
-  return "OD";
+  return "";
 }
 
-function normalizeMealRelation(
-  value?: string | null,
-): PrescriptionForm["meal"] {
-  const val = (value || "").trim().toLowerCase();
-  if (!val) return "after_meal";
-  if (val.includes("before") || val.includes("empty") || val.includes("ac"))
+function getFrequencyLabel(value: string) {
+  return (
+    {
+      OD: "Once a day",
+      BD: "Twice a day",
+      TDS: "Three times a day",
+      SOS: "SOS",
+    }[value] ?? value
+  );
+}
+
+function parseTimingFlagsFromSpeech(text: string) {
+  const value = text.trim().toLowerCase();
+
+  return {
+    timing_morning: /\bmorning\b/.test(value),
+    timing_afternoon: /\b(?:afternoon|noon)\b/.test(value),
+    timing_evening: /\bevening\b/.test(value),
+    timing_night: /\b(?:night|bedtime)\b/.test(value),
+  };
+}
+
+function countActiveTimings(flags: {
+  timing_morning: boolean;
+  timing_afternoon: boolean;
+  timing_evening: boolean;
+  timing_night: boolean;
+}) {
+  return Object.values(flags).filter(Boolean).length;
+}
+
+function inferFrequencyFromTimings(flags: {
+  timing_morning: boolean;
+  timing_afternoon: boolean;
+  timing_evening: boolean;
+  timing_night: boolean;
+}) {
+  const count = countActiveTimings(flags);
+
+  if (count <= 0) return "";
+  if (count === 1) return "OD";
+  if (count === 2) return "BD";
+  return "TDS";
+}
+
+function applyFrequencyDefaults(
+  frequency: string,
+  flags: {
+    timing_morning: boolean;
+    timing_afternoon: boolean;
+    timing_evening: boolean;
+    timing_night: boolean;
+  },
+) {
+  if (countActiveTimings(flags) > 0) {
+    return flags;
+  }
+
+  if (frequency === "OD") {
+    return {
+      timing_morning: false,
+      timing_afternoon: false,
+      timing_evening: false,
+      timing_night: true,
+    };
+  }
+
+  if (frequency === "BD") {
+    return {
+      timing_morning: true,
+      timing_afternoon: false,
+      timing_evening: false,
+      timing_night: true,
+    };
+  }
+
+  if (frequency === "TDS") {
+    return {
+      timing_morning: true,
+      timing_afternoon: true,
+      timing_evening: false,
+      timing_night: true,
+    };
+  }
+
+  return flags;
+}
+
+function getTimingLabels(flags: {
+  timing_morning: boolean;
+  timing_afternoon: boolean;
+  timing_evening: boolean;
+  timing_night: boolean;
+}) {
+  return [
+    flags.timing_morning ? "Morning" : "",
+    flags.timing_afternoon ? "Afternoon" : "",
+    flags.timing_evening ? "Evening" : "",
+    flags.timing_night ? "Night" : "",
+  ].filter(Boolean);
+}
+
+function parseMealRelationFromSpeech(
+  text: string,
+): PrescriptionForm["meal"] | "" {
+  const value = text.trim().toLowerCase();
+
+  if (/\b(?:before meal|before food|empty stomach|ac)\b/.test(value)) {
     return "before_meal";
-  if (val.includes("after") || val.includes("post") || val.includes("pc"))
+  }
+
+  if (/\b(?:after meal|after food|post meal|pc)\b/.test(value)) {
     return "after_meal";
-  if (val.includes("with") || val.includes("during")) return "with_meal";
-  return "after_meal";
+  }
+
+  if (/\b(?:with meal|with food|during meal)\b/.test(value)) {
+    return "with_meal";
+  }
+
+  return "";
+}
+
+function getMealLabel(value: PrescriptionForm["meal"]) {
+  return (
+    {
+      before_meal: "Before Meal",
+      after_meal: "After Meal",
+      with_meal: "With Meal",
+    }[value] ?? value
+  );
+}
+
+function parseDurationFromSpeech(text: string, currentStartDate: string) {
+  const match = text
+    .toLowerCase()
+    .match(
+      /\b(?:for\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(day|days|week|weeks|month|months|night|nights)\b/,
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const amount = parseCountToken(match[1]);
+  const unit = match[2];
+
+  if (!amount) {
+    return null;
+  }
+
+  const days = unit.startsWith("week")
+    ? amount * 7
+    : unit.startsWith("month")
+      ? amount * 30
+      : amount;
+
+  const startDate = currentStartDate || getTodayDate();
+  const endDate = addDaysToDate(startDate, Math.max(days - 1, 0));
+
+  return {
+    startDate,
+    endDate,
+    label: `${amount} ${unit.endsWith("s") ? unit : `${unit}${amount > 1 ? "s" : ""}`}`,
+  };
+}
+
+function parseCountToken(token: string) {
+  const normalized = token.trim().toLowerCase();
+
+  if (/^\d+$/.test(normalized)) {
+    return Number(normalized);
+  }
+
+  return (
+    {
+      one: 1,
+      two: 2,
+      three: 3,
+      four: 4,
+      five: 5,
+      six: 6,
+      seven: 7,
+      eight: 8,
+      nine: 9,
+      ten: 10,
+    }[normalized] ?? 0
+  );
+}
+
+function addDaysToDate(dateString: string, days: number) {
+  const date = new Date(dateString);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split("T")[0];
+}
+
+function extractVoiceInstructions(text: string) {
+  return text
+    .replace(
+      /\b(before meal|before food|after meal|after food|with meal|with food|empty stomach|post meal|during meal|ac|pc)\b/gi,
+      " ",
+    )
+    .replace(
+      /\b(?:for\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(day|days|week|weeks|month|months|night|nights)\b/gi,
+      " ",
+    )
+    .replace(/\s+/g, " ")
+    .replace(/^[,.;:\-\s]+|[,.;:\-\s]+$/g, "")
+    .trim();
 }

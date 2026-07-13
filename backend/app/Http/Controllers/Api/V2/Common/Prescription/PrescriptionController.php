@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V2\Common\Prescription;
 use App\Http\Controllers\Controller;
 use App\Models\{Appointment, Medicine, Patient, Prescription, PrescriptionDraft, DoctorAddedMedicine, Doctor};
 use App\Services\{ApiResponseService, PrescriptionDraftParser, PrescriptionService, NotificationService};
-use App\Services\DeepgramService;
 use App\Support\{PrescriptionDictation, PrescriptionSpeech};
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -423,7 +422,6 @@ class PrescriptionController extends Controller
                 'dictation_assistant' => array_merge(
                     PrescriptionDictation::settings(),
                     [
-                        'deepgram_enabled' => app(DeepgramService::class)->isEnabled(),
                         'browser_speech_enabled' => (bool) (PrescriptionSpeech::settings()['enabled'] ?? false),
                     ]
                 ),
@@ -523,7 +521,6 @@ class PrescriptionController extends Controller
             'dictation_assistant' => array_merge(
                 PrescriptionDictation::settings(),
                 [
-                    'deepgram_enabled' => app(DeepgramService::class)->isEnabled(),
                     'browser_speech_enabled' => (bool) (PrescriptionSpeech::settings()['enabled'] ?? false),
                 ]
             ),

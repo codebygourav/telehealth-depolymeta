@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Auth;
 
+use App\Filament\Resources\Patients\PatientResource;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Filament\Auth\Pages\Login as BaseLogin;
 use Filament\Facades\Filament;
@@ -22,7 +23,12 @@ class Login extends BaseLogin
         $response = parent::authenticate();
 
         if ($response) {
-            $userName = Filament::auth()->user()?->name;
+            $user = Filament::auth()->user();
+            $userName = $user?->name;
+
+            if ($user?->hasRole('patient')) {
+                session()->put('url.intended', PatientResource::getUrl());
+            }
 
             Notification::make()
                 ->success()

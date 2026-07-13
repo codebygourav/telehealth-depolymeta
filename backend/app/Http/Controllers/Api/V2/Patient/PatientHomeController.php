@@ -91,6 +91,7 @@ class PatientHomeController extends Controller
                 })
                 ->orderBy('appointment_date', 'asc')
                 ->orderBy('appointment_time', 'asc')
+                ->limit(2)
                 ->get();
         }
 

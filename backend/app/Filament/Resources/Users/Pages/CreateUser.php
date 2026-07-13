@@ -3,8 +3,12 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
+use App\Services\PatientAuthAccountService;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Enums\Alignment;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class CreateUser extends CreateRecord
 {
@@ -34,17 +38,29 @@ class CreateUser extends CreateRecord
             $data['role'] = is_array($data['roles']) ? $data['roles'][0] : $data['roles'];
         }
 
+        if (! empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        }
+
         unset($data['email_verified_at']); // optional
 
         return $data;
     }
 
-    protected function afterCreate(): void
+    protected function handleRecordCreation(array $data): Model
     {
-        $user = $this->record;
-        if (!empty($user->roles)) {
-            // Sync roles using Spatie
-            $user->syncRoles([$user->role]);
-        }
+        return DB::transaction(function () use ($data) {
+            $user = $this->getModel()::create($data);
+
+            if (! empty($user->role)) {
+                $user->syncRoles([$user->role]);
+            }
+
+            if ($user->hasRole('patient')) {
+                app(PatientAuthAccountService::class)->ensurePatientProfileForUser($user);
+            }
+
+            return $user;
+        });
     }
 }

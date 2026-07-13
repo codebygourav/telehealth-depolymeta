@@ -6,20 +6,33 @@ export enum NotificationQueryKeys {
   UNREAD_COUNT = "notifications_unread_count",
 }
 
-export function useNotifications() {
+interface UseNotificationsOptions {
+  enabled?: boolean;
+}
+
+export function useNotifications({ enabled = true }: UseNotificationsOptions = {}) {
   return useQuery({
     queryKey: [NotificationQueryKeys.NOTIFICATIONS],
     queryFn: getNotifications,
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    enabled,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
-export function useUnreadCount() {
+export function useUnreadCount({ enabled = true }: UseNotificationsOptions = {}) {
   return useQuery({
     queryKey: [NotificationQueryKeys.UNREAD_COUNT],
     queryFn: getUnreadCount,
-    refetchInterval: 60000, // Optional: Poll every 1 minute
+    enabled,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 

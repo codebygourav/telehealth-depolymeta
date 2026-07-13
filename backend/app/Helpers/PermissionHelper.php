@@ -24,6 +24,16 @@ if (!function_exists('check_permission')) {
             // Direct check first
             if ($user->can($permission)) return true;
 
+            if (
+                $user->hasRole('patient') &&
+                in_array($permission, [
+                    'patients.view',
+                    'patients.manage_own',
+                ], true)
+            ) {
+                return true;
+            }
+
             // Backwards-compatible conversion for legacy snake_case permission names
             // e.g. "view_medicines" -> "medicines.view"
             // e.g. "view_any_medicine_categories" -> "medicine-categories.view_any"

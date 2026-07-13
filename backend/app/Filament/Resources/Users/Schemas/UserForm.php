@@ -7,7 +7,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Facades\Hash;
 
 class UserForm
 {
@@ -52,7 +51,6 @@ class UserForm
                         TextInput::make('name')
                             ->label('Full Name')
                             ->required()
-                            ->unique(ignoreRecord: true)
                             ->maxLength(255),
 
                         TextInput::make('phone')
@@ -90,7 +88,7 @@ class UserForm
                             ->required(fn(string $operation) => $operation === 'create')
                             ->visible(fn($get, string $operation) => $operation === 'create' || ($operation === 'edit' && $get('change_password')))
                             ->dehydrated(fn($state) => filled($state))
-                            ->dehydrateStateUsing(fn($state) => filled($state) ? Hash::make($state) : null),
+                            ->dehydrateStateUsing(fn($state) => filled($state) ? $state : null),
 
                         TextInput::make('email')
                             ->email()

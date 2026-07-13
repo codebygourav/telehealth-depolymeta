@@ -15,6 +15,7 @@ class NotificationController extends Controller
     {
         $query = $request->user()
             ->notifications()
+            ->select(['id', 'data', 'read_at', 'created_at', 'category', 'event_type', 'is_archived'])
             ->where('is_archived', $request->boolean('archived', false))
             ->latest();
 
@@ -31,20 +32,17 @@ class NotificationController extends Controller
             $query->whereNull('read_at');
         }
 
-        $notifications = $query->paginate($request->get('per_page', 20));
+        $perPage = max(1, min((int) $request->get('per_page', 20), 50));
+        $notifications = $query->paginate($perPage);
 
         $unreadCount = $request->user()
-        ->notifications()
-        ->whereNull('read_at')
-        ->count();
-
+            ->notifications()
+            ->whereNull('read_at')
+            ->count();
 
         $notifications->setCollection(
             NotificationIndexResource::collection($notifications->getCollection())->collection
         );
-
-        $paginator = $notifications->toArray();
-        $paginator['meta']['unread_count'] = $unreadCount;
 
         return ApiResponseService::paginated(
             paginated: $notifications,
@@ -52,11 +50,6 @@ class NotificationController extends Controller
             extra: [
                 'unread_count' => $unreadCount,
             ]
-        );
-
-        return ApiResponseService::paginated(
-            paginated: $notifications,
-            responseKey: 'responses.success',
         );
     }
 

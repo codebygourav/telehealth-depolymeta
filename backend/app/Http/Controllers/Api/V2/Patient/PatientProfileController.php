@@ -28,9 +28,7 @@ class PatientProfileController extends Controller
             return ApiResponseService::unauthorized();
         }
 
-        $isPatient = $user->patient;
-
-        if (! $isPatient) {
+        if (! $user->patient || $user->id !== $user_id) {
             return ApiResponseService::unauthorized();
         }
 
@@ -49,7 +47,7 @@ class PatientProfileController extends Controller
         }
 
         // Fetch Patient
-        $patient = Patient::where('user_id', $user_id)->first();
+        $patient = Patient::where('user_id', $user->id)->first();
 
         // If patient not found, fail with 404
         if (! $patient) {
@@ -79,14 +77,11 @@ class PatientProfileController extends Controller
             return ApiResponseService::unauthorized();
         }
 
-        $isOwner = $user->id === $user_id;
-        $isAdmin = $user->patient;
-
-        if (! $isOwner && ! $isAdmin) {
+        if (! $user->patient || $user->id !== $user_id) {
             return ApiResponseService::unauthorized();
         }
 
-        $patient = Patient::where('user_id', $user_id)->firstOrFail();
+        $patient = Patient::where('user_id', $user->id)->firstOrFail();
 
         $group = $request->input('group')
             ?? $request->get('group')

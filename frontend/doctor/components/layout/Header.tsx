@@ -20,12 +20,10 @@ import {
   SheetTrigger,
 } from "@/components/ui";
 import { useAuth } from "@/context/userContext";
-import { useNotifications } from "@/queries/notifications";
 import { cn } from "@/lib/utils";
 import icon from "@/public/assets/icon/logo-light.png";
 import type { NavItem } from "@/types/header";
 import {
-  Bell,
   Calendar,
   LayoutDashboard,
   LogOut,
@@ -35,15 +33,13 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NotificationDropdown } from "./NotificationDropdown";
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const router = useRouter();
 
   // Use actual media query for responsive check
   const [isDesktop, setIsDesktop] = useState(true);
@@ -68,8 +64,6 @@ export function Header() {
 
   const pathname = usePathname();
   const { user, initializing, logout } = useAuth();
-  const { data: notificationsData } = useNotifications();
-  const unreadCount = notificationsData?.meta?.total_unread ?? 0;
 
   // For notification label (Name fallback)
   const name =

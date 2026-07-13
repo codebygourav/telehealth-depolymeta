@@ -203,7 +203,7 @@ class LoginController extends Controller
             $dob = $patient?->date_of_birth ?? '';
             $email = $patient?->email ?? $user->email;
             $avatar = storage_url($patient?->avatar) ?? null;
-            $phone = $patient?->phone ?? $user->phone ?? '';
+            $phone = $patient?->mobile_no ?? $user->phone ?? '';
             $bio = $patient?->bio ?? '';
             $address = [
                 'address' => $patient?->address ?? '',

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Appointments\Tables;
 
 use App\Filament\Resources\Appointments\AppointmentResource;
 use Filament\Facades\Filament;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\{TextColumn, BadgeColumn};
 use Filament\Actions\{ActionGroup, BulkActionGroup, DeleteBulkAction, ForceDeleteBulkAction, RestoreBulkAction, ViewAction, DeleteAction};
@@ -403,7 +404,7 @@ class AppointmentsTable
                                 ->options(collect(AppointmentStatus::cases())->mapWithKeys(fn($status) => [$status->value => $status->label()])->toArray())
                                 ->required(),
                         ])
-                        ->mountUsing(fn (\Filament\Forms\ComponentContainer $form, $record) => $form->fill([
+                        ->mountUsing(fn (Schema $form, $record) => $form->fill([
                             'status' => $record->status instanceof AppointmentStatus ? $record->status->value : $record->status,
                         ]))
                         ->action(function ($record, array $data) {

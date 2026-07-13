@@ -13,6 +13,7 @@ use App\Models\Patient;
 use App\Models\Doctor;
 use App\Models\DoctorAvailability;
 use App\Services\DoctorAvailabilityService;
+use App\Services\PatientAuthAccountService;
 use App\Services\SettingService;
 use App\Services\SlotCapacityService;
 use App\Traits\HasCustomSidebar;
@@ -311,6 +312,14 @@ class BookAppointment extends Page implements HasForms
                             ->required(fn(callable $get) => $get('patient_mode') === 'new')
                             ->visible(fn(callable $get) => $get('patient_mode') === 'new')
                             ->maxLength(255)
+                            ->columnSpan(1),
+
+                        TextInput::make('new_patient_password')
+                            ->label('Login Password')
+                            ->password()
+                            ->revealable()
+                            ->visible(fn(callable $get) => $get('patient_mode') === 'new')
+                            ->helperText('Required for mobile app login. Leave blank to use the default password `Patient@123`.')
                             ->columnSpan(1),
 
                         Textarea::make('new_patient_address')
@@ -1012,14 +1021,19 @@ class BookAppointment extends Page implements HasForms
                 : null,
             'source' => 'internal',
             'is_existing_patient' => filled($state['existing_patient_id'] ?? null),
-            'create_user_account' => false,
+            'create_user_account' => true,
+            'user_email' => $state['new_patient_email'] ?? null,
+            'user_phone' => $state['new_patient_mobile_no'] ?? null,
         ];
 
         if ($relationshipField) {
             $patientData[$relationshipField] = $state['new_patient_' . $relationshipField] ?? null;
         }
 
-        return Patient::create($patientData);
+        return app(PatientAuthAccountService::class)->provision(
+            patientData: $patientData,
+            plainPassword: $state['new_patient_password'] ?? null,
+        )['patient'];
     }
 
     private function existingPatientForNewPatientEmail(array $state): ?Patient

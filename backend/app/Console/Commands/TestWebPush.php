@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Models\User;
 use App\Notifications\SystemNotification;
 
+
 class TestWebPush extends Command
 {
     protected $signature = 'notification:test-webpush {email}';

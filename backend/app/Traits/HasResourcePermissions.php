@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use Filament\Resources\Resource;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 trait HasResourcePermissions
@@ -65,6 +66,24 @@ trait HasResourcePermissions
             return true;
         }
 
+        if ($record instanceof \App\Models\Appointment) {
+            if ($record->relationLoaded('patient') || method_exists($record, 'patient')) {
+                $patient = $record->patient;
+
+                if ($patient && $patient->user_id === $userId) {
+                    return true;
+                }
+            }
+
+            if ($record->relationLoaded('doctor') || method_exists($record, 'doctor')) {
+                $doctor = $record->doctor;
+
+                if ($doctor && $doctor->user_id === $userId) {
+                    return true;
+                }
+            }
+        }
+
         // For models that might have different ownership patterns
         // Check if model has a method to determine ownership
         if (method_exists($record, 'isOwnedBy')) {
@@ -107,7 +126,7 @@ trait HasResourcePermissions
      * If user has view or manage_own, filter to show only own records
      * Otherwise, return empty query
      */
-    public static function filterQueryByOwnership(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    public static function filterQueryByOwnership(Builder $query): Builder
     {
         $user = Auth::user();
         if (!$user) {
@@ -130,6 +149,16 @@ trait HasResourcePermissions
             // Special handling for User model - a user's own record is themselves
             if ($model === \App\Models\User::class) {
                 return $query->where('id', $userId);
+            }
+
+            if ($model === \App\Models\Appointment::class) {
+                if ($user->patient) {
+                    return $query->whereHas('patient', fn (Builder $patientQuery) => $patientQuery->where('user_id', $userId));
+                }
+
+                if ($user->doctor) {
+                    return $query->whereHas('doctor', fn (Builder $doctorQuery) => $doctorQuery->where('user_id', $userId));
+                }
             }
 
             // Check which ownership field exists in the table

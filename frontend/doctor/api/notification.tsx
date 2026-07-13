@@ -1,27 +1,34 @@
 import { NotificationsResponse } from "@/types/notification";
 import axios from "axios";
+import { getAuthToken } from "@/lib/authToken";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "";
+const baseURL =
+  process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 const notificationsApi = axios.create({
   baseURL,
 });
 
 notificationsApi.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token =
-      localStorage.getItem("@token") ||
-      localStorage.getItem("doctorToken") ||
-      localStorage.getItem("token") ||
-      localStorage.getItem("access_token");
+  const token = getAuthToken();
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;
 });
+
+notificationsApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== "undefined" && error?.response?.status === 401) {
+      window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+    }
+
+    return Promise.reject(error);
+  },
+);
 
 export const getNotifications = async (): Promise<NotificationsResponse> => {
   const response = await notificationsApi.get("/notifications");
@@ -29,11 +36,15 @@ export const getNotifications = async (): Promise<NotificationsResponse> => {
 };
 
 export const getSingleNotification = async (notificationId: string) => {
-  const response = await notificationsApi.get(`/notifications/${notificationId}`);
+  const response = await notificationsApi.get(
+    `/notifications/${notificationId}`,
+  );
   return response.data;
 };
 
-export const getUnreadCount = async (): Promise<any> => {
+export const getUnreadCount = async (): Promise<number> => {
   const response = await notificationsApi.get("/notifications/unread-count");
-  return response.data;
+  return Number(
+    response.data?.data?.unread_count ?? response.data?.unread_count ?? 0,
+  );
 };

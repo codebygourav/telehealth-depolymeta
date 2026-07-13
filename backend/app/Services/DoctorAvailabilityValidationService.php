@@ -250,13 +250,13 @@ class DoctorAvailabilityValidationService
         return $query->get()->contains(function ($slot) {
             if (!$slot->is_recurring) {
                 return $this->isNonRecurringSlotInFutureWindow(
-                    $this->normalizeModelDateValue($slot->date),
+                    $slot->date?->format('Y-m-d') ?? $slot->date,
                     $slot->end_time
                 );
             }
 
             return !$this->hasRecurringWindowPassed(
-                $this->normalizeModelDateValue($slot->recurring_end_date)
+                $slot->recurring_end_date?->format('Y-m-d') ?? $slot->recurring_end_date
             );
         });
     }
