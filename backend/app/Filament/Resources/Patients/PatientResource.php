@@ -32,17 +32,9 @@ class PatientResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return check_permission('patients.view_any');
+        return static::canViewAny();
     }
 
-    public static function getSidebarOptions(): array
-    {
-        return [
-            'label' => 'Pateints',
-            'icon'  => 'heroicon-o-user-circle',
-            'sort'  => 3,
-        ];
-    }
     public static function requiredPermission(): string
     {
         return 'patient_manager';
@@ -56,6 +48,24 @@ class PatientResource extends Resource
     public static function table(Table $table): Table
     {
         return PatientsTable::configure($table);
+    }
+
+    public static function canCreate(): bool
+    {
+        return check_permission('patients.create');
+    }
+
+    public static function canDelete($record): bool
+    {
+        if (check_permission('patients.delete_any')) {
+            return true;
+        }
+
+        if (check_permission('patients.delete')) {
+            return static::isOwnRecord($record);
+        }
+
+        return false;
     }
 
     public static function infolist(Schema $schema): Schema
@@ -83,7 +93,6 @@ class PatientResource extends Resource
             //
         ];
     }
-
 
     public static function getPages(): array
     {

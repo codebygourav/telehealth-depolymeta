@@ -66,10 +66,23 @@ class AppointmentResource extends Resource
     // Note: canCreate and canEdit are intentionally disabled as appointments are managed via API
     public static function canViewAny(): bool
     {
+        if (Auth::user()?->hasRole('patient')) {
+            return false;
+        }
+
         // Use the standard permission check from HasResourcePermissions trait
         // Menu will only show if user has view, view_any, or manage_own permission
         $slug = static::getPermissionSlug();
         return check_permission(["{$slug}.view", "{$slug}.view_any", "{$slug}.manage_own"]);
+    }
+
+    public static function canView($record): bool
+    {
+        if (Auth::user()?->hasRole('patient')) {
+            return false;
+        }
+
+        return parent::canView($record);
     }
 
     public static function getEloquentQuery(): Builder

@@ -4,18 +4,23 @@ namespace App\Filament\Resources\Patients\Pages;
 
 use App\Filament\Resources\Patients\PatientResource;
 use App\Models\Patient;
-use App\Models\Registration;
-use App\Models\User;
+use App\Services\PatientAuthAccountService;
+use App\Services\PatientCredentialsService;
+use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ToggleButtons;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Models\Role;
 
 class EditPatient extends EditRecord
 {
@@ -23,14 +28,58 @@ class EditPatient extends EditRecord
 
     protected ?string $userPassword = null;
 
+    public bool $showCredentialPrompt = false;
+
+    public string $credentialPromptContext = 'update';
+
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        $this->restoreCredentialPrompt();
+    }
+
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('sendCredentials')
+                ->label('Send Credentials')
+                ->icon('heroicon-o-envelope')
+                ->modalHeading('Send Login Credentials')
+                ->modalDescription(fn () => 'Choose a password option and send patient login credentials to ' . ($this->record->user?->email ?? $this->record->email ?? 'this patient') . '.')
+                ->modalSubmitActionLabel('Send Email')
+                ->form([
+                    ToggleButtons::make('password_mode')
+                        ->label('Password Option')
+                        ->options([
+                            'custom' => 'Use a custom password',
+                            'generated' => 'Generate a new password automatically',
+                        ])
+                        ->colors([
+                            'custom' => 'success',
+                            'generated' => 'success',
+                        ])
+                        ->default('generated')
+                        ->extraAttributes(['class' => 'credential-password-mode'])
+                        ->grouped()
+                        ->live()
+                        ->required(),
+                    TextInput::make('custom_password')
+                        ->label('Custom Password')
+                        ->password()
+                        ->revealable()
+                        ->minLength(6)
+                        ->required(fn (callable $get) => $get('password_mode') === 'custom')
+                        ->visible(fn (callable $get) => $get('password_mode') === 'custom'),
+                ])
+                ->action(fn (array $data) => $this->sendCredentialsWithPassword($data))
+                ->visible(fn () => filled($this->record->user?->email ?: $this->record->email)),
             ActionGroup::make([
                 ViewAction::make()
                     ->icon('heroicon-o-eye'),
                 DeleteAction::make()
                     ->icon('heroicon-o-trash')
+                    ->visible(fn () => PatientResource::canDelete($this->record))
                     ->requiresConfirmation(),
             ])
                 ->icon('heroicon-o-ellipsis-vertical')
@@ -42,26 +91,15 @@ class EditPatient extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        $record = $this->record;
-
-        if ($record->create_user_account && $record->user_id && $record->user) {
-            $data['user_email'] = $record->user->email ?? $record->email;
-            $data['user_phone'] = $record->user->phone ?? $record->mobile_no;
-        }
+        $data['create_user_account'] = true;
+        $data['draft_patient_id'] = $this->record->getKey();
 
         return $data;
     }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $record = $this->record;
-        $source = $data['source'] ?? $record->source ?? 'website';
-        $createUserAccount = $data['create_user_account'] ?? false;
-
-        if ($source === 'app') {
-            $data['create_user_account'] = true;
-            $createUserAccount = true;
-        }
+        $data['create_user_account'] = true;
 
         if (! empty($data['user_password'])) {
             $this->userPassword = $data['user_password'];
@@ -70,178 +108,198 @@ class EditPatient extends EditRecord
         return $data;
     }
 
+    public function persistAccountStep(Get $get, Set $set): void
+    {
+        $patient = DB::transaction(function () use ($get) {
+            return app(PatientAuthAccountService::class)->provision(
+                patientData: $this->getAccountStepPayload($get),
+                patient: $this->record,
+                plainPassword: $get('user_password') ?: null,
+            )['patient'];
+        });
+
+        $this->record = $patient;
+        $set('draft_patient_id', $patient->getKey());
+    }
+
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         return DB::transaction(function () use ($record, $data) {
-            $source = $data['source'] ?? $record->source ?? 'website';
-            $createUserAccount = $source === 'app' || (bool) ($data['create_user_account'] ?? false);
-
-            if ($source === 'app') {
-                $data['create_user_account'] = true;
-            }
-
-            if ($createUserAccount) {
-                $user = $this->resolveLoginUserForPatient($record, $data);
-                $phone = $this->normalizePhone($data['user_phone'] ?? $data['mobile_no'] ?? null);
-
-                if ($user->trashed()) {
-                    $user->restore();
-                }
-
-                $userData = [
-                    'name' => trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? '')),
-                    'phone' => $phone ?: ($data['mobile_no'] ?? $user->phone),
-                    'email_verified_at' => $user->email_verified_at ?: now(),
-                    'status' => \App\Enums\AuthStatus::registered->value,
-                ];
-
-                if (! empty($this->userPassword)) {
-                    $userData['password'] = Hash::make($this->userPassword);
-                }
-
-                $user->update($userData);
-                $this->ensurePatientRole($user);
-                $this->markRegistrationAsRegistered($user->email);
-
-                $data['user_id'] = $user->id;
-                $data['email'] = $user->email;
-                $data['mobile_no'] = $phone ?: ($data['mobile_no'] ?? null);
-            } else {
-                $data['user_id'] = null;
-            }
-
-            unset($data['user_email'], $data['user_phone'], $data['user_password']);
-
-            $record->update($data);
-
-            return $record;
+            return app(PatientAuthAccountService::class)->provision(
+                patientData: $data,
+                patient: $record,
+                plainPassword: $this->userPassword,
+            )['patient'];
         });
     }
 
-    private function normalizeEmail(mixed $email): ?string
+    protected function afterSave(): void
     {
-        if (! is_string($email)) {
-            return null;
+        if (! $this->userPassword || ! $this->record->user?->email) {
+            return;
         }
 
-        $email = trim($email);
-
-        return $email === '' ? null : strtolower($email);
+        $this->openCredentialPrompt($this->record, $this->userPassword, 'update');
     }
 
-    private function normalizePhone(mixed $phone): ?string
+    public function sendPendingCredentials(): void
     {
-        if (! is_string($phone) && ! is_numeric($phone)) {
-            return null;
-        }
+        $patientId = session('edit_patient_page_patient_id');
+        $password = session('edit_patient_page_credentials_password');
+        $patient = $patientId ? Patient::query()->with('user')->find($patientId) : $this->record->fresh('user');
 
-        $phone = preg_replace('/[\s\-()]/', '', (string) $phone);
+        if (! $patient?->user?->email || ! $password) {
+            Notification::make()
+                ->danger()
+                ->title('Unable to send credentials')
+                ->body('A patient email or updated password was not found.')
+                ->send();
 
-        return $phone === '' ? null : $phone;
-    }
-
-    private function findUserByEmail(string $email): ?User
-    {
-        return User::withTrashed()
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->first();
-    }
-
-    private function resolveLoginUserForPatient(Model $record, array $data): User
-    {
-        if ($record->user_id) {
-            $user = User::withTrashed()->find($record->user_id);
-
-            if (! $user) {
-                throw ValidationException::withMessages([
-                    'data.user_email' => 'The linked user account was not found. Remove login access or use another email.',
-                ]);
-            }
-
-            return $user;
-        }
-
-        $email = $this->normalizeEmail($data['user_email'] ?? $data['email'] ?? null);
-        $phone = $this->normalizePhone($data['user_phone'] ?? $data['mobile_no'] ?? null);
-
-        if (! $email) {
-            throw ValidationException::withMessages([
-                'data.user_email' => 'Email is required to create a login account.',
-            ]);
-        }
-
-        $user = $this->findUserByEmail($email);
-
-        if (! $user) {
-            return User::create([
-                'name' => trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? '')),
-                'slug' => Str::slug(($data['first_name'] ?? '') . '-' . ($data['last_name'] ?? '') . '-' . Str::random(6)),
-                'email' => $email,
-                'phone' => $phone,
-                'password' => ! empty($this->userPassword)
-                    ? Hash::make($this->userPassword)
-                    : Hash::make('Patient@123'),
-                'email_verified_at' => now(),
-                'status' => \App\Enums\AuthStatus::registered->value,
-            ]);
-        }
-
-        $linkedPatient = Patient::withTrashed()
-            ->where('user_id', $user->id)
-            ->whereKeyNot($record->getKey())
-            ->first();
-
-        if ($linkedPatient) {
-            throw ValidationException::withMessages([
-                'data.user_email' => 'This user account is already linked to another patient. Select that patient or use another email.',
-            ]);
-        }
-
-        return $user;
-    }
-
-    private function ensurePatientRole(User $user): void
-    {
-        if (method_exists($user, 'assignRole')) {
-            if (! method_exists($user, 'hasRole') || ! $user->hasRole('patient')) {
-                $user->assignRole('patient');
-            }
+            $this->closeCredentialPrompt();
 
             return;
         }
 
-        if (class_exists(Role::class)) {
-            $roleClass = Role::class;
-            $patientRole = $roleClass::where('name', 'patient')->first();
-            if ($patientRole && ! $user->roles->contains('id', $patientRole->id)) {
-                $user->roles()->attach($patientRole);
-            }
-        }
+        $this->notifyCredentialDelivery(
+            sent: app(PatientCredentialsService::class)->sendCredentials($patient, $password),
+            email: $patient->user->email,
+        );
+
+        $this->closeCredentialPrompt();
+        $this->userPassword = null;
     }
 
-    private function markRegistrationAsRegistered(string $email): void
+    public function closeCredentialPrompt(): void
     {
-        $registration = Registration::withTrashed()
-            ->whereRaw('LOWER(email) = ?', [strtolower($email)])
-            ->first();
+        $this->showCredentialPrompt = false;
+        $this->credentialPromptContext = 'update';
 
-        if ($registration) {
-            if ($registration->trashed()) {
-                $registration->restore();
-            }
-
-            $registration->update([
-                'email_verified' => true,
-                'status' => \App\Enums\AuthStatus::registered->value,
-            ]);
-
-            return;
-        }
-
-        Registration::create([
-            'email' => strtolower($email),
-            'email_verified' => true,
-            'status' => \App\Enums\AuthStatus::registered->value,
+        session()->forget([
+            'edit_patient_page_credentials_password',
+            'edit_patient_page_patient_id',
+            'edit_patient_page_credentials_context',
         ]);
+    }
+
+    protected function getAccountStepPayload(Get $get): array
+    {
+        return [
+            'source' => $get('source') ?: ($this->record->source ?: 'internal'),
+            'first_name' => $get('first_name'),
+            'last_name' => $get('last_name'),
+            'email' => $get('email'),
+            'mobile_no' => $get('mobile_no'),
+            'create_user_account' => true,
+        ];
+    }
+
+    public function getFooter(): ?View
+    {
+        return view('filament.patients.credential-prompt-modal', [
+            'show' => $this->showCredentialPrompt,
+            'context' => $this->credentialPromptContext,
+            'email' => $this->record->user?->email ?? $this->record->email ?? '',
+        ]);
+    }
+
+    protected function restoreCredentialPrompt(): void
+    {
+        if (session('edit_patient_page_patient_id') != $this->record->getKey() || ! session('edit_patient_page_credentials_password')) {
+            return;
+        }
+
+        $this->showCredentialPrompt = true;
+        $this->credentialPromptContext = session('edit_patient_page_credentials_context', 'update');
+    }
+
+    protected function openCredentialPrompt(Patient $patient, string $password, string $context): void
+    {
+        session([
+            'edit_patient_page_credentials_password' => $password,
+            'edit_patient_page_patient_id' => $patient->getKey(),
+            'edit_patient_page_credentials_context' => $context,
+        ]);
+
+        $this->showCredentialPrompt = true;
+        $this->credentialPromptContext = $context;
+    }
+
+    protected function sendCredentialsWithPassword(array $data): void
+    {
+        $password = ($data['password_mode'] ?? 'generated') === 'custom'
+            ? (string) $data['custom_password']
+            : Str::random(12);
+
+        $patient = $this->syncPatientCredentials($password);
+
+        if (! $patient?->user?->email) {
+            Notification::make()
+                ->danger()
+                ->title('Unable to send credentials')
+                ->body('A patient login account or email address was not found.')
+                ->send();
+
+            return;
+        }
+
+        $this->notifyCredentialDelivery(
+            sent: app(PatientCredentialsService::class)->sendCredentials($patient, $password),
+            email: $patient->user->email,
+        );
+    }
+
+    protected function syncPatientCredentials(string $password): ?Patient
+    {
+        $patient = $this->record->fresh('user');
+
+        if (! $patient) {
+            return null;
+        }
+
+        if (! $patient->user) {
+            $patient = DB::transaction(function () use ($patient, $password) {
+                return app(PatientAuthAccountService::class)->provision(
+                    patientData: [
+                        'source' => $patient->source ?: 'internal',
+                        'first_name' => $patient->first_name,
+                        'last_name' => $patient->last_name,
+                        'email' => $patient->email,
+                        'mobile_no' => $patient->mobile_no,
+                        'create_user_account' => true,
+                    ],
+                    patient: $patient,
+                    plainPassword: $password,
+                )['patient'];
+            });
+
+            $this->record = $patient->fresh('user');
+
+            return $this->record;
+        }
+
+        $patient->user->forceFill([
+            'password' => Hash::make($password),
+        ])->save();
+
+        $this->record = $patient->fresh('user');
+
+        return $this->record;
+    }
+
+    protected function notifyCredentialDelivery(bool $sent, string $email): void
+    {
+        $notification = Notification::make()
+            ->title($sent ? 'Credentials sent' : 'Failed to send credentials')
+            ->body($sent
+                ? "Login credentials were emailed to {$email}."
+                : 'The credentials email could not be sent.');
+
+        if ($sent) {
+            $notification->success();
+        } else {
+            $notification->danger();
+        }
+
+        $notification->send();
     }
 }

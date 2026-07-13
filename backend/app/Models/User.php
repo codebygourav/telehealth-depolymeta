@@ -187,7 +187,7 @@ class User extends Authenticatable implements FilamentUser, HasName
 
     public static function getAllowedPanelRoles(): array
     {
-        return ['super_admin', 'admin', 'doctor_manager', 'doctor'];
+        return ['super_admin', 'admin', 'doctor_manager', 'doctor', 'patient'];
     }
 
     public function canAccessResource(string $permission): bool

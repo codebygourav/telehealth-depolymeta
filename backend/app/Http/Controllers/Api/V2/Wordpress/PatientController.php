@@ -7,9 +7,9 @@ use App\Mail\PatientCredentialsMail;
 use App\Models\EmailLog;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\PatientAuthAccountService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -27,14 +27,31 @@ class PatientController extends Controller
             $user = $this->findUserByEmail($email);
 
             if ($patient && $user) {
-                if (empty($patient->user_id) || $patient->user_id !== $user->id) {
-                    $patient->user_id = $user->id;
-                    $patient->save();
-                }
+                $provisioned = app(PatientAuthAccountService::class)->provision(
+                    patientData: [
+                        'first_name' => $patient->first_name,
+                        'last_name' => $patient->last_name,
+                        'gender' => $patient->gender,
+                        'age' => $patient->age,
+                        'marital_status' => $patient->marital_status,
+                        'father_name' => $patient->father_name,
+                        'wife_name' => $patient->wife_name,
+                        'husband_name' => $patient->husband_name,
+                        'mobile_no' => $patient->mobile_no,
+                        'email' => $email,
+                        'address' => $patient->address,
+                        'is_existing_patient' => $patient->is_existing_patient,
+                        'existing_patient_id' => $patient->existing_patient_id,
+                        'source' => $patient->source ?: 'website',
+                    ],
+                    patient: $patient,
+                    user: $user,
+                );
+
                 return response()->json([
                     'message' => 'Patient created successfully',
-                    'patient' => $patient,
-                    'user' => $user,
+                    'patient' => $provisioned['patient'],
+                    'user' => $provisioned['user'],
                 ]);
             }
         }
@@ -124,90 +141,37 @@ class PatientController extends Controller
         $patient = $this->findPatientByEmail($validated['email']);
         $user = $this->findUserByEmail($validated['email']);
 
-        if ($patient && $user) {
-            if (empty($patient->user_id) || $patient->user_id !== $user->id) {
-                $patient->user_id = $user->id;
-                $patient->save();
-            }
-            return response()->json([
-                'message' => 'Patient created successfully',
-                'patient' => $patient,
-                'user' => $user,
-            ]);
-        }
-
         $rawPassword = null;
 
-        // 1. Create the User if they don't exist
         if (! $user) {
             $rawPassword = Str::random(10);
-            $hashedPassword = Hash::make($rawPassword);
-
-            $userData = [
-                'name'              => trim($validated['first_name'] . ' ' . $validated['last_name']),
-                'email'             => $validated['email'],
-                'password'          => $hashedPassword,
-                'mobile'            => $validated['mobile'],
-                'phone'             => $validated['mobile'],
-                'email_verified_at' => now(),
-                'status'            => \App\Enums\AuthStatus::registered->value,
-            ];
-
-            try {
-                $user = User::create($userData);
-            } catch (UniqueConstraintViolationException $e) {
-                return $this->existingPatientResponse($validated['email']);
-            }
-
-            if (method_exists($user, 'assignRole')) {
-                $user->assignRole('patient');
-            }
-
-            if (class_exists('\App\Models\Registration')) {
-                \App\Models\Registration::updateOrCreate(
-                    ['email' => $validated['email']],
-                    [
-                        'email_verified' => true,
-                        'status' => \App\Enums\AuthStatus::registered->value,
-                    ]
-                );
-            }
         }
 
-        // 2. Create the Patient if they don't exist, or link to User if they do
-        if (! $patient) {
-            $patientData = [
-                'first_name'          => $validated['first_name'],
-                'last_name'           => $validated['last_name'],
-                'gender'              => $validated['gender'],
-                'age'                 => $validated['age'],
-                'marital_status'      => $validated['marital_status'],
-                'father_name'         => $validated['father_name'] ?? null,
-                'husband_name'        => $validated['husband_name'] ?? null,
-                'mobile_no'           => $validated['mobile'],
-                'email'               => $validated['email'],
-                'address'             => $validated['address'],
-                'is_existing_patient' => (bool) ($validated['is_existing_patient'] ?? false),
-                'existing_patient_id' => $validated['existing_patient_id'] ?? null,
-                'source'              => $validated['source'] ?? 'website',
-            ];
-
-            if (in_array('user_id', (new Patient())->getFillable())) {
-                $patientData['user_id'] = $user->id;
-            }
-
-            try {
-                $patient = Patient::create($patientData);
-            } catch (UniqueConstraintViolationException $e) {
-                return $this->existingPatientResponse($validated['email']);
-            }
-        } else {
-            // Patient already existed, but User was missing and just got created. Link them!
-            $patient->user_id = $user->id;
-            $patient->save();
+        try {
+            $provisioned = app(PatientAuthAccountService::class)->provision(
+                patientData: [
+                    'first_name' => $validated['first_name'],
+                    'last_name' => $validated['last_name'],
+                    'gender' => $validated['gender'],
+                    'age' => $validated['age'],
+                    'marital_status' => $validated['marital_status'],
+                    'father_name' => $validated['father_name'] ?? null,
+                    'husband_name' => $validated['husband_name'] ?? null,
+                    'mobile_no' => $validated['mobile'],
+                    'email' => $validated['email'],
+                    'address' => $validated['address'],
+                    'is_existing_patient' => (bool) ($validated['is_existing_patient'] ?? false),
+                    'existing_patient_id' => $validated['existing_patient_id'] ?? null,
+                    'source' => $validated['source'] ?? 'website',
+                ],
+                patient: $patient,
+                plainPassword: $rawPassword,
+                user: $user,
+            );
+        } catch (UniqueConstraintViolationException $e) {
+            return $this->existingPatientResponse($validated['email']);
         }
 
-        // 3. Send email only if a new User account was created
         if ($rawPassword !== null) {
             $mailable = new PatientCredentialsMail(
                 trim($validated['first_name'] . ' ' . $validated['last_name']),
@@ -230,7 +194,7 @@ class PatientController extends Controller
                     type: PatientCredentialsMail::class,
                     toEmail: $validated['email'],
                     subject: $subject,
-                    patientId: $patient->id ?? null,
+                    patientId: $provisioned['patient']->id ?? null,
                     htmlBody: $htmlBody
                 );
             } catch (\Exception $e) {
@@ -243,7 +207,7 @@ class PatientController extends Controller
                     toEmail: $validated['email'],
                     subject: $subject,
                     errorMessage: $e->getMessage(),
-                    patientId: $patient->id ?? null,
+                    patientId: $provisioned['patient']->id ?? null,
                     htmlBody: $htmlBody
                 );
             }
@@ -251,8 +215,8 @@ class PatientController extends Controller
 
         return response()->json([
             'message' => 'Patient created successfully',
-            'patient' => $patient,
-            'user' => $user,
+            'patient' => $provisioned['patient'],
+            'user' => $provisioned['user'],
         ]);
     }
 
