@@ -10,7 +10,11 @@ import {
   ScrollArea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { useNotifications, useReadNotification } from "@/queries/notifications";
+import {
+  useNotifications,
+  useReadNotification,
+  useUnreadCount,
+} from "@/queries/notifications";
 import {
   Bell,
   Calendar,
@@ -25,12 +29,23 @@ import Link from "next/link";
 import { useState } from "react";
 
 export function NotificationDropdown() {
+  const [open, setOpen] = useState(false);
+  const [hasOpened, setHasOpened] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [readingId, setReadingId] = useState<string | null>(null);
 
-  const { data: notificationsData, isLoading: isLoadingNotifications } = useNotifications();
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+
+    if (nextOpen) {
+      setHasOpened(true);
+    }
+  };
+
+  const { data: unreadCount = 0 } = useUnreadCount();
+  const { data: notificationsData, isLoading: isLoadingNotifications } =
+    useNotifications({ enabled: hasOpened });
   const markAsReadMutation = useReadNotification();
-  const unreadCount = notificationsData?.meta?.total_unread ?? 0;
   const notifications = notificationsData?.data ?? [];
 
   const toggleExpand = (e: React.MouseEvent, id: string) => {
@@ -93,7 +108,7 @@ export function NotificationDropdown() {
   };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-6! w-6!"/>

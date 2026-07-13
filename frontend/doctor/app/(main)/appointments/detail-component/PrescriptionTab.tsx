@@ -82,7 +82,6 @@ type DictationAssistantConfig = {
   supported_locales?: string[];
   allow_custom_locale?: boolean;
   requires_doctor_review?: boolean;
-  deepgram_enabled?: boolean;
   browser_speech_enabled?: boolean;
 };
 type ConclusionReportFile = {

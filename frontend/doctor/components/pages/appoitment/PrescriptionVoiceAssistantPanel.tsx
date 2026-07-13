@@ -1,9 +1,7 @@
-import type { VoiceTranscriptionResult } from "@/api/voice-transcription";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Mic, X } from "lucide-react";
-import DeepgramVoiceRecorder from "./DeepgramVoiceRecorder";
 import type { MedicineSource, VoiceLocale } from "./prescription-dialog-types";
 
 interface GuidedVoiceStep {
@@ -13,15 +11,7 @@ interface GuidedVoiceStep {
 }
 
 interface PrescriptionVoiceAssistantPanelProps {
-  appointmentId: string;
-  deepgramEnabled: boolean;
   browserVoiceEnabled: boolean;
-  voiceSubMode: "deepgram" | "browser";
-  setVoiceSubMode: (value: "deepgram" | "browser") => void;
-  onDeepgramResult: (result: VoiceTranscriptionResult) => void;
-  onDeepgramRecordingChange: (value: boolean) => void;
-  onDeepgramProcessingChange: (value: boolean) => void;
-  onDeepgramErrorChange: (value: string | null) => void;
   voiceLanguageOptions: Array<{ label: string; value: VoiceLocale }>;
   selectedSpeechLocale: VoiceLocale;
   setSelectedSpeechLocale: (value: VoiceLocale) => void;
@@ -32,13 +22,12 @@ interface PrescriptionVoiceAssistantPanelProps {
   onGuidedTranscriptChange: (step: number, value: string) => void;
   speechSupported: boolean;
   isListening: boolean;
-  isDeepgramProcessing: boolean;
   speechError: string | null;
   isSearchingMedicine: boolean;
   selectedMedicineName: string;
   selectedMedicineSource: MedicineSource;
   showCustomConfirm: { name: string } | null;
-  parseDraftPending: boolean;
+  isFinishing: boolean;
   onStartListening: () => void;
   onStopListening: () => void;
   onBack: () => void;
@@ -50,15 +39,7 @@ interface PrescriptionVoiceAssistantPanelProps {
 }
 
 export default function PrescriptionVoiceAssistantPanel({
-  appointmentId,
-  deepgramEnabled,
   browserVoiceEnabled,
-  voiceSubMode,
-  setVoiceSubMode,
-  onDeepgramResult,
-  onDeepgramRecordingChange,
-  onDeepgramProcessingChange,
-  onDeepgramErrorChange,
   voiceLanguageOptions,
   selectedSpeechLocale,
   setSelectedSpeechLocale,
@@ -69,13 +50,12 @@ export default function PrescriptionVoiceAssistantPanel({
   onGuidedTranscriptChange,
   speechSupported,
   isListening,
-  isDeepgramProcessing,
   speechError,
   isSearchingMedicine,
   selectedMedicineName,
   selectedMedicineSource,
   showCustomConfirm,
-  parseDraftPending,
+  isFinishing,
   onStartListening,
   onStopListening,
   onBack,
@@ -85,37 +65,17 @@ export default function PrescriptionVoiceAssistantPanel({
   onCustomConfirmAccept,
   onCustomConfirmDismiss,
 }: PrescriptionVoiceAssistantPanelProps) {
-  const showModeToggle = deepgramEnabled && browserVoiceEnabled;
   const browserSpeechAvailable = browserVoiceEnabled && speechSupported;
-  const controlsBusy = isListening || isDeepgramProcessing;
+  const controlsBusy = isListening || isFinishing;
 
   return (
     <div className="space-y-4">
       <div className="font-semibold text-xs text-muted-foreground border-b pb-1.5 flex items-center justify-between">
         <span>Voice Dictation Assistant</span>
         <span className="text-[10px] text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/20 font-semibold uppercase tracking-wider">
-          Voice Mode
+          Browser Voice
         </span>
       </div>
-
-      {showModeToggle && (
-        <div className="flex gap-1 p-1 bg-muted/30 rounded-xl border border-muted/50">
-          <button
-            type="button"
-            onClick={() => setVoiceSubMode("deepgram")}
-            className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${voiceSubMode === "deepgram" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            Deepgram Cloud AI
-          </button>
-          <button
-            type="button"
-            onClick={() => setVoiceSubMode("browser")}
-            className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${voiceSubMode === "browser" ? "bg-background text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            Browser Voice
-          </button>
-        </div>
-      )}
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground font-medium">
@@ -186,20 +146,7 @@ export default function PrescriptionVoiceAssistantPanel({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {voiceSubMode === "deepgram" && deepgramEnabled ? (
-            <DeepgramVoiceRecorder
-              appointmentId={appointmentId}
-              onResult={onDeepgramResult}
-              selectedLanguage={selectedSpeechLocale}
-              transcriptValue={guidedTranscripts[guidedStep] || ""}
-              onTranscriptChange={(value) =>
-                onGuidedTranscriptChange(guidedStep, value)
-              }
-              onRecordingChange={onDeepgramRecordingChange}
-              onProcessingChange={onDeepgramProcessingChange}
-              onErrorChange={onDeepgramErrorChange}
-            />
-          ) : browserSpeechAvailable ? (
+          {browserSpeechAvailable ? (
             <Button
               type="button"
               size="sm"
@@ -223,7 +170,7 @@ export default function PrescriptionVoiceAssistantPanel({
             </Button>
           ) : (
             <p className="text-[10px] text-red-500">
-              Browser voice is disabled from admin settings.
+              Browser voice is disabled or unsupported in this browser.
             </p>
           )}
         </div>
@@ -239,7 +186,7 @@ export default function PrescriptionVoiceAssistantPanel({
             }
             rows={3}
             className="text-xs resize-none rounded-lg"
-            placeholder="Speak now or type custom text here..."
+            placeholder="Only confirmed values are shown here."
             disabled={controlsBusy}
           />
         </div>
@@ -349,20 +296,19 @@ export default function PrescriptionVoiceAssistantPanel({
             onClick={onFinish}
             disabled={
               controlsBusy ||
-              parseDraftPending ||
               !Object.values(guidedTranscripts).some((val) =>
                 Boolean(val.trim()),
               )
             }
             className="h-8 text-xs font-medium"
           >
-            {parseDraftPending ? (
+            {isFinishing ? (
               <>
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                Parsing...
+                Applying...
               </>
             ) : (
-              "Prefill Form Fields"
+              "Apply to Form"
             )}
           </Button>
         )}

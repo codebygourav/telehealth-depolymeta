@@ -34,7 +34,10 @@ run_artisan_safe() {
 
 fix_permissions
 run_artisan_safe "storage:link"
-run_artisan_safe "config:clear"
-run_artisan_safe "cache:clear"
+
+if [ "${APP_ENV:-local}" != "production" ]; then
+    run_artisan_safe "config:clear"
+    run_artisan_safe "cache:clear"
+fi
 
 exec "$@"

@@ -140,13 +140,13 @@ return [
             'dictation' => [
                 'db_group' => 'prescription_dictation',
                 'label' => 'Prescription Dictation',
-                'description' => 'Manage AI voice dictation and transcription settings.',
+                'description' => 'Manage browser voice dictation settings for prescriptions.',
                 'fields' => [
                     'enabled' => [
                         'type' => 'toggle',
-                        'label' => 'Enable AI Dictation',
+                        'label' => 'Enable Voice Dictation',
                         'default' => false,
-                        'helper' => 'Enable or disable AI dictation features for prescriptions.',
+                        'helper' => 'Enable or disable browser-based voice dictation for prescriptions.',
                         'env_key' => 'PRESCRIPTION_DICTATION_ENABLED',
                         'is_public' => false,
                     ],
@@ -156,10 +156,10 @@ return [
                         'options' => [
                             'off' => 'Disabled',
                             'text' => 'Text Mode (Keyboard Input)',
-                            'speech' => 'Speech Mode (Voice Recording)',
+                            'speech' => 'Speech Mode (Browser Voice)',
                         ],
                         'default' => 'off',
-                        'helper' => 'Choose how doctors can dictate prescriptions (text input vs voice/speech recording).',
+                        'helper' => 'Choose how doctors can enter prescription drafts.',
                         'env_key' => 'PRESCRIPTION_DICTATION_INPUT_MODE',
                         'is_public' => false,
                     ],
@@ -181,7 +181,7 @@ return [
                             'pa-IN' => 'Punjabi',
                         ],
                         'default' => 'en-IN',
-                        'helper' => 'Default locale used when the doctor opens browser or Deepgram voice dictation.',
+                        'helper' => 'Default locale used when the doctor opens browser voice dictation.',
                         'env_key' => 'PRESCRIPTION_DICTATION_SPEECH_LOCALE',
                         'is_public' => false,
                     ],
@@ -200,87 +200,6 @@ return [
                         'default' => true,
                         'helper' => 'Keep this enabled if you may provide locales outside the default preset list.',
                         'env_key' => 'PRESCRIPTION_DICTATION_ALLOW_CUSTOM_LOCALE',
-                        'is_public' => false,
-                    ],
-                ],
-            ],
-        ],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Deepgram Speech-to-Text Settings
-    |--------------------------------------------------------------------------
-    */
-    'deepgram' => [
-        'label' => 'Deepgram Voice AI',
-        'icon' => 'heroicon-o-microphone',
-        'description' => 'Deepgram cloud speech-to-text settings.',
-        'sections' => [
-            'connection' => [
-                'label' => 'API Connection',
-                'description' => 'Configure your Deepgram API credentials. Get your key from console.deepgram.com.',
-                'fields' => [
-                    'enabled' => [
-                        'type' => 'toggle',
-                        'label' => 'Enable Deepgram STT',
-                        'default' => false,
-                        'helper' => 'When enabled, doctors can record voice and Deepgram will transcribe it into prescription text.',
-                        'env_key' => 'DEEPGRAM_ENABLED',
-                        'is_public' => false,
-                    ],
-                    'api_key' => [
-                        'type' => 'password',
-                        'label' => 'Deepgram API Key',
-                        'placeholder' => 'Enter your Deepgram API key',
-                        'helper' => 'Your secret key from console.deepgram.com. Never share this.',
-                        'env_key' => 'DEEPGRAM_API_KEY',
-                        'is_public' => false,
-                    ],
-                ],
-            ],
-            'transcription' => [
-                'label' => 'Transcription Settings',
-                'description' => 'Control the quality and language of transcriptions.',
-                'fields' => [
-                    'model' => [
-                        'type' => 'select',
-                        'label' => 'Transcription Model',
-                        'options' => [
-                            'nova-2' => 'Nova-2 (Best — Recommended)',
-                            'nova'   => 'Nova',
-                            'base'   => 'Base (Faster, Less Accurate)',
-                        ],
-                        'default' => 'nova-2',
-                        'helper' => 'Nova-2 gives the best accuracy for medical terms.',
-                        'env_key' => 'DEEPGRAM_MODEL',
-                        'is_public' => false,
-                    ],
-                    'language' => [
-                        'type' => 'select',
-                        'label' => 'Default Language',
-                        'options' => [
-                            'en'    => 'English',
-                            'hi'    => 'Hindi',
-                            'multi' => 'Multi-language (Auto Detect)',
-                        ],
-                        'default' => 'en',
-                        'helper' => 'Default language for voice recognition. Doctors can override per session.',
-                        'env_key' => 'DEEPGRAM_LANGUAGE',
-                        'is_public' => false,
-                    ],
-                ],
-            ],
-            'budget' => [
-                'label' => 'Usage & Budget',
-                'description' => 'Track and control monthly usage. Deepgram charges ~$0.0043 per minute.',
-                'fields' => [
-                    'monthly_budget_minutes' => [
-                        'type' => 'number',
-                        'label' => 'Monthly Budget (minutes)',
-                        'placeholder' => '500',
-                        'helper' => 'Set a soft monthly limit in minutes. 0 = no limit. Used only for dashboard tracking.',
-                        'env_key' => 'DEEPGRAM_MONTHLY_BUDGET_MINUTES',
                         'is_public' => false,
                     ],
                 ],
