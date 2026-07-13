@@ -79,18 +79,24 @@ services:
   # ==============================
   db:
     image: mysql:8
-
     container_name: tele-db
-
+    # Resource limits to stay within Hostinger 75% CPU cap and limit RAM/I/O
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"   # 75% of a single core
+          memory: 2g       # adjust as needed
+        reservations:
+          memory: 1g
+    # Mount a custom MySQL config to tune performance and avoid heavy queries
+    volumes:
+      - tele_db_data:/var/lib/mysql
+      - ./my.cnf:/etc/mysql/conf.d/custom.cnf
     environment:
       MYSQL_DATABASE: cmc_telehealth
       MYSQL_USER: cmc_user
       MYSQL_PASSWORD: cmc_pass
       MYSQL_ROOT_PASSWORD: root
-
-    volumes:
-      - tele_db_data:/var/lib/mysql
-
     restart: unless-stopped
 
   phpmyadmin:
