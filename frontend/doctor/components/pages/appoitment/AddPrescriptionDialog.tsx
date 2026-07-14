@@ -1230,12 +1230,7 @@ export default function AddPrescriptionDialog({
 
     recognition.onend = () => {
       const shouldPrefill = shouldParseAfterStopRef.current;
-      const spokenTranscript = cleanDuplicateWords(
-        combineTranscript(
-          liveTranscriptRef.current,
-          transcriptFinalRef.current,
-        ),
-      );
+      const spokenTranscript = cleanDuplicateWords(liveTranscriptRef.current);
 
       shouldParseAfterStopRef.current = false;
       setIsListening(false);
@@ -1269,7 +1264,7 @@ export default function AddPrescriptionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-h-[92vh] sm:max-w-5xl! rounded-2xl p-0 overflow-hidden flex flex-col gap-0! fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <DialogContent className="w-[95vw] max-h-[92vh] sm:max-w-5xl! rounded-lg p-0 overflow-hidden flex flex-col gap-0! fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           {toastMessage && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-100 animate-in fade-in slide-in-from-top-4 duration-300">
               <div
@@ -1288,25 +1283,11 @@ export default function AddPrescriptionDialog({
           )}
 
           <DialogHeader className="border-b px-5 py-4 pr-14 sm:pr-20 shrink-0">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex items-start justify-between gap-1 flex-wrap">
               <div className="space-y-1">
                 <DialogTitle className="text-lg sm:text-xl font-bold">
                   Add Prescription
                 </DialogTitle>
-                <DialogDescription className="sr-only">
-                  {entryMode === "voice"
-                    ? "Dictate medicine details. Unknown medicine names will be saved as custom medicines."
-                    : entryMode === "manual"
-                      ? "Fill in medicine details. Unknown medicine names will be saved as custom medicines."
-                      : "Choose how you want to add this prescription."}
-                </DialogDescription>
-                <p className="text-xs text-muted-foreground">
-                  {entryMode === "voice"
-                    ? "Dictate medicine details. Unknown medicine names will be saved as custom medicines."
-                    : entryMode === "manual"
-                      ? "Fill in medicine details. Unknown medicine names will be saved as custom medicines."
-                      : "Choose how you want to add this prescription."}
-                </p>
               </div>
 
               {entryMode !== null && dictationEnabled && (
@@ -1327,7 +1308,7 @@ export default function AddPrescriptionDialog({
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6 min-h-0 bg-muted/5">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0 bg-muted/5">
             <form onSubmit={(e) => e.preventDefault()} className="h-full">
               {entryMode === null ? (
                 <PrescriptionEntryModeSelector
@@ -1340,7 +1321,7 @@ export default function AddPrescriptionDialog({
                 />
               ) : (
                 <div className="space-y-4">
-                  <div className="flex md:hidden border mb-4 bg-muted/20 p-1 rounded-xl">
+                  <div className="flex md:hidden border mb-4 bg-muted/20 p-1 rounded-lg sticky top-0 z-10 bg-white">
                     <button
                       type="button"
                       onClick={() => setMobileTab("form")}
@@ -1364,9 +1345,9 @@ export default function AddPrescriptionDialog({
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
                     <div
-                      className={`md:col-span-7 bg-background border rounded-2xl p-4 sm:p-5 shadow-sm ${mobileTab === "form" ? "block" : "hidden md:block"}`}
+                      className={`md:col-span-7 bg-background border rounded-lg p-2 sm:p-5 shadow-sm ${mobileTab === "form" ? "block" : "hidden md:block"}`}
                     >
                       {entryMode === "voice" ? (
                         editingIndex !== null ? (
