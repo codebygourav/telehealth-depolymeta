@@ -1308,6 +1308,32 @@ export default function AddPrescriptionDialog({
             </div>
           </DialogHeader>
 
+          {entryMode !== null && (
+            <div className="flex md:hidden border-b bg-background px-4 py-3 shrink-0">
+              <div className="flex w-full bg-muted/20 p-1 rounded-lg border">
+                <button
+                  type="button"
+                  onClick={() => setMobileTab("form")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg text-center transition-all ${mobileTab === "form" ? "bg-primary text-white shadow-sm" : "text-muted-foreground"}`}
+                >
+                  {entryMode === "voice" ? "Voice Assistant" : "Manual Form"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileTab("list")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg text-center transition-all relative ${mobileTab === "list" ? "bg-primary text-white shadow-sm" : "text-muted-foreground"}`}
+                >
+                  Prescription List
+                  {addedMedicines.length > 0 && (
+                    <span className="absolute top-1/2 -translate-y-1/2 right-2.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow-sm">
+                      {addedMedicines.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0 bg-muted/5">
             <form onSubmit={(e) => e.preventDefault()} className="h-full">
               {entryMode === null ? (
@@ -1321,30 +1347,6 @@ export default function AddPrescriptionDialog({
                 />
               ) : (
                 <div className="space-y-4">
-                  <div className="flex md:hidden border mb-4 bg-muted/20 p-1 rounded-lg sticky top-0 z-10 bg-white">
-                    <button
-                      type="button"
-                      onClick={() => setMobileTab("form")}
-                      className={`flex-1 py-2 text-xs font-bold rounded-lg text-center transition-all ${mobileTab === "form" ? "bg-primary text-white shadow-sm" : "text-muted-foreground"}`}
-                    >
-                      {entryMode === "voice"
-                        ? "Voice Assistant"
-                        : "Manual Form"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMobileTab("list")}
-                      className={`flex-1 py-2 text-xs font-bold rounded-lg text-center transition-all relative ${mobileTab === "list" ? "bg-primary text-white shadow-sm" : "text-muted-foreground"}`}
-                    >
-                      Prescription List
-                      {addedMedicines.length > 0 && (
-                        <span className="absolute top-1/2 -translate-y-1/2 right-2.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow-sm">
-                          {addedMedicines.length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
                     <div
                       className={`md:col-span-7 bg-background border rounded-lg p-2 sm:p-5 shadow-sm ${mobileTab === "form" ? "block" : "hidden md:block"}`}
