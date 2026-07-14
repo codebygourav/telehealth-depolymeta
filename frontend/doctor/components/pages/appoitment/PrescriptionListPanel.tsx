@@ -19,7 +19,7 @@ interface PrescriptionListPanelProps {
     frequencyOptions: Array<{ label: string; value: string }>;
     mealOptions: Array<{ label: string; value: string }>;
     mobileTab: "form" | "list";
-    
+
     // New doctor general notes props
     generalNotes: string;
     onGeneralNotesChange: (value: string) => void;
@@ -61,9 +61,9 @@ export default function PrescriptionListPanel({
         rec.continuous = true;
         rec.interimResults = true;
         rec.lang = "en-IN";
-        
+
         const initialText = generalNotes.trim();
-        
+
         rec.onresult = (event: any) => {
             let finalTrans = "";
             let interimTrans = "";
@@ -186,11 +186,10 @@ export default function PrescriptionListPanel({
                         <button
                             type="button"
                             onClick={toggleListeningNotes}
-                            className={`p-1 rounded-full border transition-all ${
-                                isListeningNotes
+                            className={`p-1 rounded-full border transition-all ${isListeningNotes
                                     ? "bg-red-500 text-white border-red-500 animate-pulse"
                                     : "bg-secondary hover:bg-secondary/80 text-muted-foreground"
-                            }`}
+                                }`}
                             title="Dictate general notes"
                         >
                             <Mic className="h-3.5 w-3.5" />
@@ -238,25 +237,25 @@ export default function PrescriptionListPanel({
 }
 
 function cleanDuplicateWords(text: string): string {
-  if (!text) return "";
-  
-  let cleaned = text.replace(/\s+/g, " ").trim();
+    if (!text) return "";
 
-  let prev = "";
-  while (cleaned !== prev) {
-    prev = cleaned;
-    cleaned = cleaned.replace(/(.{5,200?})\s*\1/gi, "$1");
-  }
+    let cleaned = text.replace(/\s+/g, " ").trim();
 
-  const words = cleaned.split(/\s+/);
-  const result: string[] = [];
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    if (i > 0 && word.toLowerCase() === words[i - 1].toLowerCase()) {
-      continue;
+    let prev = "";
+    while (cleaned !== prev) {
+        prev = cleaned;
+        cleaned = cleaned.replace(/(.{5,})\s*\1/gi, "$1");
     }
-    result.push(word);
-  }
-  
-  return result.join(" ").trim();
+
+    const words = cleaned.split(/\s+/);
+    const result: string[] = [];
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        if (i > 0 && word.toLowerCase() === words[i - 1].toLowerCase()) {
+            continue;
+        }
+        result.push(word);
+    }
+
+    return result.join(" ").trim();
 }
