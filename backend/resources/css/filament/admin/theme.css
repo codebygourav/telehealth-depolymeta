@@ -3567,3 +3567,12 @@ input[type="checkbox"]:checked::after {
 .fi-toggle-on {
     background: green;
 }
+
+.module-documents-grid-table .fi-ta-record-content-ctn,
+.module-documents-grid-table a.fi-ta-record-content {
+    padding: 0 !important;
+}
+
+.module-documents-grid-table .fi-ta-record.fi-clickable {
+    box-shadow: none !important;
+}

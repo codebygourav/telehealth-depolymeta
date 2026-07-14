@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Medicines;
 
-use App\Filament\Resources\Medicines\Pages\ListMedicines;
+use App\Filament\Resources\Medicines\Pages\{CreateMedicine, EditMedicine, ListMedicines};
 use App\Filament\Resources\Medicines\Schemas\MedicineForm;
 use App\Filament\Resources\Medicines\Tables\MedicinesTable;
 use App\Models\Medicine;
@@ -60,6 +60,8 @@ class MedicineResource extends Resource
     {
         return [
             'index' => ListMedicines::route('/'),
+            'create' => CreateMedicine::route('/create'),
+            'edit' => EditMedicine::route('/{record}/edit'),
         ];
     }
 

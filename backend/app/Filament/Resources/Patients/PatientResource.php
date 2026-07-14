@@ -27,7 +27,7 @@ class PatientResource extends Resource
     protected static ?string $model = Patient::class;
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-circle';
     protected static string|BackedEnum|null $activeNavigationIcon = 'heroicon-s-user-circle';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
     protected static ?string $recordTitleAttribute = 'Patient';
 
     public static function shouldRegisterNavigation(): bool

@@ -412,7 +412,7 @@ export default function PrescriptionTab({
   if (!hasPrescriptionData && !hasConclusionData) {
     return (
       <>
-        <div className="flex justify-end gap-2 mt-4 mb-4">
+        <div className="flex flex-wrap items-center justify-end gap-2 mt-4 mb-4 w-full">
           <Button
             type="button"
             variant="outline"
@@ -472,7 +472,7 @@ export default function PrescriptionTab({
 
   return (
     <div className="space-y-4 sm:space-y-5 md:space-y-6">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2 w-full">
         <Button
           type="button"
           variant="outline"

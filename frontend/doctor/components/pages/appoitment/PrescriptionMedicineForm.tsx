@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Stethoscope, X } from "lucide-react";
+import { Search, Stethoscope, X, Calendar, Clock, BookOpen, AlertCircle } from "lucide-react";
 import type { MedicineItem, MedicineSource, MedicineStatus, PrescriptionForm } from "./prescription-dialog-types";
 
 type TimingFieldName = "timing_morning" | "timing_afternoon" | "timing_evening" | "timing_night";
@@ -23,9 +23,13 @@ interface PrescriptionMedicineFormProps {
     medicineStatus: MedicineStatus | null;
     errors: Record<string, { message?: string } | undefined>;
     medicationType: string | undefined;
+    strength: string | undefined;
     dosage: string | undefined;
     frequency: string | undefined;
     meal: PrescriptionForm["meal"] | undefined;
+    applicationArea: string | undefined;
+    remarks: string | undefined;
+    followUpNote: string | undefined;
     timingMorning: boolean | undefined;
     timingAfternoon: boolean | undefined;
     timingEvening: boolean | undefined;
@@ -34,18 +38,27 @@ interface PrescriptionMedicineFormProps {
     endDate: string;
     instructions: string | undefined;
     medicationTypeOptions: OptionItem[];
+    strengthOptions: OptionItem[];
     frequencyOptions: OptionItem[];
     mealOptions: OptionItem[];
     dosageOptions: OptionItem[];
-    visibleFields?: Array<"medicine_name" | "medication_type" | "dosage" | "frequency" | "meal">;
+    applicationAreaOptions: OptionItem[];
+    durationOptions: OptionItem[];
+    fieldRules: string[];
+    visibleFields?: Array<"medicine_name" | "medication_type" | "strength" | "dosage" | "frequency" | "meal" | "application_area" | "remarks" | "follow_up_note" | "timing" | "duration">;
     mode?: "full" | "compact";
     onSelectMedicine: (medicine: MedicineItem) => void;
     onUseCustomMedicine: (value: string) => void;
     onClearSelectedMedicine: () => void;
     onMedicationTypeChange: (value: string) => void;
+    onStrengthChange: (value: string) => void;
     onDosageChange: (value: string) => void;
     onFrequencyChange: (value: string) => void;
     onMealChange: (value: string) => void;
+    onApplicationAreaChange: (value: string) => void;
+    onDurationPresetChange: (value: string) => void;
+    onRemarksChange: (value: string) => void;
+    onFollowUpNoteChange: (value: string) => void;
     onTimingChange: (name: TimingFieldName, value: boolean) => void;
     onStartDateChange: (value: string) => void;
     onEndDateChange: (value: string) => void;
@@ -70,9 +83,13 @@ export default function PrescriptionMedicineForm({
     medicineStatus,
     errors,
     medicationType,
+    strength,
     dosage,
     frequency,
     meal,
+    applicationArea,
+    remarks,
+    followUpNote,
     timingMorning,
     timingAfternoon,
     timingEvening,
@@ -81,18 +98,27 @@ export default function PrescriptionMedicineForm({
     endDate,
     instructions,
     medicationTypeOptions,
+    strengthOptions,
     frequencyOptions,
     mealOptions,
     dosageOptions,
-    visibleFields = ["medicine_name", "medication_type", "dosage", "frequency", "meal"],
+    applicationAreaOptions,
+    durationOptions,
+    fieldRules,
+    visibleFields = ["medicine_name", "medication_type", "strength", "dosage", "frequency", "meal", "application_area", "remarks", "follow_up_note", "timing", "duration"],
     mode = "full",
     onSelectMedicine,
     onUseCustomMedicine,
     onClearSelectedMedicine,
     onMedicationTypeChange,
+    onStrengthChange,
     onDosageChange,
     onFrequencyChange,
     onMealChange,
+    onApplicationAreaChange,
+    onDurationPresetChange,
+    onRemarksChange,
+    onFollowUpNoteChange,
     onTimingChange,
     onStartDateChange,
     onEndDateChange,
@@ -104,13 +130,14 @@ export default function PrescriptionMedicineForm({
     fullWidthButton = false,
 }: PrescriptionMedicineFormProps) {
     const showAdvancedFields = mode === "full";
-    const shouldShowField = (field: "medicine_name" | "medication_type" | "dosage" | "frequency" | "meal") =>
-        visibleFields.includes(field);
+    
+    const shouldShowField = (field: typeof visibleFields[number]) =>
+        visibleFields.includes(field) && (fieldRules.length === 0 || fieldRules.includes(field));
 
     return (
-        <div className="space-y-4">
-            <div className="font-semibold text-xs text-muted-foreground border-b pb-1.5 flex items-center justify-between">
-                <span>{title}</span>
+        <div className="space-y-5 bg-background border rounded-2xl p-4 sm:p-5 shadow-sm">
+            <div className="font-semibold text-xs text-muted-foreground border-b pb-2 flex items-center justify-between">
+                <span className="font-bold text-foreground text-sm">{title}</span>
                 {editingIndex !== null && (
                     <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold uppercase tracking-wider">
                         Editing Item #{editingIndex + 1}
@@ -118,18 +145,22 @@ export default function PrescriptionMedicineForm({
                 )}
             </div>
 
-            {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
+            {subtitle && <p className="text-[11px] text-muted-foreground -mt-2 leading-relaxed">{subtitle}</p>}
 
+            {/* Medicine Search Section */}
             {shouldShowField("medicine_name") && (
                 <div className="space-y-1 relative">
-                    <Label className="text-xs font-semibold">Medicine Name *</Label>
+                    <Label className="text-xs font-semibold text-foreground">Medicine Name *</Label>
                     {selectedMedicineName ? (
-                        <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-1.5">
+                        <div className="flex items-center justify-between rounded-xl border bg-secondary/30 px-3.5 py-2.5 hover:border-muted-foreground/30 transition shadow-inner">
                             <div className="space-y-0.5">
                                 <p className="text-xs font-bold text-foreground">{selectedMedicineName}</p>
-                                <p className="text-[10px] text-muted-foreground font-medium">
+                                <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                                    <span className={`h-1.5 w-1.5 rounded-full ${
+                                        selectedMedicineSource === "inventory" ? "bg-green-500" : selectedMedicineSource === "doctor_added" ? "bg-amber-500" : "bg-blue-500"
+                                    }`} />
                                     {selectedMedicineSource === "inventory"
-                                        ? "Main Medicine Inventory"
+                                        ? "Admin Medicine Master"
                                         : selectedMedicineSource === "doctor_added"
                                             ? "Doctor-added Database"
                                             : "Custom Medicine Name"}
@@ -138,52 +169,55 @@ export default function PrescriptionMedicineForm({
                             <button
                                 type="button"
                                 onClick={onClearSelectedMedicine}
-                                className="rounded-md p-1 hover:bg-muted text-muted-foreground transition-colors"
+                                className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                             >
-                                <X className="h-3.5 w-3.5" />
+                                <X className="h-4 w-4" />
                             </button>
                         </div>
                     ) : (
                         <div className="space-y-1">
                             <div className="relative">
-                                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     placeholder="Search database or type custom medicine name..."
                                     value={searchQuery}
                                     onChange={(event) => setSearchQuery(event.target.value)}
-                                    className="pl-8 h-8.5 text-xs rounded-lg"
+                                    className="pl-9 h-10 text-xs rounded-xl"
                                 />
                             </div>
 
                             {searchQuery.trim() !== "" && (
-                                <div className="max-h-48 overflow-y-auto rounded-lg border bg-background text-xs shadow-lg absolute z-20 w-full left-0 mt-1">
+                                <div className="max-h-52 overflow-y-auto rounded-xl border bg-background text-xs shadow-xl absolute z-20 w-full left-0 mt-1 ring-1 ring-black/5 animate-in fade-in slide-in-from-top-1 duration-150">
                                     <button
                                         key="use-custom-btn"
                                         type="button"
                                         onClick={() => onUseCustomMedicine(searchQuery)}
-                                        className="flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-muted/40 font-semibold text-primary"
+                                        className="flex w-full items-center justify-between border-b px-3.5 py-2.5 text-left hover:bg-muted/40 font-semibold text-primary"
                                     >
                                         <span>Use custom: &quot;{searchQuery.trim()}&quot;</span>
-                                        <Stethoscope className="h-3.5 w-3.5" />
+                                        <Stethoscope className="h-4 w-4 text-primary" />
                                     </button>
                                     {isSearchingMedicine ? (
-                                        <div className="px-3 py-2.5 text-muted-foreground text-[11px]">Searching database...</div>
+                                        <div className="px-3.5 py-3 text-muted-foreground text-[11px] flex items-center gap-2">
+                                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                            Searching database...
+                                        </div>
                                     ) : medicineList.length > 0 ? (
                                         medicineList.map((medicine) => (
                                             <button
                                                 key={`${medicine.source}-${medicine.id}`}
                                                 type="button"
                                                 onClick={() => onSelectMedicine(medicine)}
-                                                className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-muted/40 transition-colors"
+                                                className="flex w-full items-center justify-between px-3.5 py-2.5 text-left hover:bg-muted/40 transition-colors"
                                             >
-                                                <span>{medicine.name}</span>
-                                                <span className="text-[10px] text-muted-foreground bg-muted px-1 py-0.5 rounded">
+                                                <span className="font-medium text-foreground">{medicine.name}</span>
+                                                <span className="text-[9px] text-muted-foreground bg-muted px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
                                                     {medicine.source === "inventory" ? "stock" : "custom"}
                                                 </span>
                                             </button>
                                         ))
                                     ) : (
-                                        <div className="px-3 py-2.5 text-muted-foreground text-[11px]">No medicines found. Use &quot;Use custom&quot; above.</div>
+                                        <div className="px-3.5 py-3 text-muted-foreground text-[11px]">No medicines found. Use &quot;Use custom&quot; above.</div>
                                     )}
                                 </div>
                             )}
@@ -197,12 +231,13 @@ export default function PrescriptionMedicineForm({
 
             {medicineStatus && <MedicineStatusCard {...medicineStatus} />}
 
-            <div className="grid grid-cols-2 gap-3">
+            {/* Core Medicine Properties - Grid is fully responsive */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {shouldShowField("medication_type") && (
                     <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Medication Type *</Label>
+                        <Label className="text-xs font-semibold text-foreground">Medication Type *</Label>
                         <Select value={medicationType} onValueChange={onMedicationTypeChange}>
-                            <SelectTrigger className="h-8.5 text-xs rounded-lg">
+                            <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -219,11 +254,33 @@ export default function PrescriptionMedicineForm({
                     </div>
                 )}
 
+                {shouldShowField("strength") && (
+                    <div className="space-y-1">
+                        <Label className="text-xs font-semibold text-foreground">Strength</Label>
+                        {strengthOptions.length > 0 ? (
+                            <Select value={strength || ""} onValueChange={onStrengthChange}>
+                                <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                                    <SelectValue placeholder="Select strength" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {strengthOptions.map((item) => (
+                                        <SelectItem key={item.value} value={item.value} className="text-xs">
+                                            {item.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <Input value={strength || ""} onChange={(event) => onStrengthChange(event.target.value)} placeholder="e.g. 500 mg" className="h-9.5 text-xs rounded-xl" />
+                        )}
+                    </div>
+                )}
+
                 {shouldShowField("dosage") && (
                     <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Dosage *</Label>
+                        <Label className="text-xs font-semibold text-foreground">Dosage *</Label>
                         <Select value={dosage} onValueChange={onDosageChange}>
-                            <SelectTrigger className="h-8.5 text-xs rounded-lg">
+                            <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
                                 <SelectValue placeholder="Select dosage" />
                             </SelectTrigger>
                             <SelectContent>
@@ -241,12 +298,13 @@ export default function PrescriptionMedicineForm({
                 )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            {/* Frequency & Meal - Grid is responsive */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {shouldShowField("frequency") && (
                     <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Frequency *</Label>
+                        <Label className="text-xs font-semibold text-foreground">Frequency *</Label>
                         <Select value={frequency} onValueChange={onFrequencyChange}>
-                            <SelectTrigger className="h-8.5 text-xs rounded-lg">
+                            <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
                                 <SelectValue placeholder="Select frequency" />
                             </SelectTrigger>
                             <SelectContent>
@@ -265,9 +323,9 @@ export default function PrescriptionMedicineForm({
 
                 {shouldShowField("meal") && (
                     <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Meal Relation *</Label>
+                        <Label className="text-xs font-semibold text-foreground">Meal Relation *</Label>
                         <Select value={meal || ""} onValueChange={onMealChange}>
-                            <SelectTrigger className="h-8.5 text-xs rounded-lg">
+                            <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
                                 <SelectValue placeholder="Select meal timing" />
                             </SelectTrigger>
                             <SelectContent>
@@ -286,56 +344,131 @@ export default function PrescriptionMedicineForm({
             </div>
 
             {showAdvancedFields && (
-                <>
+                <div className="space-y-5 pt-3 border-t border-dashed border-border/80">
+                    {/* Timings Picker (if configured in rules) */}
+                    {shouldShowField("timing") && (
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                Timings
+                            </Label>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {[
+                                    { label: "Morning", name: "timing_morning" as const, val: timingMorning },
+                                    { label: "Afternoon", name: "timing_afternoon" as const, val: timingAfternoon },
+                                    { label: "Evening", name: "timing_evening" as const, val: timingEvening },
+                                    { label: "Night", name: "timing_night" as const, val: timingNight },
+                                ].map((item) => (
+                                    <button
+                                        key={item.label}
+                                        type="button"
+                                        onClick={() => onTimingChange(item.name, !item.val)}
+                                        className={`py-2 px-3 text-[11px] font-semibold border rounded-xl text-center transition-all ${item.val
+                                                ? "bg-primary text-primary-foreground border-primary shadow"
+                                                : "bg-background text-muted-foreground border-border hover:bg-muted/50"
+                                            }`}
+                                    >
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Application Area & Duration Presets */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {shouldShowField("application_area") && applicationAreaOptions.length > 0 && (
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold text-foreground">Application Area</Label>
+                                <Select value={applicationArea || ""} onValueChange={onApplicationAreaChange}>
+                                    <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                                        <SelectValue placeholder="Select area" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {applicationAreaOptions.map((item) => (
+                                            <SelectItem key={item.value} value={item.value} className="text-xs">
+                                                {item.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {shouldShowField("duration") && durationOptions.length > 0 && (
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold text-foreground">Duration Option</Label>
+                                <Select value="" onValueChange={onDurationPresetChange}>
+                                    <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                                        <SelectValue placeholder="Use admin duration" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {durationOptions.map((item) => (
+                                            <SelectItem key={item.value} value={item.value} className="text-xs">
+                                                {item.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Duration Range (Calendar input) */}
+                    {shouldShowField("duration") && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Start Date
+                                </Label>
+                                <Input type="date" min={new Date().toISOString().split("T")[0]} value={startDate} onChange={(event) => onStartDateChange(event.target.value)} className="h-9.5 text-xs rounded-xl" />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    End Date
+                                </Label>
+                                <Input type="date" min={startDate || new Date().toISOString().split("T")[0]} value={endDate} onChange={(event) => onEndDateChange(event.target.value)} className="h-9.5 text-xs rounded-xl" />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Standard Instructions */}
                     <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold">Timings</Label>
-                        <div className="grid grid-cols-4 gap-2">
-                            {[
-                                { label: "Morning", name: "timing_morning" as const, val: timingMorning },
-                                { label: "Afternoon", name: "timing_afternoon" as const, val: timingAfternoon },
-                                { label: "Evening", name: "timing_evening" as const, val: timingEvening },
-                                { label: "Night", name: "timing_night" as const, val: timingNight },
-                            ].map((item) => (
-                                <button
-                                    key={item.label}
-                                    type="button"
-                                    onClick={() => onTimingChange(item.name, !item.val)}
-                                    className={`py-1.5 px-2 text-[10px] sm:text-[11px] font-semibold border rounded-lg text-center transition-all ${item.val
-                                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                            : "bg-background text-muted-foreground border-border hover:bg-muted/50"
-                                        }`}
-                                >
-                                    {item.label}
-                                </button>
-                            ))}
-                        </div>
+                        <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                            <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                            Instructions / Notes
+                        </Label>
+                        <Textarea rows={2} value={instructions || ""} onChange={(event) => onInstructionsChange(event.target.value)} placeholder="e.g. Take after food with warm water" className="text-xs resize-none rounded-xl" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                            <Label className="text-xs font-semibold">Start Date</Label>
-                            <Input type="date" min={new Date().toISOString().split("T")[0]} value={startDate} onChange={(event) => onStartDateChange(event.target.value)} className="h-8.5 text-xs rounded-lg" />
+                    {/* Remarks (Conditional) */}
+                    {shouldShowField("remarks") && (
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-foreground">Additional Remarks</Label>
+                            <Textarea rows={2} value={remarks || ""} onChange={(event) => onRemarksChange(event.target.value)} placeholder="Any extra medicine-specific remarks" className="text-xs resize-none rounded-xl" />
                         </div>
-                        <div className="space-y-1">
-                            <Label className="text-xs font-semibold">End Date</Label>
-                            <Input type="date" min={startDate || new Date().toISOString().split("T")[0]} value={endDate} onChange={(event) => onEndDateChange(event.target.value)} className="h-8.5 text-xs rounded-lg" />
-                        </div>
-                    </div>
+                    )}
 
-                    <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Instructions / Notes</Label>
-                        <Textarea rows={2} value={instructions || ""} onChange={(event) => onInstructionsChange(event.target.value)} placeholder="e.g. Take after food with warm water" className="text-xs resize-none rounded-lg" />
-                    </div>
-                </>
+                    {/* Medicine specific Follow-up Note (Conditional) */}
+                    {shouldShowField("follow_up_note") && (
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold text-foreground">Patient Follow-up Note for PDF</Label>
+                            <Textarea rows={2} value={followUpNote || ""} onChange={(event) => onFollowUpNoteChange(event.target.value)} placeholder="e.g. Review after 3 days if fever persists" className="text-xs resize-none rounded-xl" />
+                        </div>
+                    )}
+                </div>
             )}
 
-            <div className="flex gap-2 pt-2 border-t mt-3">
+            {/* Bottom Submit Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-3 border-t mt-4">
                 {onCancel && (
-                    <Button type="button" variant="outline" onClick={onCancel} className="h-9 text-xs rounded-lg">
+                    <Button type="button" variant="outline" onClick={onCancel} className="h-10 text-xs rounded-xl order-2 sm:order-1 sm:flex-1">
                         {cancelLabel}
                     </Button>
                 )}
-                <Button type="button" onClick={onSubmit} className={`${fullWidthButton ? "w-full" : "flex-1"} h-9 text-xs rounded-lg font-semibold shadow-sm`}>
+                <Button type="button" onClick={onSubmit} className={`${fullWidthButton ? "w-full" : "flex-1"} h-10 text-xs rounded-xl font-semibold shadow-sm order-1 sm:order-2 bg-primary hover:bg-primary/95 text-primary-foreground`}>
                     {submitLabel}
                 </Button>
             </div>
@@ -348,16 +481,21 @@ function MedicineStatusCard({
     title,
     description,
 }: MedicineStatus) {
-    const toneClasses = {
-        green: "border-green-200 bg-green-50 text-green-800",
-        amber: "border-amber-200 bg-amber-50 text-amber-800",
-        blue: "border-blue-200 bg-blue-50 text-blue-800",
+    const cardStyles = {
+        green: "border-green-200 bg-green-50/50 text-green-950 shadow-sm",
+        amber: "border-amber-200 bg-amber-50/50 text-amber-950 shadow-sm",
+        blue: "border-blue-200 bg-blue-50/50 text-blue-950 shadow-sm",
     }[tone];
 
     return (
-        <div className={`rounded-2xl border p-4 ${toneClasses}`}>
-            <p className="text-sm font-semibold">{title}</p>
-            <p className="mt-1 text-xs sm:text-sm">{description}</p>
+        <div className={`rounded-xl border p-3.5 space-y-1 flex items-start gap-3 ${cardStyles}`}>
+            <AlertCircle className={`h-4 w-4 shrink-0 mt-0.5 ${
+                tone === "green" ? "text-green-600" : tone === "amber" ? "text-amber-600" : "text-blue-600"
+            }`} />
+            <div className="space-y-0.5">
+                <p className="text-xs font-bold leading-normal">{title}</p>
+                <p className="text-[10px] sm:text-xs leading-normal opacity-90">{description}</p>
+            </div>
         </div>
     );
 }

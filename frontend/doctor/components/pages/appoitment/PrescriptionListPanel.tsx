@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Stethoscope, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Stethoscope, X, Mic } from "lucide-react";
+import { useState, useRef } from "react";
 import type { AddedMedicine, PrescriptionForm } from "./prescription-dialog-types";
 
 interface PrescriptionListPanelProps {
@@ -17,6 +19,10 @@ interface PrescriptionListPanelProps {
     frequencyOptions: Array<{ label: string; value: string }>;
     mealOptions: Array<{ label: string; value: string }>;
     mobileTab: "form" | "list";
+    
+    // New doctor general notes props
+    generalNotes: string;
+    onGeneralNotesChange: (value: string) => void;
 }
 
 export default function PrescriptionListPanel({
@@ -32,7 +38,62 @@ export default function PrescriptionListPanel({
     frequencyOptions,
     mealOptions,
     mobileTab,
+    generalNotes,
+    onGeneralNotesChange,
 }: PrescriptionListPanelProps) {
+    const [isListeningNotes, setIsListeningNotes] = useState(false);
+    const recognitionRef = useRef<any>(null);
+
+    const toggleListeningNotes = () => {
+        if (isListeningNotes) {
+            recognitionRef.current?.stop();
+            setIsListeningNotes(false);
+            return;
+        }
+
+        const SpeechRecognitionApi = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognitionApi) {
+            alert("This browser does not support voice dictation.");
+            return;
+        }
+
+        const rec = new SpeechRecognitionApi();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = "en-IN";
+        
+        let finalTrans = "";
+        rec.onresult = (event: any) => {
+            let interimTrans = "";
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTrans += transcript + " ";
+                } else {
+                    interimTrans += transcript;
+                }
+            }
+            const spoken = (finalTrans + interimTrans).trim();
+            if (spoken) {
+                // Append or set the spoken text
+                const baseText = generalNotes.trim();
+                onGeneralNotesChange(baseText ? `${baseText} ${spoken}` : spoken);
+            }
+        };
+
+        rec.onerror = () => {
+            setIsListeningNotes(false);
+        };
+
+        rec.onend = () => {
+            setIsListeningNotes(false);
+        };
+
+        recognitionRef.current = rec;
+        setIsListeningNotes(true);
+        rec.start();
+    };
+
     return (
         <div className={`md:col-span-5 bg-background border rounded-2xl p-4 sm:p-5 shadow-sm space-y-4 self-start ${mobileTab === "list" ? "block" : "hidden md:block"}`}>
             <div className="font-semibold text-xs text-muted-foreground border-b pb-2 flex items-center justify-between">
@@ -114,7 +175,33 @@ export default function PrescriptionListPanel({
                 </div>
             )}
 
-            <div className="pt-4 border-t space-y-3 bg-background">
+            <div className="pt-4 border-t space-y-4 bg-background">
+                {/* Global Doctor Notes field */}
+                <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">Doctor Notes / Patient Instructions</Label>
+                        <button
+                            type="button"
+                            onClick={toggleListeningNotes}
+                            className={`p-1 rounded-full border transition-all ${
+                                isListeningNotes
+                                    ? "bg-red-500 text-white border-red-500 animate-pulse"
+                                    : "bg-secondary hover:bg-secondary/80 text-muted-foreground"
+                            }`}
+                            title="Dictate general notes"
+                        >
+                            <Mic className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                    <Textarea
+                        rows={3}
+                        value={generalNotes}
+                        onChange={(e) => onGeneralNotesChange(e.target.value)}
+                        placeholder="Write or dictate general notes, diagnosis, or patient instructions here. This will be printed on the prescription PDF."
+                        className="text-xs rounded-lg resize-none bg-background"
+                    />
+                </div>
+
                 <div className="space-y-1">
                     <Label className="text-xs font-semibold">Stamp Preference *</Label>
                     <Select value={stampPreference} onValueChange={onStampChange}>

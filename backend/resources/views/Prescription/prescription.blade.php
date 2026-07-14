@@ -125,7 +125,6 @@
         @if (isset($hospital_logo_url) && $hospital_logo_url)
             <img src="{{ $hospital_logo_url }}" style="max-height: 60px; margin-bottom: 5px;" alt="Hospital Logo"><br>
         @endif
-        <div class="hospital-name">{{ $hospital_name ?? 'CMC Telehealth' }}</div>
         <div>{{ $hospital_address ?? '123 Main St, Anytown, USA' }}</div>
         <div>Phone: {{ $hospital_phone ?? '555-555-5555' }} | Email: {{ $hospital_email ?? 'info@cmctelehealth.com' }}
         </div>
@@ -165,7 +164,19 @@
                         <td>{{ $index + 1 }}</td>
                         <td>
                             <strong>{{ $item->medicine_name }}</strong><br>
+                            @if (!empty($item->strength))
+                                <small>Strength: {{ $item->strength }}</small><br>
+                            @endif
+                            @if (!empty($item->route))
+                                <small>Route: {{ $item->route }}@if (!empty($item->application_area)) - {{ $item->application_area }}@endif</small><br>
+                            @endif
+                            @if (!empty($item->sos_instruction))
+                                <small>SOS: {{ $item->sos_instruction }}</small><br>
+                            @endif
                             <small>{{ $item->instructions }}</small>
+                            @if (!empty($item->remarks))
+                                <br><small>{{ $item->remarks }}</small>
+                            @endif
                         </td>
                         <td>{{ $item->dosage }}</td>
                         <td>
@@ -185,6 +196,17 @@
         <div class="note">
             <strong>Notes:</strong>
             {{ is_array($appointment->notes) ? $appointment->notes['problem'] ?? '' : $appointment->notes }}
+        </div>
+    @endif
+
+    @if (!empty($appointment->instructions_by_doctor))
+        <div class="note">
+            <strong>Follow-up advice:</strong>
+            @if (is_array($appointment->instructions_by_doctor))
+                {{ implode(', ', array_filter($appointment->instructions_by_doctor)) }}
+            @else
+                {{ $appointment->instructions_by_doctor }}
+            @endif
         </div>
     @endif
 

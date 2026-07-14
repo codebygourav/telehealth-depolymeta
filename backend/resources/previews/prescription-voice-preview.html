@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prescription Voice Assistant Preview</title>
+<style>
+:root{--blue:#055bd9;--blue2:#064eb8;--bg:#f6f8fb;--text:#172033;--muted:#667085;--line:#e5eaf1;--ok:#0f9d6c;--warn:#b66b00;--bad:#d92d20;--white:#fff;--shadow:0 8px 26px rgba(24,39,75,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}
+.top{height:66px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:5}.brand{display:flex;gap:10px;align-items:center;font-weight:800}.logo{width:38px;height:38px;border-radius:10px;background:var(--blue);color:white;display:grid;place-items:center}.tabs{display:flex;gap:8px}.tab{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 12px;font-weight:700;color:#475467}.tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.wrap{padding:22px;max-width:1440px;margin:auto}.head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}.head h1{font-size:25px;margin:0 0 5px}.head p{margin:0;color:var(--muted);font-size:14px}.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:10px 13px;font-weight:800;color:#344054;display:inline-flex;align-items:center;gap:7px}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.warn{color:var(--warn)}.btn.bad{color:var(--bad)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.grid{display:grid;gap:14px}.admin-grid{grid-template-columns:360px 1fr}.doctor-grid{grid-template-columns:360px 1fr}.card{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}.card-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}.card-h strong{font-size:15px}.card-b{padding:16px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin-bottom:12px}.field label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}.field small{display:block;margin-top:5px;font-size:11px;color:var(--muted)}input,select,textarea{width:100%;border:1px solid #d6dde8;border-radius:8px;padding:10px 11px;background:white;color:var(--text);outline:none}textarea{min-height:82px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(5,91,217,.1)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);background:#f8fafc;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:700;color:#475467}.chip.blue{background:#eef5ff;border-color:#cfe2ff;color:var(--blue)}.chip.ok{background:#eaf8f2;border-color:#c8efdf;color:var(--ok)}.chip.warn{background:#fff6e7;border-color:#ffe0a8;color:var(--warn)}.pill-select{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.pill-select button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px;font-weight:700;font-size:12px}.pill-select button.active{border-color:#b8d4f7;background:#eef5ff;color:var(--blue)}
+table{width:100%;border-collapse:collapse;min-width:880px}th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:12px}th{background:#fbfcfe;color:#667085;text-transform:uppercase;font-size:10px}.table-wrap{overflow:auto}.med-name strong{display:block;font-size:13px}.med-name small{color:var(--muted)}.actions{display:flex;gap:6px;flex-wrap:wrap}
+.stepper{display:grid;gap:10px}.step{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;grid-template-columns:30px 1fr;gap:10px;background:#fff}.step-num{width:28px;height:28px;border-radius:50%;background:#eef5ff;color:var(--blue);display:grid;place-items:center;font-weight:900}.step.active{border-color:#b8d4f7;background:#fbfdff}.step.done .step-num{background:var(--ok);color:#fff}.step strong{font-size:13px}.step p{margin:3px 0 0;color:var(--muted);font-size:11px;line-height:1.4}
+.assistant{display:grid;gap:12px}.mic{display:flex;gap:10px;flex-wrap:wrap}.transcript{background:#101828;color:white;border-radius:10px;padding:14px;min-height:105px;line-height:1.55}.hint{font-size:12px;color:var(--muted);line-height:1.5}.detected{display:grid;gap:12px}.rx-card{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff}.rx-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}.rx-head strong{font-size:15px}.warnbox{border:1px solid #ffe0a8;background:#fff9ed;color:#815000;padding:9px;border-radius:8px;font-size:12px}.okbox{border:1px solid #c8efdf;background:#effbf6;color:#08704d;padding:9px;border-radius:8px;font-size:12px}.missing{outline:2px solid #ffd6d2}
+.preview{border:1px solid var(--line);background:#fff;border-radius:10px;padding:16px}.preview h3{margin:0 0 10px}.preview-line{border-bottom:1px solid var(--line);padding:8px 0;font-size:13px}.hide{display:none!important}
+@media(max-width:980px){.admin-grid,.doctor-grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}.top{height:auto;align-items:flex-start;gap:12px;flex-direction:column;padding:14px}.tabs{width:100%;overflow:auto}.wrap{padding:14px}.head{display:block}.head .actions{margin-top:12px}.pill-select{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="logo">Rx</div><span>Prescription Voice Assistant</span></div>
+  <nav class="tabs">
+    <button class="tab active" data-view="admin">Admin Medicine Management</button>
+    <button class="tab" data-view="doctor">Doctor Prescription Screen</button>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section id="adminView">
+    <div class="head">
+      <div><h1>Medicine Master</h1><p>Configure medicines, aliases, field rules and defaults used by speech-to-text prescriptions.</p></div>
+      <div class="actions"><button class="btn" id="resetAdmin">Reset sample</button><button class="btn primary" id="newMedicine">Add medicine</button></div>
+    </div>
+    <div class="grid admin-grid">
+      <form class="card" id="medicineForm">
+        <div class="card-h"><strong id="formTitle">Add medicine</strong><span class="chip ok">Speech ready</span></div>
+        <div class="card-b">
+          <div class="row">
+            <div class="field"><label>Medicine name</label><input id="mName" required></div>
+            <div class="field"><label>Category</label><input id="mCategory"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Medicine type</label><select id="mType"></select><small>Dosage fields change by type.</small></div>
+            <div class="field"><label>Default route</label><select id="mRoute"></select></div>
+          </div>
+          <div class="field"><label>Strength options</label><input id="mStrengths" placeholder="500 mg, 650 mg"></div>
+          <div class="field"><label>Dosage options</label><div class="pill-select" id="doseButtons"></div><small>Use the buttons or add comma-separated custom options below.</small></div>
+          <div class="field"><input id="mDoses" placeholder="Custom dosage options"></div>
+          <div class="field" id="areaField"><label>Application areas</label><input id="mAreas" placeholder="Both eyes, Left ear, Affected area"></div>
+          <div class="field"><label>Spoken aliases</label><input id="mAliases" placeholder="crocin, dolo six fifty, calpol"></div>
+          <div class="row">
+            <div class="field"><label>Default frequency</label><select id="mFrequency"><option>OD</option><option>BD</option><option>TDS</option><option>SOS</option></select></div>
+            <div class="field"><label>Default meal</label><select id="mMeal"><option value="after_meal">After meal</option><option value="before_meal">Before meal</option><option value="with_meal">With meal</option><option value="empty_stomach">Empty stomach</option></select></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Default duration</label><input id="mDuration" placeholder="5 days"></div>
+            <div class="field"><label>Default dosage</label><input id="mDefaultDose" placeholder="1 tablet"></div>
+          </div>
+          <div class="field"><label>Fields shown for this type</label><div class="chips" id="fieldRules"></div></div>
+          <div class="field"><label>Default remarks</label><textarea id="mRemarks" placeholder="Take after food."></textarea></div>
+          <div class="actions"><button class="btn primary" type="submit">Save medicine</button><button class="btn bad" type="button" id="deleteMedicine">Delete</button></div>
+        </div>
+      </form>
+      <section class="card">
+        <div class="card-h"><strong>Admin data used by doctor app</strong><input id="adminSearch" placeholder="Search medicine or alias" style="max-width:280px"></div>
+        <div class="table-wrap"><table><thead><tr><th>Medicine</th><th>Type</th><th>Strength</th><th>Dosage</th><th>Defaults</th><th>Aliases</th><th></th></tr></thead><tbody id="adminRows"></tbody></table></div>
+      </section>
+    </div>
+  </section>
+
+  <section id="doctorView" class="hide">
+    <div class="head">
+      <div><h1>Create Prescription</h1><p>Doctors can dictate naturally, review detected medicines, fill missing fields and confirm before saving.</p></div>
+      <div class="actions"><button class="btn" id="sampleSpeech">Use sample speech</button><button class="btn primary" id="confirmAll">Confirm prescription</button></div>
+    </div>
+    <div class="grid doctor-grid">
+      <aside class="card">
+        <div class="card-h"><strong>Voice Dictation Assistant</strong><span class="chip blue">Vertical flow</span></div>
+        <div class="card-b stepper">
+          <div class="step active" id="s1"><div class="step-num">1</div><div><strong>Speak</strong><p>Say medicine, dose, timing, meal, route, duration and follow-up note.</p></div></div>
+          <div class="step" id="s2"><div class="step-num">2</div><div><strong>Fetch admin values</strong><p>Medicine aliases match the admin master and load type-specific options.</p></div></div>
+          <div class="step" id="s3"><div class="step-num">3</div><div><strong>Review</strong><p>Missing or uncertain fields are highlighted before save.</p></div></div>
+          <div class="step" id="s4"><div class="step-num">4</div><div><strong>Confirm</strong><p>Only confirmed items are sent to the prescription API.</p></div></div>
+        </div>
+      </aside>
+      <section class="assistant">
+        <div class="card">
+          <div class="card-h"><strong>Dictation</strong><span id="speechStatus" class="chip warn">Browser mic optional</span></div>
+          <div class="card-b">
+            <div class="mic">
+              <button class="btn primary" id="startMic">Start mic</button>
+              <button class="btn" id="stopMic">Stop</button>
+              <button class="btn" id="parseText">Parse transcript</button>
+            </div>
+            <div class="field" style="margin-top:12px"><label>Transcript preview</label><textarea id="transcript" class="transcript" placeholder="Example: Dolo six fifty tablet one tablet twice daily morning and night after food for five days. Follow-up: review fever after three days."></textarea></div>
+            <div class="hint">The real app should call <code>POST /prescriptions/{appointmentId}/prescription-drafts/text</code> with <code>source_type=speech</code>, then show the returned structured form for doctor review.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><strong>Detected medicine details</strong><span id="detectedCount" class="chip">0 items</span></div>
+          <div class="card-b detected" id="detectedList"><div class="hint">No parsed medicine yet.</div></div>
+        </div>
+        <div class="preview" id="pdfPreview">
+          <h3>Prescription PDF preview</h3>
+          <div id="pdfLines" class="hint">Confirmed medicines and dictated follow-up advice will appear here.</div>
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<script>
+const defs={
+ tablet:{label:'Tablet',routes:['Oral','Sublingual'],doses:['1/2 tablet','1 tablet','2 tablets'],fields:['strength','dosage','frequency','timing','meal','duration','route','remarks']},
+ capsule:{label:'Capsule',routes:['Oral'],doses:['1 capsule','2 capsules'],fields:['strength','dosage','frequency','timing','meal','duration','route','remarks']},
+ syrup:{label:'Syrup',routes:['Oral'],doses:['2.5 ml','5 ml','10 ml','15 ml'],fields:['strength','dosage','frequency','timing','meal','duration','route','remarks']},
+ injection:{label:'Injection',routes:['IV (Intravenous)','IM (Intramuscular)','SC (Subcutaneous)'],doses:['0.5 ml','1 ml','5 units','10 units'],fields:['strength','dosage','frequency','timing','duration','route','sos','remarks']},
+ drops:{label:'Drops',routes:['Eye','Ear','Nasal'],doses:['1 drop','2 drops','3 drops'],fields:['strength','dosage','frequency','timing','duration','route','application_area','remarks']},
+ ointment:{label:'Cream / Ointment',routes:['Topical'],doses:['Thin layer','Small amount'],fields:['strength','dosage','frequency','duration','route','application_area','remarks']}
+};
+let meds=[],editId=null,confirmed=[],recognition=null;
+const $=s=>document.querySelector(s), split=v=>String(v||'').split(',').map(x=>x.trim()).filter(Boolean), label=o=>defs[o]?.label||o;
+function seed(){meds=[
+ {id:1,name:'Paracetamol',category:'Analgesic',type:'tablet',strengths:['500 mg','650 mg'],doses:['1/2 tablet','1 tablet','2 tablets'],aliases:['paracetamol','dolo six fifty','dolo 650','crocin'],frequency:'BD',meal:'after_meal',duration:'5 days',route:'Oral',areas:[],remarks:'Take after food.',defaultDose:'1 tablet',fields:defs.tablet.fields},
+ {id:2,name:'Azithromycin',category:'Antibiotic',type:'syrup',strengths:['200 mg/5 ml'],doses:['2.5 ml','5 ml','10 ml'],aliases:['azithromycin syrup','azee syrup'],frequency:'OD',meal:'after_meal',duration:'3 days',route:'Oral',areas:[],remarks:'Shake well before use.',defaultDose:'5 ml',fields:defs.syrup.fields},
+ {id:3,name:'Moxifloxacin',category:'Ophthalmic',type:'drops',strengths:['0.5%'],doses:['1 drop','2 drops'],aliases:['moxifloxacin eye drops','moxi eye'],frequency:'TDS',meal:'',duration:'7 days',route:'Eye',areas:['Both eyes','Left eye','Right eye'],remarks:'Do not touch the dropper tip.',defaultDose:'1 drop',fields:defs.drops.fields}
+];}
+function init(){Object.entries(defs).forEach(([k,v])=>mType.innerHTML+=`<option value="${k}">${v.label}</option>`);renderAdmin();loadForm(meds[0]);}
+function renderAdmin(){const q=adminSearch.value?.toLowerCase()||'';adminRows.innerHTML=meds.filter(m=>[m.name,m.category,...m.aliases].join(' ').toLowerCase().includes(q)).map(m=>`<tr><td class="med-name"><strong>${m.name}</strong><small>${m.category}</small></td><td><span class="chip blue">${label(m.type)}</span></td><td>${m.strengths.map(x=>`<span class="chip">${x}</span>`).join(' ')}</td><td>${m.doses.map(x=>`<span class="chip">${x}</span>`).join(' ')}</td><td>${m.defaultDose||'-'} / ${m.frequency||'-'} / ${m.duration||'-'}</td><td>${m.aliases.slice(0,3).map(x=>`<span class="chip ok">${x}</span>`).join(' ')}</td><td><button class="btn" onclick="loadForm(meds.find(x=>x.id===${m.id}))">Edit</button></td></tr>`).join('');}
+function renderDoseButtons(){const d=defs[mType.value];mRoute.innerHTML=d.routes.map(r=>`<option>${r}</option>`).join('');doseButtons.innerHTML=d.doses.map(x=>`<button type="button" onclick="toggleDose('${x}')">${x}</button>`).join('');areaField.style.display=d.fields.includes('application_area')?'block':'none';fieldRules.innerHTML=d.fields.map(f=>`<span class="chip blue">${f.replace('_',' ')}</span>`).join('');}
+function toggleDose(x){const list=split(mDoses.value);mDoses.value=(list.includes(x)?list.filter(v=>v!==x):[...list,x]).join(', ');}
+function loadForm(m){editId=m?.id||null;formTitle.textContent=m?'Edit medicine':'Add medicine';mName.value=m?.name||'';mCategory.value=m?.category||'';mType.value=m?.type||'tablet';renderDoseButtons();mStrengths.value=(m?.strengths||[]).join(', ');mDoses.value=(m?.doses||[]).join(', ');mAreas.value=(m?.areas||[]).join(', ');mAliases.value=(m?.aliases||[]).join(', ');mFrequency.value=m?.frequency||'OD';mMeal.value=m?.meal||'after_meal';mDuration.value=m?.duration||'';mRoute.value=m?.route||defs[mType.value].routes[0];mDefaultDose.value=m?.defaultDose||'';mRemarks.value=m?.remarks||'';}
+mType.onchange=renderDoseButtons;adminSearch.oninput=renderAdmin;resetAdmin.onclick=()=>{seed();renderAdmin();loadForm(meds[0])};newMedicine.onclick=()=>loadForm(null);deleteMedicine.onclick=()=>{if(editId){meds=meds.filter(m=>m.id!==editId);renderAdmin();loadForm(null)}};
+medicineForm.onsubmit=e=>{e.preventDefault();const m={id:editId||Date.now(),name:mName.value,category:mCategory.value,type:mType.value,strengths:split(mStrengths.value),doses:split(mDoses.value),areas:split(mAreas.value),aliases:split(mAliases.value),frequency:mFrequency.value,meal:mMeal.value,duration:mDuration.value,route:mRoute.value,defaultDose:mDefaultDose.value,remarks:mRemarks.value,fields:defs[mType.value].fields};editId?meds=meds.map(x=>x.id===editId?m:x):meds.push(m);renderAdmin();loadForm(m);};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');adminView.classList.toggle('hide',b.dataset.view!=='admin');doctorView.classList.toggle('hide',b.dataset.view!=='doctor');});
+sampleSpeech.onclick=()=>{transcript.value='Dolo six fifty tablet 650 mg one tablet twice daily morning and night after food for five days. Follow-up: review fever after three days and maintain fluids.';parseTranscript();};
+parseText.onclick=parseTranscript;
+function wordNum(t){return t.replace(/\bone\b/g,'1').replace(/\btwo\b/g,'2').replace(/\bthree\b/g,'3').replace(/\bfive\b/g,'5').replace(/\bseven\b/g,'7');}
+function parseTranscript(){const t=wordNum(transcript.value.toLowerCase());setStep(2);const m=meds.find(x=>[x.name,...x.aliases].some(a=>t.includes(a.toLowerCase())));if(!m){detectedList.innerHTML='<div class="warnbox">Medicine not matched with admin data. Doctor can still add it as a custom medicine.</div>';return}const item={...m,found:true,strength:(t.match(/\d+\s*(mg|ml|%)/)||[])[0]||m.strengths[0]||'',dose:m.doses.find(d=>t.includes(d.toLowerCase()))||m.defaultDose||'',frequency:t.includes('three')||t.includes('tds')?'TDS':t.includes('twice')||t.includes('bd')?'BD':t.includes('sos')?'SOS':m.frequency,timing:['morning','afternoon','evening','night'].filter(x=>t.includes(x)),meal:t.includes('before')?'before_meal':t.includes('with food')?'with_meal':t.includes('after')?'after_meal':m.meal,duration:(t.match(/\d+\s+(day|days|week|weeks)/)||[])[0]||m.duration,follow:(transcript.value.match(/follow[- ]?up:?\s*(.+)$/i)||[])[1]||''};renderDetected(item);setStep(3);}
+function renderDetected(item){detectedCount.textContent='1 item';const miss=['dose','frequency','duration'].filter(k=>!item[k]);detectedList.innerHTML=`<div class="rx-card" data-id="${item.id}"><div class="rx-head"><div><strong>${item.name}</strong><div class="chips"><span class="chip blue">${label(item.type)}</span><span class="chip ok">matched admin</span></div></div><button class="btn bad" onclick="detectedList.innerHTML='<div class=hint>No parsed medicine yet.</div>';detectedCount.textContent='0 items'">Remove</button></div>${miss.length?`<div class="warnbox">Missing or uncertain: ${miss.join(', ')}</div>`:'<div class="okbox">All required fields detected. Review before confirm.</div>'}<div class="row" style="margin-top:10px"><div class="field"><label>Strength</label><input id="dStrength" value="${item.strength}"></div><div class="field"><label>Dosage</label><select id="dDose">${item.doses.map(x=>`<option ${x===item.dose?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Frequency</label><select id="dFreq">${['OD','BD','TDS','SOS'].map(x=>`<option ${x===item.frequency?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Meal</label><select id="dMeal">${['after_meal','before_meal','with_meal','empty_stomach'].map(x=>`<option ${x===item.meal?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Route</label><select id="dRoute">${defs[item.type].routes.map(x=>`<option ${x===item.route?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Duration</label><input id="dDuration" value="${item.duration}"></div></div>${item.fields.includes('application_area')?`<div class="field"><label>Application area</label><select id="dArea">${item.areas.map(x=>`<option>${x}</option>`).join('')}</select></div>`:''}<div class="field"><label>Remarks</label><textarea id="dRemarks">${item.remarks}</textarea></div><div class="field"><label>Patient follow-up free note for PDF</label><textarea id="dFollow">${item.follow}</textarea></div><button class="btn primary" onclick="confirmItem('${item.name}','${item.type}')">Confirm item</button></div>`;}
+function confirmItem(name,type){confirmed=[{name,type,strength:dStrength.value,dose:dDose.value,frequency:dFreq.value,meal:dMeal.value,route:dRoute.value,duration:dDuration.value,remarks:dRemarks.value,follow:dFollow.value}];setStep(4);renderPdf();}
+confirmAll.onclick=()=>{if(!confirmed.length&&$('#dDose'))confirmItem($('.rx-head strong').textContent,mType.value);renderPdf();};
+function renderPdf(){pdfLines.innerHTML=confirmed.map((x,i)=>`<div class="preview-line"><strong>${i+1}. ${x.name}</strong> ${x.strength} - ${x.dose}, ${x.frequency}, ${x.meal.replace('_',' ')}, ${x.duration}. ${x.remarks}</div>${x.follow?`<div class="preview-line"><strong>Follow-up advice:</strong> ${x.follow}</div>`:''}`).join('')||'Confirmed medicines and dictated follow-up advice will appear here.';}
+function setStep(n){[s1,s2,s3,s4].forEach((s,i)=>{s.classList.toggle('active',i+1===n);s.classList.toggle('done',i+1<n);});}
+startMic.onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){speechStatus.textContent='Speech API unavailable';return}recognition=new SR();recognition.lang='en-IN';recognition.continuous=true;recognition.interimResults=true;recognition.onresult=e=>{transcript.value=[...e.results].map(r=>r[0].transcript).join(' ')};recognition.start();speechStatus.textContent='Listening...';};
+stopMic.onclick=()=>{recognition?.stop();speechStatus.textContent='Stopped';};
+seed();init();
+</script>
+</body>
+</html>

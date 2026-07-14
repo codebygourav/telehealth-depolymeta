@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Medicines\Pages;
 
 use App\Filament\Resources\Medicines\MedicineResource;
 use App\Filament\Resources\PrescriptionDrafts\PrescriptionDraftResource;
-use Filament\Actions\CreateAction;
 use App\Filament\Resources\Pages\ListRecords;
 use App\Filament\Resources\Medicines\Pages\ManageCategoriesTypes;
 use App\Models\{MedicineCategory, MedicineType};
@@ -29,29 +28,6 @@ class ListMedicines extends ListRecords
 
             ManageCategoriesTypes::manageTypesAction()
                 ->visible(fn() => MedicineResource::canViewAny() || MedicineResource::canCreate()),
-
-            Action::make('voicePrescriptionLogs')
-                ->label('Voice Logs')
-                ->icon('heroicon-o-microphone')
-                ->color('primary')
-                ->url(fn (): string => PrescriptionDraftResource::getUrl('index', [
-                    'tableFilters' => [
-                        'status' => ['value' => PrescriptionDraft::STATUS_APPLIED],
-                        'source_type' => ['value' => 'speech'],
-                    ],
-                ]))
-                ->visible(fn (): bool => PrescriptionDraftResource::canViewAny()),
-
-            Action::make('doctorAddedFromVoice')
-                ->label('Voice Summary')
-                ->icon('heroicon-o-clipboard-document-list')
-                ->color('warning')
-                ->modalHeading('Voice Prescription Summary')
-                ->modalWidth('7xl')
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Close')
-                ->modalContent(fn () => view('filament.medicines.voice-prescription-summary', $this->getVoicePrescriptionSummaryData()))
-                ->visible(fn (): bool => PrescriptionDraftResource::canViewAny()),
 
             ActionGroup::make([
 
@@ -91,8 +67,11 @@ class ListMedicines extends ListRecords
                 ->color('primary')
                 ->button(),
 
-            CreateAction::make()
-                ->slideOver()
+            Action::make('create')
+                ->label('Add medicine')
+                ->icon('heroicon-o-plus')
+                ->color('primary')
+                ->url(fn (): string => MedicineResource::getUrl('create'))
                 ->visible(fn() => MedicineResource::canCreate()),
         ];
     }
