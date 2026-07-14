@@ -9,7 +9,7 @@ use App\Support\{PrescriptionDictation, PrescriptionSpeech};
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Storage, Validator};
+use Illuminate\Support\Facades\{Schema, Storage, Validator};
 
 class PrescriptionController extends Controller
 {
@@ -25,6 +25,27 @@ class PrescriptionController extends Controller
                 'id' => $medicine->id,
                 'name' => $medicine->name,
                 'type' => $type,
+                'category' => $category,
+                'strength_options' => $medicine->strength_options ?? [],
+                'dosage_options' => $medicine->dosage_options ?? [],
+                'frequency_options' => $medicine->frequency_options ?? [],
+                'timing_options' => $medicine->timing_options ?? [],
+                'meal_options' => $medicine->meal_options ?? [],
+                'route_options' => $medicine->route_options ?? [],
+                'duration_options' => $medicine->duration_options ?? [],
+                'application_area_options' => $medicine->application_area_options ?? [],
+                'field_rules' => $medicine->field_rules ?? [],
+                'spoken_aliases' => $medicine->spoken_aliases ?? [],
+                'defaults' => [
+                    'strength' => $medicine->default_strength,
+                    'dosage' => $medicine->default_dosage,
+                    'frequency' => $medicine->default_frequency,
+                    'timing' => $medicine->default_timing,
+                    'meal' => $medicine->default_meal,
+                    'duration' => $medicine->default_duration,
+                    'route' => $medicine->default_route,
+                    'instructions' => $medicine->default_instructions,
+                ],
             ];
         })->toArray(); // Cast to array to satisfy the type hint
 
@@ -51,7 +72,13 @@ class PrescriptionController extends Controller
             'medicines.*.timings' => 'nullable|array',
             'medicines.*.timings.*' => 'in:morning,afternoon,evening,night',
             'medicines.*.dosage' => 'nullable|string|max:255',
+            'medicines.*.strength' => 'nullable|string|max:255',
             'medicines.*.meal' => 'nullable|string|max:255',
+            'medicines.*.route' => 'nullable|string|max:255',
+            'medicines.*.application_area' => 'nullable|string|max:255',
+            'medicines.*.is_sos' => 'nullable|boolean',
+            'medicines.*.sos_instruction' => 'nullable|string|max:500',
+            'medicines.*.remarks' => 'nullable|string|max:1000',
 
             'medicines.*.start_date' => 'nullable|date',
             'medicines.*.end_date' => 'nullable|date|after_or_equal:medicines.*.start_date',
@@ -59,6 +86,8 @@ class PrescriptionController extends Controller
             'medicines.*.is_ongoing' => 'nullable|boolean',
 
             'medicines.*.instructions' => 'nullable|string|max:500',
+            'follow_up_note' => 'nullable|string|max:2000',
+            'patient_follow_up_note' => 'nullable|string|max:2000',
             'stamp_preference' => 'nullable|string|in:only_department,both,only_global',
         ]);
 
@@ -84,6 +113,11 @@ class PrescriptionController extends Controller
         // 🔹 Save Stamp Preference to Appointment
         if ($request->has('stamp_preference')) {
             $appointment->update(['stamp_preference' => $request->stamp_preference]);
+        }
+
+        $followUpNote = trim((string) ($request->input('follow_up_note') ?: $request->input('patient_follow_up_note')));
+        if ($followUpNote !== '') {
+            $appointment->update(['instructions_by_doctor' => $followUpNote]);
         }
 
         // 🔹 Authenticated doctor
@@ -157,8 +191,7 @@ class PrescriptionController extends Controller
                 }
             }
 
-            // Save Prescription
-            $prescription = Prescription::create([
+            $prescriptionData = [
                 'appointment_id' => $appointment->id,
                 'doctor_id' => $doctorId, // Use resolved doctor_id, not blindly $doctor->id
                 'patient_id' => $patientId,
@@ -173,7 +206,23 @@ class PrescriptionController extends Controller
                 'end_date' => $endDate,
                 'instructions' => $item['instructions'] ?? null,
                 'meal_timing' => $item['meal'],
-            ]);
+            ];
+
+            foreach ([
+                'strength',
+                'route',
+                'application_area',
+                'is_sos',
+                'sos_instruction',
+                'remarks',
+            ] as $optionalColumn) {
+                if (Schema::hasColumn('prescriptions', $optionalColumn) && array_key_exists($optionalColumn, $item)) {
+                    $prescriptionData[$optionalColumn] = $item[$optionalColumn];
+                }
+            }
+
+            // Save Prescription
+            $prescription = Prescription::create($prescriptionData);
 
             $created[] = $prescription;
         }
@@ -491,7 +540,13 @@ class PrescriptionController extends Controller
                 'end_date' => $toDate,
                 'instructions' => $instructions,
                 'dosage' => $med->dosage,
+                'strength' => $med->strength,
                 'meal' => $med->meal_timing,
+                'route' => $med->route,
+                'application_area' => $med->application_area,
+                'is_sos' => (bool) $med->is_sos,
+                'sos_instruction' => $med->sos_instruction,
+                'remarks' => $med->remarks,
                 'status' => $status,
                 'notes' => $med->notes,
                 'medicine_source' => $med->doctor_added_medicine_id

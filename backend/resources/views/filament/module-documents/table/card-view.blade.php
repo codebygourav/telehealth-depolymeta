@@ -1,147 +1,94 @@
-<div class="h-full w-full bg-white dark:bg-gray-800 rounded-xl group overflow-hidden p-0">
+<div class="h-full w-full bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700/80 hover:border-primary-500/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden group">
     @php
-        $documentName = $getRecord()->name;
+        $record = $getRecord();
+        $documentName = $record->name;
+        $modelType = $record->model_type;
+        $modelId = $record->model_id;
 
-        // Fetch all documents with the same name
-        $allDocuments = \App\Models\ModuleDocument::where('name', $documentName)->get();
+        // Fetch all documents with the same name, model type, and id
+        $allDocuments = \App\Models\ModuleDocument::where('name', $documentName)
+            ->where('model_type', $modelType)
+            ->where('model_id', $modelId)
+            ->get();
 
-        $totalDocuments = $allDocuments->count();
         $totalFiles = $allDocuments->sum(fn($doc) => count($doc->files ?? []));
 
-        // Get unique model types linked to this document name
-        $modelTypes = $allDocuments->pluck('model_type')->unique();
-
-        // Get creators
-        $creatorIds = $allDocuments->whereNotNull('created_by')->pluck('created_by')->unique();
-        $creators = \App\Models\User::whereIn('id', $creatorIds)->limit(3)->get();
-        $moreCreators = $creatorIds->count() - $creators->count();
-
-        // Dynamic name formatting: replace underscores with spaces and capitalize
+        // Format name
         $displayName = ucwords(str_replace(['_', '-'], ' ', $documentName));
 
-        // Dynamic icon and color based on keywords in the name
-        $iconClass = 'heroicon-m-document-text';
-        $colorClass = 'primary';
-        $lowerName = strtolower($documentName);
-
-        if (str_contains($lowerName, 'prescription_pdf')) {
-            $iconClass = 'heroicon-m-clipboard-document-list';
-            $colorClass = 'success';
-        } elseif (str_contains($lowerName, 'signature')) {
-            $iconClass = 'heroicon-m-pencil-square';
-            $colorClass = 'info';
-        } elseif (str_contains($lowerName, 'stamp')) {
-            $iconClass = 'heroicon-m-shield-check';
-            $colorClass = 'warning';
-        } elseif (str_contains($lowerName, 'report')) {
-            $iconClass = 'heroicon-m-document-chart-bar';
-            $colorClass = 'danger';
-        } elseif (str_contains($lowerName, 'image') || str_contains($lowerName, 'photo')) {
-            $iconClass = 'heroicon-m-photo';
-            $colorClass = 'purple';
+        // Resolve patient details
+        $linkedModel = $record->model;
+        $patientName = '';
+        $formattedDate = '';
+        if ($linkedModel) {
+            $modelBase = class_basename($modelType);
+            if ($modelBase === 'Appointment') {
+                if ($linkedModel->patient) {
+                    $patientName = trim(($linkedModel->patient->first_name ?? '') . ' ' . ($linkedModel->patient->last_name ?? ''));
+                }
+                if ($linkedModel->appointment_date) {
+                    $formattedDate = $linkedModel->appointment_date->format('M d, Y');
+                }
+            }
         }
-
-        // Check if any linked model is a MedicalReport for the redirect button
-        $hasMedicalReports = $modelTypes->contains('App\\Models\\MedicalReport');
-        // Count specific links if they exist
-        $linkedAppointmentCount = $allDocuments
-            ->where('model_type', 'App\\Models\\Appointment')
-            ->pluck('model_id')
-            ->unique()
-            ->count();
-        $linkedMedicalReportCount = $allDocuments
-            ->where('model_type', 'App\\Models\\MedicalReport')
-            ->pluck('model_id')
-            ->unique()
-            ->count();
     @endphp
 
-    {{-- Header --}}
-    <div
-        class="p-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-{{ $colorClass }}-50 to-{{ $colorClass }}-100/50 dark:from-{{ $colorClass }}-900/20 dark:to-{{ $colorClass }}-800/10">
-        <div class="flex items-start gap-3">
-            <div class="flex-shrink-0">
-                <div
-                    class="w-10 h-10 rounded-lg bg-grey dark:bg-{{ $colorClass }} flex items-center justify-center shadow-lg">
-                    <x-dynamic-component :component="$iconClass" class="w-6 h-6 text-black" />
-                </div>
-            </div>
-            <div class="flex-1 min-w-0">
-                <h3 class="font-bold text-gray-900 dark:text-white text-base leading-tight">
+    <div class="p-5 flex-1 flex flex-col gap-4 asdgfd">
+        {{-- Top Section: Title & Icon --}}
+        <div class="flex items-start justify-between gap-4">
+            <div class="space-y-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 border border-primary-100/50 dark:border-primary-900/30">
+                    {{ class_basename($modelType) }}
+                </span>
+                <h3 class="text-base font-bold text-[var(--app-primary-hex)] dark:text-white leading-snug">
                     {{ $displayName }}
                 </h3>
-                <p class="text-xs text-gray-600 dark:text-gray-400 font-medium mt-1">
-                    {{ $modelTypes->map(fn($t) => class_basename($t))->join(', ') }}
-                </p>
             </div>
+            
+            <div class="w-10 h-10 rounded-lg bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center border border-gray-100 dark:border-gray-600 shrink-0">
+                <x-heroicon-m-clipboard-document-list class="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </div>
+        </div>
+
+        {{-- Meta list --}}
+        <div class="space-y-2 text-xs py-1 border-t border-b border-gray-100 dark:border-gray-700">
+            @if ($patientName)
+                <div class="flex justify-between items-center mt-1">
+                    <span class="text-gray-500 dark:text-gray-400">Patient</span>
+                    <span class="font-semibold text-gray-800 dark:text-gray-200">{{ $patientName }}</span>
+                </div>
+            @endif
+
+            @if ($formattedDate)
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500 dark:text-gray-400">Date</span>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ $formattedDate }}</span>
+                </div>
+            @endif
+
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-gray-500 dark:text-gray-400">Reference ID</span>
+                <span class="font-mono text-[11px] text-gray-600 dark:text-gray-400">#{{ substr($modelId, 0, 8) }}</span>
+            </div>
+        </div>
+
+        {{-- Stats and Files indicator --}}
+        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1">
+            <span class="flex items-center gap-1.5">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                {{ $allDocuments->count() }} {{ \Illuminate\Support\Str::plural('Entry', $allDocuments->count()) }}
+            </span>
+            <span class="font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/20 px-2 py-0.5 rounded">
+                {{ $totalFiles }} {{ \Illuminate\Support\Str::plural('File', $totalFiles) }}
+            </span>
         </div>
     </div>
 
-    {{-- Stats Grid --}}
-    <div
-        class="grid grid-cols-2 divide-x divide-gray-100 dark:divide-gray-700 border-b border-gray-100 dark:border-gray-700">
-        <div class="p-3 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-            <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Entries</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $totalDocuments }}</p>
-        </div>
-        <div class="p-3 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-            <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Total Files</p>
-            <p class="text-2xl font-bold text-{{ $colorClass }}-600">{{ $totalFiles }}</p>
-        </div>
-    </div>
-
-    @if ($linkedAppointmentCount > 0 || $linkedMedicalReportCount > 0 || $modelTypes->count() > 1)
-        {{-- Body Context --}}
-        <div class="p-4 space-y-4 flex-1">
-            @if ($linkedAppointmentCount > 0)
-                <div
-                    class="flex items-center justify-between text-sm p-2.5 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <div class="flex items-center gap-2 text-green-700 dark:text-green-400">
-                        <x-heroicon-m-calendar-days class="w-4 h-4" />
-                        <span class="font-medium">Appointments</span>
-                    </div>
-                    <span class="font-bold text-green-900 dark:text-green-300">{{ $linkedAppointmentCount }}</span>
-                </div>
-            @endif
-
-            @if ($linkedMedicalReportCount > 0)
-                <div
-                    class="flex items-center justify-between text-sm p-2.5 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                    <div class="flex items-center gap-2 text-red-700 dark:text-red-400">
-                        <x-heroicon-m-document-chart-bar class="w-4 h-4" />
-                        <span class="font-medium">Medical Reports</span>
-                    </div>
-                    <span class="font-bold text-red-900 dark:text-red-300">{{ $linkedMedicalReportCount }}</span>
-                </div>
-            @endif
-
-            {{-- Multiple Model Types Pill Display --}}
-            @if ($modelTypes->count() > 1)
-                <div class="flex flex-wrap gap-1.5">
-                    @foreach ($modelTypes as $type)
-                        <span
-                            class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-[10px] font-bold uppercase tracking-tight">
-                            {{ class_basename($type) }}
-                        </span>
-                    @endforeach
-                </div>
-            @endif
-
-        </div>
-    @endif
-    {{-- Footer Actions --}}
-    <div class="p-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700">
-        @if ($hasMedicalReports)
-            <a href="{{ url('/admin/medical-reports') }}"
-                class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-red-400 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white rounded-lg text-xs font-bold font-heading transition shadow-sm">
-                <x-heroicon-m-arrow-right class="w-4 h-4" />
-                Medical Reports Screen
-            </a>
-        @else
-            <div
-                class="w-full py-2 px-4 bg-{{ $colorClass }}-50 text-{{ $colorClass }}-700 dark:bg-{{ $colorClass }}-900/40 dark:text-{{ $colorClass }}-300 rounded-lg text-xs font-bold text-center border border-{{ $colorClass }}-100 dark:border-{{ $colorClass }}-800/50">
-                View Details
-            </div>
-        @endif
+    {{-- Action Footer --}}
+    <div class="px-5 py-3.5 bg-gray-50/50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between group-hover:bg-primary-50/10 transition-colors duration-200">
+        <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 group-hover:text-[var(--app-primary-hex)] dark:group-hover:text-[var(--app-primary-hex)] transition-colors">
+            View Details
+        </span>
+        <x-heroicon-m-arrow-right class="w-4 h-4 text-gray-400 group-hover:text-[var(--app-primary-hex)] group-hover:translate-x-0.5 transition-all" />
     </div>
 </div>

@@ -22,18 +22,27 @@ class PrescriptionDraftParser
 
         $medicineName = $medicine['name'] ?? $this->extractMedicineName($sourceText, $text);
         $medicineType = $medicine['type'] ?? $this->extractMedicationType($text) ?? 'tablet';
-        $dosage = $this->extractDosage($text);
-        $frequency = $this->extractFrequency($text);
+        $strength = $this->extractStrength($text) ?? ($medicine['defaults']['strength'] ?? null);
+        $dosage = $this->extractDosage($text) ?? ($medicine['defaults']['dosage'] ?? null);
+        $frequency = $this->extractFrequency($text) ?? ($medicine['defaults']['frequency'] ?? null);
         $timings = $this->extractTimings($text);
-        $meal = $this->extractMeal($text);
-        [$startDate, $endDate] = $this->extractDates($text);
-        $instructions = $this->extractInstructions($sourceText, $text);
+        if (empty($timings) && ! blank($medicine['defaults']['timing'] ?? null)) {
+            $timings[] = $medicine['defaults']['timing'];
+        }
+        $meal = $this->extractMeal($text) ?? ($medicine['defaults']['meal'] ?? null);
+        [$startDate, $endDate, $durationLabel] = $this->extractDates($text);
+        $durationLabel ??= $medicine['defaults']['duration'] ?? null;
+        $route = $this->extractRoute($text) ?? ($medicine['defaults']['route'] ?? null);
+        $applicationArea = $this->extractApplicationArea($text, $medicine['options']['application_areas'] ?? []);
+        $instructions = $this->extractInstructions($sourceText, $text) ?: ($medicine['defaults']['instructions'] ?? '');
+        $followUpNote = $this->extractFollowUpNote($sourceText, $text);
 
         $form = [
             'medicine_id' => ($medicine['source'] ?? null) === 'inventory' ? ($medicine['id'] ?? null) : null,
             'medicine_name' => $medicineName,
             'medicine_source' => $medicine['source'] ?? null,
             'medication_type' => $medicineType ?: 'tablet',
+            'strength' => $strength,
             'dosage' => $dosage,
             'frequency' => $frequency,
             'timing_morning' => in_array('morning', $timings, true),
@@ -41,7 +50,14 @@ class PrescriptionDraftParser
             'timing_evening' => in_array('evening', $timings, true),
             'timing_night' => in_array('night', $timings, true),
             'meal' => $meal,
+            'duration' => $durationLabel,
+            'route' => $route,
+            'application_area' => $applicationArea,
+            'is_sos' => $frequency === 'SOS',
             'instructions' => $instructions,
+            'follow_up_note' => $followUpNote,
+            'medicine_options' => $medicine['options'] ?? [],
+            'field_rules' => $medicine['field_rules'] ?? [],
             'start_date' => $startDate,
             'end_date' => $endDate,
             'stamp_preference' => 'only_global',
@@ -93,27 +109,62 @@ class PrescriptionDraftParser
 
     private function normalizeDigits(string $text): string
     {
-        return strtr($text, [
+        $text = strtr($text, [
             '०' => '0', '१' => '1', '२' => '2', '३' => '3', '४' => '4',
             '५' => '5', '६' => '6', '७' => '7', '८' => '8', '९' => '9',
             '੦' => '0', '੧' => '1', '੨' => '2', '੩' => '3', '੪' => '4',
             '੫' => '5', '੬' => '6', '੭' => '7', '੮' => '8', '੯' => '9',
         ]);
+
+        return (string) preg_replace_callback(
+            '/\b(one|two|three|four|five|six|seven|eight|nine|ten|fourteen|fifteen|twenty|thirty)\b/i',
+            fn(array $matches): string => [
+                'one' => '1',
+                'two' => '2',
+                'three' => '3',
+                'four' => '4',
+                'five' => '5',
+                'six' => '6',
+                'seven' => '7',
+                'eight' => '8',
+                'nine' => '9',
+                'ten' => '10',
+                'fourteen' => '14',
+                'fifteen' => '15',
+                'twenty' => '20',
+                'thirty' => '30',
+            ][strtolower($matches[1])] ?? $matches[1],
+            $text
+        );
     }
 
     private function resolveMedicine(string $sourceText, string $canonicalText, ?string $doctorId = null): array
     {
         $matchedInventory = Medicine::query()
             ->with('type:id,name')
-            ->get(['id', 'name', 'type_id'])
+            ->get()
             ->filter(function (Medicine $medicine) use ($sourceText, $canonicalText): bool {
+                if ($medicine->getAttribute('speech_enabled') === false || $medicine->getAttribute('is_active') === false) {
+                    return false;
+                }
+
                 $name = $this->normalizeText((string) $medicine->name);
                 $canonicalName = $this->canonicalizeForParsing($name);
+                $aliases = collect($medicine->spoken_aliases ?? [])
+                    ->filter(fn($alias): bool => is_string($alias) && trim($alias) !== '')
+                    ->values();
 
-                return $name !== '' && (
+                $nameMatched = $name !== '' && (
                     $this->containsText($sourceText, $name)
                     || $this->containsText($canonicalText, $canonicalName)
                 );
+
+                $aliasMatched = $aliases->contains(function (string $alias) use ($sourceText, $canonicalText): bool {
+                    return $this->containsText($sourceText, $alias)
+                        || $this->containsText($canonicalText, $this->canonicalizeForParsing($alias));
+                });
+
+                return $nameMatched || $aliasMatched;
             })
             ->sortByDesc(fn (Medicine $medicine) => strlen((string) $medicine->name))
             ->values();
@@ -131,6 +182,27 @@ class PrescriptionDraftParser
                 'name' => $medicine->name,
                 'type' => $medicine->type?->name,
                 'source' => 'inventory',
+                'defaults' => [
+                    'strength' => $medicine->default_strength,
+                    'dosage' => $medicine->default_dosage,
+                    'frequency' => $medicine->default_frequency,
+                    'timing' => $medicine->default_timing,
+                    'meal' => $medicine->default_meal,
+                    'duration' => $medicine->default_duration,
+                    'route' => $medicine->default_route,
+                    'instructions' => $medicine->default_instructions,
+                ],
+                'options' => [
+                    'strengths' => $this->arrayValues($medicine->strength_options),
+                    'dosages' => $this->arrayValues($medicine->dosage_options),
+                    'frequencies' => $this->arrayValues($medicine->frequency_options),
+                    'timings' => $this->arrayValues($medicine->timing_options),
+                    'meals' => $this->arrayValues($medicine->meal_options),
+                    'routes' => $this->arrayValues($medicine->route_options),
+                    'durations' => $this->arrayValues($medicine->duration_options),
+                    'application_areas' => $this->arrayValues($medicine->application_area_options),
+                ],
+                'field_rules' => $this->arrayValues($medicine->field_rules),
             ], []];
         }
 
@@ -213,7 +285,7 @@ class PrescriptionDraftParser
     private function extractDosage(string $text): ?string
     {
         $patterns = [
-            '/\b(\d+(?:\.\d+)?)\s*(tablet|tablets|capsule|capsules|drop|drops|puff|puffs|ml|mg|gm|mcg|units?)\b/i',
+            '/\b(\d+(?:\.\d+)?)\s*(tablet|tablets|capsule|capsules|drop|drops|puff|puffs|ml|units?)\b/i',
             '/\b(half|one|two|three)\s+(tablet|tablets|capsule|capsules)\b/i',
         ];
 
@@ -221,6 +293,19 @@ class PrescriptionDraftParser
             if (preg_match($pattern, $text, $matches)) {
                 return strtolower(trim($matches[0]));
             }
+        }
+
+        return null;
+    }
+
+    private function extractStrength(string $text): ?string
+    {
+        if (preg_match('/\b(\d+(?:\.\d+)?)\s*(mg|gm|mcg)\s*\/\s*(\d+(?:\.\d+)?)\s*(ml)\b/i', $text, $matches)) {
+            return strtolower(trim($matches[0]));
+        }
+
+        if (preg_match('/\b(\d+(?:\.\d+)?)\s*(mg|gm|mcg|iu|%)\b/i', $text, $matches)) {
+            return strtolower(trim($matches[0]));
         }
 
         return null;
@@ -279,10 +364,12 @@ class PrescriptionDraftParser
     {
         $startDate = Carbon::today()->format('Y-m-d');
         $endDate = null;
+        $durationLabel = null;
 
         if (preg_match('/(?:for\s+)?(\d+)\s+(day|days|week|weeks|month|months)\b/i', $text, $matches)) {
             $value = (int) $matches[1];
             $unit = strtolower($matches[2]);
+            $durationLabel = $value . ' ' . $unit;
 
             $end = Carbon::today();
 
@@ -297,7 +384,56 @@ class PrescriptionDraftParser
             $endDate = $end->format('Y-m-d');
         }
 
-        return [$startDate, $endDate];
+        return [$startDate, $endDate, $durationLabel];
+    }
+
+    private function extractRoute(string $text): ?string
+    {
+        $normalized = strtolower($text);
+
+        return match (true) {
+            str_contains($normalized, 'intravenous'),
+            preg_match('/\biv\b/i', $text) === 1 => 'IV (Intravenous)',
+            str_contains($normalized, 'intramuscular'),
+            preg_match('/\bim\b/i', $text) === 1 => 'IM (Intramuscular)',
+            str_contains($normalized, 'subcutaneous'),
+            preg_match('/\bsc\b/i', $text) === 1 => 'SC (Subcutaneous)',
+            str_contains($normalized, 'sublingual') => 'Sublingual',
+            str_contains($normalized, 'eye') => 'Eye',
+            str_contains($normalized, 'ear') => 'Ear',
+            str_contains($normalized, 'nasal'),
+            str_contains($normalized, 'nose') => 'Nasal',
+            str_contains($normalized, 'topical'),
+            str_contains($normalized, 'apply') => 'Topical',
+            str_contains($normalized, 'inhale'),
+            str_contains($normalized, 'puff') => 'Inhalation',
+            str_contains($normalized, 'nebul') => 'Nebulization',
+            str_contains($normalized, 'oral'),
+            str_contains($normalized, 'by mouth') => 'Oral',
+            default => null,
+        };
+    }
+
+    private function extractApplicationArea(string $text, array $configuredAreas): ?string
+    {
+        foreach ($configuredAreas as $area) {
+            if (is_string($area) && $this->containsText($text, $area)) {
+                return $area;
+            }
+        }
+
+        $normalized = strtolower($text);
+
+        return match (true) {
+            str_contains($normalized, 'both eyes') => 'Both eyes',
+            str_contains($normalized, 'left eye') => 'Left eye',
+            str_contains($normalized, 'right eye') => 'Right eye',
+            str_contains($normalized, 'both ears') => 'Both ears',
+            str_contains($normalized, 'left ear') => 'Left ear',
+            str_contains($normalized, 'right ear') => 'Right ear',
+            str_contains($normalized, 'affected area') => 'Affected area',
+            default => null,
+        };
     }
 
     private function extractInstructions(string $sourceText, string $canonicalText): string
@@ -315,6 +451,31 @@ class PrescriptionDraftParser
         }
 
         return '';
+    }
+
+    private function extractFollowUpNote(string $sourceText, string $canonicalText): ?string
+    {
+        $patterns = [
+            '/(?:follow[\s-]?up|patient note|doctor note|review note)\s*[:\-]?\s*(.+)$/iu',
+        ];
+
+        foreach ([$sourceText, $canonicalText] as $text) {
+            foreach ($patterns as $pattern) {
+                if (preg_match($pattern, $text, $matches)) {
+                    return trim($matches[1]);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function arrayValues(mixed $value): array
+    {
+        return collect(is_array($value) ? $value : [])
+            ->filter(fn($item): bool => is_string($item) && trim($item) !== '')
+            ->values()
+            ->all();
     }
 
     private function translateToEnglish(string $text): string

@@ -4,6 +4,15 @@ export interface MedicineItem {
   type: string | null;
   category: string | null;
   source?: "inventory" | "doctor_added";
+  strength_options?: string[];
+  dosage_options?: string[];
+  frequency_options?: string[];
+  timing_options?: string[];
+  meal_options?: string[];
+  duration_options?: string[];
+  application_area_options?: string[];
+  field_rules?: string[];
+  spoken_aliases?: string[];
   created_at: string;
   updated_at: string;
 }

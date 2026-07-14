@@ -23,6 +23,7 @@ class Prescription extends Model
         'doctor_added_medicine_id',
         'medicine_name',
         'medicine_type',
+        'strength',
         'dosage',
         'frequency',
         'frequency_times',
@@ -31,6 +32,11 @@ class Prescription extends Model
         'duration_value',
         'instructions',
         'meal_timing',
+        'route',
+        'application_area',
+        'is_sos',
+        'sos_instruction',
+        'remarks',
         'quantity',
         'start_date',
         'end_date',
@@ -58,6 +64,7 @@ class Prescription extends Model
     protected $casts = [
         'frequency_times' => 'array',
         'is_ongoing' => 'boolean',
+        'is_sos' => 'boolean',
         'start_date' => 'date',
         'end_date' => 'date',
     ];

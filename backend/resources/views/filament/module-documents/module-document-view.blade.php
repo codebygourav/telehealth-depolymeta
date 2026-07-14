@@ -4,9 +4,13 @@
 
     $record = $getState();
     $documentName = $record->name;
+    $modelType = $record->model_type;
+    $modelId = $record->model_id;
 
-    // Fetch all documents with the same name
+    // Fetch all documents with the same name, model_type, and model_id
     $allDocuments = \App\Models\ModuleDocument::where('name', $documentName)
+        ->where('model_type', $modelType)
+        ->where('model_id', $modelId)
         ->with(['model', 'creator'])
         ->orderBy('created_at', 'desc')
         ->get();

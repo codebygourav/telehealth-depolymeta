@@ -28,14 +28,14 @@ class ModuleDocumentsTable
                 'class' => 'module-documents-grid-table',
             ])
             ->query(function () {
-                // Get one representative document per name
+                // Get one representative document per name and linked model (e.g. Appointment)
                 return ModuleDocument::query()
                     ->where('name', 'prescription_pdf') // Filter: Show only prescription pdf
                     ->whereIn('id', function ($q) {
                         $q->selectRaw('MAX(id)')
                             ->from('module_documents')
                             ->whereNull('deleted_at')
-                            ->groupBy('name');
+                            ->groupBy('name', 'model_type', 'model_id');
                     });
             })
             // Use grid layout for responsive cards

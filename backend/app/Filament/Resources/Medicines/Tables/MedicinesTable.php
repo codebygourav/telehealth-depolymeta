@@ -14,11 +14,50 @@ class MedicinesTable
     {
         return $table
             ->columns([
-                TextColumn::make('name'),
-                TextColumn::make('category.name'),
-                TextColumn::make('type.name'),
-                TextColumn::make('created_at'),
-                TextColumn::make('updated_at'),
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('category.name')
+                    ->label('Category')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('type.name')
+                    ->label('Type')
+                    ->badge()
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('spoken_aliases')
+                    ->label('Voice aliases')
+                    ->formatStateUsing(function ($state): string {
+                        $aliases = collect(is_array($state) ? $state : [])
+                            ->map(fn($val) => trim($val))
+                            ->filter(fn($val) => $val !== '');
+                        
+                        if ($aliases->isEmpty()) {
+                            return '';
+                        }
+                        
+                        return $aliases->take(3)->implode(', ');
+                    })
+                    ->placeholder('No aliases')
+                    ->searchable(query: function ($query, string $search) {
+                        return $query->where('spoken_aliases', 'like', "%{$search}%");
+                    })
+                    ->toggleable(),
+                TextColumn::make('speech_enabled')
+                    ->label('Speech')
+                    ->badge()
+                    ->formatStateUsing(fn($state): string => $state ? 'Enabled' : 'Off')
+                    ->color(fn($state): string => $state ? 'success' : 'gray')
+                    ->toggleable(),
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 getUserAuditColumn('creator', 'Created By'),
                 getUserAuditColumn('updater', 'Updated By'),
                 getUserAuditColumn('deleter', 'Deleted By'),
@@ -28,7 +67,7 @@ class MedicinesTable
             ->recordActions([
                 ActionGroup::make([
                     EditAction::make()
-                        ->slideOver()
+                        ->url(fn ($record): string => MedicineResource::getUrl('edit', ['record' => $record]))
                         ->visible(fn($record) => MedicineResource::canEditRecord($record)),
 
                     DeleteAction::make()
