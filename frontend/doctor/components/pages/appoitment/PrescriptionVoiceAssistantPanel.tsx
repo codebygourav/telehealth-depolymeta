@@ -92,14 +92,14 @@ export default function PrescriptionVoiceAssistantPanel({
   const handleSuggestionClick = (value: string) => {
     const currentText = guidedTranscripts[guidedStep] || "";
     const trimmedVal = value.trim();
-    
+
     // Split the current text by comma to check for existing items
     const existingItems = currentText.split(',').map(item => item.trim().toLowerCase());
-    
+
     if (existingItems.includes(trimmedVal.toLowerCase())) {
       return; // Already exists, do not add it again
     }
-    
+
     const newText = currentText ? `${currentText}, ${trimmedVal}` : trimmedVal;
     onGuidedTranscriptChange(guidedStep, newText);
   };
@@ -310,16 +310,10 @@ export default function PrescriptionVoiceAssistantPanel({
 
   return (
     <div className="space-y-4">
-      <div className="font-semibold text-xs text-muted-foreground border-b pb-1.5 flex items-center justify-between">
-        <span>Voice Dictation Assistant</span>
-        <span className="text-[10px] text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/20 font-semibold uppercase tracking-wider">
-          Browser Voice
-        </span>
-      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <span className="text-xs text-muted-foreground font-medium">
-          Select Language:
+          Language:
         </span>
         <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-0.5">
           {voiceLanguageOptions.map((option) => (
@@ -344,27 +338,25 @@ export default function PrescriptionVoiceAssistantPanel({
           return (
             <div
               key={step.id}
-              className={`rounded-xl border transition-all duration-200 ${
-                isActive
-                  ? "border-primary bg-primary/5/10 shadow-md ring-1 ring-primary/20 p-4"
-                  : "border-border bg-background hover:bg-muted/30 p-3"
-              }`}
+              className={`transition-all duration-200 ${isActive
+                ? "border border-primary/20 bg-primary/5 rounded-xl p-3 sm:p-4 shadow-sm"
+                : "border-b border-border/40 hover:bg-muted/10 p-1"
+                }`}
             >
               <button
                 type="button"
                 onClick={() => onGuidedStepChange(step.id)}
                 disabled={controlsBusy}
-                className="w-full text-left flex items-start justify-between"
+                className="w-full text-left flex items-center justify-between"
               >
-                <div className="flex gap-3">
+                <div className="flex items-center gap-3">
                   <div
-                    className={`h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-all ${
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow"
-                        : isComplete
-                          ? "bg-green-100 text-green-700 border border-green-200"
-                          : "bg-muted text-muted-foreground border border-border"
-                    }`}
+                    className={`h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-all ${isActive
+                      ? "bg-primary text-primary-foreground shadow"
+                      : isComplete
+                        ? "bg-green-100 text-green-700 border border-green-200"
+                        : "bg-muted text-muted-foreground border border-border"
+                      }`}
                   >
                     {isComplete && !isActive ? (
                       <Check className="h-3.5 w-3.5 stroke-[3]" />
@@ -383,11 +375,10 @@ export default function PrescriptionVoiceAssistantPanel({
                 </div>
                 <div className="shrink-0 text-right">
                   <span
-                    className={`text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider ${
-                      isComplete
-                        ? "bg-green-100/70 text-green-700 border border-green-200/50"
-                        : "bg-muted text-muted-foreground"
-                    }`}
+                    className={`text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider ${isComplete
+                      ? "bg-green-100/70 text-green-700 border border-green-200/50"
+                      : "bg-muted text-muted-foreground"
+                      }`}
                   >
                     {isComplete ? "Captured" : "Pending"}
                   </span>
@@ -396,7 +387,7 @@ export default function PrescriptionVoiceAssistantPanel({
 
               {/* Inline Content for the Active Step */}
               {isActive && (
-                <div className="mt-3.5 pt-3.5 border-t border-dashed border-border/80 space-y-3">
+                <div className="mt-3.5 pt-3.5 border-t border-dashed border-primary/20 space-y-3">
                   {/* Suggestion Chips */}
                   {getSuggestionsForStep(step.id)}
 

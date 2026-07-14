@@ -412,12 +412,12 @@ export default function PrescriptionTab({
   if (!hasPrescriptionData && !hasConclusionData) {
     return (
       <>
-        <div className="flex flex-wrap items-center justify-end gap-2 mt-4 mb-4 w-full">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 mt-4 mb-4 w-full">
           <Button
             type="button"
             variant="outline"
             onClick={() => setIsAddConclusionOpen(true)}
-            className="h-8 sm:h-9 text-xs sm:text-sm"
+            className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
           >
             Add Conclusion
           </Button>
@@ -425,7 +425,7 @@ export default function PrescriptionTab({
             type="button"
             variant="outline"
             onClick={() => setIsTemplateDialogOpen(true)}
-            className="h-8 sm:h-9 text-xs sm:text-sm"
+            className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
           >
             <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
             Use Template
@@ -433,7 +433,7 @@ export default function PrescriptionTab({
           <Button
             type="button"
             onClick={() => setIsAddDialogOpen(true)}
-            className="h-8 sm:h-9 text-xs sm:text-sm"
+            className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
           >
             Add Prescription
           </Button>
@@ -588,11 +588,10 @@ export default function PrescriptionTab({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge
-                      className={`text-[10px] sm:text-xs px-1.5 sm:px-2 ${
-                        draft.source_type === "speech"
-                          ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-100"
-                      }`}
+                      className={`text-[10px] sm:text-xs px-1.5 sm:px-2 ${draft.source_type === "speech"
+                        ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-100"
+                        }`}
                     >
                       {draft.source_type === "speech"
                         ? "Voice Draft"
