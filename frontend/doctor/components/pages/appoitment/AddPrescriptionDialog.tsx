@@ -1824,7 +1824,19 @@ function combineTranscript(...parts: Array<string | null | undefined>) {
 
 function cleanDuplicateWords(text: string): string {
   if (!text) return "";
-  const words = text.split(/\s+/);
+  
+  // 1. Standardize spacing
+  let cleaned = text.replace(/\s+/g, " ").trim();
+
+  // 2. Remove repeating consecutive patterns of length >= 5 characters (handles browser concatenation bugs)
+  let prev = "";
+  while (cleaned !== prev) {
+    prev = cleaned;
+    cleaned = cleaned.replace(/(.{5,200?})\s*\1/gi, "$1");
+  }
+
+  // 3. Traditional word-by-word deduplication for shorter repeating words (e.g. "the the", "no no")
+  const words = cleaned.split(/\s+/);
   const result: string[] = [];
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
@@ -1833,7 +1845,8 @@ function cleanDuplicateWords(text: string): string {
     }
     result.push(word);
   }
-  return result.join(" ");
+  
+  return result.join(" ").trim();
 }
 
 function buildVoiceLanguageOptions(
