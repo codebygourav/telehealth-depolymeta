@@ -1190,16 +1190,16 @@ export default function AddPrescriptionDialog({
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      let finalTranscript = transcriptFinalRef.current;
+      let finalTranscript = "";
       let interimTranscript = "";
 
       for (
-        let index = event.resultIndex;
+        let index = 0;
         index < event.results.length;
         index += 1
       ) {
         const result = event.results[index];
-        const transcript = result?.[0]?.transcript?.trim();
+        const transcript = result?.[0]?.transcript;
 
         if (!transcript) {
           continue;
