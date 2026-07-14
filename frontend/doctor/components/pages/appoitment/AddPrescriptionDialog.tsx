@@ -1832,7 +1832,7 @@ function cleanDuplicateWords(text: string): string {
   let prev = "";
   while (cleaned !== prev) {
     prev = cleaned;
-    cleaned = cleaned.replace(/(.{5,200?})\s*\1/gi, "$1");
+    cleaned = cleaned.replace(/(.{5,})\s*\1/gi, "$1");
   }
 
   // 3. Traditional word-by-word deduplication for shorter repeating words (e.g. "the the", "no no")
