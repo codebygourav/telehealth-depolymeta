@@ -1,0 +1,20 @@
+name: Sync to Target Repo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history so all branches and tags can be synced
+
+      - name: Push to Destination Repository
+        run: |
+          git remote add destination https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/CodeSproutX/Telehealth.git
+          git push --force --prune destination main
