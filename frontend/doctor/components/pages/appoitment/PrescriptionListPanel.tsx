@@ -62,10 +62,12 @@ export default function PrescriptionListPanel({
         rec.interimResults = true;
         rec.lang = "en-IN";
         
-        let finalTrans = "";
+        const initialText = generalNotes.trim();
+        
         rec.onresult = (event: any) => {
+            let finalTrans = "";
             let interimTrans = "";
-            for (let i = event.resultIndex; i < event.results.length; i++) {
+            for (let i = 0; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
                     finalTrans += transcript + " ";
@@ -74,10 +76,11 @@ export default function PrescriptionListPanel({
                 }
             }
             const spoken = (finalTrans + interimTrans).trim();
-            if (spoken) {
-                // Append or set the spoken text
-                const baseText = generalNotes.trim();
-                onGeneralNotesChange(baseText ? `${baseText} ${spoken}` : spoken);
+            const cleanedSpoken = cleanDuplicateWords(spoken);
+            if (cleanedSpoken) {
+                onGeneralNotesChange(initialText ? `${initialText} ${cleanedSpoken}` : cleanedSpoken);
+            } else if (!spoken && initialText) {
+                onGeneralNotesChange(initialText);
             }
         };
 
@@ -232,4 +235,28 @@ export default function PrescriptionListPanel({
             </div>
         </div>
     );
+}
+
+function cleanDuplicateWords(text: string): string {
+  if (!text) return "";
+  
+  let cleaned = text.replace(/\s+/g, " ").trim();
+
+  let prev = "";
+  while (cleaned !== prev) {
+    prev = cleaned;
+    cleaned = cleaned.replace(/(.{5,200?})\s*\1/gi, "$1");
+  }
+
+  const words = cleaned.split(/\s+/);
+  const result: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    if (i > 0 && word.toLowerCase() === words[i - 1].toLowerCase()) {
+      continue;
+    }
+    result.push(word);
+  }
+  
+  return result.join(" ").trim();
 }
