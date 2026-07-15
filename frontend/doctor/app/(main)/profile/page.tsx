@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import AddressSection from "@/components/pages/profile/addressSection";
+import AiTrainingSection from "@/components/pages/profile/aiTrainingSection";
 import AwardsSection from "@/components/pages/profile/awardsSection";
 import CertificatesSection from "@/components/pages/profile/certificatesSection";
 import EducationSection from "@/components/pages/profile/educationSection";
@@ -11,15 +11,16 @@ import ProfileHeader from "@/components/pages/profile/profileHeader";
 import ReviewsSection from "@/components/pages/profile/reviewsSection";
 import SocialLinksSection from "@/components/pages/profile/socialLinksSection";
 import VoiceSettingsSection from "@/components/pages/profile/voiceSettingsSection";
-import { useDoctorProfile } from "@/queries/useProfile";
-import { useDoctorHome } from "@/queries/useHome";
-import { useAuth } from "@/context/userContext";
-import HeroSection from "@/components/ui/hero-section";
-import { User, MapPinPen, Award, GraduationCap, Trophy, FileBadge, Link, UserStar, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui";
+import HeroSection from "@/components/ui/hero-section";
+import { useAuth } from "@/context/userContext";
 import { cn } from "@/lib/utils";
+import { useDoctorHome } from "@/queries/useHome";
+import { useDoctorProfile } from "@/queries/useProfile";
+import { Award, BrainCircuit, FileBadge, GraduationCap, Link, MapPinPen, Trophy, User, UserStar, Volume2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
-type TabKey = "personal" | "address" | "experience" | "education" | "awards" | "certificates" | "social" | "reviews" | "voice";
+type TabKey = "personal" | "address" | "experience" | "education" | "awards" | "certificates" | "social" | "reviews" | "voice" | "ai-training";
 
 const ProfilePage = () => {
 
@@ -87,6 +88,11 @@ const ProfilePage = () => {
             key: "voice" as TabKey,
             label: "Voice Settings",
             icon: Volume2,
+        },
+        {
+            key: "ai-training" as TabKey,
+            label: "AI Training",
+            icon: BrainCircuit,
         },
     ];
 
@@ -350,6 +356,9 @@ const ProfilePage = () => {
                     )}
                     {activeTab === "voice" && (
                         <VoiceSettingsSection voiceSettings={profile?.voice_settings ?? null} userId={user?.id} />
+                    )}
+                    {activeTab === "ai-training" && (
+                        <AiTrainingSection aiTraining={profile?.ai_training ?? null} userId={user?.id} />
                     )}
                 </main>
             </div>

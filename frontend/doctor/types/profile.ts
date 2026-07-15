@@ -190,6 +190,25 @@ export interface VoiceSettings {
   speech_locale: string | null;
 }
 
+export interface AiTrainingPronunciationRule {
+  doctor_says: string;
+  ai_converts_to: string;
+}
+
+export interface AiTrainingMedicineShortcut {
+  medicine: string;
+  shortcut: string;
+  priority?: number;
+}
+
+export interface AiTrainingProfile {
+  pronunciation_dictionary: AiTrainingPronunciationRule[];
+  medicine_shortcuts: AiTrainingMedicineShortcut[];
+  common_diagnoses: string[];
+  frequently_used_instructions: string[];
+  procedures_investigations: string[];
+}
+
 export interface DoctorProfileData {
   personal_information: PersonalInformation;
   working_experience: WorkingExperienceItem[];
@@ -202,6 +221,7 @@ export interface DoctorProfileData {
   social_media: SocialMedia | null;
   review_summary: ReviewSummary | null;
   voice_settings?: VoiceSettings;
+  ai_training?: AiTrainingProfile;
 }
 
 export interface GetDoctorProfileResponse {

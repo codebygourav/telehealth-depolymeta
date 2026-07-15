@@ -13,6 +13,7 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
+    
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
@@ -64,14 +65,6 @@ return [
         'api_key' => env('WHEREBY_API_KEY', env('WHEREBY_SECRET', '')),
         'base_url' => env('WHEREBY_BASE_URL', 'https://api.whereby.dev/v1'),
         'webhook_secret' => env('WHEREBY_WEBHOOK_SECRET', 'd7c5t2ncbde95wgx7ehanwbjr23fx0ta'),
-    ],
-
-    'webpush' => [
-        'vapid' => [
-            'subject' => env('VAPID_SUBJECT', 'mailto:webclouddeveloper@gmail.com'),
-            'public_key' => env('VAPID_PUBLIC_KEY'),
-            'private_key' => env('VAPID_PRIVATE_KEY'),
-        ],
     ],
 
 ];

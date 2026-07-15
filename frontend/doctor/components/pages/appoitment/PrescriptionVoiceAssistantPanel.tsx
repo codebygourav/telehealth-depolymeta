@@ -50,6 +50,7 @@ interface PrescriptionVoiceAssistantPanelProps {
   mealOptions?: OptionItem[];
   durationOptions?: OptionItem[];
   applicationAreaOptions?: OptionItem[];
+  commonInstructionSuggestions?: string[];
 }
 
 export default function PrescriptionVoiceAssistantPanel({
@@ -85,6 +86,7 @@ export default function PrescriptionVoiceAssistantPanel({
   mealOptions = [],
   durationOptions = [],
   applicationAreaOptions = [],
+  commonInstructionSuggestions = [],
 }: PrescriptionVoiceAssistantPanelProps) {
   const browserSpeechAvailable = browserVoiceEnabled && speechSupported;
   const controlsBusy = isListening || isFinishing;
@@ -273,6 +275,16 @@ export default function PrescriptionVoiceAssistantPanel({
           </div>
         );
       case 5:
+        const instructionSuggestions = commonInstructionSuggestions.length > 0
+          ? commonInstructionSuggestions
+          : [
+            "Drink plenty of water",
+            "Avoid cold food and drinks",
+            "Take complete bed rest",
+            "Review after 3 days",
+            "If pain persists, visit clinic",
+          ];
+
         return (
           <div className="space-y-3 p-3 bg-secondary/40 rounded-lg border border-border/60">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -282,13 +294,7 @@ export default function PrescriptionVoiceAssistantPanel({
               <div>
                 <span className="text-[9px] font-semibold text-muted-foreground block mb-1">Common Instructions:</span>
                 <div className="flex flex-wrap gap-1.5">
-                  {[
-                    "Drink plenty of water",
-                    "Avoid cold food and drinks",
-                    "Take complete bed rest",
-                    "Review after 3 days",
-                    "If pain persists, visit clinic",
-                  ].map((note) => (
+                  {instructionSuggestions.map((note) => (
                     <button
                       key={note}
                       type="button"
