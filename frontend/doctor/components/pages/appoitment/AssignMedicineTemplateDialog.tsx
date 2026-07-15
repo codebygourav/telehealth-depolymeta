@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAssignMedicineTemplate } from "@/mutations/useAssignMedicineTemplate";
+import { useDoctorProfile } from "@/queries/useProfile";
 import { useMedicineTemplates } from "@/queries/useMedicineTemplates";
 import type {
   MedicineTemplate,
@@ -46,6 +47,9 @@ export default function AssignMedicineTemplateDialog({
   open,
   onOpenChange,
 }: AssignMedicineTemplateDialogProps) {
+  const { data: profileResponse } = useDoctorProfile();
+  const voiceSettings = profileResponse?.data?.voice_settings;
+
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState(getTodayDate());
@@ -116,7 +120,8 @@ export default function AssignMedicineTemplateDialog({
         console.error(err);
         setIsPlayingAll(false);
         setCurrentPlayingIndex(null);
-      }
+      },
+      voiceSettings
     );
   };
 
@@ -345,6 +350,7 @@ export default function AssignMedicineTemplateDialog({
                           index={index + 1}
                           language={language}
                           isCurrentlySpeaking={isPlayingAll && currentPlayingIndex === index}
+                          voiceSettings={voiceSettings}
                         />
                       ))}
                     </div>
@@ -439,11 +445,18 @@ function TemplateMedicinePreview({
   index,
   language,
   isCurrentlySpeaking,
+  voiceSettings,
 }: {
   item: MedicineTemplateItem;
   index: number;
   language: SpeechLanguage;
   isCurrentlySpeaking: boolean;
+  voiceSettings?: {
+    voice_name?: string | null;
+    speech_rate?: number;
+    speech_pitch?: number;
+    speech_locale?: string | null;
+  };
 }) {
   const [isSpeakingSelf, setIsSpeakingSelf] = useState(false);
   const isSpeaking = isCurrentlySpeaking || isSpeakingSelf;
@@ -465,7 +478,8 @@ function TemplateMedicinePreview({
         language,
         undefined,
         () => setIsSpeakingSelf(false),
-        () => setIsSpeakingSelf(false)
+        () => setIsSpeakingSelf(false),
+        voiceSettings
       );
     }
   };

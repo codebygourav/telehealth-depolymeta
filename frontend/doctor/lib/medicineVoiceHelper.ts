@@ -147,7 +147,13 @@ export function speakText(
   lang: SpeechLanguage,
   onStart?: () => void,
   onEnd?: () => void,
-  onError?: (err: any) => void
+  onError?: (err: any) => void,
+  voiceSettings?: {
+    voice_name?: string | null;
+    speech_rate?: number;
+    speech_pitch?: number;
+    speech_locale?: string | null;
+  }
 ): SpeechSynthesisUtterance | null {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     console.warn('Speech synthesis not supported in this browser.');
@@ -184,11 +190,19 @@ export function speakText(
     }
 
     const voices = window.speechSynthesis.getVoices();
-    const searchLang = bcpLang.toLowerCase();
     
-    let voice = voices.find(v => v.lang.toLowerCase() === searchLang);
+    // Find voice using doctor preferences or fallback
+    let voice;
+    if (voiceSettings?.voice_name) {
+      voice = voices.find(v => v.name === voiceSettings.voice_name);
+    }
+    
     if (!voice) {
-      voice = voices.find(v => v.lang.toLowerCase().startsWith(searchLang.substring(0, 2)));
+      const searchLang = bcpLang.toLowerCase();
+      voice = voices.find(v => v.lang.toLowerCase() === searchLang);
+      if (!voice) {
+        voice = voices.find(v => v.lang.toLowerCase().startsWith(searchLang.substring(0, 2)));
+      }
     }
 
     if (!voice && lang === 'pa') {
@@ -203,8 +217,8 @@ export function speakText(
 
     // Set voice properties
     utterance.text = speechText;
-    utterance.rate = 0.92;
-    utterance.pitch = 1.0;
+    utterance.rate = voiceSettings?.speech_rate ?? 0.92;
+    utterance.pitch = voiceSettings?.speech_pitch ?? 1.0;
     utterance.volume = 1.0;
     utterance.lang = bcpLang;
 

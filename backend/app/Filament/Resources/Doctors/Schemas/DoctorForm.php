@@ -695,6 +695,56 @@ class DoctorForm
                             ->label('Expertise Info')
                             ->placeholder('e.g., Complex hematological disorders, childhood malignancies...')
                             ->columnSpanFull(),
+
+                        Section::make('Voice & Speech Settings')
+                            ->schema([
+                                Grid::make(2)
+                                    ->schema([
+                                        Select::make('speech_locale')
+                                            ->label('Speech Recognition Accent / Locale')
+                                            ->options([
+                                                'en-IN' => 'English (India)',
+                                                'en-US' => 'English (US)',
+                                                'hi-IN' => 'Hindi',
+                                                'pa-IN' => 'Punjabi',
+                                            ])
+                                            ->default('en-IN'),
+                                        Select::make('voice_name')
+                                            ->label('Text-to-Speech Voice Name')
+                                            ->options([
+                                                'system_default' => 'Default System Voice',
+                                                'Google US English' => 'Google US English (en-US)',
+                                                'Google UK English Female' => 'Google UK English Female (en-GB)',
+                                                'Google UK English Male' => 'Google UK English Male (en-GB)',
+                                                'Google India English' => 'Google India English (en-IN)',
+                                                'Samantha' => 'Apple Samantha (en-US)',
+                                            ])
+                                            ->searchable()
+                                            ->placeholder('Select voice')
+                                            ->helperText('Choose a preferred voice for prescription synthesis. Fallback defaults are used if not available.')
+                                            ->nullable(),
+                                    ]),
+                                Grid::make(2)
+                                    ->schema([
+                                        TextInput::make('speech_rate')
+                                            ->label('Speech Rate (Speed)')
+                                            ->numeric()
+                                            ->default(1.0)
+                                            ->step(0.1)
+                                            ->minValue(0.5)
+                                            ->maxValue(2.0)
+                                            ->helperText('Spoken speed multiplier. 1.0 is standard, 0.5 is slow, 2.0 is fast.'),
+                                        TextInput::make('speech_pitch')
+                                            ->label('Speech Pitch')
+                                            ->numeric()
+                                            ->default(1.0)
+                                            ->step(0.1)
+                                            ->minValue(0.5)
+                                            ->maxValue(2.0)
+                                            ->helperText('Voice pitch frequency. 1.0 is standard, 0.5 is deep, 2.0 is high.'),
+                                    ]),
+                            ])
+                            ->columns(1),
                     ]),
 
                 // 10. Contact

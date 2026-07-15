@@ -15,8 +15,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useConclusionByAppointmentId } from "@/queries/useConclusionByAppointmentId";
-import { useDeletePrescriptionItem } from "@/queries/useDeletePrescriptionItem";
+import { useAddPrescription } from "@/queries/useAddPrescription";
 import { usePrescriptionByAppointmentId } from "@/queries/usePrescriptionByAppointmentId";
+import { useAuth } from "@/context/userContext";
 import { getStatusColor } from "@/src/utils/getStatusColor";
 import {
   AlertCircle,
@@ -30,6 +31,7 @@ import {
   FileText,
   Mic,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import { useCallback, useState } from "react";
 
@@ -96,10 +98,12 @@ const MedicineAccordionItem = ({
   medicine,
   index,
   onDelete,
+  onEdit,
 }: {
   medicine: Medicine;
   index: number;
   onDelete: (medicine: Medicine) => void;
+  onEdit: (medicine: Medicine) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -121,60 +125,60 @@ const MedicineAccordionItem = ({
   }, []);
 
   return (
-    <Card className="overflow-hidden p-0">
+    <Card className="overflow-hidden border border-muted hover:border-primary/40 hover:shadow-md transition-all duration-300 rounded-2xl bg-gradient-to-br from-background to-muted/10">
       <div
-        className="cursor-pointer hover:bg-muted/30 transition-colors"
+        className="cursor-pointer hover:bg-muted/20 transition-colors"
         onClick={toggleOpen}
         role="button"
         aria-expanded={isOpen}
         aria-controls={`medicine-details-${medicine.prescription_id}`}
       >
-        <CardHeader className="p-3 sm:p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 shrink-0">
-                <span className="text-xs sm:text-sm font-semibold text-primary">
+        <CardHeader className="p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-primary/10 shrink-0 border border-primary/20 shadow-sm">
+                <span className="text-xs sm:text-sm font-bold text-primary">
                   #{index}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <h4 className="font-semibold text-sm sm:text-base truncate">
+                  <h4 className="font-bold text-sm sm:text-base text-foreground tracking-tight truncate">
                     {medicine.name}
                   </h4>
                   <Badge
-                    variant="outline"
-                    className="text-[9px] sm:text-xs px-1 sm:px-1.5"
+                    variant="secondary"
+                    className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-md"
                   >
                     {medicine.type}
                   </Badge>
                   <Badge
-                    className={`${getStatusColor("session", medicine.status)} text-[9px] sm:text-xs px-1 sm:px-1.5`}
+                    className={`${getStatusColor("session", medicine.status)} text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-md`}
                   >
                     {medicine.status}
                   </Badge>
                   {medicine.medicine_source === "doctor_added" && (
-                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[9px] sm:text-xs px-1 sm:px-1.5">
+                    <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200 text-[10px] sm:text-xs px-2 py-0.5 rounded-md">
                       Doctor-added
                     </Badge>
                   )}
                   {medicine.medicine_source === "inventory" && (
                     <Badge
                       variant="outline"
-                      className="text-[9px] sm:text-xs px-1 sm:px-1.5"
+                      className="border-primary/20 text-primary bg-primary/5 text-[10px] sm:text-xs px-2 py-0.5 rounded-md font-semibold"
                     >
                       Stock medicine
                     </Badge>
                   )}
                   {medicine.created_via === "speech" && (
-                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[9px] sm:text-xs px-1 sm:px-1.5">
+                    <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50 border border-blue-200 text-[10px] sm:text-xs px-2 py-0.5 rounded-md">
                       Voice draft
                     </Badge>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 text-[10px] sm:text-sm text-muted-foreground">
-                  <span>{medicine.dosage}</span>
-                  <span className="hidden xs:inline">•</span>
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5 text-xs text-muted-foreground font-medium">
+                  <span className="text-foreground font-semibold">{medicine.dosage}</span>
+                  <span className="text-muted-foreground/60">•</span>
                   <span className="capitalize">
                     {medicine.use_type === "sos"
                       ? "SOS (As Needed)"
@@ -184,7 +188,7 @@ const MedicineAccordionItem = ({
                   </span>
                   {medicine.use_type !== "sos" && medicine.times && (
                     <>
-                      <span className="hidden xs:inline">•</span>
+                      <span className="text-muted-foreground/60">•</span>
                       <span>{medicine.times}</span>
                     </>
                   )}
@@ -193,21 +197,22 @@ const MedicineAccordionItem = ({
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(medicine);
                 }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4.5 w-4.5" />
               </Button>
               {isOpen ? (
-                <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
+                <ChevronUp className="h-5 w-5 text-muted-foreground shrink-0" />
               ) : (
-                <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
+                <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
               )}
             </div>
           </div>
@@ -216,127 +221,101 @@ const MedicineAccordionItem = ({
 
       {isOpen && (
         <CardContent
-          className="p-3 sm:p-4 pt-0 border-t"
+          className="p-4 sm:p-5 pt-0 border-t bg-muted/5"
           id={`medicine-details-${medicine.prescription_id}`}
         >
-          <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
-            <div className="space-y-1 sm:space-y-2">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
-                With Meal
-              </p>
-              <p className="text-xs sm:text-sm font-medium">
-                {getMealLabel(medicine.meal)}
-              </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            {/* Column 1: Intake & Dosage Details */}
+            <div className="p-3.5 bg-background border border-muted rounded-xl space-y-3">
+              <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Intake & Dosing</p>
+              <div className="space-y-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase">Meal Relation</span>
+                  <span className="font-semibold text-foreground">{getMealLabel(medicine.meal)}</span>
+                </div>
+                {medicine.use_type && medicine.use_type !== "regular" && medicine.use_type !== "sos" && (
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase">Special Instructions</span>
+                    <span className="font-semibold text-foreground capitalize">Take as {medicine.use_type.replace("_", " ")}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-1 sm:space-y-2">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
-                Duration
-              </p>
-              <p className="text-xs sm:text-sm font-medium">{medicine.date}</p>
+            {/* Column 2: Duration & Origin */}
+            <div className="p-3.5 bg-background border border-muted rounded-xl space-y-3">
+              <p className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Duration & Origin</p>
+              <div className="space-y-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase">Duration</span>
+                  <span className="font-semibold text-foreground">{medicine.date}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase">Source</span>
+                  <span className="font-semibold text-foreground">
+                    {medicine.medicine_source === "doctor_added"
+                      ? "Doctor-added medicine"
+                      : medicine.medicine_source === "inventory"
+                        ? "Stock medicine"
+                        : "Unknown"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase">Entry Method</span>
+                  <span className="font-semibold text-foreground">
+                    {medicine.created_via === "speech" ? "Voice dictation" : "Standard entry"}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-1 sm:space-y-2">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
-                Medicine Source
-              </p>
-              <p className="text-xs sm:text-sm font-medium">
-                {medicine.medicine_source === "doctor_added"
-                  ? "Doctor-added medicine"
-                  : medicine.medicine_source === "inventory"
-                    ? "Stock medicine"
-                    : "Unknown"}
-              </p>
-            </div>
-
-            <div className="space-y-1 sm:space-y-2">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
-                Entry Method
-              </p>
-              <p className="text-xs sm:text-sm font-medium">
-                {medicine.created_via === "speech"
-                  ? "Voice draft"
-                  : "Standard entry"}
-              </p>
+            {/* Column 3: Instructions & Custom Notes */}
+            <div className="p-3.5 bg-background border border-muted rounded-xl space-y-3">
+              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Instructions & SOS Rules</p>
+              <div className="space-y-2 text-xs">
+                {medicine.use_type === "sos" && (
+                  <div className="space-y-1.5 border-b pb-2 mb-2">
+                    {medicine.take_when && (
+                      <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase">SOS Criteria</span>
+                        <span className="font-semibold text-foreground capitalize">{medicine.take_when}</span>
+                      </div>
+                    )}
+                    {medicine.min_gap && (
+                      <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase">Min Gap</span>
+                        <span className="font-semibold text-foreground capitalize">{medicine.min_gap}</span>
+                      </div>
+                    )}
+                    {medicine.max_doses_per_day && (
+                      <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase">Max Doses Per Day</span>
+                        <span className="font-semibold text-foreground capitalize">{medicine.max_doses_per_day}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {medicine.instructions && medicine.instructions.length > 0 && (
+                  <div>
+                    <span className="text-muted-foreground block text-[10px] uppercase mb-1">Standard Instructions</span>
+                    <ul className="list-disc list-inside space-y-0.5 text-blue-700 font-medium bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                      {medicine.instructions.map((ins: string, i: number) => (
+                        <li key={`${medicine.prescription_id}-instruction-${i}`} className="text-[11px] truncate">
+                          {ins}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {medicine.notes && (
+                  <div className="pt-1">
+                    <span className="text-muted-foreground block text-[10px] uppercase">Notes</span>
+                    <p className="italic text-amber-900 bg-amber-50/50 p-2 rounded-lg border border-amber-100">{medicine.notes}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-
-          {medicine.use_type === "sos" && (
-            <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4 mt-3 pt-3 border-t">
-              {medicine.take_when && (
-                <div className="space-y-1">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
-                    Take When / Reason
-                  </p>
-                  <p className="text-xs sm:text-sm font-medium capitalize">
-                    {medicine.take_when}
-                  </p>
-                </div>
-              )}
-              {medicine.min_gap && (
-                <div className="space-y-1">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
-                    Minimum Gap
-                  </p>
-                  <p className="text-xs sm:text-sm font-medium capitalize">
-                    {medicine.min_gap}
-                  </p>
-                </div>
-              )}
-              {medicine.max_doses_per_day && (
-                <div className="space-y-1">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
-                    Max Doses Per Day
-                  </p>
-                  <p className="text-xs sm:text-sm font-medium capitalize">
-                    {medicine.max_doses_per_day}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {medicine.use_type &&
-            medicine.use_type !== "regular" &&
-            medicine.use_type !== "sos" && (
-              <div className="space-y-1 mt-3 pt-3 border-t">
-                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide font-semibold">
-                  Special Instructions
-                </p>
-                <p className="text-xs sm:text-sm font-medium capitalize">
-                  Take as {medicine.use_type.replace("_", " ")}
-                </p>
-              </div>
-            )}
-
-          {medicine.instructions && medicine.instructions.length > 0 && (
-            <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-blue-50 rounded-lg">
-              <p className="text-[10px] sm:text-xs text-blue-700 uppercase tracking-wide mb-1 sm:mb-2">
-                Instructions
-              </p>
-              <ul className="list-disc list-inside space-y-0.5 sm:space-y-1">
-                {medicine.instructions.map((ins: string, i: number) => (
-                  <li
-                    key={`${medicine.prescription_id}-instruction-${i}`}
-                    className="text-[11px] sm:text-sm text-blue-800 wrap-break-word"
-                  >
-                    {ins}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {medicine.notes && (
-            <div className="mt-3 p-2 sm:p-3 bg-yellow-50 rounded-lg">
-              <p className="text-[10px] sm:text-xs text-yellow-700 uppercase tracking-wide mb-1">
-                Notes
-              </p>
-              <p className="text-[11px] sm:text-sm text-yellow-800 wrap-break-word">
-                {medicine.notes}
-              </p>
-            </div>
-          )}
         </CardContent>
       )}
     </Card>
@@ -348,13 +327,15 @@ export default function PrescriptionTab({
 }: {
   appointmentId: string;
 }) {
-  const deleteMutation = useDeletePrescriptionItem(appointmentId);
+  const { token } = useAuth();
+  const deleteMutation = useAddPrescription(appointmentId, token || "");
 
   const { data, isLoading, error } =
     usePrescriptionByAppointmentId(appointmentId);
   const { data: conclusionData } = useConclusionByAppointmentId(appointmentId);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isAddConclusionOpen, setIsAddConclusionOpen] = useState(false);
+  const [isConclusionDialogOpen, setIsConclusionDialogOpen] = useState(false);
+  const [dialogTab, setDialogTab] = useState<"findings" | "medicines" | "reports">("findings");
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Medicine | null>(null);
 
@@ -381,6 +362,9 @@ export default function PrescriptionTab({
   const draftHistory = (data?.data?.draft_history ?? []) as DraftHistoryItem[];
   const pdfUrl = data?.data?.pdf_url;
   const instructionsByDoctor = data?.data?.instructions_by_doctor;
+  const instructionsParts = instructionsByDoctor ? instructionsByDoctor.split("Recommended Tests:") : [];
+  const initialFindings = instructionsParts[0] ? instructionsParts[0].replace("Clinical Findings:", "").trim() : "";
+  const initialRecommendedTests = instructionsParts[1] ? instructionsParts[1].trim() : "";
   const nextVisitDate = data?.data?.next_visit_date;
   const dictationAssistant = (data?.data?.dictation_assistant ??
     null) as DictationAssistantConfig | null;
@@ -416,14 +400,6 @@ export default function PrescriptionTab({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setIsAddConclusionOpen(true)}
-            className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
-          >
-            Add Conclusion
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
             onClick={() => setIsTemplateDialogOpen(true)}
             className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
           >
@@ -432,7 +408,10 @@ export default function PrescriptionTab({
           </Button>
           <Button
             type="button"
-            onClick={() => setIsAddDialogOpen(true)}
+            onClick={() => {
+              setDialogTab("medicines");
+              setIsAddDialogOpen(true);
+            }}
             className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
           >
             Add Prescription
@@ -446,7 +425,7 @@ export default function PrescriptionTab({
                 No prescription or conclusion available
               </p>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Start by adding a prescription or conclusion
+                Start by adding findings, diagnostics, or a prescription
               </p>
             </div>
           </CardContent>
@@ -454,17 +433,18 @@ export default function PrescriptionTab({
         <AddPrescriptionDialog
           open={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
+          initialTab={dialogTab}
           assistantConfig={dictationAssistant}
+          initialMedicines={medicines}
+          initialFindings={initialFindings}
+          initialNextVisitDate={nextVisitDate}
+          initialRecommendedTests={initialRecommendedTests}
+          initialGeneralNotes={data?.data?.follow_up_note}
         />
         <AssignMedicineTemplateDialog
           appointmentId={appointmentId}
           open={isTemplateDialogOpen}
           onOpenChange={setIsTemplateDialogOpen}
-        />
-        <AddConclusionDialog
-          appointmentId={appointmentId}
-          open={isAddConclusionOpen}
-          onOpenChange={setIsAddConclusionOpen}
         />
       </>
     );
@@ -476,14 +456,6 @@ export default function PrescriptionTab({
         <Button
           type="button"
           variant="outline"
-          onClick={() => setIsAddConclusionOpen(true)}
-          className="w-full bg-muted sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
-        >
-          Add Conclusion
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
           onClick={() => setIsTemplateDialogOpen(true)}
           className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
         >
@@ -492,16 +464,20 @@ export default function PrescriptionTab({
         </Button>
         <Button
           type="button"
-          onClick={() => setIsAddDialogOpen(true)}
+          onClick={() => {
+            setDialogTab("medicines");
+            setIsAddDialogOpen(true);
+          }}
           className="w-full sm:w-auto h-8 sm:h-9 text-xs sm:text-sm"
         >
           Add Prescription
         </Button>
       </div>
+
       {/* Medicines List - Accordion */}
       {medicines.length > 0 && (
         <div className="space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 w-full">
             <div className="flex items-center gap-2">
               <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
                 <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
@@ -510,25 +486,36 @@ export default function PrescriptionTab({
                 <h3 className="font-semibold text-sm sm:text-base md:text-lg">
                   Prescribed Medicines
                 </h3>
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] sm:text-xs px-1.5 sm:px-2"
-                >
-                  {medicines.length} Items
-                </Badge>
-                {voiceAddedCount > 0 && (
-                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] sm:text-xs px-1.5 sm:px-2">
-                    {voiceAddedCount} Voice-added
+                <div className="flex flex-wrap gap-1.5 mt-0.5">
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] sm:text-xs px-1.5 sm:px-2"
+                  >
+                    {medicines.length} Items
                   </Badge>
-                )}
-                {doctorAddedCount > 0 && (
-                  <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px] sm:text-xs px-1.5 sm:px-2">
-                    {doctorAddedCount} Doctor-added
-                  </Badge>
-                )}
+                  {voiceAddedCount > 0 && (
+                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                      {voiceAddedCount} Voice-added
+                    </Badge>
+                  )}
+                  {doctorAddedCount > 0 && (
+                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px] sm:text-xs px-1.5 sm:px-2">
+                      {doctorAddedCount} Doctor-added
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <div></div>
             </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsConclusionDialogOpen(true)}
+              className="text-xs text-blue-600 border-blue-200 hover:bg-blue-50/50 rounded-xl flex items-center gap-1.5 shadow-sm"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Add / Edit Diagnostics
+            </Button>
           </div>
 
           <div className="space-y-2 sm:space-y-3">
@@ -538,9 +525,85 @@ export default function PrescriptionTab({
                 medicine={medicine}
                 index={index + 1}
                 onDelete={(med) => setDeleteTarget(med)}
+                onEdit={(med) => {
+                  setDialogTab("medicines");
+                  setIsAddDialogOpen(true);
+                }}
               />
             ))}
           </div>
+
+          {/* Recommended Diagnostics / Tests */}
+          {((instructionsByDoctor && instructionsByDoctor.includes("Recommended Tests:")) || conclusionFiles.length > 0) && (
+            <Card className="overflow-hidden border border-indigo-100 hover:shadow-md transition-all duration-300 rounded-2xl bg-gradient-to-br from-indigo-50/10 to-indigo-50/30 mt-4">
+              <CardHeader className="p-4 sm:p-5 border-b border-indigo-100/50 bg-indigo-50/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-indigo-600" />
+                    <CardTitle className="text-sm font-bold text-indigo-900">Recommended Diagnostics & Patient Reports</CardTitle>
+                  </div>
+                  <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 text-[10px] uppercase font-bold tracking-wider">
+                    Diagnostics Active
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-5 space-y-4">
+                {instructionsByDoctor && instructionsByDoctor.includes("Recommended Tests:") && (
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Assigned Tests</span>
+                    <p className="text-xs sm:text-sm font-medium text-foreground bg-background p-3 rounded-xl border border-indigo-50 whitespace-pre-line leading-relaxed">
+                      {instructionsByDoctor.split("Recommended Tests:")[1]?.trim()}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  {/* Doctor Uploads */}
+                  <div className="space-y-2">
+                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider block">Doctor Reference Files</span>
+                    {conclusionFiles.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {conclusionFiles.map((file, idx) => (
+                          <a
+                            key={file.id || idx}
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2.5 bg-background hover:bg-indigo-50/30 border border-muted rounded-xl transition-all text-xs text-indigo-700 font-semibold group"
+                          >
+                            <span className="truncate flex-1 pr-2">{file.name || `Reference Document #${idx + 1}`}</span>
+                            <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs italic text-muted-foreground bg-background/50 p-3 rounded-xl border border-dashed text-center">No reference files uploaded by doctor</p>
+                    )}
+                  </div>
+
+                  {/* Patient Upload Status */}
+                  <div className="space-y-2">
+                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider block">Patient Report Upload</span>
+                    {conclusionFiles.some(f => f.type === "patient-uploaded" || f.name?.toLowerCase().includes("patient")) ? (
+                      <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-xs text-emerald-800 font-bold">Patient uploaded report files successfully</span>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-xl flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-amber-400" />
+                          <span className="text-xs text-amber-800 font-medium">Reports Pending Patient Upload</span>
+                        </div>
+                        <Badge variant="outline" className="text-[9px] bg-white border-amber-200 text-amber-700">Awaiting Upload</Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* PDF Download Button */}
           {pdfUrl && (
             <div className="pt-2 text-right">
@@ -779,19 +842,25 @@ export default function PrescriptionTab({
       <AddPrescriptionDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
+        initialTab={dialogTab}
         assistantConfig={dictationAssistant}
+        initialMedicines={medicines}
+        initialFindings={initialFindings}
+        initialNextVisitDate={nextVisitDate}
+        initialRecommendedTests={initialRecommendedTests}
+        initialGeneralNotes={data?.data?.follow_up_note}
+      />
+
+      <AddConclusionDialog
+        appointmentId={appointmentId}
+        open={isConclusionDialogOpen}
+        onOpenChange={setIsConclusionDialogOpen}
       />
 
       <AssignMedicineTemplateDialog
         appointmentId={appointmentId}
         open={isTemplateDialogOpen}
         onOpenChange={setIsTemplateDialogOpen}
-      />
-
-      <AddConclusionDialog
-        appointmentId={appointmentId}
-        open={isAddConclusionOpen}
-        onOpenChange={setIsAddConclusionOpen}
       />
 
       {deleteTarget && (
@@ -825,9 +894,65 @@ export default function PrescriptionTab({
                 disabled={deleteMutation.isPending}
                 onClick={async () => {
                   try {
-                    await deleteMutation.mutateAsync(
-                      deleteTarget.prescription_id,
+                    const remainingMedicines = medicines.filter(
+                      (m) => m.prescription_id !== deleteTarget.prescription_id
                     );
+
+                    const medicinesPayload = remainingMedicines.map((med) => {
+                      const timings: string[] = [];
+                      const timesStr = String(med.times || "").toLowerCase();
+                      if (timesStr.includes("morning")) timings.push("morning");
+                      if (timesStr.includes("afternoon")) timings.push("afternoon");
+                      if (timesStr.includes("evening")) timings.push("evening");
+                      if (timesStr.includes("night")) timings.push("night");
+
+                      const mapFrequencyLabelToValue = (lbl: string): string => {
+                        const norm = String(lbl || "").toLowerCase().trim();
+                        if (norm.includes("once") || norm === "od") return "OD";
+                        if (norm.includes("twice") || norm === "bd") return "BD";
+                        if (norm.includes("three") || norm === "tds") return "TDS";
+                        if (norm.includes("sos")) return "SOS";
+                        return "OD";
+                      };
+
+                      const ensureValidDate = (dateStr: any): string | null => {
+                        if (!dateStr) return null;
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+                        const parsed = Date.parse(dateStr);
+                        if (!isNaN(parsed)) return new Date(parsed).toISOString().split("T")[0];
+                        return null;
+                      };
+
+                      const rawDate = med.date || "";
+                      let fallbackStartDate = new Date().toISOString().split("T")[0];
+                      if (rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate.split(" - ")[0])) {
+                        fallbackStartDate = rawDate.split(" - ")[0];
+                      }
+
+                      return {
+                        medicine_id: med.prescription_id || med.medicine_id || null,
+                        medicine_name: (med.name || "").trim(),
+                        medication_type: med.type || "tablet",
+                        strength: med.strength || "",
+                        dosage: med.dosage,
+                        frequency: med.frequency || mapFrequencyLabelToValue(med.frequencylabel) || "OD",
+                        timings,
+                        meal: med.meal || "after_meal",
+                        application_area: med.application_area || "",
+                        remarks: med.notes || "",
+                        start_date: ensureValidDate(med.start_date) || fallbackStartDate,
+                        end_date: ensureValidDate(med.end_date) || null,
+                        instructions: med.instructions?.join(", ") || "",
+                        follow_up_note: med.follow_up_note || "",
+                      };
+                    });
+
+                    const payload = {
+                      follow_up_note: data?.data?.follow_up_note || "",
+                      medicines: medicinesPayload,
+                    };
+
+                    await deleteMutation.mutateAsync(payload);
                   } catch (err) {
                     console.error(err);
                   } finally {

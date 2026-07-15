@@ -183,6 +183,13 @@ export interface ReviewSummary {
   total_reviews: number;
 }
 
+export interface VoiceSettings {
+  voice_name: string | null;
+  speech_rate: number;
+  speech_pitch: number;
+  speech_locale: string | null;
+}
+
 export interface DoctorProfileData {
   personal_information: PersonalInformation;
   working_experience: WorkingExperienceItem[];
@@ -194,6 +201,7 @@ export interface DoctorProfileData {
   additional_information: AdditionalInformation | null;
   social_media: SocialMedia | null;
   review_summary: ReviewSummary | null;
+  voice_settings?: VoiceSettings;
 }
 
 export interface GetDoctorProfileResponse {

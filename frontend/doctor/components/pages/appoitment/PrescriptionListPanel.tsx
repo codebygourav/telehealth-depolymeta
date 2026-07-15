@@ -2,8 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Stethoscope, X, Mic } from "lucide-react";
+import { Loader2, Stethoscope, X, Mic, ClipboardList, FileText } from "lucide-react";
 import { useState, useRef } from "react";
+import { useDoctorProfile } from "@/queries/useProfile";
 import type { AddedMedicine, PrescriptionForm } from "./prescription-dialog-types";
 
 interface PrescriptionListPanelProps {
@@ -23,6 +24,13 @@ interface PrescriptionListPanelProps {
     // New doctor general notes props
     generalNotes: string;
     onGeneralNotesChange: (value: string) => void;
+
+    // Added findings & reports props
+    findingsText?: string;
+    nextVisitDate?: string;
+    includeReports?: boolean;
+    recommendedTests?: string;
+    reportFiles?: File[];
 }
 
 export default function PrescriptionListPanel({
@@ -40,7 +48,15 @@ export default function PrescriptionListPanel({
     mobileTab,
     generalNotes,
     onGeneralNotesChange,
+    findingsText = "",
+    nextVisitDate = "",
+    includeReports = false,
+    recommendedTests = "",
+    reportFiles = [],
 }: PrescriptionListPanelProps) {
+    const { data: profileResponse } = useDoctorProfile();
+    const doctorVoiceLocale = profileResponse?.data?.voice_settings?.speech_locale;
+
     const [isListeningNotes, setIsListeningNotes] = useState(false);
     const recognitionRef = useRef<any>(null);
 
@@ -60,7 +76,7 @@ export default function PrescriptionListPanel({
         const rec = new SpeechRecognitionApi();
         rec.continuous = true;
         rec.interimResults = true;
-        rec.lang = "en-IN";
+        rec.lang = doctorVoiceLocale || "en-IN";
 
         const initialText = generalNotes.trim();
 
@@ -178,6 +194,50 @@ export default function PrescriptionListPanel({
                 </div>
             )}
 
+            {/* Live Previews */}
+            {(findingsText.trim() || nextVisitDate) && (
+                <div className="p-3 border border-primary/20 rounded-xl bg-primary/5 text-xs space-y-2 animate-in fade-in duration-200">
+                    <div className="font-bold text-primary flex items-center gap-1.5">
+                        <ClipboardList className="h-3.5 w-3.5" />
+                        <span>Findings & Notes Preview</span>
+                    </div>
+                    <div className="space-y-1 text-[11px] text-muted-foreground">
+                        {findingsText.trim() && (
+                            <p className="line-clamp-3 italic">
+                                &ldquo;{findingsText.trim()}&rdquo;
+                            </p>
+                        )}
+                        {nextVisitDate && (
+                            <p>
+                                <span className="font-semibold text-foreground">Follow-up Visit:</span> {nextVisitDate}
+                            </p>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {includeReports && (recommendedTests.trim() || reportFiles.length > 0) && (
+                <div className="p-3 border border-indigo-200 rounded-xl bg-indigo-50/50 text-xs space-y-2 animate-in fade-in duration-200">
+                    <div className="font-bold text-indigo-700 flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5" />
+                        <span>Diagnostics Preview</span>
+                    </div>
+                    <div className="space-y-1.5 text-[11px] text-muted-foreground">
+                        {recommendedTests.trim() && (
+                            <div>
+                                <span className="font-semibold text-foreground">Suggested Tests:</span>
+                                <p className="italic line-clamp-2">&ldquo;{recommendedTests.trim()}&rdquo;</p>
+                            </div>
+                        )}
+                        {reportFiles.length > 0 && (
+                            <p className="font-semibold text-indigo-700">
+                                📎 {reportFiles.length} file{reportFiles.length > 1 ? "s" : ""} to upload
+                            </p>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="pt-4 border-t space-y-4 bg-background">
                 {/* Global Doctor Notes field */}
                 <div className="space-y-1.5">
@@ -186,9 +246,9 @@ export default function PrescriptionListPanel({
                         <button
                             type="button"
                             onClick={toggleListeningNotes}
-                            className={`p-1 rounded-full border transition-all ${isListeningNotes
-                                    ? "bg-red-500 text-white border-red-500 animate-pulse"
-                                    : "bg-secondary hover:bg-secondary/80 text-muted-foreground"
+                            className={`p-1.5 rounded-full border transition-all ${isListeningNotes
+                                ? "bg-red-500 text-white border-red-500 animate-pulse shadow-sm"
+                                : "bg-blue-50 hover:bg-blue-100/80 text-blue-600 border-blue-200 shadow-sm"
                                 }`}
                             title="Dictate general notes"
                         >
@@ -221,14 +281,19 @@ export default function PrescriptionListPanel({
                     {errors.stamp_preference && <p className="text-[11px] text-red-500 font-medium">{errors.stamp_preference.message}</p>}
                 </div>
 
-                <Button type="button" onClick={onFinalSubmit} disabled={addPrescriptionPending || addedMedicines.length === 0} className="w-full h-10 text-xs sm:text-sm font-semibold rounded-lg shadow-sm">
+                <Button 
+                    type="button" 
+                    onClick={onFinalSubmit} 
+                    disabled={addPrescriptionPending || (addedMedicines.length === 0 && !findingsText.trim() && !nextVisitDate && !recommendedTests.trim() && reportFiles.length === 0)} 
+                    className="w-full h-10 text-xs sm:text-sm font-semibold rounded-lg shadow-sm"
+                >
                     {addPrescriptionPending ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving Prescription...
+                            Saving consultation & prescription...
                         </>
                     ) : (
-                        `Save & Submit Prescription (${addedMedicines.length})`
+                        `Save & Submit (${addedMedicines.length} meds)`
                     )}
                 </Button>
             </div>

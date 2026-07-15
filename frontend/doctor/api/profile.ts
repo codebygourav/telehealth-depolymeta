@@ -36,3 +36,15 @@ export const getDoctorProfile = async (): Promise<GetDoctorProfileResponse> => {
 
   return response.data;
 };
+
+export const updateDoctorProfile = async (
+  userId: string,
+  group: string,
+  data: Record<string, any>
+): Promise<any> => {
+  const response = await axiosInstance.post(`/doctor/${userId}`, {
+    group,
+    ...data,
+  });
+  return response.data;
+};

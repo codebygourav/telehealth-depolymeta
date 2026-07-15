@@ -62,6 +62,10 @@ class Doctor extends Model
         'hide_from_mobile_app',
         'hide_from_wordpress_api',
         'is_test_doctor',
+        'voice_name',
+        'speech_rate',
+        'speech_pitch',
+        'speech_locale',
         'slug',
         'email_sent',
         'created_by',
@@ -113,6 +117,8 @@ class Doctor extends Model
         'is_checked_in' => 'boolean',
         'is_on_break' => 'boolean',
         'checked_in_at' => 'datetime',
+        'speech_rate' => 'double',
+        'speech_pitch' => 'double',
     ];
 
     public function externalBookings()
