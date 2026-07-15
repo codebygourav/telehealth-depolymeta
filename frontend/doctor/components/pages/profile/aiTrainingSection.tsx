@@ -23,6 +23,11 @@ type PronunciationRule = {
     ai_converts_to: string;
 };
 
+type SpeechWordCorrection = {
+    heard_word: string;
+    corrected_word: string;
+};
+
 type MedicineShortcut = {
     medicine: string;
     shortcut: string;
@@ -40,18 +45,25 @@ const createEmptyMedicineShortcut = (): MedicineShortcut => ({
     priority: 3,
 });
 
+const createEmptySpeechWordCorrection = (): SpeechWordCorrection => ({
+    heard_word: "",
+    corrected_word: "",
+});
+
 export default function AiTrainingSection({ aiTraining, userId }: AiTrainingSectionProps) {
     const queryClient = useQueryClient();
 
     const [isSaving, setIsSaving] = useState(false);
     const [pronunciationDictionary, setPronunciationDictionary] = useState<PronunciationRule[]>([]);
     const [medicineShortcuts, setMedicineShortcuts] = useState<MedicineShortcut[]>([]);
+    const [speechWordCorrections, setSpeechWordCorrections] = useState<SpeechWordCorrection[]>([]);
     const [commonDiagnoses, setCommonDiagnoses] = useState<string[]>([]);
     const [instructions, setInstructions] = useState<string[]>([]);
     const [procedures, setProcedures] = useState<string[]>([]);
 
     const safeProfile = useMemo(() => ({
         pronunciation_dictionary: aiTraining?.pronunciation_dictionary ?? [],
+        speech_word_corrections: aiTraining?.speech_word_corrections ?? [],
         medicine_shortcuts: aiTraining?.medicine_shortcuts ?? [],
         common_diagnoses: aiTraining?.common_diagnoses ?? [],
         frequently_used_instructions: aiTraining?.frequently_used_instructions ?? [],
@@ -74,6 +86,13 @@ export default function AiTrainingSection({ aiTraining, userId }: AiTrainingSect
             })),
         );
 
+        setSpeechWordCorrections(
+            safeProfile.speech_word_corrections.map((item) => ({
+                heard_word: item.heard_word || "",
+                corrected_word: item.corrected_word || "",
+            })),
+        );
+
         setCommonDiagnoses(safeProfile.common_diagnoses.map((item) => item || ""));
         setInstructions(safeProfile.frequently_used_instructions.map((item) => item || ""));
         setProcedures(safeProfile.procedures_investigations.map((item) => item || ""));
@@ -92,6 +111,12 @@ export default function AiTrainingSection({ aiTraining, userId }: AiTrainingSect
                     ai_converts_to: item.ai_converts_to.trim(),
                 }))
                 .filter((item) => item.doctor_says && item.ai_converts_to),
+            speech_word_corrections: speechWordCorrections
+                .map((item) => ({
+                    heard_word: item.heard_word.trim(),
+                    corrected_word: item.corrected_word.trim(),
+                }))
+                .filter((item) => item.heard_word && item.corrected_word),
             medicine_shortcuts: medicineShortcuts
                 .map((item) => ({
                     medicine: item.medicine.trim(),
@@ -135,7 +160,10 @@ export default function AiTrainingSection({ aiTraining, userId }: AiTrainingSect
                 <CardContent className="p-6 space-y-7">
                     <section className="space-y-3 pb-6 border-b border-border">
                         <div className="flex items-center justify-between">
-                            <Label className="text-sm font-bold text-foreground">Pronunciation Dictionary</Label>
+                            <div>
+                                <Label className="text-sm font-bold text-foreground">Pronunciation Dictionary</Label>
+                                <p className="text-xs text-muted-foreground mt-0.5">Map how you speak to the exact clinical term the AI should use.</p>
+                            </div>
                             <Button
                                 type="button"
                                 variant="secondary"
@@ -187,7 +215,65 @@ export default function AiTrainingSection({ aiTraining, userId }: AiTrainingSect
 
                     <section className="space-y-3 pb-6 border-b border-border">
                         <div className="flex items-center justify-between">
-                            <Label className="text-sm font-bold text-foreground">Medicine Shortcuts</Label>
+                            <div>
+                                <Label className="text-sm font-bold text-foreground">Speech Word Corrections</Label>
+                                <p className="text-xs text-muted-foreground mt-0.5">Correct common misheard words. Example: meal becomes mail.</p>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setSpeechWordCorrections((prev) => [...prev, createEmptySpeechWordCorrection()])}
+                            >
+                                <Plus className="h-4 w-4 mr-1" /> Add
+                            </Button>
+                        </div>
+
+                        <div className="space-y-2">
+                            {speechWordCorrections.length === 0 && (
+                                <p className="text-xs text-muted-foreground">No speech correction rules added yet.</p>
+                            )}
+                            {speechWordCorrections.map((row, index) => (
+                                <div key={`speech-word-${index}`} className="grid grid-cols-12 gap-2">
+                                    <Input
+                                        className="col-span-5"
+                                        placeholder="AI heard (Example: mail)"
+                                        value={row.heard_word}
+                                        onChange={(e) => {
+                                            const next = [...speechWordCorrections];
+                                            next[index] = { ...next[index], heard_word: e.target.value };
+                                            setSpeechWordCorrections(next);
+                                        }}
+                                    />
+                                    <Input
+                                        className="col-span-6"
+                                        placeholder="Should be (Example: meal)"
+                                        value={row.corrected_word}
+                                        onChange={(e) => {
+                                            const next = [...speechWordCorrections];
+                                            next[index] = { ...next[index], corrected_word: e.target.value };
+                                            setSpeechWordCorrections(next);
+                                        }}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="col-span-1"
+                                        onClick={() => setSpeechWordCorrections((prev) => prev.filter((_, i) => i !== index))}
+                                    >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    <section className="space-y-3 pb-6 border-b border-border">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label className="text-sm font-bold text-foreground">Medicine Shortcuts</Label>
+                                <p className="text-xs text-muted-foreground mt-0.5">Link your quick spoken codes to the full medicine name.</p>
+                            </div>
                             <Button
                                 type="button"
                                 variant="secondary"
@@ -252,6 +338,7 @@ export default function AiTrainingSection({ aiTraining, userId }: AiTrainingSect
 
                     <SimpleListEditor
                         title="Common Diagnoses"
+                        subtitle="Save frequent diagnoses to insert quickly while dictating or typing findings."
                         value={commonDiagnoses}
                         onChange={setCommonDiagnoses}
                         placeholder="Diagnosis"
@@ -259,6 +346,7 @@ export default function AiTrainingSection({ aiTraining, userId }: AiTrainingSect
 
                     <SimpleListEditor
                         title="Frequently Used Instructions"
+                        subtitle="Store reusable patient instruction lines for one-click insertion in notes."
                         value={instructions}
                         onChange={setInstructions}
                         placeholder="Instruction"
@@ -266,6 +354,7 @@ export default function AiTrainingSection({ aiTraining, userId }: AiTrainingSect
 
                     <SimpleListEditor
                         title="Procedures & Investigations"
+                        subtitle="Keep common test and procedure names handy for faster report recommendations."
                         value={procedures}
                         onChange={setProcedures}
                         placeholder="Procedure / Investigation"
@@ -292,11 +381,13 @@ export default function AiTrainingSection({ aiTraining, userId }: AiTrainingSect
 
 function SimpleListEditor({
     title,
+    subtitle,
     value,
     onChange,
     placeholder,
 }: {
     title: string;
+    subtitle?: string;
     value: string[];
     onChange: (next: string[]) => void;
     placeholder: string;
@@ -304,7 +395,10 @@ function SimpleListEditor({
     return (
         <section className="space-y-3 pb-6 border-b border-border last:border-b-0 last:pb-0">
             <div className="flex items-center justify-between">
-                <Label className="text-sm font-bold text-foreground">{title}</Label>
+                <div>
+                    <Label className="text-sm font-bold text-foreground">{title}</Label>
+                    {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+                </div>
                 <Button
                     type="button"
                     variant="secondary"

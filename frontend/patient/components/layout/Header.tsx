@@ -89,7 +89,7 @@ export function Header() {
         isScrolled && "shadow-sm",
       )}
     >
-      <div className="mx-auto flex h-[72px] container-max-width items-center gap-4 justify-between">
+      <div className="mx-auto flex h-18 container-max-width items-center gap-4 justify-between">
         <Link href="/" className="flex items-center shrink-0">
           <Image
             src={logo}
@@ -107,6 +107,7 @@ export function Header() {
           mobileMenuOpen={mobileMenuOpen}
           setMobileMenuOpen={setMobileMenuOpen}
           isActivePath={isActivePath}
+          onLogout={handleLogout}
         />
 
         <div className="hidden lg:flex items-center gap-3 ml-auto sm:gap-4">

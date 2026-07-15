@@ -86,6 +86,7 @@ class GetProfileResource extends JsonResource
 
         return [
             'pronunciation_dictionary' => array_values($profile['pronunciation_dictionary'] ?? []),
+            'speech_word_corrections' => array_values($profile['speech_word_corrections'] ?? []),
             'medicine_shortcuts' => array_values($profile['medicine_shortcuts'] ?? []),
             'common_diagnoses' => array_values($profile['common_diagnoses'] ?? []),
             'frequently_used_instructions' => array_values($profile['frequently_used_instructions'] ?? []),

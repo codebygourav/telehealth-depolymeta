@@ -201,8 +201,14 @@ export interface AiTrainingMedicineShortcut {
   priority?: number;
 }
 
+export interface AiTrainingSpeechWordCorrection {
+  heard_word: string;
+  corrected_word: string;
+}
+
 export interface AiTrainingProfile {
   pronunciation_dictionary: AiTrainingPronunciationRule[];
+  speech_word_corrections: AiTrainingSpeechWordCorrection[];
   medicine_shortcuts: AiTrainingMedicineShortcut[];
   common_diagnoses: string[];
   frequently_used_instructions: string[];

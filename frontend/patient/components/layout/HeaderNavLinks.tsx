@@ -11,7 +11,7 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "@/types/header";
-import { Bell, Menu } from "lucide-react";
+import { Bell, LogOut, Menu } from "lucide-react";
 import Link from "next/link";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -21,6 +21,7 @@ interface HeaderNavLinksProps {
     mobileMenuOpen: boolean;
     setMobileMenuOpen: Dispatch<SetStateAction<boolean>>;
     isActivePath: (href: string) => boolean;
+    onLogout: () => Promise<void>;
 }
 
 export function HeaderNavLinks({
@@ -29,6 +30,7 @@ export function HeaderNavLinks({
     mobileMenuOpen,
     setMobileMenuOpen,
     isActivePath,
+    onLogout,
 }: HeaderNavLinksProps) {
     return (
     
@@ -133,6 +135,18 @@ export function HeaderNavLinks({
                                 <Bell className="w-4 h-4" />
                                 <span className="flex-1">Notifications</span>
                             </Link>
+
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    setMobileMenuOpen(false);
+                                    await onLogout();
+                                }}
+                                className="mt-2 flex items-center gap-3 global-radius px-4 py-3 text-sm font-bold text-destructive transition-all duration-200 hover:bg-destructive/10"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                <span className="flex-1 text-left">Log out</span>
+                            </button>
                         </div>
                     </SheetContent>
                 </Sheet>
