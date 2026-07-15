@@ -76,6 +76,20 @@ class GetProfileResource extends JsonResource
                 'speech_pitch' => $doctor->speech_pitch ?? 1.0,
                 'speech_locale' => $doctor->speech_locale ?? 'en-IN',
             ],
+            'ai_training' => $this->normalizeAiTrainingProfile($doctor->ai_training_profile),
+        ];
+    }
+
+    protected function normalizeAiTrainingProfile(?array $profile): array
+    {
+        $profile = $profile ?? [];
+
+        return [
+            'pronunciation_dictionary' => array_values($profile['pronunciation_dictionary'] ?? []),
+            'medicine_shortcuts' => array_values($profile['medicine_shortcuts'] ?? []),
+            'common_diagnoses' => array_values($profile['common_diagnoses'] ?? []),
+            'frequently_used_instructions' => array_values($profile['frequently_used_instructions'] ?? []),
+            'procedures_investigations' => array_values($profile['procedures_investigations'] ?? []),
         ];
     }
 

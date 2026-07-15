@@ -120,7 +120,7 @@
 </head>
 
 <body>
- 
+
     <div class="header">
         @if (isset($hospital_logo_url) && $hospital_logo_url)
             <img src="{{ $hospital_logo_url }}" style="max-height: 60px; margin-bottom: 5px;" alt="Hospital Logo"><br>

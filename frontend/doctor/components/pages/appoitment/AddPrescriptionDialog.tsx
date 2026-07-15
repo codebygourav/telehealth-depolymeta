@@ -246,6 +246,36 @@ export default function AddPrescriptionDialog({
 
   const { data: profileResponse } = useDoctorProfile();
   const doctorVoiceLocale = profileResponse?.data?.voice_settings?.speech_locale;
+  const doctorAiTraining = profileResponse?.data?.ai_training;
+  const pronunciationDictionary = useMemo(
+    () => doctorAiTraining?.pronunciation_dictionary ?? [],
+    [doctorAiTraining?.pronunciation_dictionary],
+  );
+  const aiInstructionSuggestions = useMemo(
+    () =>
+      (doctorAiTraining?.frequently_used_instructions ?? [])
+        .filter((item) => item?.trim())
+        .slice(0, 12),
+    [doctorAiTraining?.frequently_used_instructions],
+  );
+  const aiCommonDiagnoses = useMemo(
+    () =>
+      (doctorAiTraining?.common_diagnoses ?? [])
+        .filter((item) => item?.trim())
+        .slice(0, 12),
+    [doctorAiTraining?.common_diagnoses],
+  );
+  const aiProcedureSuggestions = useMemo(
+    () =>
+      (doctorAiTraining?.procedures_investigations ?? [])
+        .filter((item) => item?.trim())
+        .slice(0, 12),
+    [doctorAiTraining?.procedures_investigations],
+  );
+  const medicineShortcuts = useMemo(
+    () => doctorAiTraining?.medicine_shortcuts ?? [],
+    [doctorAiTraining?.medicine_shortcuts],
+  );
 
   const addPrescription = useAddPrescription(appointmentId || "", token!);
   const submitConclusionMutation = useSubmitConclusion();
@@ -332,7 +362,10 @@ export default function AddPrescriptionDialog({
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          const cleaned = cleanDuplicateWords(transcript);
+          const cleaned = applyPronunciationDictionary(
+            cleanDuplicateWords(transcript),
+            pronunciationDictionary,
+          );
           if (cleaned) {
             setFindingsText((prev) => {
               const trimmedPrev = prev.trim();
@@ -377,7 +410,10 @@ export default function AddPrescriptionDialog({
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          const cleaned = cleanDuplicateWords(transcript);
+          const cleaned = applyPronunciationDictionary(
+            cleanDuplicateWords(transcript),
+            pronunciationDictionary,
+          );
           if (cleaned) {
             setRecommendedTests((prev) => {
               const trimmedPrev = prev.trim();
@@ -526,7 +562,7 @@ export default function AddPrescriptionDialog({
   useEffect(() => {
     if (open) {
       setActiveTab(initialTab === "reports" ? "reports" : "prescribe");
-      
+
       // Pre-populate fields
       setFindingsText(initialFindings || "");
       setNextVisitDate(initialNextVisitDate || "");
@@ -754,7 +790,7 @@ export default function AddPrescriptionDialog({
   };
 
   const handleUseCustomMedicine = (medicineName: string) => {
-    const value = medicineName.trim();
+    const value = resolveMedicineShortcut(medicineName.trim(), medicineShortcuts);
 
     if (!value) {
       return;
@@ -797,7 +833,10 @@ export default function AddPrescriptionDialog({
   };
 
   const handleStep1Complete = async (text: string, shouldAdvance = true) => {
-    const candidate = extractMedicineSearchCandidate(text);
+    const candidate = resolveMedicineShortcut(
+      extractMedicineSearchCandidate(text),
+      medicineShortcuts,
+    );
     if (!candidate) {
       setSpeechError("Speak or type a medicine name.");
       return false;
@@ -1010,6 +1049,9 @@ export default function AddPrescriptionDialog({
 
   const handleFinalSubmit = async () => {
     const hasFindings = findingsText.trim() || nextVisitDate || (includeReports && (recommendedTests.trim() || reportFiles.length > 0));
+    const cleanedFindings = sanitizeClinicalText(findingsText);
+    const cleanedRecommendedTests = sanitizeClinicalText(recommendedTests);
+    const cleanedGeneralNotes = sanitizeClinicalText(generalNotes);
 
     if (addedMedicines.length === 0 && !hasFindings) {
       alert("Please add clinical findings, diagnostics or at least one medicine to submit.");
@@ -1025,9 +1067,9 @@ export default function AddPrescriptionDialog({
 
     try {
       if (hasFindings) {
-        let combinedInstructions = findingsText.trim();
-        if (includeReports && recommendedTests.trim()) {
-          combinedInstructions += `\n\nRecommended Tests:\n${recommendedTests.trim()}`;
+        let combinedInstructions = cleanedFindings;
+        if (includeReports && cleanedRecommendedTests) {
+          combinedInstructions += `\n\nRecommended Tests:\n${cleanedRecommendedTests}`;
         }
 
         await submitConclusionMutation.mutateAsync({
@@ -1048,7 +1090,7 @@ export default function AddPrescriptionDialog({
           if (med.timing_evening) timings.push("evening");
           if (med.timing_night) timings.push("night");
 
-           return {
+          return {
             medicine_id: med.medicine_id || null,
             medicine_name: (med.medicine_name || "").trim(),
             medication_type: med.medication_type || "tablet",
@@ -1070,10 +1112,10 @@ export default function AddPrescriptionDialog({
           draft_id: draftId,
           stamp_preference: stampPref,
           follow_up_note: [
-            findingsText.trim() ? `Clinical Findings:\n${findingsText.trim()}` : "",
-            recommendedTests.trim() ? `Recommended Tests / Diagnostics:\n${recommendedTests.trim()}` : "",
-            generalNotes.trim(),
-            ...addedMedicines.map((med) => med.follow_up_note?.trim())
+            cleanedFindings ? `Clinical Findings:\n${cleanedFindings}` : "",
+            cleanedRecommendedTests ? `Recommended Tests / Diagnostics:\n${cleanedRecommendedTests}` : "",
+            cleanedGeneralNotes,
+            ...addedMedicines.map((med) => sanitizeClinicalText(med.follow_up_note || "")),
           ].filter(Boolean).join("\n\n"),
           medicines: medicinesPayload,
         };
@@ -1314,7 +1356,10 @@ export default function AddPrescriptionDialog({
     transcript: string,
     shouldAdvance = true,
   ) => {
-    const trimmed = cleanDuplicateWords(transcript.trim());
+    const trimmed = applyPronunciationDictionary(
+      cleanDuplicateWords(transcript.trim()),
+      pronunciationDictionary,
+    );
 
     if (!trimmed) {
       return true;
@@ -1494,7 +1539,10 @@ export default function AddPrescriptionDialog({
 
     recognition.onend = () => {
       const shouldPrefill = shouldParseAfterStopRef.current;
-      const spokenTranscript = cleanDuplicateWords(liveTranscriptRef.current);
+      const spokenTranscript = applyPronunciationDictionary(
+        cleanDuplicateWords(liveTranscriptRef.current),
+        pronunciationDictionary,
+      );
 
       shouldParseAfterStopRef.current = false;
       setIsListening(false);
@@ -1648,7 +1696,7 @@ export default function AddPrescriptionDialog({
                           {/* Step 1: Clinical Findings & Notes */}
                           <div className="space-y-3 pb-4 border-b">
                             <div>
-                              <h3 className="text-xs font-bold text-foreground uppercase tracking-wide text-primary">Clinical Findings & Notes</h3>
+                              <h3 className="text-xs font-bold uppercase tracking-wide text-primary">Clinical Findings & Notes</h3>
                               <p className="text-[10px] text-muted-foreground">Document symptoms, diagnosis, and observations (appears on PDF)</p>
                             </div>
 
@@ -1674,6 +1722,26 @@ export default function AddPrescriptionDialog({
                                 rows={3}
                                 className="resize-none text-sm rounded-xl border border-muted bg-background"
                               />
+                              {aiCommonDiagnoses.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                  {aiCommonDiagnoses.map((item) => (
+                                    <button
+                                      key={item}
+                                      type="button"
+                                      onClick={() => {
+                                        const existing = findingsText.trim();
+                                        const next = existing
+                                          ? `${existing}${existing.endsWith("\n") ? "" : "\n"}${item}`
+                                          : item;
+                                        setFindingsText(next);
+                                      }}
+                                      className="text-[10px] px-2 py-0.5 rounded-full border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition"
+                                    >
+                                      {item}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                             <div className="space-y-1.5">
@@ -1988,6 +2056,7 @@ export default function AddPrescriptionDialog({
                                 mealOptions={resolvedMealOptions}
                                 durationOptions={durationOptions}
                                 applicationAreaOptions={applicationAreaOptions}
+                                commonInstructionSuggestions={aiInstructionSuggestions}
                               />
                             )
                           ) : (
@@ -2117,7 +2186,7 @@ export default function AddPrescriptionDialog({
                                 onChange={(e) => setIncludeReports(e.target.checked)}
                                 className="sr-only peer"
                               />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                             </label>
                           </div>
 
@@ -2145,6 +2214,26 @@ export default function AddPrescriptionDialog({
                                   rows={4}
                                   className="resize-none text-sm rounded-xl border border-muted bg-background"
                                 />
+                                {aiProcedureSuggestions.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 pt-1">
+                                    {aiProcedureSuggestions.map((item) => (
+                                      <button
+                                        key={item}
+                                        type="button"
+                                        onClick={() => {
+                                          const existing = recommendedTests.trim();
+                                          const next = existing
+                                            ? `${existing}${existing.endsWith("\n") ? "" : "\n"}${item}`
+                                            : item;
+                                          setRecommendedTests(next);
+                                        }}
+                                        className="text-[10px] px-2 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+                                      >
+                                        {item}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
 
                               <div className="space-y-2">
@@ -2184,7 +2273,7 @@ export default function AddPrescriptionDialog({
                                     <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
                                       {reportFiles.map((file, idx) => (
                                         <div key={idx} className="flex items-center justify-between p-2 bg-muted/20 rounded-lg text-xs border">
-                                          <span className="truncate font-medium flex-1 max-w-[280px]">{file.name}</span>
+                                          <span className="truncate font-medium flex-1 max-w-70">{file.name}</span>
                                           <button
                                             type="button"
                                             onClick={() => setReportFiles((prev) => prev.filter((_, i) => i !== idx))}
@@ -2298,6 +2387,56 @@ function cleanDuplicateWords(text: string): string {
   }
 
   return result.join(" ").trim();
+}
+
+function applyPronunciationDictionary(
+  input: string,
+  dictionary: Array<{ doctor_says?: string; ai_converts_to?: string }>,
+): string {
+  if (!input) return "";
+
+  let normalized = input;
+
+  for (const row of dictionary || []) {
+    const from = String(row?.doctor_says || "").trim();
+    const to = String(row?.ai_converts_to || "").trim();
+
+    if (!from || !to) {
+      continue;
+    }
+
+    const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    normalized = normalized.replace(new RegExp(`\\b${escaped}\\b`, "gi"), to);
+  }
+
+  return cleanDuplicateWords(normalized);
+}
+
+function sanitizeClinicalText(input: string): string {
+  const normalized = cleanDuplicateWords(input || "");
+  if (!normalized) {
+    return "";
+  }
+
+  const lines = normalized
+    .split(/\r?\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const uniqueLines: string[] = [];
+  const seen = new Set<string>();
+
+  for (const line of lines) {
+    const key = line.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    uniqueLines.push(line);
+  }
+
+  return uniqueLines.join("\n").trim();
 }
 
 function buildVoiceLanguageOptions(
@@ -2500,6 +2639,24 @@ function extractMedicineSearchCandidate(text: string) {
     )
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function resolveMedicineShortcut(
+  input: string,
+  shortcuts: Array<{ medicine?: string; shortcut?: string }>,
+) {
+  const candidate = String(input || "").trim();
+  if (!candidate) {
+    return "";
+  }
+
+  const normalizedCandidate = candidate.toLowerCase();
+  const matched = (shortcuts || []).find((item) => {
+    const shortcut = String(item?.shortcut || "").trim().toLowerCase();
+    return shortcut !== "" && shortcut === normalizedCandidate;
+  });
+
+  return String(matched?.medicine || candidate).trim();
 }
 
 function findMedicineMatch(list: MedicineItem[], query: string) {

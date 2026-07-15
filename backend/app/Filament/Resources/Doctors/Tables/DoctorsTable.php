@@ -272,6 +272,12 @@ class DoctorsTable
                     EditAction::make()
                         ->visible(fn($record) => DoctorResource::canEdit($record)),
 
+                    Action::make('aiTraining')
+                        ->label('AI Training')
+                        ->icon('heroicon-o-cpu-chip')
+                        ->url(fn($record) => DoctorResource::getUrl('ai-training', ['record' => $record]))
+                        ->visible(fn($record) => DoctorResource::canEdit($record)),
+
                     DeleteAction::make()
                         ->visible(fn($record) => DoctorResource::canDelete($record)),
                 ]),

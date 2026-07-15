@@ -56,6 +56,13 @@ export default function PrescriptionListPanel({
 }: PrescriptionListPanelProps) {
     const { data: profileResponse } = useDoctorProfile();
     const doctorVoiceLocale = profileResponse?.data?.voice_settings?.speech_locale;
+    const doctorAiTraining = profileResponse?.data?.ai_training;
+    const instructionSuggestions = (doctorAiTraining?.frequently_used_instructions ?? [])
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 10);
+    const pronunciationDictionary = doctorAiTraining?.pronunciation_dictionary ?? [];
+    const medicineShortcuts = doctorAiTraining?.medicine_shortcuts ?? [];
 
     const [isListeningNotes, setIsListeningNotes] = useState(false);
     const recognitionRef = useRef<any>(null);
@@ -92,7 +99,11 @@ export default function PrescriptionListPanel({
                 }
             }
             const spoken = (finalTrans + interimTrans).trim();
-            const cleanedSpoken = cleanDuplicateWords(spoken);
+            const cleanedSpoken = applyDoctorTrainingVocabulary(
+                cleanDuplicateWords(spoken),
+                pronunciationDictionary,
+                medicineShortcuts,
+            );
             if (cleanedSpoken) {
                 onGeneralNotesChange(initialText ? `${initialText} ${cleanedSpoken}` : cleanedSpoken);
             } else if (!spoken && initialText) {
@@ -126,12 +137,12 @@ export default function PrescriptionListPanel({
                 <div className="flex flex-col items-center justify-center py-14 text-center border-2 border-dashed rounded-xl p-4 bg-muted/5">
                     <Stethoscope className="h-10 w-10 text-muted-foreground/50 mb-2 stroke-[1.2]" />
                     <p className="text-xs font-semibold text-muted-foreground">No medicines added</p>
-                    <p className="text-[10px] text-muted-foreground/80 mt-1 max-w-[180px] leading-relaxed">
+                    <p className="text-[10px] text-muted-foreground/80 mt-1 max-w-45 leading-relaxed">
                         Fill and add details using the form on the left to build the prescription.
                     </p>
                 </div>
             ) : (
-                <div className="max-h-[380px] overflow-y-auto space-y-3 pr-1 min-h-0">
+                <div className="max-h-95 overflow-y-auto space-y-3 pr-1 min-h-0">
                     {addedMedicines.map((med, index) => {
                         const timingsList = [
                             med.timing_morning ? "Morning" : null,
@@ -183,7 +194,7 @@ export default function PrescriptionListPanel({
                                         </div>
                                     )}
                                     {med.instructions && (
-                                        <div className="col-span-2 italic bg-muted/40 p-1.5 rounded-lg border text-[10px] leading-relaxed break-words font-medium">
+                                        <div className="col-span-2 italic bg-muted/40 p-1.5 rounded-lg border text-[10px] leading-relaxed wrap-break-word font-medium">
                                             &ldquo;{med.instructions}&rdquo;
                                         </div>
                                     )}
@@ -262,6 +273,26 @@ export default function PrescriptionListPanel({
                         placeholder="Write or dictate general notes, diagnosis, or patient instructions here. This will be printed on the prescription PDF."
                         className="text-xs rounded-lg resize-none bg-background"
                     />
+                    {instructionSuggestions.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                            {instructionSuggestions.map((item) => (
+                                <button
+                                    key={item}
+                                    type="button"
+                                    onClick={() => {
+                                        const existing = generalNotes.trim();
+                                        const next = existing
+                                            ? `${existing}${existing.endsWith(".") ? "" : "."} ${item}`
+                                            : item;
+                                        onGeneralNotesChange(next.trim());
+                                    }}
+                                    className="text-[10px] px-2 py-0.5 rounded-full border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition"
+                                >
+                                    {item}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-1">
@@ -323,4 +354,32 @@ function cleanDuplicateWords(text: string): string {
     }
 
     return result.join(" ").trim();
+}
+
+function applyDoctorTrainingVocabulary(
+    input: string,
+    pronunciationDictionary: Array<{ doctor_says?: string; ai_converts_to?: string }>,
+    medicineShortcuts: Array<{ shortcut?: string; medicine?: string }>,
+): string {
+    let text = input;
+
+    for (const row of pronunciationDictionary || []) {
+        const from = String(row?.doctor_says || "").trim();
+        const to = String(row?.ai_converts_to || "").trim();
+        if (!from || !to) continue;
+
+        const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        text = text.replace(new RegExp(`\\b${escaped}\\b`, "gi"), to);
+    }
+
+    for (const row of medicineShortcuts || []) {
+        const from = String(row?.shortcut || "").trim();
+        const to = String(row?.medicine || "").trim();
+        if (!from || !to) continue;
+
+        const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        text = text.replace(new RegExp(`\\b${escaped}\\b`, "gi"), to);
+    }
+
+    return cleanDuplicateWords(text);
 }

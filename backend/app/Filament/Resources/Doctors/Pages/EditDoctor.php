@@ -67,7 +67,7 @@ class EditDoctor extends EditRecord
             ->modalDescription('Are you sure you want to cancel? Any unsaved changes will be lost.')
             ->modalSubmitActionLabel('Yes, cancel')
             ->modalCancelActionLabel('No, keep editing')
-            ->action(fn () => $this->redirect($url, navigate: \Filament\Support\Facades\FilamentView::hasSpaMode($url)));
+            ->action(fn() => $this->redirect($url, navigate: \Filament\Support\Facades\FilamentView::hasSpaMode($url)));
     }
 
     protected function mutateFormDataBeforeFill(array $data): array
@@ -84,7 +84,7 @@ class EditDoctor extends EditRecord
             if (isset($data['email'])) {
                 $doctor->user->update([
                     'email' => $data['email'],
-                    'name' => $data['first_name'].' '.$data['last_name'],
+                    'name' => $data['first_name'] . ' ' . $data['last_name'],
                     'phone' => preg_replace('/[\s\-()]/', '', $data['phone'] ?? ''),
                 ]);
             }
@@ -247,20 +247,25 @@ class EditDoctor extends EditRecord
         $hasUser = $this->record->user !== null;
 
         return [
+            Action::make('aiTraining')
+                ->label('AI Training')
+                ->icon('heroicon-o-cpu-chip')
+                ->url(fn() => DoctorResource::getUrl('ai-training', ['record' => $this->record])),
+
             Action::make('manageAvailability')
                 ->label('Manage Availability')
                 ->icon('heroicon-o-calendar-days')
-                ->url(fn () => DoctorResource::getUrl('availability', ['record' => $this->record])),
+                ->url(fn() => DoctorResource::getUrl('availability', ['record' => $this->record])),
 
             Action::make('sendCredentials')
                 ->label('Send Credentials')
                 ->icon('heroicon-o-envelope')
                 ->requiresConfirmation()
                 ->modalHeading('Send Login Credentials')
-                ->modalDescription(fn () => "Generate a new password and send login credentials to {$this->record->user?->email}?")
+                ->modalDescription(fn() => "Generate a new password and send login credentials to {$this->record->user?->email}?")
                 ->modalSubmitActionLabel('Send Email')
-                ->action(fn () => $this->sendCredentialsWithNewPassword())
-                ->visible(fn () => $hasUser),
+                ->action(fn() => $this->sendCredentialsWithNewPassword())
+                ->visible(fn() => $hasUser),
 
             // ==== Assign Role Action ====
             // Action::make('assignRole')

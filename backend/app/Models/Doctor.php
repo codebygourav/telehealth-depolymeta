@@ -66,6 +66,7 @@ class Doctor extends Model
         'speech_rate',
         'speech_pitch',
         'speech_locale',
+        'ai_training_profile',
         'slug',
         'email_sent',
         'created_by',
@@ -119,6 +120,7 @@ class Doctor extends Model
         'checked_in_at' => 'datetime',
         'speech_rate' => 'double',
         'speech_pitch' => 'double',
+        'ai_training_profile' => 'array',
     ];
 
     public function externalBookings()
