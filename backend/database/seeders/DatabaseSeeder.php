@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             MedicineTypeSeeder::class,
             MedicineSeeder::class,
             DoctorSeeder::class,
+            DoctorAiTrainingSeeder::class,
             DoctorAvailabilitySeeder::class,
             RolesSeeder::class,
             PatientSeeder::class,
