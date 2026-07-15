@@ -70,6 +70,12 @@ class GetProfileResource extends JsonResource
                 'average_rating' => round($doctor->reviews()->avg('rating') ?? 0, 1),
                 'total_reviews' => (int) $doctor->reviews()->count(),
             ],
+            'voice_settings' => [
+                'voice_name' => $doctor->voice_name,
+                'speech_rate' => $doctor->speech_rate ?? 1.0,
+                'speech_pitch' => $doctor->speech_pitch ?? 1.0,
+                'speech_locale' => $doctor->speech_locale ?? 'en-IN',
+            ],
         ];
     }
 

@@ -248,6 +248,26 @@ return [
                 'social_links' => 'json',
             ],
         ],
+        'voice_settings' => [
+            'fields' => [
+                'voice_name',
+                'speech_rate',
+                'speech_pitch',
+                'speech_locale',
+            ],
+            'validation' => [
+                'voice_name' => 'nullable|string|max:255',
+                'speech_rate' => 'sometimes|numeric|min:0.5|max:2.0',
+                'speech_pitch' => 'sometimes|numeric|min:0.5|max:2.0',
+                'speech_locale' => 'nullable|string|max:20',
+            ],
+            'field_types' => [
+                'voice_name' => 'text',
+                'speech_rate' => 'text',
+                'speech_pitch' => 'text',
+                'speech_locale' => 'text',
+            ],
+        ],
     ],
 
 ];

@@ -311,23 +311,7 @@ export default function PrescriptionVoiceAssistantPanel({
   return (
     <div className="space-y-4">
 
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <span className="text-xs text-muted-foreground font-medium">
-          Language:
-        </span>
-        <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-background p-0.5">
-          {voiceLanguageOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setSelectedSpeechLocale(option.value)}
-              className={`rounded-md px-2.5 py-1 text-[10px] font-medium transition ${selectedSpeechLocale === option.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Vertical Steps List */}
       <div className="flex flex-col gap-3">

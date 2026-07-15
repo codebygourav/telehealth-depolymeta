@@ -10,15 +10,16 @@ import PersonalInfoSection from "@/components/pages/profile/personalInfoSection"
 import ProfileHeader from "@/components/pages/profile/profileHeader";
 import ReviewsSection from "@/components/pages/profile/reviewsSection";
 import SocialLinksSection from "@/components/pages/profile/socialLinksSection";
+import VoiceSettingsSection from "@/components/pages/profile/voiceSettingsSection";
 import { useDoctorProfile } from "@/queries/useProfile";
 import { useDoctorHome } from "@/queries/useHome";
 import { useAuth } from "@/context/userContext";
 import HeroSection from "@/components/ui/hero-section";
-import { User, MapPinPen, Award, GraduationCap, Trophy, FileBadge, Link, UserStar } from "lucide-react";
+import { User, MapPinPen, Award, GraduationCap, Trophy, FileBadge, Link, UserStar, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
-type TabKey = "personal" | "address" | "experience" | "education" | "awards" | "certificates" | "social" | "reviews";
+type TabKey = "personal" | "address" | "experience" | "education" | "awards" | "certificates" | "social" | "reviews" | "voice";
 
 const ProfilePage = () => {
 
@@ -81,6 +82,11 @@ const ProfilePage = () => {
             key: "reviews" as TabKey,
             label: "Reviews",
             icon: UserStar,
+        },
+        {
+            key: "voice" as TabKey,
+            label: "Voice Settings",
+            icon: Volume2,
         },
     ];
 
@@ -341,6 +347,9 @@ const ProfilePage = () => {
                     )}
                     {activeTab === "reviews" && (
                         <ReviewsSection reviews={reviews} averageRating={reviewSummary?.average_rating?.toString() || "0"} />
+                    )}
+                    {activeTab === "voice" && (
+                        <VoiceSettingsSection voiceSettings={profile?.voice_settings ?? null} userId={user?.id} />
                     )}
                 </main>
             </div>
