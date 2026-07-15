@@ -135,27 +135,31 @@ export default function PrescriptionMedicineForm({
         visibleFields.includes(field) && (fieldRules.length === 0 || fieldRules.includes(field));
 
     return (
-        <div className="space-y-5 bg-background border rounded-2xl p-4 sm:p-5 shadow-sm">
-            <div className="font-semibold text-xs text-muted-foreground border-b pb-2 flex items-center justify-between">
-                <span className="font-bold text-foreground text-sm">{title}</span>
+        <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+            <div className="border-b border-slate-200 bg-linear-to-r from-sky-50 via-white to-emerald-50 px-4 py-4 sm:px-5 flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sky-700">Prescription Builder</p>
+                    <span className="font-bold text-slate-900 text-base sm:text-lg">{title}</span>
+                </div>
                 {editingIndex !== null && (
-                    <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold uppercase tracking-wider">
+                    <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 font-semibold uppercase tracking-wider">
                         Editing Item #{editingIndex + 1}
                     </span>
                 )}
             </div>
 
-            {subtitle && <p className="text-[11px] text-muted-foreground -mt-2 leading-relaxed">{subtitle}</p>}
+            <div className="space-y-5 p-4 sm:p-5">
+            {subtitle && <p className="text-[11px] text-slate-500 -mt-2 leading-relaxed">{subtitle}</p>}
 
             {/* Medicine Search Section */}
             {shouldShowField("medicine_name") && (
-                <div className="space-y-1 relative">
-                    <Label className="text-xs font-semibold text-foreground">Medicine Name *</Label>
+                <div className="space-y-1.5 relative rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                    <Label className="text-xs font-semibold text-slate-700">Medicine Name *</Label>
                     {selectedMedicineName ? (
-                        <div className="flex items-center justify-between rounded-xl border bg-secondary/30 px-3.5 py-2.5 hover:border-muted-foreground/30 transition shadow-inner">
+                        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 hover:border-slate-300 transition shadow-sm">
                             <div className="space-y-0.5">
-                                <p className="text-xs font-bold text-foreground">{selectedMedicineName}</p>
-                                <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                                <p className="text-xs font-bold text-slate-900">{selectedMedicineName}</p>
+                                <p className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
                                     <span className={`h-1.5 w-1.5 rounded-full ${
                                         selectedMedicineSource === "inventory" ? "bg-green-500" : selectedMedicineSource === "doctor_added" ? "bg-amber-500" : "bg-blue-500"
                                     }`} />
@@ -169,7 +173,7 @@ export default function PrescriptionMedicineForm({
                             <button
                                 type="button"
                                 onClick={onClearSelectedMedicine}
-                                className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                className="rounded-xl p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
                             >
                                 <X className="h-4 w-4" />
                             </button>
@@ -177,29 +181,29 @@ export default function PrescriptionMedicineForm({
                     ) : (
                         <div className="space-y-1">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                 <Input
                                     placeholder="Search database or type custom medicine name..."
                                     value={searchQuery}
                                     onChange={(event) => setSearchQuery(event.target.value)}
-                                    className="pl-9 h-10 text-xs rounded-xl"
+                                    className="pl-9 h-11 text-xs rounded-2xl border-slate-200 bg-white shadow-sm"
                                 />
                             </div>
 
                             {searchQuery.trim() !== "" && (
-                                <div className="max-h-52 overflow-y-auto rounded-xl border bg-background text-xs shadow-xl absolute z-20 w-full left-0 mt-1 ring-1 ring-black/5 animate-in fade-in slide-in-from-top-1 duration-150">
+                                <div className="max-h-52 overflow-y-auto rounded-2xl border border-slate-200 bg-white text-xs shadow-2xl absolute z-20 w-full left-0 mt-2 ring-1 ring-black/5 animate-in fade-in slide-in-from-top-1 duration-150">
                                     <button
                                         key="use-custom-btn"
                                         type="button"
                                         onClick={() => onUseCustomMedicine(searchQuery)}
-                                        className="flex w-full items-center justify-between border-b px-3.5 py-2.5 text-left hover:bg-muted/40 font-semibold text-primary"
+                                        className="flex w-full items-center justify-between border-b border-slate-100 px-3.5 py-2.5 text-left hover:bg-sky-50 font-semibold text-sky-700"
                                     >
                                         <span>Use custom: &quot;{searchQuery.trim()}&quot;</span>
                                         <Stethoscope className="h-4 w-4 text-primary" />
                                     </button>
                                     {isSearchingMedicine ? (
-                                        <div className="px-3.5 py-3 text-muted-foreground text-[11px] flex items-center gap-2">
-                                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                        <div className="px-3.5 py-3 text-slate-500 text-[11px] flex items-center gap-2">
+                                            <Loader2 className="h-3 w-3 animate-spin text-sky-600" />
                                             Searching database...
                                         </div>
                                     ) : medicineList.length > 0 ? (
@@ -208,16 +212,16 @@ export default function PrescriptionMedicineForm({
                                                 key={`${medicine.source}-${medicine.id}`}
                                                 type="button"
                                                 onClick={() => onSelectMedicine(medicine)}
-                                                className="flex w-full items-center justify-between px-3.5 py-2.5 text-left hover:bg-muted/40 transition-colors"
+                                                className="flex w-full items-center justify-between px-3.5 py-2.5 text-left hover:bg-slate-50 transition-colors"
                                             >
-                                                <span className="font-medium text-foreground">{medicine.name}</span>
-                                                <span className="text-[9px] text-muted-foreground bg-muted px-2 py-0.5 rounded font-semibold uppercase tracking-wider">
+                                                <span className="font-medium text-slate-900">{medicine.name}</span>
+                                                <span className="text-[9px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
                                                     {medicine.source === "inventory" ? "stock" : "custom"}
                                                 </span>
                                             </button>
                                         ))
                                     ) : (
-                                        <div className="px-3.5 py-3 text-muted-foreground text-[11px]">No medicines found. Use &quot;Use custom&quot; above.</div>
+                                        <div className="px-3.5 py-3 text-slate-500 text-[11px]">No medicines found. Use &quot;Use custom&quot; above.</div>
                                     )}
                                 </div>
                             )}
@@ -234,10 +238,10 @@ export default function PrescriptionMedicineForm({
             {/* Core Medicine Properties - Grid is fully responsive */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {shouldShowField("medication_type") && (
-                    <div className="space-y-1">
-                        <Label className="text-xs font-semibold text-foreground">Medication Type *</Label>
+                    <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <Label className="text-xs font-semibold text-slate-700">Medication Type *</Label>
                         <Select value={medicationType} onValueChange={onMedicationTypeChange}>
-                            <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                            <SelectTrigger className="h-10 text-xs rounded-2xl bg-white border-slate-200">
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -255,11 +259,11 @@ export default function PrescriptionMedicineForm({
                 )}
 
                 {shouldShowField("strength") && (
-                    <div className="space-y-1">
-                        <Label className="text-xs font-semibold text-foreground">Strength</Label>
+                    <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <Label className="text-xs font-semibold text-slate-700">Strength</Label>
                         {strengthOptions.length > 0 ? (
                             <Select value={strength || ""} onValueChange={onStrengthChange}>
-                                <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                                <SelectTrigger className="h-10 text-xs rounded-2xl bg-white border-slate-200">
                                     <SelectValue placeholder="Select strength" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -271,16 +275,16 @@ export default function PrescriptionMedicineForm({
                                 </SelectContent>
                             </Select>
                         ) : (
-                            <Input value={strength || ""} onChange={(event) => onStrengthChange(event.target.value)} placeholder="e.g. 500 mg" className="h-9.5 text-xs rounded-xl" />
+                            <Input value={strength || ""} onChange={(event) => onStrengthChange(event.target.value)} placeholder="e.g. 500 mg" className="h-10 text-xs rounded-2xl border-slate-200 bg-white" />
                         )}
                     </div>
                 )}
 
                 {shouldShowField("dosage") && (
-                    <div className="space-y-1">
-                        <Label className="text-xs font-semibold text-foreground">Dosage *</Label>
+                    <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <Label className="text-xs font-semibold text-slate-700">Dosage *</Label>
                         <Select value={dosage} onValueChange={onDosageChange}>
-                            <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                            <SelectTrigger className="h-10 text-xs rounded-2xl bg-white border-slate-200">
                                 <SelectValue placeholder="Select dosage" />
                             </SelectTrigger>
                             <SelectContent>
@@ -301,10 +305,10 @@ export default function PrescriptionMedicineForm({
             {/* Frequency & Meal - Grid is responsive */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {shouldShowField("frequency") && (
-                    <div className="space-y-1">
-                        <Label className="text-xs font-semibold text-foreground">Frequency *</Label>
+                    <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <Label className="text-xs font-semibold text-slate-700">Frequency *</Label>
                         <Select value={frequency} onValueChange={onFrequencyChange}>
-                            <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                            <SelectTrigger className="h-10 text-xs rounded-2xl bg-white border-slate-200">
                                 <SelectValue placeholder="Select frequency" />
                             </SelectTrigger>
                             <SelectContent>
@@ -322,10 +326,10 @@ export default function PrescriptionMedicineForm({
                 )}
 
                 {shouldShowField("meal") && (
-                    <div className="space-y-1">
-                        <Label className="text-xs font-semibold text-foreground">Meal Relation *</Label>
+                    <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <Label className="text-xs font-semibold text-slate-700">Meal Relation *</Label>
                         <Select value={meal || ""} onValueChange={onMealChange}>
-                            <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                            <SelectTrigger className="h-10 text-xs rounded-2xl bg-white border-slate-200">
                                 <SelectValue placeholder="Select meal timing" />
                             </SelectTrigger>
                             <SelectContent>
@@ -344,11 +348,11 @@ export default function PrescriptionMedicineForm({
             </div>
 
             {showAdvancedFields && (
-                <div className="space-y-5 pt-3 border-t border-dashed border-border/80">
+                <div className="space-y-5 pt-4 border-t border-dashed border-slate-200/80">
                     {/* Timings Picker (if configured in rules) */}
                     {shouldShowField("timing") && (
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                        <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                            <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                                 <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                                 Timings
                             </Label>
@@ -363,9 +367,9 @@ export default function PrescriptionMedicineForm({
                                         key={item.label}
                                         type="button"
                                         onClick={() => onTimingChange(item.name, !item.val)}
-                                        className={`py-2 px-3 text-[11px] font-semibold border rounded-xl text-center transition-all ${item.val
-                                                ? "bg-primary text-primary-foreground border-primary shadow"
-                                                : "bg-background text-muted-foreground border-border hover:bg-muted/50"
+                                        className={`py-2 px-3 text-[11px] font-semibold border rounded-2xl text-center transition-all ${item.val
+                                            ? "bg-slate-900 text-white border-slate-900 shadow"
+                                            : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
                                             }`}
                                     >
                                         {item.label}
@@ -379,9 +383,9 @@ export default function PrescriptionMedicineForm({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {shouldShowField("application_area") && applicationAreaOptions.length > 0 && (
                             <div className="space-y-1">
-                                <Label className="text-xs font-semibold text-foreground">Application Area</Label>
+                                <Label className="text-xs font-semibold text-slate-700">Application Area</Label>
                                 <Select value={applicationArea || ""} onValueChange={onApplicationAreaChange}>
-                                    <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                                    <SelectTrigger className="h-10 text-xs rounded-2xl bg-white border-slate-200">
                                         <SelectValue placeholder="Select area" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -396,10 +400,10 @@ export default function PrescriptionMedicineForm({
                         )}
 
                         {shouldShowField("duration") && durationOptions.length > 0 && (
-                            <div className="space-y-1">
-                                <Label className="text-xs font-semibold text-foreground">Duration Option</Label>
+                            <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                                <Label className="text-xs font-semibold text-slate-700">Duration Option</Label>
                                 <Select value="" onValueChange={onDurationPresetChange}>
-                                    <SelectTrigger className="h-9.5 text-xs rounded-xl bg-background">
+                                    <SelectTrigger className="h-10 text-xs rounded-2xl bg-white border-slate-200">
                                         <SelectValue placeholder="Use admin duration" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -418,59 +422,60 @@ export default function PrescriptionMedicineForm({
                     {shouldShowField("duration") && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                                     <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                                     Start Date
                                 </Label>
-                                <Input type="date" min={new Date().toISOString().split("T")[0]} value={startDate} onChange={(event) => onStartDateChange(event.target.value)} className="h-9.5 text-xs rounded-xl" />
+                                <Input type="date" min={new Date().toISOString().split("T")[0]} value={startDate} onChange={(event) => onStartDateChange(event.target.value)} className="h-10 text-xs rounded-2xl border-slate-200 bg-white" />
                             </div>
                             <div className="space-y-1">
-                                <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                                     <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                                     End Date
                                 </Label>
-                                <Input type="date" min={startDate || new Date().toISOString().split("T")[0]} value={endDate} onChange={(event) => onEndDateChange(event.target.value)} className="h-9.5 text-xs rounded-xl" />
+                                <Input type="date" min={startDate || new Date().toISOString().split("T")[0]} value={endDate} onChange={(event) => onEndDateChange(event.target.value)} className="h-10 text-xs rounded-2xl border-slate-200 bg-white" />
                             </div>
                         </div>
                     )}
 
                     {/* Standard Instructions */}
                     <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                        <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                             <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
                             Instructions / Notes
                         </Label>
-                        <Textarea rows={2} value={instructions || ""} onChange={(event) => onInstructionsChange(event.target.value)} placeholder="e.g. Take after food with warm water" className="text-xs resize-none rounded-xl" />
+                        <Textarea rows={2} value={instructions || ""} onChange={(event) => onInstructionsChange(event.target.value)} placeholder="e.g. Take after food with warm water" className="text-xs resize-none rounded-2xl border-slate-200 bg-white" />
                     </div>
 
                     {/* Remarks (Conditional) */}
                     {shouldShowField("remarks") && (
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-foreground">Additional Remarks</Label>
-                            <Textarea rows={2} value={remarks || ""} onChange={(event) => onRemarksChange(event.target.value)} placeholder="Any extra medicine-specific remarks" className="text-xs resize-none rounded-xl" />
+                            <Label className="text-xs font-semibold text-slate-700">Additional Remarks</Label>
+                            <Textarea rows={2} value={remarks || ""} onChange={(event) => onRemarksChange(event.target.value)} placeholder="Any extra medicine-specific remarks" className="text-xs resize-none rounded-2xl border-slate-200 bg-white" />
                         </div>
                     )}
 
                     {/* Medicine specific Follow-up Note (Conditional) */}
                     {shouldShowField("follow_up_note") && (
                         <div className="space-y-1.5">
-                            <Label className="text-xs font-semibold text-foreground">Patient Follow-up Note for PDF</Label>
-                            <Textarea rows={2} value={followUpNote || ""} onChange={(event) => onFollowUpNoteChange(event.target.value)} placeholder="e.g. Review after 3 days if fever persists" className="text-xs resize-none rounded-xl" />
+                            <Label className="text-xs font-semibold text-slate-700">Patient Follow-up Note for PDF</Label>
+                            <Textarea rows={2} value={followUpNote || ""} onChange={(event) => onFollowUpNoteChange(event.target.value)} placeholder="e.g. Review after 3 days if fever persists" className="text-xs resize-none rounded-2xl border-slate-200 bg-white" />
                         </div>
                     )}
                 </div>
             )}
 
             {/* Bottom Submit Buttons */}
-            <div className="flex flex-col sm:flex-row gap-2.5 pt-3 border-t mt-4">
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-4 border-t border-slate-200 mt-4">
                 {onCancel && (
-                    <Button type="button" variant="outline" onClick={onCancel} className="h-10 text-xs rounded-xl order-2 sm:order-1 sm:flex-1">
+                    <Button type="button" variant="outline" onClick={onCancel} className="h-11 text-xs rounded-2xl order-2 sm:order-1 sm:flex-1 border-slate-200 bg-white">
                         {cancelLabel}
                     </Button>
                 )}
-                <Button type="button" onClick={onSubmit} className={`${fullWidthButton ? "w-full" : "flex-1"} h-10 text-xs rounded-xl font-semibold shadow-sm order-1 sm:order-2 bg-primary hover:bg-primary/95 text-primary-foreground`}>
+                <Button type="button" onClick={onSubmit} className={`${fullWidthButton ? "w-full" : "flex-1"} h-11 text-xs rounded-2xl font-semibold shadow-sm order-1 sm:order-2 bg-slate-900 hover:bg-slate-800 text-white`}>
                     {submitLabel}
                 </Button>
+            </div>
             </div>
         </div>
     );

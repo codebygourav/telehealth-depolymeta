@@ -177,7 +177,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{notificationId}/archive', [NotificationController::class, 'archive']);
         Route::post('/{notificationId}/unarchive', [NotificationController::class, 'unarchive']);
         Route::post('/archive-all', [NotificationController::class, 'archiveAll']);
-        
+
         // WebPush subscription endpoints
         Route::post('/push-subscription', [PushSubscriptionController::class, 'update']);
         Route::post('/push-subscription/delete', [PushSubscriptionController::class, 'destroy']);

@@ -178,7 +178,7 @@ export default function Notifications() {
                 onTabChange={setActiveTab}
                 tabsListClassName="w-full max-w-md! mt-1"
                 rightSlot={
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                         {mounted && isSupported && (
                             <Button
                                 variant="outline"

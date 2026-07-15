@@ -14,10 +14,12 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Stethoscope, CalendarCheck, FileText, User, Pill } from "lucide-react"
+import { LayoutDashboard, Stethoscope, CalendarCheck, FileText, User, Pill, LogOut } from "lucide-react"
 import Image from "next/image"
 import icon from "@/public/assets/icon/logo-light.png"
 import iconSmall from "@/public/assets/icon/app-icon.png"
+import { useAuth } from "@/context/userContext"
+import Link from "next/link"
 
 // This is sample data.
 // const data = {
@@ -287,6 +289,7 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { logout } = useAuth();
   return (
     <Sidebar
       collapsible="icon"
@@ -309,7 +312,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <div className="space-y-2">
+          <NavUser user={data.user} />
+          <Link
+            href="/auth/login"
+            onClick={async (event) => {
+              event.preventDefault();
+              await logout();
+              window.location.href = "/auth/login";
+            }}
+            className="flex w-full items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Log out</span>
+          </Link>
+        </div>
       </SidebarFooter>
 
       <SidebarRail />

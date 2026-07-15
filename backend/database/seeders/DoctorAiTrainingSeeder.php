@@ -17,6 +17,12 @@ class DoctorAiTrainingSeeder extends Seeder
                     ['doctor_says' => 'Monocef', 'ai_converts_to' => 'Ceftriaxone'],
                     ['doctor_says' => 'Rozu', 'ai_converts_to' => 'Rosuvastatin'],
                 ],
+                'speech_word_corrections' => [
+                    ['heard_word' => 'mail', 'corrected_word' => 'meal'],
+                    ['heard_word' => 'achee', 'corrected_word' => 'Azee'],
+                    ['heard_word' => 'pan to puzzle', 'corrected_word' => 'Pantoprazole'],
+                    ['heard_word' => 'met four min', 'corrected_word' => 'Metformin'],
+                ],
                 'medicine_shortcuts' => [
                     ['medicine' => 'Pantoprazole 40mg', 'shortcut' => 'Panta', 'priority' => 5],
                     ['medicine' => 'Paracetamol 650', 'shortcut' => 'PCM', 'priority' => 5],
@@ -61,6 +67,12 @@ class DoctorAiTrainingSeeder extends Seeder
                     ['doctor_says' => 'Diclo', 'ai_converts_to' => 'Diclofenac'],
                     ['doctor_says' => 'Cal D', 'ai_converts_to' => 'Calcium with Vitamin D'],
                     ['doctor_says' => 'Aceclo', 'ai_converts_to' => 'Aceclofenac'],
+                ],
+                'speech_word_corrections' => [
+                    ['heard_word' => 'mail', 'corrected_word' => 'meal'],
+                    ['heard_word' => 'dick low', 'corrected_word' => 'Diclo'],
+                    ['heard_word' => 'ace claw', 'corrected_word' => 'Aceclo'],
+                    ['heard_word' => 'cal dee', 'corrected_word' => 'Cal D'],
                 ],
                 'medicine_shortcuts' => [
                     ['medicine' => 'Aceclofenac 100mg', 'shortcut' => 'Aceclo', 'priority' => 5],

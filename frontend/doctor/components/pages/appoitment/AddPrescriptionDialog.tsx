@@ -10,7 +10,6 @@ import { getMedicines } from "@/api/medicines";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -251,6 +250,10 @@ export default function AddPrescriptionDialog({
     () => doctorAiTraining?.pronunciation_dictionary ?? [],
     [doctorAiTraining?.pronunciation_dictionary],
   );
+  const speechWordCorrections = useMemo(
+    () => doctorAiTraining?.speech_word_corrections ?? [],
+    [doctorAiTraining?.speech_word_corrections],
+  );
   const aiInstructionSuggestions = useMemo(
     () =>
       (doctorAiTraining?.frequently_used_instructions ?? [])
@@ -362,9 +365,10 @@ export default function AddPrescriptionDialog({
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          const cleaned = applyPronunciationDictionary(
+          const cleaned = applySpeechTrainingMappings(
             cleanDuplicateWords(transcript),
             pronunciationDictionary,
+            speechWordCorrections,
           );
           if (cleaned) {
             setFindingsText((prev) => {
@@ -410,9 +414,10 @@ export default function AddPrescriptionDialog({
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          const cleaned = applyPronunciationDictionary(
+          const cleaned = applySpeechTrainingMappings(
             cleanDuplicateWords(transcript),
             pronunciationDictionary,
+            speechWordCorrections,
           );
           if (cleaned) {
             setRecommendedTests((prev) => {
@@ -562,58 +567,12 @@ export default function AddPrescriptionDialog({
   useEffect(() => {
     if (open) {
       setActiveTab(initialTab === "reports" ? "reports" : "prescribe");
-
-      // Pre-populate fields
-      setFindingsText(initialFindings || "");
-      setNextVisitDate(initialNextVisitDate || "");
-      setRecommendedTests(initialRecommendedTests || "");
-      setGeneralNotes(initialGeneralNotes || "");
-      setIncludeReports(Boolean(initialRecommendedTests));
-
-      if (initialMedicines && initialMedicines.length > 0) {
-        const mapFrequencyLabelToValue = (lbl: string): string => {
-          const norm = String(lbl || "").toLowerCase().trim();
-          if (norm.includes("once") || norm === "od") return "OD";
-          if (norm.includes("twice") || norm === "bd") return "BD";
-          if (norm.includes("three") || norm === "tds") return "TDS";
-          if (norm.includes("sos")) return "SOS";
-          return "OD";
-        };
-        const ensureValidDate = (dateStr: any): string | null => {
-          if (!dateStr) return null;
-          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-          const parsed = Date.parse(dateStr);
-          if (!isNaN(parsed)) return new Date(parsed).toISOString().split("T")[0];
-          return null;
-        };
-
-        const mapped: AddedMedicine[] = initialMedicines.map((med) => {
-          const isCustom = med.medicine_source === "doctor_added";
-          return {
-            medicine_id: med.medicine_id || "",
-            medicine_name: med.name,
-            medication_type: med.type || "tablet",
-            dosage: med.dosage || "",
-            frequency: med.frequency || mapFrequencyLabelToValue(med.frequencylabel) || "OD",
-            frequencylabel: med.frequencylabel || "",
-            meal: med.meal || "after_meal",
-            duration: med.date || "Ongoing",
-            instructions: med.instructions?.join(", ") || "",
-            start_date: ensureValidDate(med.start_date) || getTodayDate(),
-            end_date: ensureValidDate(med.end_date) || null,
-            remarks: med.notes || med.remarks || "",
-            medicine_source: (isCustom ? "doctor_added" : "inventory") as MedicineSource,
-            created_via: med.created_via || "manual",
-            timing_morning: med.timings?.includes("morning") || false,
-            timing_afternoon: med.timings?.includes("afternoon") || false,
-            timing_evening: med.timings?.includes("evening") || false,
-            timing_night: med.timings?.includes("night") || false,
-          };
-        });
-        setAddedMedicines(mapped);
-      } else {
-        setAddedMedicines([]);
-      }
+      setFindingsText("");
+      setNextVisitDate("");
+      setRecommendedTests("");
+      setGeneralNotes("");
+      setIncludeReports(false);
+      setAddedMedicines([]);
       return;
     }
 
@@ -1356,9 +1315,10 @@ export default function AddPrescriptionDialog({
     transcript: string,
     shouldAdvance = true,
   ) => {
-    const trimmed = applyPronunciationDictionary(
+    const trimmed = applySpeechTrainingMappings(
       cleanDuplicateWords(transcript.trim()),
       pronunciationDictionary,
+      speechWordCorrections,
     );
 
     if (!trimmed) {
@@ -1539,9 +1499,10 @@ export default function AddPrescriptionDialog({
 
     recognition.onend = () => {
       const shouldPrefill = shouldParseAfterStopRef.current;
-      const spokenTranscript = applyPronunciationDictionary(
+      const spokenTranscript = applySpeechTrainingMappings(
         cleanDuplicateWords(liveTranscriptRef.current),
         pronunciationDictionary,
+        speechWordCorrections,
       );
 
       shouldParseAfterStopRef.current = false;
@@ -1576,7 +1537,7 @@ export default function AddPrescriptionDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-h-[92vh] sm:max-w-5xl! rounded-lg p-0 overflow-hidden flex flex-col gap-0! fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <DialogContent className="w-[95vw] max-h-[92vh] sm:max-w-6xl! rounded-[28px] p-0 overflow-hidden flex flex-col gap-0! fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border border-slate-200 bg-linear-to-br from-white via-slate-50 to-sky-50 shadow-[0_30px_90px_rgba(15,23,42,0.18)]">
           {toastMessage && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-100 animate-in fade-in slide-in-from-top-4 duration-300">
               <div
@@ -1594,12 +1555,16 @@ export default function AddPrescriptionDialog({
             </div>
           )}
 
-          <DialogHeader className="border-b px-5 py-4 pr-14 sm:pr-20 shrink-0">
-            <div className="flex items-start justify-between gap-1 flex-wrap">
+          <DialogHeader className="border-b border-slate-200 px-5 py-4 sm:px-6 sm:py-5 pr-14 sm:pr-20 shrink-0 bg-white/70 backdrop-blur">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="space-y-1">
-                <DialogTitle className="text-lg sm:text-xl font-bold">
+                <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-sky-700">
                   Add Prescription
+                </div>
+                <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                  Build a new prescription
                 </DialogTitle>
+                
               </div>
 
               {entryMode !== null && dictationEnabled && (
@@ -1646,7 +1611,7 @@ export default function AddPrescriptionDialog({
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0 bg-muted/5">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0 bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(255,255,255,1))]">
             <form onSubmit={(e) => e.preventDefault()} className="h-full">
               {entryMode === null ? (
                 <PrescriptionEntryModeSelector
@@ -1658,19 +1623,19 @@ export default function AddPrescriptionDialog({
                   }}
                 />
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start">
                     <div
-                      className={`md:col-span-7 bg-background border rounded-lg p-2 sm:p-5 shadow-sm ${mobileTab === "form" ? "block" : "hidden md:block"}`}
+                      className={`md:col-span-7  p-0 sm:p-0  ${mobileTab === "form" ? "block" : "hidden md:block"}`}
                     >
                       {/* Sub-Tabs */}
-                      <div className="flex border-b mb-4 pb-2 gap-1 sm:gap-2 flex-wrap">
+                      <div className="flex mb-5 gap-2 fEnable Desktop Pushlex-wrap rounded-lg border border-slate-100 bg-slate-50 p-1.5 shadow-sm justify-center">
                         <button
                           type="button"
                           onClick={() => setActiveTab("prescribe")}
-                          className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${activeTab === "prescribe"
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "text-muted-foreground hover:bg-muted/50"
+                          className={`flex items-center gap-2 px-2 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all ${activeTab === "prescribe"
+                            ? "bg-muted text-black shadow-sm ring-1 ring-slate-200"
+                            : "text-slate-500 hover:bg-white/70"
                             }`}
                         >
                           <Stethoscope className="h-4 w-4" />
@@ -1679,9 +1644,9 @@ export default function AddPrescriptionDialog({
                         <button
                           type="button"
                           onClick={() => setActiveTab("reports")}
-                          className={`flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${activeTab === "reports"
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "text-muted-foreground hover:bg-muted/50"
+                          className={`flex items-center gap-2 px-2 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all ${activeTab === "reports"
+                            ? "bg-muted text-black shadow-sm ring-1 ring-slate-200"
+                            : "text-slate-500 hover:bg-white/70"
                             }`}
                         >
                           <FileText className="h-4 w-4" />
@@ -1694,10 +1659,10 @@ export default function AddPrescriptionDialog({
                       {activeTab === "prescribe" && (
                         <div className="space-y-5 animate-in fade-in duration-200">
                           {/* Step 1: Clinical Findings & Notes */}
-                          <div className="space-y-3 pb-4 border-b">
+                          <div className="space-y-3 pb-5 border-b border-slate-200">
                             <div>
-                              <h3 className="text-xs font-bold uppercase tracking-wide text-primary">Clinical Findings & Notes</h3>
-                              <p className="text-[10px] text-muted-foreground">Document symptoms, diagnosis, and observations (appears on PDF)</p>
+                              <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-sky-700">Clinical Findings & Notes</h3>
+                              <p className="text-[11px] text-slate-500">Document symptoms, diagnosis, and observations. This section appears on the prescription PDF.</p>
                             </div>
 
                             <div className="space-y-1.5">
@@ -1720,7 +1685,7 @@ export default function AddPrescriptionDialog({
                                 onChange={(e) => setFindingsText(e.target.value)}
                                 placeholder="Enter or dictate patient findings, symptoms, diagnosis, and notes..."
                                 rows={3}
-                                className="resize-none text-sm rounded-xl border border-muted bg-background"
+                                className="resize-none text-sm rounded-2xl border border-slate-200 bg-white shadow-inner"
                               />
                               {aiCommonDiagnoses.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 pt-1">
@@ -1735,7 +1700,7 @@ export default function AddPrescriptionDialog({
                                           : item;
                                         setFindingsText(next);
                                       }}
-                                      className="text-[10px] px-2 py-0.5 rounded-full border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition"
+                                      className="text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition"
                                     >
                                       {item}
                                     </button>
@@ -1745,18 +1710,18 @@ export default function AddPrescriptionDialog({
                             </div>
 
                             <div className="space-y-1.5">
-                              <label className="text-xs font-semibold text-muted-foreground">Next Follow-up Date</label>
+                              <label className="text-xs font-semibold text-slate-600">Next Follow-up Date</label>
                               <Input
                                 type="date"
                                 value={nextVisitDate}
                                 onChange={(e) => setNextVisitDate(e.target.value)}
-                                className="text-sm rounded-xl border border-muted bg-background"
+                                className="text-sm rounded-2xl border border-slate-200 bg-white"
                               />
                             </div>
                           </div>
 
                           <div className="pt-2">
-                            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Prescribe Medicines</h3>
+                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em]">Prescribe Medicines</h3>
                           </div>
                         </div>
                       )}
@@ -2174,10 +2139,10 @@ export default function AddPrescriptionDialog({
 
                       {activeTab === "reports" && (
                         <div className="space-y-5 animate-in fade-in duration-200">
-                          <div className="flex items-center justify-between p-3.5 bg-muted/20 border rounded-xl">
+                          <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-2xl shadow-sm">
                             <div>
-                              <h4 className="text-sm font-bold text-foreground">Recommend Tests & Upload Reports</h4>
-                              <p className="text-xs text-muted-foreground">Ask patient to get diagnostic tests or upload current records</p>
+                              <h4 className="text-sm font-bold text-slate-900">Recommend Tests & Upload Reports</h4>
+                              <p className="text-xs text-slate-500">Add investigations or upload supporting records in the same flow.</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input
@@ -2194,7 +2159,7 @@ export default function AddPrescriptionDialog({
                             <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                  <label className="text-xs font-semibold text-muted-foreground">Recommend Tests / Reports (to Patients)</label>
+                                  <label className="text-xs font-semibold text-slate-600">Recommend Tests / Reports (to Patients)</label>
                                   <button
                                     type="button"
                                     onClick={toggleListeningTests}
@@ -2212,7 +2177,7 @@ export default function AddPrescriptionDialog({
                                   onChange={(e) => setRecommendedTests(e.target.value)}
                                   placeholder="E.g. Complete Blood Count (CBC), Chest X-Ray, Blood sugar fasting..."
                                   rows={4}
-                                  className="resize-none text-sm rounded-xl border border-muted bg-background"
+                                  className="resize-none text-sm rounded-2xl border border-slate-200 bg-white shadow-inner"
                                 />
                                 {aiProcedureSuggestions.length > 0 && (
                                   <div className="flex flex-wrap gap-1.5 pt-1">
@@ -2227,7 +2192,7 @@ export default function AddPrescriptionDialog({
                                             : item;
                                           setRecommendedTests(next);
                                         }}
-                                        className="text-[10px] px-2 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition"
+                                        className="text-[10px] px-2 py-0.5 rounded-full border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition"
                                       >
                                         {item}
                                       </button>
@@ -2237,9 +2202,9 @@ export default function AddPrescriptionDialog({
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-xs font-semibold text-muted-foreground">Report Category</label>
+                                <label className="text-xs font-semibold text-slate-600">Report Category</label>
                                 <Select value={reportType} onValueChange={setReportType}>
-                                  <SelectTrigger className="w-full text-sm rounded-xl border border-muted bg-background">
+                                  <SelectTrigger className="w-full text-sm rounded-2xl border border-slate-200 bg-white">
                                     <SelectValue placeholder="Select report category" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -2250,8 +2215,8 @@ export default function AddPrescriptionDialog({
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-xs font-semibold text-muted-foreground">Upload Existing Report Files</label>
-                                <div className="border-2 border-dashed border-muted rounded-xl p-6 text-center hover:border-primary/50 transition-colors bg-muted/5 relative">
+                                <label className="text-xs font-semibold text-slate-600">Upload Existing Report Files</label>
+                                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-sky-400 transition-colors bg-slate-50/80 relative">
                                   <input
                                     type="file"
                                     accept=".jpg,.jpeg,.png,.pdf"
@@ -2262,22 +2227,22 @@ export default function AddPrescriptionDialog({
                                     }}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                   />
-                                  <FileText className="h-8 w-8 text-muted-foreground/60 mx-auto mb-2" />
-                                  <p className="text-xs font-semibold text-muted-foreground">Click to upload or drag & drop files</p>
-                                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">JPG, PNG, PDF up to 10MB each</p>
+                                  <FileText className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                                  <p className="text-xs font-semibold text-slate-600">Click to upload or drag & drop files</p>
+                                  <p className="text-[10px] text-slate-500 mt-0.5">JPG, PNG, PDF up to 10MB each</p>
                                 </div>
 
                                 {reportFiles.length > 0 && (
                                   <div className="space-y-1.5 pt-2">
-                                    <p className="text-xs font-bold text-foreground">Selected Files ({reportFiles.length}):</p>
+                                    <p className="text-xs font-bold text-slate-900">Selected Files ({reportFiles.length}):</p>
                                     <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
                                       {reportFiles.map((file, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-2 bg-muted/20 rounded-lg text-xs border">
+                                        <div key={idx} className="flex items-center justify-between p-2 bg-white rounded-xl text-xs border border-slate-200 shadow-sm">
                                           <span className="truncate font-medium flex-1 max-w-70">{file.name}</span>
                                           <button
                                             type="button"
                                             onClick={() => setReportFiles((prev) => prev.filter((_, i) => i !== idx))}
-                                            className="p-1 hover:bg-destructive/10 text-destructive rounded transition-colors"
+                                            className="p-1 hover:bg-destructive/10 text-destructive rounded-lg transition-colors"
                                           >
                                             <X className="h-3.5 w-3.5" />
                                           </button>
@@ -2410,6 +2375,38 @@ function applyPronunciationDictionary(
   }
 
   return cleanDuplicateWords(normalized);
+}
+
+function applySpeechWordCorrections(
+  input: string,
+  corrections: Array<{ heard_word?: string; corrected_word?: string }>,
+): string {
+  if (!input) return "";
+
+  let normalized = input;
+
+  for (const row of corrections || []) {
+    const from = String(row?.heard_word || "").trim();
+    const to = String(row?.corrected_word || "").trim();
+
+    if (!from || !to) {
+      continue;
+    }
+
+    const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    normalized = normalized.replace(new RegExp(`\\b${escaped}\\b`, "gi"), to);
+  }
+
+  return cleanDuplicateWords(normalized);
+}
+
+function applySpeechTrainingMappings(
+  input: string,
+  dictionary: Array<{ doctor_says?: string; ai_converts_to?: string }>,
+  corrections: Array<{ heard_word?: string; corrected_word?: string }>,
+): string {
+  const withPronunciation = applyPronunciationDictionary(input, dictionary);
+  return applySpeechWordCorrections(withPronunciation, corrections);
 }
 
 function sanitizeClinicalText(input: string): string {

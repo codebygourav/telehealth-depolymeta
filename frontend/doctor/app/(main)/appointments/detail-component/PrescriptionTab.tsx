@@ -15,9 +15,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useConclusionByAppointmentId } from "@/queries/useConclusionByAppointmentId";
-import { useAddPrescription } from "@/queries/useAddPrescription";
 import { usePrescriptionByAppointmentId } from "@/queries/usePrescriptionByAppointmentId";
-import { useAuth } from "@/context/userContext";
+import { useDeletePrescriptionItem } from "@/queries/useDeletePrescriptionItem";
 import { getStatusColor } from "@/src/utils/getStatusColor";
 import {
   AlertCircle,
@@ -125,7 +124,7 @@ const MedicineAccordionItem = ({
   }, []);
 
   return (
-    <Card className="overflow-hidden border border-muted hover:border-primary/40 hover:shadow-md transition-all duration-300 rounded-2xl bg-gradient-to-br from-background to-muted/10">
+    <Card className="overflow-hidden border border-muted hover:border-primary/40 hover:shadow-md transition-all duration-300 rounded-2xl bg-linear-to-br from-background to-muted/10">
       <div
         className="cursor-pointer hover:bg-muted/20 transition-colors"
         onClick={toggleOpen}
@@ -327,8 +326,7 @@ export default function PrescriptionTab({
 }: {
   appointmentId: string;
 }) {
-  const { token } = useAuth();
-  const deleteMutation = useAddPrescription(appointmentId, token || "");
+  const deleteMutation = useDeletePrescriptionItem(appointmentId);
 
   const { data, isLoading, error } =
     usePrescriptionByAppointmentId(appointmentId);
@@ -477,7 +475,7 @@ export default function PrescriptionTab({
       {/* Medicines List - Accordion */}
       {medicines.length > 0 && (
         <div className="space-y-3 sm:space-y-4">
-          <div className="flex items-center justify-between gap-3 w-full">
+          <div className="flex items-center justify-between gap-3 w-full flex-wrap">
             <div className="flex items-center gap-2">
               <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
                 <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
@@ -535,7 +533,7 @@ export default function PrescriptionTab({
 
           {/* Recommended Diagnostics / Tests */}
           {((instructionsByDoctor && instructionsByDoctor.includes("Recommended Tests:")) || conclusionFiles.length > 0) && (
-            <Card className="overflow-hidden border border-indigo-100 hover:shadow-md transition-all duration-300 rounded-2xl bg-gradient-to-br from-indigo-50/10 to-indigo-50/30 mt-4">
+            <Card className="overflow-hidden border border-indigo-100 hover:shadow-md transition-all duration-300 rounded-2xl bg-linear-to-br from-indigo-50/10 to-indigo-50/30 mt-4">
               <CardHeader className="p-4 sm:p-5 border-b border-indigo-100/50 bg-indigo-50/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -947,12 +945,7 @@ export default function PrescriptionTab({
                       };
                     });
 
-                    const payload = {
-                      follow_up_note: data?.data?.follow_up_note || "",
-                      medicines: medicinesPayload,
-                    };
-
-                    await deleteMutation.mutateAsync(payload);
+                    await deleteMutation.mutateAsync(deleteTarget.prescription_id);
                   } catch (err) {
                     console.error(err);
                   } finally {

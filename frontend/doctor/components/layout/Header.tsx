@@ -36,6 +36,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NotificationDropdown } from "./NotificationDropdown";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -64,6 +65,14 @@ export function Header() {
 
   const pathname = usePathname();
   const { user, initializing, logout } = useAuth();
+  const {
+    permission,
+    subscription,
+    loading: notificationsLoading,
+    subscribeToPush,
+    unsubscribeFromPush,
+    isSupported,
+  } = usePushNotifications();
 
   // For notification label (Name fallback)
   const name =
@@ -279,6 +288,45 @@ export function Header() {
                           ) : null}
                         </Link>
                       ))}
+
+                      <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                            <p className="text-[11px] text-slate-500">Enable push alerts for appointments and updates.</p>
+                          </div>
+                          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                            {subscription ? "On" : permission === "denied" ? "Blocked" : "Off"}
+                          </Badge>
+                        </div>
+                        <Button
+                          type="button"
+                          variant={subscription ? "outline" : "default"}
+                          className="w-full justify-center rounded-xl"
+                          disabled={!isSupported || notificationsLoading || permission === "denied"}
+                          onClick={async () => {
+                            try {
+                              if (subscription) {
+                                await unsubscribeFromPush();
+                              } else {
+                                await subscribeToPush();
+                              }
+                            } catch (error) {
+                              console.error(error);
+                            }
+                          }}
+                        >
+                          {notificationsLoading ? (
+                            <span className="inline-flex items-center gap-2"><LogOut className="h-4 w-4 opacity-0" />Loading...</span>
+                          ) : permission === "denied" ? (
+                            "Notifications blocked"
+                          ) : subscription ? (
+                            "Disable notifications"
+                          ) : (
+                            "Enable notifications"
+                          )}
+                        </Button>
+                      </div>
 
                       <Separator className="my-2" />
 
