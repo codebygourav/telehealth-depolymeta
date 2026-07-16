@@ -49,7 +49,7 @@ class DoctorConsultationChart extends ChartWidget
                 [
                     'label' => 'Appointments',
                     'data' => $typesCount->pluck('total')->toArray(),
-                    'backgroundColor' => ['#055bd9bf', '#055bd9bf', '#055bd9bf', '#055bd9bf', '#055bd9bf'],
+                    'backgroundColor' => ['var(--primary)', 'var(--primary)', 'var(--primary)', 'var(--primary)', 'var(--primary)'],
                 ],
             ],
             'labels' => $typesCount->map(fn ($t) => str_replace(['_', '-'], ' ', $t->consultation_type ?: 'General'))->toArray(),

@@ -27,7 +27,7 @@ export default function DoctorInfoCard({ doctor, appointment_status }: DoctorInf
 
                         <div className="text-center sm:text-left flex-1">
                             <p className="text-primary flex items-center justify-center sm:justify-start text-xs font-semibold uppercase tracking-wider">
-                                <Stethoscope size={14} color="#055BD9" className="mr-1.5" />
+                                <Stethoscope size={14} color="var(--primary)" className="mr-1.5" />
                                 {doctor?.department || "Cardiology"}
                             </p>
                             <h2 className="text-2xl font-bold text-[#1F1E1E] mt-1">

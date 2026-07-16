@@ -291,7 +291,7 @@
                     --text-xs--line-height: calc(1/.75);
                     --text-sm: .875rem;
                     --text-sm--line-height: calc(1.25/.875);
-                    --text-base: 1rem;
+                    --text-base: 20px;
                     --text-base--line-height: 1.5;
                     --text-lg: 1.125rem;
                     --text-lg--line-height: calc(1.75/1.125);
@@ -319,9 +319,9 @@
                     --font-weight-normal: 400;
                     --font-weight-medium: 500;
                     --font-weight-semibold: 600;
-                    --font-weight-bold: 700;
-                    --font-weight-extrabold: 800;
-                    --font-weight-black: 900;
+                    --font-weight-bold: bold;
+                    --font-weight-extrabold: bold;
+                    --font-weight-black: bold;
                     --tracking-tighter: -.05em;
                     --tracking-tight: -.025em;
                     --tracking-normal: 0em;

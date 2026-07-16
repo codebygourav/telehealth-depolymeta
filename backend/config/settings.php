@@ -757,4 +757,32 @@ return [
             ],
         ],
     ],
+
+    'theme_settings' => [
+        'label' => 'Frontend Themes',
+        'icon' => 'heroicon-o-paint-brush',
+        'description' => 'Manage branding and colors for Patient and Doctor frontend apps',
+        'sections' => [
+            'patient' => [
+                'label' => 'Patient App Theme',
+                'description' => 'Theme settings for Patient portal',
+                'fields' => [
+                    'patient_primary_color' => ['type' => 'color', 'label' => 'Primary Color', 'default' => '#055bd9', 'is_public' => true],
+                    'patient_secondary_color' => ['type' => 'color', 'label' => 'Secondary Color', 'default' => '#055bd9', 'is_public' => true],
+                    'patient_logo' => ['type' => 'file', 'label' => 'Logo', 'directory' => 'settings/themes', 'is_public' => true],
+                    'patient_favicon' => ['type' => 'file', 'label' => 'Favicon', 'directory' => 'settings/themes', 'is_public' => true],
+                ],
+            ],
+            'doctor' => [
+                'label' => 'Doctor App Theme',
+                'description' => 'Theme settings for Doctor portal',
+                'fields' => [
+                    'doctor_primary_color' => ['type' => 'color', 'label' => 'Primary Color', 'default' => '#055bd9', 'is_public' => true],
+                    'doctor_secondary_color' => ['type' => 'color', 'label' => 'Secondary Color', 'default' => '#055bd9', 'is_public' => true],
+                    'doctor_logo' => ['type' => 'file', 'label' => 'Logo', 'directory' => 'settings/themes', 'is_public' => true],
+                    'doctor_favicon' => ['type' => 'file', 'label' => 'Favicon', 'directory' => 'settings/themes', 'is_public' => true],
+                ],
+            ],
+        ],
+    ],
 ];

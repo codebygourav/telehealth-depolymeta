@@ -40,14 +40,19 @@ class AppServiceProvider extends ServiceProvider
         $serverHttps    = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
         $xForwardedSsl  = strtolower((string) request()->header('x-forwarded-ssl'));
 
+        $isLocalHost = in_array((string) parse_url((string) config('app.url'), PHP_URL_HOST), ['localhost', '127.0.0.1', '::1'], true)
+            || request()->isLocal();
+
         $isHttps = request()->isSecure()
             || str_contains($forwardedProto, 'https')
             || $serverHttps === 'on'
             || $xForwardedSsl === 'on'
             || str_starts_with((string) config('app.url'), 'https://');
 
-        if ($isHttps) {
+        if (! $isLocalHost && $isHttps) {
             URL::forceScheme('https');
+        } elseif ($isLocalHost) {
+            config(['session.secure' => false]);
         }
 
         // ── Fix Public Disk URL ───────────────────────────────────────────────
@@ -89,7 +94,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Event::subscribe(LogPushNotificationStatus::class);
-        
+
         Relation::morphMap([
             'Doctor' => Doctor::class,
             'Patient' => Patient::class,

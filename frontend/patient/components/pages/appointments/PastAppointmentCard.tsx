@@ -82,7 +82,7 @@ const PastAppointmentCard = ({
                     {/* Right Section - Rating & Status (Stacked vertically) */}
                     <div className="flex flex-col items-end gap-2 shrink-0">
                         <div className="flex items-center gap-1 bg-primary/8 text-primary px-2 py-1.5 rounded h-fit">
-                            <Star size={12} color="#055bd9" fill="#055bd9" />
+                            <Star size={12} color="var(--primary)" fill="var(--primary)" />
                             <span className="text-xs font-semibold">{doctor?.rating}</span>
                         </div>
                         <span className={`px-3 py-1.5 rounded text-xs font-semibold hidden md:block ${getStatusColor(appointment.status)}`}>

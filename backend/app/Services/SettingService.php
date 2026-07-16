@@ -306,6 +306,20 @@ class SettingService
         ];
     }
 
+    public static function getThemeValue(string $key, string $default): string
+    {
+        return Setting::getValue('theme_settings', $key, $default) ?: $default;
+    }
+
+    public static function getThemeFileUrl(string $key): ?string
+    {
+        $val = Setting::getValue('theme_settings', $key);
+        if ($val && Storage::disk('public')->exists($val)) {
+            return Storage::disk('public')->url($val);
+        }
+        return null;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Public Settings (For API)
@@ -322,6 +336,18 @@ class SettingService
                 'primary_color' => self::getPrimaryColor(),
                 'secondary_color' => self::getSecondaryColor(),
                 'contact' => self::getContactInfo(),
+            ],
+            'patient_theme' => [
+                'primary_color' => self::getThemeValue('patient_primary_color', '#055bd9'),
+                'secondary_color' => self::getThemeValue('patient_secondary_color', '#055bd9'),
+                'logo' => self::getThemeFileUrl('patient_logo'),
+                'favicon' => self::getThemeFileUrl('patient_favicon'),
+            ],
+            'doctor_theme' => [
+                'primary_color' => self::getThemeValue('doctor_primary_color', '#055bd9'),
+                'secondary_color' => self::getThemeValue('doctor_secondary_color', '#055bd9'),
+                'logo' => self::getThemeFileUrl('doctor_logo'),
+                'favicon' => self::getThemeFileUrl('doctor_favicon'),
             ],
             'mobile' => self::getMobileAppSettings(),
             'otp' => self::getOtpSettings(),

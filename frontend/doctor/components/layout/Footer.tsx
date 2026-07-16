@@ -20,7 +20,7 @@ export function Footer() {
                         href="https://deploymeta.com/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#055bd9] font-semibold transition-colors"
+                        className="text-primary font-semibold transition-colors"
                     >
                         Deploy Meta
                     </a>

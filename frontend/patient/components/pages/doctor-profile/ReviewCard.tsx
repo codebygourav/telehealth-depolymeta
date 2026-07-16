@@ -26,8 +26,8 @@ const ReviewCard = ({ review }: ReviewCardProps) => {
                 <div className="flex-1">
                     <div className="flex items-center justify-between flex-wrap">
                         <h4 className="text-[#1F1E1E] text-lg font-[#1F1E1E] font-semibold">{review.patient_name}</h4>
-                        <div className="flex items-center gap-1 bg-[#055BD9]/8 text-[#055BD9] px-2 py-1.5 rounded h-fit">
-                            <Star size={12} fill="#055BD9" color="#055BD9" />
+                        <div className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1.5 rounded h-fit">
+                            <Star size={12} style={{ fill: 'var(--primary)', color: 'var(--primary)' }} />
                             <span className="text-xs font-semibold">{review.rating}</span>
                         </div>
                     </div>

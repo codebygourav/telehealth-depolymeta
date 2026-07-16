@@ -387,7 +387,7 @@
 
         .admin-booking-page .patient-type-radio .fi-fo-radio-label:has(.fi-radio-input:checked) {
             border-color: var(--app-primary-hex);
-            background: #055bd91c;
+            background: var(--app-primary-hex-12);
             color: var(--app-primary-hex);
             box-shadow: inset 0 0 0 1px var(--app-primary-hex);
         }

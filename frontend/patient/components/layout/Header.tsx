@@ -15,6 +15,7 @@ import {
   Pill,
   Stethoscope,
 } from "lucide-react";
+import { useSettings } from "@/context/settingsContext";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -23,6 +24,7 @@ import { HeaderNavLinks } from "./HeaderNavLinks";
 import { HeaderUserProfileMenu } from "./HeaderUserProfileMenu";
 
 export function Header() {
+  const { settings } = useSettings();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: unreadData } = useUnreadCount();
@@ -92,12 +94,13 @@ export function Header() {
       <div className="mx-auto flex h-18 container-max-width items-center gap-4 justify-between">
         <Link href="/" className="flex items-center shrink-0">
           <Image
-            src={logo}
-            alt="Telehealth Deploymeta"
+            src={settings.logoUrl || logo}
+            alt={settings.appName || "Telehealth"}
             width={190}
             height={42}
             className="object-contain w-auto h-10"
             priority
+            unoptimized
           />
         </Link>
 

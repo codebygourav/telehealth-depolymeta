@@ -66,12 +66,12 @@
 
         .display-settings-nav-item:hover {
             background: rgba(var(--primary-500), 0.05);
-            border-color: #055bd917;
+            border-color: color-mix(in srgb, var(--app-primary-hex) 9%, transparent);
         }
 
         .display-settings-nav-item.active {
             background: rgba(var(--primary-500), 0.1);
-            border-color: #055bd917;
+            border-color: color-mix(in srgb, var(--app-primary-hex) 9%, transparent);
             box-shadow: 0 4px 12px -2px rgba(var(--primary-500), 0.1);
         }
 

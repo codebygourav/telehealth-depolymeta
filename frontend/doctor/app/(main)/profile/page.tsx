@@ -289,7 +289,7 @@ const ProfilePage = () => {
                                             : "g-text-dark border border-transparent"
                                     )}
                                 >
-                                    <Icon size={14} color={`${isActive ? "#1776FF" : "#4D4D4D"}`} />
+                                    <Icon size={14} color={`${isActive ? "var(--primary)" : "#4D4D4D"}`} />
                                     {item.label}
                                 </Button>
                             );

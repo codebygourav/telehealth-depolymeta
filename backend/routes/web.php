@@ -42,24 +42,24 @@ Route::get('/clear-cache', function () {
 // });
 
 Route::get('/vendor/register', VendorRegistration::class)->name('vendor.register');
-Route::get('/opd-token', [DisplayTokenController::class, 'show'])->name('opd-token.display');
-Route::get('/opd-token/data', [DisplayTokenController::class, 'boardData'])->name('opd-token.data');
-Route::post('/opd-token/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opd-token.authenticate');
-Route::post('/opd-token/logout', [DisplayTokenController::class, 'logout'])->name('opd-token.logout');
-Route::get('/opd-token/{screen:slug}', [DisplayTokenController::class, 'show'])->name('opd-token.screen.display');
-Route::get('/opd-token/{screen:slug}/data', [DisplayTokenController::class, 'boardData'])->name('opd-token.screen.data');
-Route::post('/opd-token/{screen:slug}/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opd-token.screen.authenticate');
-Route::post('/opd-token/{screen:slug}/logout', [DisplayTokenController::class, 'logout'])->name('opd-token.screen.logout');
+Route::get('/admin/opd-token', [DisplayTokenController::class, 'show'])->name('opd-token.display')->middleware(['web','auth']);
+Route::get('/admin/opd-token/data', [DisplayTokenController::class, 'boardData'])->name('opd-token.data')->middleware(['web','auth']);
+Route::post('/admin/opd-token/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opd-token.authenticate')->middleware(['web','auth']);
+Route::post('/admin/opd-token/logout', [DisplayTokenController::class, 'logout'])->name('opd-token.logout')->middleware(['web','auth']);
+Route::get('/admin/opd-token/{screen:slug}', [DisplayTokenController::class, 'show'])->name('opd-token.screen.display')->middleware(['web','auth']);
+Route::get('/admin/opd-token/{screen:slug}/data', [DisplayTokenController::class, 'boardData'])->name('opd-token.screen.data')->middleware(['web','auth']);
+Route::post('/admin/opd-token/{screen:slug}/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opd-token.screen.authenticate')->middleware(['web','auth']);
+Route::post('/admin/opd-token/{screen:slug}/logout', [DisplayTokenController::class, 'logout'])->name('opd-token.screen.logout')->middleware(['web','auth']);
 
 // Backward-compatible aliases for old OPT URLs.
-Route::get('/opt-token', [DisplayTokenController::class, 'show'])->name('opt-token.display');
-Route::get('/opt-token/data', [DisplayTokenController::class, 'boardData'])->name('opt-token.data');
-Route::post('/opt-token/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opt-token.authenticate');
-Route::post('/opt-token/logout', [DisplayTokenController::class, 'logout'])->name('opt-token.logout');
-Route::get('/opt-token/{screen:slug}', [DisplayTokenController::class, 'show'])->name('opt-token.screen.display');
-Route::get('/opt-token/{screen:slug}/data', [DisplayTokenController::class, 'boardData'])->name('opt-token.screen.data');
-Route::post('/opt-token/{screen:slug}/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opt-token.screen.authenticate');
-Route::post('/opt-token/{screen:slug}/logout', [DisplayTokenController::class, 'logout'])->name('opt-token.screen.logout');
+Route::get('/admin/opt-token', [DisplayTokenController::class, 'show'])->name('opt-token.display')->middleware(['web','auth']);
+Route::get('/admin/opt-token/data', [DisplayTokenController::class, 'boardData'])->name('opt-token.data')->middleware(['web','auth']);
+Route::post('/admin/opt-token/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opt-token.authenticate')->middleware(['web','auth']);
+Route::post('/admin/opt-token/logout', [DisplayTokenController::class, 'logout'])->name('opt-token.logout')->middleware(['web','auth']);
+Route::get('/admin/opt-token/{screen:slug}', [DisplayTokenController::class, 'show'])->name('opt-token.screen.display')->middleware(['web','auth']);
+Route::get('/admin/opt-token/{screen:slug}/data', [DisplayTokenController::class, 'boardData'])->name('opt-token.screen.data')->middleware(['web','auth']);
+Route::post('/admin/opt-token/{screen:slug}/authenticate', [DisplayTokenController::class, 'authenticate'])->name('opt-token.screen.authenticate')->middleware(['web','auth']);
+Route::post('/admin/opt-token/{screen:slug}/logout', [DisplayTokenController::class, 'logout'])->name('opt-token.screen.logout')->middleware(['web','auth']);
 Route::get('/queue', [DisplayTokenController::class, 'show'])->name('queue.display');
 
 Route::get('/thankyou-demo', function () {

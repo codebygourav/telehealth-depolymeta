@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
+import { Cormorant_Garamond, Manrope, Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 import { Providers } from "./providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+const cormorant = Cormorant_Garamond({
+    subsets: ['latin'],
+    weight: ['300', '400', '500', '600', '700'],
+    variable: '--font-headings',
+})
+
+const manrope = Manrope({
+    subsets: ['latin'],
+    variable: '--font-sans',
+})
 
 const fontMono = Geist_Mono({
     subsets: ["latin"],
@@ -22,7 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     return (
         <html
             lang="en"
-            className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
+            className={cn("antialiased", fontMono.variable, "font-sans", manrope.variable, cormorant.variable)}
             suppressHydrationWarning
         >
             <body className="min-h-full flex flex-col" suppressHydrationWarning>

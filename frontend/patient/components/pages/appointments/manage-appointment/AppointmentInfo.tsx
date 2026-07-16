@@ -36,7 +36,7 @@ export default function AppointmentInfo({
             <Card className="rounded-lg p-5">
                 <CardContent className="p-0 space-y-5">
                     <h3 className="text-lg text-[#1F1E1E] font-semibold flex items-center gap-2.5">
-                        <Calendar size={18} color='#055BD9' />
+                        <Calendar size={18} color='var(--primary)' />
                         Appointment Details
                     </h3>
                     <div className="space-y-2.5 sm:space-y-3">
@@ -77,7 +77,7 @@ export default function AppointmentInfo({
             <Card className="rounded-lg p-5">
                 <CardContent className="p-0 space-y-5">
                     <h3 className="text-lg text-[#1F1E1E] font-semibold flex items-center gap-2.5">
-                        <User size={18} color='#055BD9' />
+                        <User size={18} color='var(--primary)' />
                         Patient Details
                     </h3>
                     <div className="space-y-2.5 sm:space-y-3">

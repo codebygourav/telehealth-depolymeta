@@ -20,7 +20,7 @@ const DoctorInfoCard = ({ doctor }: DoctorInfoCardProps) => {
             />
             <div className="text-center sm:text-left flex-1">
               <p className="text-primary flex items-center justify-center sm:justify-start text-xs font-semibold uppercase tracking-wider">
-                <Stethoscope size={14} className="mr-1.5 text-[#055BD9]" />
+                <Stethoscope size={14} className="mr-1.5 text-primary" />
                 {doctor?.department || "Department"}
               </p>
               <h2 className="text-2xl font-bold text-[#1F1E1E] mt-1">

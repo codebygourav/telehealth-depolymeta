@@ -18,199 +18,17 @@ import { LayoutDashboard, Stethoscope, CalendarCheck, FileText, User, Pill, LogO
 import Image from "next/image"
 import icon from "@/public/assets/icon/logo-light.png"
 import iconSmall from "@/public/assets/icon/app-icon.png"
+import { useSettings } from "@/context/settingsContext"
 import { useAuth } from "@/context/userContext"
 import Link from "next/link"
 
 // This is sample data.
-// const data = {
-//   user: {
-//     name: "shadcn",
-//     email: "m@example.com",
-//     avatar: "/avatars/shadcn.jpg",
-//   },
-//   teams: [
-//     {
-//       name: "Acme Inc",
-//       logo: (
-//         <GalleryVerticalEndIcon
-//         />
-//       ),
-//       plan: "Enterprise",
-//     },
-//     {
-//       name: "Acme Corp.",
-//       logo: (
-//         <AudioLinesIcon
-//         />
-//       ),
-//       plan: "Startup",
-//     },
-//     {
-//       name: "Evil Corp.",
-//       logo: (
-//         <TerminalIcon
-//         />
-//       ),
-//       plan: "Free",
-//     },
-//   ],
-//   navMain: [
-//     {
-//       title: "Dashboard",
-//       url: "#",
-//       icon: (
-//         <TerminalSquareIcon
-//         />
-//       ),
-//       isActive: true,
-//       items: [
-//         {
-//           title: "History",
-//           url: "#",
-//         },
-//         {
-//           title: "Starred",
-//           url: "#",
-//         },
-//         {
-//           title: "Settings",
-//           url: "#",
-//         },
-//       ],
-//     },
-//     {
-//       title: "Models",
-//       url: "#",
-//       icon: (
-//         <BotIcon
-//         />
-//       ),
-//       items: [
-//         {
-//           title: "Genesis",
-//           url: "#",
-//         },
-//         {
-//           title: "Explorer",
-//           url: "#",
-//         },
-//         {
-//           title: "Quantum",
-//           url: "#",
-//         },
-//       ],
-//     },
-//     {
-//       title: "Documentation",
-//       url: "#",
-//       icon: (
-//         <BookOpenIcon
-//         />
-//       ),
-//       items: [
-//         {
-//           title: "Introduction",
-//           url: "#",
-//         },
-//         {
-//           title: "Get Started",
-//           url: "#",
-//         },
-//         {
-//           title: "Tutorials",
-//           url: "#",
-//         },
-//         {
-//           title: "Changelog",
-//           url: "#",
-//         },
-//       ],
-//     },
-//     {
-//       title: "Settings",
-//       url: "#",
-//       icon: (
-//         <Settings2Icon
-//         />
-//       ),
-//       items: [
-//         {
-//           title: "General",
-//           url: "#",
-//         },
-//         {
-//           title: "Team",
-//           url: "#",
-//         },
-//         {
-//           title: "Billing",
-//           url: "#",
-//         },
-//         {
-//           title: "Limits",
-//           url: "#",
-//         },
-//       ],
-//     },
-//   ],
-//   projects: [
-//     {
-//       name: "Design Engineering",
-//       url: "#",
-//       icon: (
-//         <FrameIcon
-//         />
-//       ),
-//     },
-//     {
-//       name: "Sales & Marketing",
-//       url: "#",
-//       icon: (
-//         <PieChartIcon
-//         />
-//       ),
-//     },
-//     {
-//       name: "Travel",
-//       url: "#",
-//       icon: (
-//         <MapIcon
-//         />
-//       ),
-//     },
-//   ],
-// }
-
 const data = {
   user: {
     name: "Patient",
     email: "patient@example.com",
     avatar: "/avatars/user.png",
   },
-  teams: [
-    {
-      name: "CMC Team",
-      logo: (
-        <Image
-          src={icon}
-          alt="Logo"
-          width={200}
-          height={200}
-          className="w-full h-full object-contain rounded-lg"
-        />
-      ),
-      collapsedLogo: (
-        <Image
-          src={iconSmall}
-          alt="Logo Small"
-          width={200}
-          height={200}
-          className="w-full h-40 scale-200 object-contain rounded-lg"
-        />
-      ),
-      plan: "Enterprise",
-    },
-  ],
   navMain: [
     {
       title: "Dashboard",
@@ -237,30 +55,6 @@ const data = {
       url: "/my-medicines",
       icon: <Pill />,
     },
-
-
-    // {
-    //   title: "Notifications",
-    //   url: "/notifications",
-    //   icon: <Settings2Icon />,
-    // },
-    // {
-    //   title: "My Profile",
-    //   url: "/profile",
-    //   icon: <Settings2Icon />,
-    // },
-    // {
-    //   title: "My Reviews",
-    //   url: "/reviews",
-    //   icon: <Settings2Icon />,
-    // },
-    // {
-    //   title: "Transactions",
-    //   url: "/transactions",
-    //   icon: <Settings2Icon />,
-    // },
-
-
     {
       title: "Person Info",
       icon: <User />,
@@ -290,6 +84,35 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { logout } = useAuth();
+  const { settings } = useSettings();
+
+  const teams = [
+    {
+      name: settings.appName || "CMC Team",
+      logo: (
+        <Image
+          src={settings.logoUrl || icon}
+          alt="Logo"
+          width={200}
+          height={200}
+          className="w-full h-full object-contain rounded-lg"
+          unoptimized
+        />
+      ),
+      collapsedLogo: (
+        <Image
+          src={settings.faviconUrl || iconSmall}
+          alt="Logo Small"
+          width={200}
+          height={200}
+          className="w-full h-40 scale-200 object-contain rounded-lg"
+          unoptimized
+        />
+      ),
+      plan: "Enterprise",
+    },
+  ];
+
   return (
     <Sidebar
       collapsible="icon"
@@ -297,8 +120,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       className="transition-all duration-300 [--sidebar-width:17rem] [--sidebar-width-icon:4.5rem]"
     >
       <SidebarHeader className="border-b">
-        {data?.teams?.length > 0 && (
-          <TeamSwitcher teams={data.teams} />
+        {teams.length > 0 && (
+          <TeamSwitcher teams={teams} />
         )}
       </SidebarHeader>
 

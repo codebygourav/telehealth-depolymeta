@@ -29,7 +29,7 @@
 
         /* Active Tab */
         button.fi-tabs-item.fi-active {
-            background: #055bd9 !important;
+            background: var(--app-primary-hex) !important;
             color: white !important;
             box-shadow: 0 4px 12px rgba(7, 56, 39, 0.18);
         }
@@ -52,12 +52,12 @@
 
         .nav-item:hover {
             background: rgba(var(--primary-500), 0.05);
-            border-color: #055bd917;
+            border-color: color-mix(in srgb, var(--app-primary-hex) 9%, transparent);
         }
 
         .nav-item.active {
             background: rgba(var(--primary-500), 0.1);
-            border-color: #055bd917;
+            border-color: color-mix(in srgb, var(--app-primary-hex) 9%, transparent);
             box-shadow: 0 4px 12px -2px rgba(var(--primary-500), 0.1);
         }
 
@@ -227,7 +227,7 @@
         <div class="form-container">
             <div class="form-header flex items-center justify-between py-4">
                 <div class="flex items-center gap-3">
-                    <div class="p-2 bg-shade-min dark:bg-gray-800 rounded-lg text-primary-600" style="color: #055bd9">
+                    <div class="p-2 bg-shade-min dark:bg-gray-800 rounded-lg text-primary-600" style="color: var(--app-primary-hex)">
                         <x-heroicon-o-bolt class="w-5 h-5" />
                     </div>
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">Quick Actions</h3>
@@ -239,21 +239,21 @@
                 <div class="flex flex-wrap gap-4">
                     <button wire:click="clearCache" wire:loading.attr="disabled"
                         class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm"
-                        style="color: #055bd9">
+                        style="color: var(--app-primary-hex)">
                         <x-heroicon-o-arrow-path class="w-5 h-5" wire:loading.class="animate-spin" />
                         Clear All System Cache
                     </button>
-
+ 
                     <button wire:click="clearConfigCache" wire:loading.attr="disabled"
                         class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm"
-                        style="color: #055bd9">
+                        style="color: var(--app-primary-hex)">
                         <x-heroicon-o-cog-6-tooth class="w-5 h-5" />
                         Refresh Configurations
                     </button>
-
+ 
                     <button wire:click="clearViewCache" wire:loading.attr="disabled"
                         class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-gray-100 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm"
-                        style="color: #055bd9">
+                        style="color: var(--app-primary-hex)">
                         <x-heroicon-o-eye class="w-5 h-5" />
                         Clear Views
                     </button>

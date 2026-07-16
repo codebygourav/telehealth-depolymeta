@@ -19,7 +19,7 @@
 
     <style>
         .availability-shell {
-            --av-primary: #055bd9;
+            --av-primary: var(--app-primary-hex);
             --av-primary-hover: #052a1f;
             --av-border: #e2e8f0;
             --av-border-strong: #cbd5e1;
@@ -378,11 +378,10 @@
             line-height: 1.5;
         }
 
-        /* Filament modal toggles — #055bd9 on, gray off */
         .fi-modal .fi-fo-toggle[aria-checked="true"] .fi-toggle,
         .fi-modal .fi-fo-toggle[aria-checked="true"] {
-            background-color: #055bd9 !important;
-            border-color: #055bd9 !important;
+            background-color: var(--app-primary-hex) !important;
+            border-color: var(--app-primary-hex) !important;
         }
 
         .fi-modal .fi-fo-toggle[aria-checked="false"] .fi-toggle,
@@ -896,14 +895,14 @@
 
     <div class="availability-shell">
         <div class="availability-kpis">
-            <div class="availability-kpi" style="--kpi-dot: #055bd9">
+            <div class="availability-kpi" style="--kpi-dot: var(--app-primary-hex)">
                 <div class="availability-kpi__top">
                     <span class="availability-kpi__label">Total slots</span>
                     <span class="availability-kpi__dot"></span>
                 </div>
                 <div class="availability-kpi__value">{{ $summary['total'] }}</div>
             </div>
-            <div class="availability-kpi" style="--kpi-dot: #055bd9; --kpi-value-color: #055bd9">
+            <div class="availability-kpi" style="--kpi-dot: var(--app-primary-hex); --kpi-value-color: var(--app-primary-hex)">
                 <div class="availability-kpi__top">
                     <span class="availability-kpi__label">Available</span>
                     <span class="availability-kpi__dot"></span>

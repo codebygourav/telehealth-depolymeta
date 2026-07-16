@@ -92,7 +92,7 @@ class CronSettings extends Page
                     ->schema([
                         Placeholder::make('manage_link')
                             ->label('')
-                            ->content(new HtmlString('<div style="padding: 10px 0;"><a href="' . route('filament.admin.resources.cron-jobs.index') . '" style="background:#055bd9; color:white; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; box-shadow:0 2px 4px rgba(5,91,217,0.2); transition:all 0.2s;" onmouseover="this.style.background=\'#044ab0\'" onmouseout="this.style.background=\'#055bd9\'">Manage Cron Jobs & Logs &rarr;</a></div>')),
+                            ->content(new HtmlString('<div style="padding: 10px 0;"><a href="' . route('filament.admin.resources.cron-jobs.index') . '" style="background:var(--primary); color:white; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; box-shadow:0 2px 4px rgba(5,91,217,0.2); transition:all 0.2s;" onmouseover="this.style.background=\'var(--primary-hover)\'" onmouseout="this.style.background=\'var(--primary)\'">Manage Cron Jobs & Logs &rarr;</a></div>')),
                     ])
                     ->columnSpanFull(),
 
@@ -174,7 +174,7 @@ class CronSettings extends Page
         <ul style="margin:0 0 12px 18px;padding:0;list-style-type:disc;color:#475569;">
             <li style="margin-bottom:4px;">Select type: <strong>Custom</strong></li>
             <li style="margin-bottom:4px;">In <strong>Command to Run</strong>, enter the following command based on your Hostinger Docker environment:
-                <pre style="background:#0f172a;color:#34d399;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;margin:6px 0;overflow-x:auto;">docker exec -i tele-backend-app php artisan schedule:run >> /dev/null 2>&1</pre>
+                <pre style="background:#0f172a;color:#34d399;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;margin:6px 0;overflow-x:auto;">docker exec -i dr-sushil-backend-app php artisan schedule:run >> /dev/null 2>&1</pre>
             </li>
             <li style="margin-bottom:4px;">Under <strong>Common Options</strong>, select: <code>Once per minute (* * * * *)</code> (or ensure Minute, Hour, Day, Month, Weekday are all set to <code>*</code>).</li>
         </ul>
