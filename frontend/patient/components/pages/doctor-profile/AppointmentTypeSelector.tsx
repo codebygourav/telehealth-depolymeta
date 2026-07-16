@@ -36,7 +36,7 @@ const AppointmentTypeSelector = ({
                     onClick={() => inPersonAvailable && onChange('in_person')}
                     disabled={!inPersonAvailable}
                     className={`p-6 rounded-lg border border-[#E7E8EB] transition-all flex flex-col items-center text-center gap-3 ${value === 'in_person'
-                        ? 'border-primary bg-[#055BD9]'
+                        ? 'border-primary bg-primary'
                         : 'border-[#E7E8EB] hover:border-primary/50'
                         } ${!inPersonAvailable && 'opacity-50 cursor-not-allowed'}`}
                 >
@@ -52,7 +52,7 @@ const AppointmentTypeSelector = ({
                     onClick={() => videoAvailable && onChange('video')}
                     disabled={!videoAvailable}
                     className={`p-6 rounded-lg border border-[#E7E8EB] transition-all flex flex-col items-center text-center gap-3 ${value === 'video'
-                        ? 'border-primary bg-[#055BD9]'
+                        ? 'border-primary bg-primary'
                         : 'border-[#E7E8EB] hover:border-primary/50'
                         } ${!videoAvailable && 'opacity-50 cursor-not-allowed'}`}
                 >

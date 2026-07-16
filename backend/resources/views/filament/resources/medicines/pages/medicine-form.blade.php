@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     <style>
         .medicine-master-page {
-            --medicine-primary: #055bd9;
+            --medicine-primary: var(--app-primary-hex);
             --medicine-primary-dark: #064eb8;
             --medicine-primary-soft: #eef5ff;
             --medicine-text: #172033;

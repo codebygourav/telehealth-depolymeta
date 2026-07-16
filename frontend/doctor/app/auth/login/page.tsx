@@ -8,6 +8,7 @@ import AuthLayout from "@/components/auth/AuthLayout"
 import { useLogin } from "@/mutations/useLogin"
 import { useAuth } from "@/context/userContext"
 import { User, UserRole } from "@/types/user-context"
+import { useSettings } from "@/context/settingsContext";
 
 import Logo from "@/public/assets/icon/logo-light.png"
 
@@ -24,6 +25,7 @@ const LoginPage = () => {
     const [mounted, setMounted] = useState(false)
     const [imageError, setImageError] = useState(false)
     const [emailverified, setEmailverified] = useState(false);
+    const { settings } = useSettings();
 
     useEffect(() => {
         setMounted(true)
@@ -121,13 +123,12 @@ const LoginPage = () => {
                 <div className="mb-4 flex justify-center">
                     {mounted && (
                         <Image
-                            src={Logo}
-                            alt="Company Logo"
-                            width={120}
-                            height={40}
+                            src={settings.logoUrl || Logo}
+                            alt={settings.appName || "Logo"}
+                            width={180}
+                            height={32}
+                            className="w-28 sm:w-32 md:w-44 h-auto"
                             priority
-                            className="h-16 w-auto"
-                            onError={() => setImageError(true)}
                             unoptimized
                         />
                     )}

@@ -81,7 +81,7 @@ export default function AppointmentHeader({ appointment }: { appointment: any })
                             <div className="flex flex-col gap-1">
 
                                 <div className="flex items-center gap-1">
-                                    <p className="mt-0.5 flex items-center font-bold text-[#055BD9] text-xs font-semibold">
+                                    <p className="mt-0.5 flex items-center font-bold text-primary text-xs font-semibold">
                                         {schedule?.date_format || appointment?.appointment_date_format}
                                         <span className="opacity-50 px-1"> | </span>
                                         {schedule?.time_formatted || appointment?.appointment_time_formatted}

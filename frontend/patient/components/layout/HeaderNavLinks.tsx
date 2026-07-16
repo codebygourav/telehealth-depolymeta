@@ -33,7 +33,7 @@ export function HeaderNavLinks({
     onLogout,
 }: HeaderNavLinksProps) {
     return (
-    
+
         <>
             <nav className="items-center justify-center flex-1 hidden lg:flex">
                 <div className="flex items-center gap-2 p-1 global-radius">
@@ -48,7 +48,7 @@ export function HeaderNavLinks({
                                     "inline-flex items-center gap-2 global-radius px-4 py-2 text-sm font-bold transition-all duration-200 ",
                                     isActive
                                         ? "bg-primary text-primary-foreground shadow-sm"
-                                        : "text-foreground/70 hover:bg-primary hover:text-white transition-all duration-100 bg-secondary-menu-color",
+                                        : "text-primary hover:bg-primary border border-primary hover:text-white transition-all bg-primary-100 duration-100",
                                 )}
                             >
                                 {item.icon}

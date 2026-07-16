@@ -85,14 +85,14 @@ export default function AppointmentDetailPage() {
                 <div className="overflow-hidden mb-10">
                     <div className="pt-8 pb-4 border-b border-gray-100 bg-gray-50">
                         <h3 className="flex items-center gap-2 text-lg font-semibold text-[#1F1E1E]">
-                            <Pill size={20} color='#055BD9' />
+                            <Pill size={20} className="text-primary" />
                             Medical Details & Prescriptions
                         </h3>
                     </div>
 
                     {/* Show notes if they exist */}
                     {notes && (
-                        <div className="p-6 italic text-gray-600 bg-gray-100 border-l-4 rounded-xl border-[#055BD9]">
+                        <div className="p-6 italic text-gray-600 bg-gray-100 border-l-4 rounded-xl border-primary">
                             <h3 className="text-sm">Symptoms Reported</h3>
                             <div className="mt-2 text-base">
                                 &quot;{notes}&quot;

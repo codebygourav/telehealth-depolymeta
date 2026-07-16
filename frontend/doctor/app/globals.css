@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Manrope:wght@400;500;600;700&display=swap";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -8,9 +9,10 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
+  --font-source-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-inter: var(--font-inter);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-headings);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -59,7 +61,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #055BD9;
+  --primary: #055bd9;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: #013220;
@@ -138,6 +140,20 @@
 
   html {
     @apply font-sans;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .g-h1,
+  .g-h2,
+  .g-h3,
+  .g-h4,
+  .g-h5 {
+    font-family: var(--font-headings), serif !important;
   }
 
 

@@ -11,7 +11,7 @@
             background: #fff !important;
         }
         .started_queue_app{
-            background: #055bd92b;
+            background: color-mix(in srgb, var(--app-primary-hex) 17%, transparent);
         }
 
 

@@ -69,7 +69,7 @@ const UpcomingAppointmentCard = ({
                     {/* Rating Badge */}
                     {doctor?.rating !== 0 && doctor?.rating && (
                         <div className="flex items-center gap-1 bg-primary/8 text-primary px-2 py-1.5 rounded h-fit">
-                            <Star size={12} color="#055bd9" fill="#055bd9" />
+                            <Star size={12} color="var(--primary)" fill="var(--primary)" />
                             <span className="text-xs font-semibold">{doctor?.rating}</span>
                         </div>
                     )}
@@ -88,7 +88,7 @@ const UpcomingAppointmentCard = ({
                                 {
                                     appointment.type === 'video' ? (
                                         <>
-                                            <Video size={18} color='#055bd9' fill="#055bd9" />
+                                            <Video size={18} color='var(--primary)' fill="var(--primary)" />
                                             <p className="text-xs font-bold capitalize break-words hidden md:block">
                                                 {consultationType}
                                             </p>
@@ -98,7 +98,7 @@ const UpcomingAppointmentCard = ({
                                         </>
                                     ) : appointment.type === 'in-person' ? (
                                         <>
-                                            <Hospital size={18} color='#055bd9' />
+                                            <Hospital size={18} color='var(--primary)' />
                                             <p className="text-xs font-bold capitalize break-words hidden md:block">
                                                 {consultationType}
                                             </p>
@@ -109,11 +109,11 @@ const UpcomingAppointmentCard = ({
                                     ) : (
                                         <div className="flex flex-wrap items-center gap-2 text-xs font-bold capitalize break-words">
                                             <div className="flex items-center gap-1">
-                                                <Video size={18} color='#055bd9' fill="#055bd9" />
+                                                <Video size={18} color='var(--primary)' fill="var(--primary)" />
                                                 Video
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <Hospital size={18} color='#055bd9' />
+                                                <Hospital size={18} color='var(--primary)' />
                                                 In-Person
                                             </div>
                                         </div>

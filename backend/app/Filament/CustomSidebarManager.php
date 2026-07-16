@@ -249,7 +249,6 @@ class CustomSidebarManager
                 }
 
                 $navigationGroups[] = \Filament\Navigation\NavigationGroup::make($nav['label'])
-                    ->icon($nav['icon'] ?? null)
                     ->items($groupItems)
                     ->collapsible($nav['isCollapsible'] ?? true);
             }

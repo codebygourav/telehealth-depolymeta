@@ -106,7 +106,7 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
                                                 whitespace-nowrap
                                                 text-sm font-semibold py-2 px-7 rounded-md
                                                 ${activeTab === 'overview'
-                                            ? 'text-white bg-[#055BD9]'
+                                            ? 'text-white bg-primary'
                                             : 'text-[#4D4D4D]'
                                         }
                                      `}
@@ -120,7 +120,7 @@ const DoctorProfile = ({ params }: DoctorProfileProps) => {
                                                 whitespace-nowrap
                                                 text-sm font-semibold py-2 px-7 rounded-md
                                                 ${activeTab === 'reviews'
-                                            ? 'text-white bg-[#055BD9]'
+                                            ? 'text-white bg-primary'
                                             : 'text-[#4D4D4D]'
                                         }
                                 `}

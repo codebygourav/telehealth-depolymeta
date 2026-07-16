@@ -31,6 +31,7 @@ import {
   MessageSquare,
   User as UserIcon,
 } from "lucide-react";
+import { useSettings } from "@/context/settingsContext";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -39,6 +40,7 @@ import { NotificationDropdown } from "./NotificationDropdown";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export function Header() {
+  const { settings } = useSettings();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -118,12 +120,13 @@ export function Header() {
         {/* Logo and App Name */}
         <Link href="/" className="flex items-center space-x-2 shrink-0">
           <Image
-            src={icon}
-            alt="Logo"
+            src={settings.logoUrl || icon}
+            alt={settings.appName || "Logo"}
             width={180}
             height={32}
             className="w-28 sm:w-32 md:w-44 h-auto"
             priority
+            unoptimized
           />
         </Link>
 

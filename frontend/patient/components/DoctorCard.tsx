@@ -42,7 +42,7 @@ const DoctorCard = ({ doctor, isLoading = false, onBook }: DoctorCardProps) => {
                                 </h3>
                                 {doctor?.rating ? (
                                     <div className="flex items-center gap-1 bg-primary/8 text-primary px-2 py-1.5 rounded shrink-0">
-                                        <Star size={12} color="#055bd9" fill="#055bd9" />
+                                        <Star size={12} color="var(--primary)" fill="var(--primary)" />
                                         <span className="text-xs font-semibold">
                                             {doctor.rating}
                                         </span>
@@ -88,24 +88,24 @@ const DoctorCard = ({ doctor, isLoading = false, onBook }: DoctorCardProps) => {
                                         ? (
                                             <>
                                                 {doctor.consultation_type.includes('video') && (
-                                                    <Video size={18} color='#055bd9' fill="#055bd9" />
+                                                    <Video size={18} color='var(--primary)' fill="var(--primary)" />
                                                 )}
                                                 {doctor.consultation_type.includes('in-person') && (
-                                                    <Hospital size={18} color='#055bd9' />
+                                                    <Hospital size={18} color='var(--primary)' />
                                                 )}
                                                 {!doctor.consultation_type.includes('video') && !doctor.consultation_type.includes('in-person') || doctor.consultation_type === 'both' && null}
                                             </>
                                         )
                                         : doctor.consultation_type === 'video' ? (
                                             <>
-                                                <Video size={18} color='#055bd9' fill="#055bd9" />
+                                                <Video size={18} color='var(--primary)' fill="var(--primary)" />
                                                 <p className="text-xs font-bold capitalize break-words">
                                                     {doctor.consultation_type_label}
                                                 </p>
                                             </>
                                         ) : doctor.consultation_type === 'in-person' || doctor.consultation_type === 'In Person' ? (
                                             <>
-                                                <Hospital size={18} color='#055bd9' />
+                                                <Hospital size={18} color='var(--primary)' />
                                                 <p className="text-xs font-bold capitalize break-words">
                                                     {doctor.consultation_type_label}
                                                 </p>
@@ -113,11 +113,11 @@ const DoctorCard = ({ doctor, isLoading = false, onBook }: DoctorCardProps) => {
                                         ) : doctor.consultation_type === 'both' ? (
                                             <div className="flex flex-wrap items-center md:justify-center justify-end gap-2 text-xs font-bold capitalize break-words">
                                                 <div className="flex items-center gap-1">
-                                                    <Video size={18} color='#055bd9' fill="#055bd9" />
+                                                    <Video size={18} color='var(--primary)' fill="var(--primary)" />
                                                     Video
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <Hospital size={18} color='#055bd9' />
+                                                    <Hospital size={18} color='var(--primary)' />
                                                     In-Person
                                                 </div>
                                             </div>

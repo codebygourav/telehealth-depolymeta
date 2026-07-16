@@ -17,7 +17,7 @@
     --border: oklch(0.922 0 0);
 }
 
-/* Filament primary palette — brand #055bd9 */
+/* Filament primary palette — brand var(--primary) */
 [x-cloak],
 :root {
     --primary-50: 239 245 255;
@@ -662,7 +662,7 @@ a.fi-btn:not(.fi-outlined):not(.fi-disabled):hover {
 /* Slight divider between items (subtle) */
 .fi-sidebar .fi-sidebar-nav .fi-sidebar-item,
 li.fi-sidebar-group.fi-collapsible.fi-collapsed {
-    border-bottom: 1px solid #055bd91a;
+    border-bottom: 1px solid var(--app-primary-hex-12);
 }
 
 .fi-sidebar-group {
@@ -1894,7 +1894,7 @@ input[type="checkbox"]:checked::after {
     stroke-width: 3 !important;
     transform: rotate(180deg) !important;
     transition: transform 160ms ease !important;
-    color: #055bd9;
+    color: var(--app-primary-hex);
 }
 
 .fi-sidebar .fi-sidebar-group:has(.fi-active) .fi-sidebar-group-collapse-btn,
@@ -1928,7 +1928,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-group-items {
-    background: #055bd90d !important;
+    background: var(--primary-50) !important;
     margin-top: 0 !important;
     padding: 0 !important;
 }
@@ -1962,7 +1962,7 @@ input[type="checkbox"]:checked::after {
     width: 0.3rem !important;
     height: 0.3rem !important;
     border-radius: 999px !important;
-    background: color-mix(in srgb, var(--app-primary-hex) 20%, #ffffff) !important;
+    background: color-mix(in srgb, var(--app-primary-hex-12), #ffffff) !important;
     transform: translateY(-50%) !important;
     z-index: 2 !important;
 }
@@ -2026,7 +2026,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .fi-sidebar .fi-sidebar-group:has(.fi-sidebar-group-btn) .fi-sidebar-item.fi-active>.fi-sidebar-item-btn {
-    background: color-mix(in srgb, var(--app-primary-hex) 10%, #ffffff) !important;
+    background: color-mix(in srgb, var(--app-primary-hex-12), #ffffff) !important;
     color: var(--app-primary-hex) !important;
     border-bottom-color: transparent !important;
     box-shadow: none !important;
@@ -2110,7 +2110,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .dark .header-stat-card.is-active {
-    background-color: color-mix(in srgb, var(--app-primary-hex) 15%, #111827) !important;
+    background-color: color-mix(in srgb, var(--app-primary-hex-14), #111827) !important;
 }
 
 /* Color text inside active cards to make active state extremely obvious */
@@ -2162,23 +2162,23 @@ input[type="checkbox"]:checked::after {
 }
 
 .header-stat-icon.is-inactive {
-    background-color: color-mix(in srgb, var(--app-primary-hex) 10%, transparent) !important;
+    background-color: color-mix(in srgb, var(--app-primary-hex-12), transparent) !important;
     color: var(--app-primary-hex) !important;
 }
 
 .dark .header-stat-icon.is-inactive {
-    background-color: color-mix(in srgb, var(--app-primary-hex) 20%, transparent) !important;
-    color: color-mix(in srgb, var(--app-primary-hex) 80%, white) !important;
+    background-color: color-mix(in srgb, var(--app-primary-hex-12), transparent) !important;
+    color: color-mix(in srgb, var(--app-primary-hex-80), white) !important;
 }
 
 /* Active indicator badges */
 .header-stat-badge.is-active {
-    background-color: color-mix(in srgb, var(--app-primary-hex) 15%, transparent) !important;
+    background-color: color-mix(in srgb, var(--app-primary-hex-12), transparent) !important;
     color: var(--app-primary-hex) !important;
 }
 
 .dark .header-stat-badge.is-active {
-    background-color: color-mix(in srgb, var(--app-primary-hex) 30%, transparent) !important;
+    background-color: color-mix(in srgb, var(--app-primary-hex-12), transparent) !important;
     color: color-mix(in srgb, var(--app-primary-hex) 90%, white) !important;
 }
 
@@ -2339,7 +2339,7 @@ input[type="checkbox"]:checked::after {
 
 .custom-appointment-table-cls button.fi-tabs-item.fi-active,
 :where([class*="fi-resource-"][class*="-list-"][class*="-page"]) button.fi-tabs-item.fi-active {
-    background: #055bd9;
+    background: var(--app-primary-hex);
 }
 
 
@@ -2554,7 +2554,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .diet-template-chart>.fi-section-header {
-    background: linear-gradient(90deg, #eef7f3dc 0%, #055bd9 72%) !important;
+    background: linear-gradient(90deg, #eef7f3dc 0%, var(--primary) 72%) !important;
     border-bottom: 1px solid #afcfffc1;
 }
 
@@ -2589,7 +2589,7 @@ input[type="checkbox"]:checked::after {
     height: 28px;
     border-radius: 50%;
     background: rgba(5, 91, 217, 0.08);
-    color: var(--app-primary-hex, #055bd9);
+    color: var(--app-primary-hex, var(--primary));
     font-size: 0.85rem;
     font-weight: 700;
     flex-shrink: 0;
@@ -2682,7 +2682,7 @@ input[type="checkbox"]:checked::after {
 .diet-scenario-tab {
     background: #ffffff;
     border: 1px solid #b3d1ff;
-    color: #055bd9;
+    color: var(--app-primary-hex);
     border-radius: 10px;
     padding: 6px 10px;
     font-size: 11px;
@@ -2722,7 +2722,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .diet-day-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
-    color: var(--app-primary-hex, #055bd9) !important;
+    color: var(--app-primary-hex, var(--primary)) !important;
     font-size: 0.95rem !important;
     font-weight: 700 !important;
 }
@@ -2734,7 +2734,7 @@ input[type="checkbox"]:checked::after {
 /* Meals Repeater nested inside Days */
 .diet-meal-repeater {
     margin-top: 12px;
-    border-top: 1px dashed #055bd9;
+    border-top: 1px dashed var(--app-primary-hex);
     padding-top: 16px;
 }
 
@@ -2758,7 +2758,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .diet-meal-repeater>.fi-fo-repeater-items>.fi-fo-repeater-item>.fi-fo-repeater-item-header .fi-fo-repeater-item-header-label {
-    color: var(--primary, #055bd9) !important;
+    color: var(--primary, var(--primary)) !important;
     font-size: 0.86rem !important;
     font-weight: 700 !important;
 }
@@ -2865,7 +2865,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .diet-schedule-card.is-clickable:focus-visible {
-    outline: 2px solid #055bd9;
+    outline: 2px solid var(--app-primary-hex);
     outline-offset: 2px;
 }
 
@@ -2929,7 +2929,7 @@ input[type="checkbox"]:checked::after {
     border-radius: 999px;
     border: 1px solid #cfe0fb;
     background: #ffffff;
-    color: #055bd9;
+    color: var(--app-primary-hex);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
@@ -2942,8 +2942,8 @@ input[type="checkbox"]:checked::after {
 }
 
 .diet-week-tab.is-active {
-    background: #055bd9;
-    border-color: #055bd9;
+    background: var(--app-primary-hex);
+    border-color: var(--app-primary-hex);
     color: #ffffff;
 }
 
@@ -3053,7 +3053,7 @@ input[type="checkbox"]:checked::after {
 .diet-form-day-tab.is-active {
     border-color: #075eea;
     background: #edf5ff;
-    color: #055bd9;
+    color: var(--app-primary-hex);
 }
 
 .diet-form-day-tab span:last-child {
@@ -3095,7 +3095,7 @@ input[type="checkbox"]:checked::after {
     border: 1px solid #cfe0fb;
     border-radius: 999px;
     background: #ffffff;
-    color: #055bd9;
+    color: var(--app-primary-hex);
     font-size: 11px;
     font-weight: 700;
     padding: 4px 8px;
@@ -3128,8 +3128,8 @@ input[type="checkbox"]:checked::after {
 }
 
 .diet-primary-btn {
-    border: 1px solid #055bd9;
-    background: #055bd9;
+    border: 1px solid var(--app-primary-hex);
+    background: var(--app-primary-hex);
     color: #ffffff;
 }
 
@@ -3164,7 +3164,7 @@ input[type="checkbox"]:checked::after {
 .diet-form-add-day-btn {
     border: 1px dashed #b9cff8;
     background: #ffffff;
-    color: #055bd9;
+    color: var(--app-primary-hex);
 }
 
 .diet-form-add-day-btn:hover {
@@ -3305,7 +3305,7 @@ input[type="checkbox"]:checked::after {
 .diet-week-day-item.is-active {
     border-color: #075eea;
     background: #edf5ff;
-    color: #055bd9;
+    color: var(--app-primary-hex);
     font-weight: 700;
 }
 
@@ -3336,7 +3336,7 @@ input[type="checkbox"]:checked::after {
     border: 1px solid #cfe0fb;
     border-radius: 999px;
     background: #ffffff;
-    color: #055bd9;
+    color: var(--app-primary-hex);
     font-size: 11px;
     font-weight: 700;
     padding: 4px 8px;
@@ -3367,7 +3367,7 @@ input[type="checkbox"]:checked::after {
 }
 
 .diet-week-meal-summary strong {
-    color: #055bd9;
+    color: var(--app-primary-hex);
 }
 
 .diet-week-meal-summary span {

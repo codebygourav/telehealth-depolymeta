@@ -54,8 +54,8 @@ export default function ProfileHeader({
 
                     {/* Info */}
                     <div className="flex-1">
-                        <p className="flex items-center gap-x-1.5 text-xs font-semibold text-[#055BD9] uppercase tracking-wide">
-                            <Stethoscope color="#055BD9" size={14} />
+                        <p className="flex items-center gap-x-1.5 text-xs font-semibold text-primary uppercase tracking-wide">
+                            <Stethoscope className="text-primary" size={14} />
                             {department}
                         </p>
                         <h1 className="text-[#1F1E1E] text-2xl font-bold mb-2 mt-1.5">{fullName}</h1>

@@ -32,7 +32,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
 
                                 <div className="text-center sm:text-left flex-1">
                                     <p className="text-primary flex items-center justify-center sm:justify-start text-xs font-semibold uppercase tracking-wider">
-                                        <Stethoscope size={14} color="#055BD9" className="mr-1.5" />
+                                        <Stethoscope size={14} color="var(--primary)" className="mr-1.5" />
                                         {doctor?.department || "Cardiology"}
                                     </p>
                                     <h2 className="text-2xl font-bold text-[#1F1E1E] mt-1">
@@ -99,7 +99,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                     <Card className="rounded-lg p-5">
                         <CardContent className="p-0 space-y-5">
                             <h3 className="text-lg text-[#1F1E1E] font-semibold flex items-center gap-2.5">
-                                <Calendar size={18} color='#055BD9' />
+                                <Calendar size={18} color='var(--primary)' />
                                 Schedule Detail
                             </h3>
                             <div className="space-y-2.5 sm:space-y-3">
@@ -140,7 +140,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                     <Card className="rounded-lg p-5">
                         <CardContent className="p-0 space-y-3 sm:space-y-4">
                             <h3 className="text-lg text-[#1F1E1E] font-semibold flex items-center gap-2.5">
-                                <User size={18} color='#055BD9' />
+                                <User size={18} color='var(--primary)' />
                                 Patient Info
                             </h3>
                             <div className="space-y-2.5 sm:space-y-3">
@@ -185,7 +185,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                 {medical_reports?.length > 0 && (
                     <div className="space-y-3 sm:space-y-4 pt-2 sm:pt-4">
                         <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 px-1 text-base sm:text-lg">
-                            <FileText size={20} color="#055BD9" />
+                            <FileText size={20} color="var(--primary)" />
                             Medical Reports
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -195,8 +195,8 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                     className="flex items-center justify-between p-3 sm:p-4 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-700"
                                 >
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#055bd929] rounded-lg flex items-center justify-center shrink-0">
-                                            <Download size={20} color="#055BD9" />
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[var(--primary)29] rounded-lg flex items-center justify-center shrink-0">
+                                            <Download size={20} color="var(--primary)" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">
@@ -213,7 +213,7 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                                         rel="noopener noreferrer"
                                         className="text-emerald-600 hover:text-emerald-700 transition-colors shrink-0 ml-2"
                                     >
-                                        <Eye size={18} color="#055BD9" />
+                                        <Eye size={18} color="var(--primary)" />
                                     </a>
                                 </div>
                             ))}
@@ -229,8 +229,8 @@ export const AppointmentInfoCards = ({ data }: AppointmentInfoCardsProps) => {
                         <CardContent className="p-0 space-y-4 sm:space-y-5 md:space-y-6">
 
                             <h3 className="text-lg text-[#1F1E1E] font-semibold flex items-center gap-2.5">
-                                <span className="p-1.5 bg-[#055bd929] rounded-md">
-                                    <CreditCard size={18} color='#055BD9' />
+                                <span className="p-1.5 bg-[var(--primary)29] rounded-md">
+                                    <CreditCard size={18} color='var(--primary)' />
                                 </span>
                                 Payment Detail
                             </h3>
