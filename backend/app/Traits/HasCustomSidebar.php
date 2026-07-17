@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use App\Support\FilamentUiVisibility;
 use Illuminate\Support\Str;
 
 trait HasCustomSidebar
@@ -117,16 +118,7 @@ trait HasCustomSidebar
 
     protected static function isSidebarItemVisible(): bool
     {
-        if (method_exists(static::class, 'canViewAny')) {
-            return (bool) static::canViewAny();
-        }
-        if (method_exists(static::class, 'shouldRegisterNavigation')) {
-            return (bool) static::shouldRegisterNavigation();
-        }
-        if (method_exists(static::class, 'canAccess')) {
-            return (bool) static::canAccess();
-        }
-        return true;
+        return FilamentUiVisibility::canAccessClass(static::class);
     }
 
     protected static function getSidebarSort(): int|float

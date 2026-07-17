@@ -426,7 +426,7 @@ class AppointmentsTable
                         ->requiresConfirmation()
                         ->modalHeading('Generate video link')
                         ->modalDescription('Create a Whereby room with host and participant URLs for this appointment.')
-                        ->visible(fn ($record): bool => $record->consultation_type === 'video' && !self::hasCompleteVideoLinks($record))
+                        ->visible(fn ($record): bool => AppointmentResource::canEdit($record) && $record->consultation_type === 'video' && !self::hasCompleteVideoLinks($record))
                         ->action(function ($record): void {
                             self::generateVideoLink($record);
                         }),
@@ -434,7 +434,7 @@ class AppointmentsTable
                         ->label('View Video Links')
                         ->icon('heroicon-o-video-camera')
                         ->color('success')
-                        ->visible(fn ($record): bool => $record->consultation_type === 'video' && self::hasCompleteVideoLinks($record))
+                        ->visible(fn ($record): bool => AppointmentResource::canView($record) && $record->consultation_type === 'video' && self::hasCompleteVideoLinks($record))
                         ->modalHeading('Video consultation links')
                         ->modalContent(fn ($record) => view('filament.pages.video-consultation-urls', [
                             'videoConsultation' => $record->videoConsultation,
@@ -519,7 +519,7 @@ class AppointmentsTable
                                 ->success()
                                 ->send();
                         })
-                        ->visible(fn($record) => !$record->hasActiveReplacement() && !in_array($record->status, ['cancelled', 'completed'])),
+                        ->visible(fn($record) => AppointmentResource::canEdit($record) && !$record->hasActiveReplacement() && !in_array($record->status, ['cancelled', 'completed'])),
                     DeleteAction::make()
                         ->requiresConfirmation(),
                 ]),
