@@ -41,17 +41,15 @@ return [
     |--------------------------------------------------------------------------
     |
     | This value controls the number of minutes until an issued token will be
-    | considered expired. This will override any values set in the token's
-    | "expires_at" attribute, but first-party sessions are not affected.
+    | considered expired. Keep it null so mobile/API tokens can use the dynamic
+    | per-token "expires_at" value configured in Settings > Security.
     |
     | Set to null for tokens that never expire (not recommended for production).
     | Recommended: 43200 (30 days) or 10080 (7 days) for mobile apps.
     |
     */
 
-    'expiration' => env('SANCTUM_TOKEN_EXPIRATION') !== null
-        ? (int) env('SANCTUM_TOKEN_EXPIRATION')
-        : 10080, // 7 days default (cast to int to handle string from env)
+    'expiration' => null,
 
     /*
     |--------------------------------------------------------------------------
