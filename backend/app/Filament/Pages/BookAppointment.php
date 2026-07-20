@@ -23,7 +23,6 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -83,7 +82,8 @@ class BookAppointment extends Page implements HasForms
             'patient_mode' => 'existing',
             'booking_mode' => 'new',
             'consultation_type' => 'in-person',
-            'collect_payment' => true,
+            'admin_payment_mode' => 'online',
+            'admin_cash_received_by' => auth()->user()?->name,
         ];
 
         if (is_string($patientId) && $patientId !== '' && Patient::query()->whereKey($patientId)->exists()) {
@@ -114,20 +114,75 @@ class BookAppointment extends Page implements HasForms
     {
         return $form
             ->schema([
-                Section::make('Admin Payment')
-                ->description('Choose whether this admin-created appointment should collect payment.')
-                ->schema([
-                    Toggle::make('collect_payment')
-                        ->label('Collect payment for this booking')
-                        ->helperText('Turn this off to confirm the appointment without creating a payment order.')
-                        ->default(true)
-                        ->inline(false)
-                        ->onColor('success')
-                        ->offColor('gray'),
-                ])
-                ->columns(1),
+                Section::make('Payment Collection')
+                    ->description('Choose how payment should be handled for this admin-created appointment.')
+                    ->icon('heroicon-o-credit-card')
+                    ->schema([
+                        Radio::make('admin_payment_mode')
+                            ->label('Payment Mode')
+                            ->options([
+                                'online' => 'Online Payment',
+                                'cash' => 'Cash at Counter',
+                                'no_payment' => 'No Payment',
+                            ])
+                            ->descriptions([
+                                'online' => 'Create a Razorpay order and collect payment online.',
+                                'cash' => 'Mark the appointment as paid by cash and confirm it immediately.',
+                                'no_payment' => 'Confirm without collecting payment.',
+                            ])
+                            ->default('online')
+                            ->required(fn(callable $get): bool => ($get('booking_mode') ?? 'new') === 'new')
+                            ->visible(fn(callable $get): bool => ($get('booking_mode') ?? 'new') === 'new')
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $set): void {
+                                if ($state === 'cash') {
+                                    $set('admin_cash_received_by', auth()->user()?->name);
+
+                                    return;
+                                }
+
+                                $set('admin_cash_receipt_number', null);
+                                $set('admin_cash_collection_id', null);
+                                $set('admin_cash_notes', null);
+                            })
+                            ->columns(3)
+                            ->extraAttributes(['class' => 'payment-mode-radio'])
+                            ->columnSpanFull(),
+
+                        TextInput::make('admin_cash_receipt_number')
+                            ->label('Cash Receipt Number')
+                            ->placeholder('e.g. CMC-REC-1024')
+                            ->maxLength(255)
+                            ->required(fn(callable $get): bool => $get('admin_payment_mode') === 'cash')
+                            ->visible(fn(callable $get): bool => $get('admin_payment_mode') === 'cash')
+                            ->columnSpan(1),
+
+                        TextInput::make('admin_cash_collection_id')
+                            ->label('Cash Collection ID')
+                            ->placeholder('Optional counter/cashier reference')
+                            ->maxLength(255)
+                            ->visible(fn(callable $get): bool => $get('admin_payment_mode') === 'cash')
+                            ->columnSpan(1),
+
+                        TextInput::make('admin_cash_received_by')
+                            ->label('Cash Received By')
+                            ->placeholder('Name of staff member')
+                            ->maxLength(255)
+                            ->required(fn(callable $get): bool => $get('admin_payment_mode') === 'cash')
+                            ->visible(fn(callable $get): bool => $get('admin_payment_mode') === 'cash')
+                            ->columnSpan(1),
+
+                        Textarea::make('admin_cash_notes')
+                            ->label('Cash Notes')
+                            ->placeholder('Optional payment counter notes')
+                            ->rows(2)
+                            ->visible(fn(callable $get): bool => $get('admin_payment_mode') === 'cash')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(3),
                 Section::make('Patient Details')
                     ->description('Select an existing patient or enter the walk-in patient details.')
+                    ->icon('heroicon-o-user')
                     ->schema([
                         Radio::make('patient_mode')
                             ->label('Patient Type')
@@ -332,6 +387,7 @@ class BookAppointment extends Page implements HasForms
 
                 Section::make('Appointment Details')
                     ->description('Select the doctor, then choose an available date and time.')
+                    ->icon('heroicon-o-calendar-days')
                     ->schema([
                         Select::make('doctor_id')
                             ->label('Doctor')
@@ -452,6 +508,7 @@ class BookAppointment extends Page implements HasForms
 
     public function confirmBooking(): void
     {
+        $this->form->getState();
         $this->showBookingConfirmation = true;
     }
 
@@ -521,7 +578,12 @@ class BookAppointment extends Page implements HasForms
                 'notes',
             ]);
             $payload['patient_id'] = $patient->id;
-            $payload['admin_skip_payment'] = ! (bool) ($state['collect_payment'] ?? true);
+            $payload['admin_payment_mode'] = $state['admin_payment_mode'] ?? 'online';
+            $payload['admin_skip_payment'] = $payload['admin_payment_mode'] !== 'online';
+            $payload['admin_cash_receipt_number'] = $state['admin_cash_receipt_number'] ?? null;
+            $payload['admin_cash_collection_id'] = $state['admin_cash_collection_id'] ?? null;
+            $payload['admin_cash_received_by'] = $state['admin_cash_received_by'] ?? null;
+            $payload['admin_cash_notes'] = $state['admin_cash_notes'] ?? null;
 
             $request = Request::create(
                 '/api/v2/test-book-appointment',
@@ -718,6 +780,15 @@ class BookAppointment extends Page implements HasForms
     public function isRescheduleMode(): bool
     {
         return ($this->data['booking_mode'] ?? 'new') === 'reschedule';
+    }
+
+    public function selectedAdminPaymentModeLabel(): string
+    {
+        return match ($this->data['admin_payment_mode'] ?? 'online') {
+            'cash' => 'Cash at Counter',
+            'no_payment' => 'No Payment',
+            default => 'Online Payment',
+        };
     }
 
     private function patientOptions(): array

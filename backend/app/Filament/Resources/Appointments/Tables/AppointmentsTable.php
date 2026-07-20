@@ -65,6 +65,10 @@ class AppointmentsTable
                 BadgeColumn::make('payment_display_status')
                     ->label('Payment Status')
                     ->getStateUsing(function ($record) {
+                        if (($record->booking_source ?? null) === 'admin' && ($record->admin_payment_type ?? null) === 'cash_payment') {
+                            return 'admin_cash_payment';
+                        }
+
                         if (($record->booking_source ?? null) === 'admin' && ($record->admin_payment_type ?? null) === 'without_payment') {
                             return 'admin_without_payment';
                         }
@@ -72,6 +76,10 @@ class AppointmentsTable
                         return $record->payment?->status;
                     })
                     ->formatStateUsing(function ($state) {
+                        if ($state === 'admin_cash_payment') {
+                            return 'Admin Cash';
+                        }
+
                         if ($state === 'admin_without_payment') {
                             return 'Admin No Payment';
                         }
@@ -87,6 +95,10 @@ class AppointmentsTable
                             : (is_string($state) ? ucfirst($state) : 'Unpaid');
                     })
                     ->color(function ($state) {
+                        if ($state === 'admin_cash_payment') {
+                            return 'success';
+                        }
+
                         if ($state === 'admin_without_payment') {
                             return 'info';
                         }
@@ -110,9 +122,11 @@ class AppointmentsTable
                     ->label('Booking Source')
                     ->getStateUsing(function ($record) {
                         if (($record->booking_source ?? null) === 'admin') {
-                            return ($record->admin_payment_type ?? null) === 'without_payment'
-                                ? 'Admin - No Payment'
-                                : 'Admin - With Payment';
+                            return match ($record->admin_payment_type ?? null) {
+                                'without_payment' => 'Admin - No Payment',
+                                'cash_payment' => 'Admin - Cash',
+                                default => 'Admin - Online',
+                            };
                         }
 
                         return is_string($record->booking_source ?? null)
@@ -353,11 +367,18 @@ class AppointmentsTable
                     ->label('Payment Status')
                     ->options([
                         ...collect(PaymentStatus::cases())->mapWithKeys(fn($status) => [$status->value => $status->label()])->toArray(),
+                        'admin_cash_payment' => 'Admin Cash',
                         'admin_without_payment' => 'Admin No Payment',
                     ])
                     ->query(function ($query, array $data) {
                         if (empty($data['value'])) {
                             return $query;
+                        }
+
+                        if ($data['value'] === 'admin_cash_payment') {
+                            return $query
+                                ->where('booking_source', 'admin')
+                                ->where('admin_payment_type', 'cash_payment');
                         }
 
                         if ($data['value'] === 'admin_without_payment') {
@@ -372,7 +393,8 @@ class AppointmentsTable
                 SelectFilter::make('admin_payment_type')
                     ->label('Admin Payment')
                     ->options([
-                        'with_payment' => 'Admin - With Payment',
+                        'with_payment' => 'Admin - Online',
+                        'cash_payment' => 'Admin - Cash',
                         'without_payment' => 'Admin - No Payment',
                     ])
                     ->query(function ($query, array $data) {

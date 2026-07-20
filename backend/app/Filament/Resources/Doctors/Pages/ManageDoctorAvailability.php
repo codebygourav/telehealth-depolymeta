@@ -1389,7 +1389,9 @@ class ManageDoctorAvailability extends Page
         $rows = collect();
 
         $this->baseAvailabilityQuery()
-            ->with('overrides')
+            ->with(['overrides' => function ($query) use ($from, $to): void {
+                $query->whereBetween('override_date', [$from->toDateString(), $to->toDateString()]);
+            }])
             ->when($this->availabilityFilter, fn($query) => $query->where('id', $this->availabilityFilter))
             ->get()
             ->each(function (DoctorAvailability $availability) use ($from, $to, $rows): void {
@@ -1407,7 +1409,7 @@ class ManageDoctorAvailability extends Page
                 }
 
                 if ($this->isRecurringTemplate($availability)) {
-                    $rows->push(...$this->recurringRows($availability, $from, $to));
+                    $rows->push(...$this->recurringRows($availability, $from, $to, false));
 
                     return;
                 }
@@ -1418,7 +1420,7 @@ class ManageDoctorAvailability extends Page
 
                 $date = Carbon::parse($availability->date);
                 if ($date->betweenIncluded($from, $to)) {
-                    $rows->push($this->rowForAvailability($availability, $date, null));
+                    $rows->push($this->rowForAvailability($availability, $date, null, false));
                 }
             });
 
@@ -1438,7 +1440,8 @@ class ManageDoctorAvailability extends Page
                 default => true,
             })
             ->sortBy([['date', 'asc'], ['start_time', 'asc']])
-            ->values();
+            ->values()
+            ->pipe(fn(Collection $rows) => $this->applyBookedCountsToRows($rows));
     }
 
     public function getGroupedRowsProperty(): Collection
@@ -1470,7 +1473,7 @@ class ManageDoctorAvailability extends Page
         ])->filter()->count();
     }
 
-    private function recurringRows(DoctorAvailability $availability, Carbon $from, Carbon $to): array
+    private function recurringRows(DoctorAvailability $availability, Carbon $from, Carbon $to, bool $includeBookedCounts = true): array
     {
         $start = $availability->recurring_start_date ? Carbon::parse($availability->recurring_start_date)->startOfDay() : $from->copy();
         $end = $availability->recurring_end_date ? Carbon::parse($availability->recurring_end_date)->endOfDay() : $to->copy();
@@ -1503,14 +1506,14 @@ class ManageDoctorAvailability extends Page
 
         while ($current->lte($rangeEnd)) {
             $date = $current->copy();
-            $rows[] = $this->rowForAvailability($availability, $date, $overrides->get($date->toDateString()));
+            $rows[] = $this->rowForAvailability($availability, $date, $overrides->get($date->toDateString()), $includeBookedCounts);
             $current->addWeek();
         }
 
         return $rows;
     }
 
-    private function rowForAvailability(DoctorAvailability $availability, Carbon $date, ?DoctorAvailabilityOverride $override): array
+    private function rowForAvailability(DoctorAvailability $availability, Carbon $date, ?DoctorAvailabilityOverride $override, bool $includeBookedCounts = true): array
     {
         $effective = app(DoctorAvailabilityService::class)->effectiveValuesForDate($availability, $date);
         $isRecurring = $this->isRecurringTemplate($availability);
@@ -1518,7 +1521,9 @@ class ManageDoctorAvailability extends Page
             ? 'cancelled'
             : ($effective['status'] === 'blocked' || ! $availability->is_available ? 'blocked' : 'active');
 
-        $bookedDetails = $this->bookedCountsDetail($availability, $date, $effective['start_time'], $availability->consultation_type);
+        $bookedDetails = $includeBookedCounts
+            ? $this->bookedCountsDetail($availability, $date, $effective['start_time'], $availability->consultation_type)
+            : ['internal' => 0, 'external' => 0, 'total' => 0];
         $cutoffSource = $effective['booking_cutoff_rules_source'] ?? 'app_default';
 
         $isEndingSoon = false;
@@ -1563,7 +1568,7 @@ class ManageDoctorAvailability extends Page
             'consultation_type' => $normalizedConsultationType,
             'opd_type' => $normalizedOpdType,
             'is_child_only' => (bool) $availability->is_child_only,
-            'child_age' => $availability->is_child_only ? $this->globalChildAgeLimit() : null,
+            'child_age' => $availability->is_child_only ? $this->childAge : null,
             'fee' => $effective['consultation_fee'],
             'room' => $effective['doctor_room'],
             'label' => $this->availabilityLabel($availability, $override),
@@ -1575,6 +1580,36 @@ class ManageDoctorAvailability extends Page
             'booking_cutoff_source' => $cutoffSource,
             'booking_cutoff_label' => $this->bookingCutoffLabel($effective['booking_cutoff_rules'] ?? [], $cutoffSource),
         ];
+    }
+
+    private function applyBookedCountsToRows(Collection $rows): Collection
+    {
+        if ($rows->isEmpty()) {
+            return $rows;
+        }
+
+        $counts = app(SlotCapacityService::class)->bookedCountsForRows($rows);
+
+        return $rows->map(function (array $row) use ($counts): array {
+            $key = $row['availability_id'] . '|' . $row['date'];
+            $detail = $counts[$key] ?? ['internal' => 0, 'external' => 0, 'total' => 0];
+            $externalBooked = $this->supportsExternalBookingsForRow($row) ? (int) ($detail['external'] ?? 0) : 0;
+            $totalBooked = (int) ($detail['internal'] ?? 0) + $externalBooked;
+
+            return [
+                ...$row,
+                'internal_booked' => (int) ($detail['internal'] ?? 0),
+                'external_booked' => $externalBooked,
+                'total_booked' => $totalBooked,
+                'booked' => $totalBooked,
+            ];
+        });
+    }
+
+    private function supportsExternalBookingsForRow(array $row): bool
+    {
+        return (string) ($row['consultation_type'] ?? '') === 'in-person'
+            && (string) ($row['opd_type'] ?? '') === 'private';
     }
 
     private function bookedCount(
