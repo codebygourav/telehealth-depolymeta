@@ -4,7 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login as CustomLogin;
 use Filament\Enums\DatabaseNotificationsPosition;
-use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, CronSettings, Dashboard, DisplayAdsSettings, DisplayScreenSettings, DoctorReport, ManageVideoLinks, OPDCalendar, PrescriptionVoiceSettings, QueueLogsDashboard, RolePermissionMatrix, Settings};
+use App\Filament\Pages\{AppointmentQueueDashboard, BookAppointment, CronSettings, Dashboard, DisplayAdsSettings, DisplayScreenSettings, DoctorReport, ManageVideoLinks, OPDCalendar, PrescriptionVoiceSettings, QueueLogsDashboard, RolePermissionMatrix, Settings, WhatsAppNotificationTester};
 use App\Filament\Resources\DisplayScreens\DisplayScreenResource;
 use App\Filament\Resources\Advertisements\AdvertisementResource;
 use App\Filament\Resources\EmailLogs\EmailLogResource;
@@ -73,6 +73,7 @@ class AdminPanelProvider extends PanelProvider
                 ManageVideoLinks::class,
                 AppointmentQueueDashboard::class,
                 QueueLogsDashboard::class,
+                WhatsAppNotificationTester::class,
             ])
             ->resources([
                 AppointmentResource::class,

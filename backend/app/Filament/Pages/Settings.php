@@ -16,7 +16,6 @@ use Filament\Forms\Components\{
     RichEditor
 };
 use Filament\Notifications\Notification;
-use Filament\Pages\Page;
 use Filament\Schemas\Components\{
     Grid,
     Section,
@@ -37,7 +36,6 @@ class Settings extends Page
     use HasCustomSidebar;
     protected string $view = 'filament.pages.settings';
     protected static ?string $title = 'Settings';
-protected static ?string $description = 'Settings';
     protected static ?string $slug = 'settings';
 
     public static function getSidebarOptions(): array
@@ -92,11 +90,9 @@ protected static ?string $description = 'Settings';
         // Then, for fields with env_key, use .env value if database value is empty
         foreach ($config as $groupKey => $group) {
             foreach (($group['sections'] ?? []) as $section) {
-                $dbGroup = $section['db_group'] ?? $groupKey;
-
                 foreach (($section['fields'] ?? []) as $fieldKey => $field) {
                     if (isset($field['env_key'])) {
-                        $fullKey = "{$dbGroup}.{$fieldKey}";
+                        $fullKey = "{$groupKey}.{$fieldKey}";
                         $envValue = env($field['env_key']);
 
                         // If database value is empty but .env has a value, use .env value
@@ -312,10 +308,7 @@ protected static ?string $description = 'Settings';
             default => null,
         };
     }
-    public static function getHiddenSettingsGroups(): array
-    {
-        return ['display', 'display_ads', 'prescription_voice'];
-    }
+
     protected function shouldPairField(string $type): bool
     {
         return in_array($type, ['text', 'email', 'tel', 'url', 'number', 'password', 'select', 'color', 'time', 'richtext']);

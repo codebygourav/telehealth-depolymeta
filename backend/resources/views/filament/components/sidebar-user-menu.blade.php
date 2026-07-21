@@ -34,9 +34,11 @@
                         </x-filament::dropdown.list.item>
                     @endif
 
-                    <x-filament::dropdown.list.item :href="filament()->getUrl() . '/settings'" tag="a" icon="heroicon-m-cog-6-tooth">
-                        Settings
-                    </x-filament::dropdown.list.item>
+                    @if (\App\Support\FilamentUiVisibility::canShowSettingsLink())
+                        <x-filament::dropdown.list.item :href="filament()->getUrl() . '/settings'" tag="a" icon="heroicon-m-cog-6-tooth">
+                            Settings
+                        </x-filament::dropdown.list.item>
+                    @endif
 
                     <form action="{{ filament()->getLogoutUrl() }}" method="post" class="contents">
                         @csrf
@@ -67,9 +69,11 @@
                         </x-filament::dropdown.list.item>
                     @endif
 
-                    <x-filament::dropdown.list.item :href="filament()->getUrl() . '/settings'" tag="a" icon="heroicon-m-cog-6-tooth">
-                        Settings
-                    </x-filament::dropdown.list.item>
+                    @if (\App\Support\FilamentUiVisibility::canShowSettingsLink())
+                        <x-filament::dropdown.list.item :href="filament()->getUrl() . '/settings'" tag="a" icon="heroicon-m-cog-6-tooth">
+                            Settings
+                        </x-filament::dropdown.list.item>
+                    @endif
 
                     <form action="{{ filament()->getLogoutUrl() }}" method="post" class="contents">
                         @csrf

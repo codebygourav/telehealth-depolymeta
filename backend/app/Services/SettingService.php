@@ -15,7 +15,7 @@ class SettingService
 
     public static function getAppName(): string
     {
-        return Setting::getValue('app', 'name', config('app.name', 'Telehealth Deploymeta'));
+        return Setting::getValue('app', 'name', config('app.name', 'CMC Telehealth'));
     }
 
     public static function getAppVersion(): string
@@ -25,12 +25,12 @@ class SettingService
 
     public static function getPrimaryColor(): string
     {
-        return Setting::getValue('app', 'primary_color', '#055bd9');
+        return Setting::getValue('app', 'primary_color', '#073827');
     }
 
     public static function getSecondaryColor(): string
     {
-        return Setting::getValue('app', 'secondary_color', '#055bd9');
+        return Setting::getValue('app', 'secondary_color', '#073827');
     }
 
     /**
@@ -180,13 +180,30 @@ class SettingService
 
     public static function getMaxLoginAttempts(): int
     {
-        // Unlimited login attempts
-        return PHP_INT_MAX;
+        return (int) Setting::getValue('security', 'max_login_attempts', 12000);
     }
 
     public static function getLockoutDuration(): int
     {
         return (int) Setting::getValue('security', 'lockout_duration', 30);
+    }
+
+    public static function getApiTokenExpirationDays(): int
+    {
+        $days = (int) Setting::getValue(
+            'security',
+            'api_token_expiration_days',
+            config('settings.security.sections.auth.fields.api_token_expiration_days.default', 30)
+        );
+
+        return max(0, $days);
+    }
+
+    public static function getApiTokenExpiresAt(): ?\Illuminate\Support\Carbon
+    {
+        $days = self::getApiTokenExpirationDays();
+
+        return $days > 0 ? now()->addDays($days) : null;
     }
 
     public static function getPasswordMinLength(): int
@@ -306,20 +323,6 @@ class SettingService
         ];
     }
 
-    public static function getThemeValue(string $key, string $default): string
-    {
-        return Setting::getValue('theme_settings', $key, $default) ?: $default;
-    }
-
-    public static function getThemeFileUrl(string $key): ?string
-    {
-        $val = Setting::getValue('theme_settings', $key);
-        if ($val && Storage::disk('public')->exists($val)) {
-            return Storage::disk('public')->url($val);
-        }
-        return null;
-    }
-
     /*
     |--------------------------------------------------------------------------
     | Public Settings (For API)
@@ -336,18 +339,6 @@ class SettingService
                 'primary_color' => self::getPrimaryColor(),
                 'secondary_color' => self::getSecondaryColor(),
                 'contact' => self::getContactInfo(),
-            ],
-            'patient_theme' => [
-                'primary_color' => self::getThemeValue('patient_primary_color', '#055bd9'),
-                'secondary_color' => self::getThemeValue('patient_secondary_color', '#055bd9'),
-                'logo' => self::getThemeFileUrl('patient_logo'),
-                'favicon' => self::getThemeFileUrl('patient_favicon'),
-            ],
-            'doctor_theme' => [
-                'primary_color' => self::getThemeValue('doctor_primary_color', '#055bd9'),
-                'secondary_color' => self::getThemeValue('doctor_secondary_color', '#055bd9'),
-                'logo' => self::getThemeFileUrl('doctor_logo'),
-                'favicon' => self::getThemeFileUrl('doctor_favicon'),
             ],
             'mobile' => self::getMobileAppSettings(),
             'otp' => self::getOtpSettings(),

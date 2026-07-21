@@ -6,7 +6,6 @@ use App\Enums\PaymentStatus;
 use App\Models\{Appointment, Doctor, DoctorReview, Patient, Payment};
 use App\Traits\HasCustomSidebar;
 use Carbon\Carbon;
-use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Auth;
 
@@ -34,7 +33,17 @@ class Dashboard extends Page
      */
     public static function canAccess(): bool
     {
-        return Auth::check() && ! Auth::user()?->hasRole('patient');
+        $user = Auth::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if (! $user->hasRole('patient')) {
+            return true;
+        }
+
+        return check_permission(['dashboard.view', 'dashboard.view_any']);
     }
 
     /**

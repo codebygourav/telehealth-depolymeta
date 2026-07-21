@@ -397,7 +397,8 @@ class ProfileController extends Controller
                     );
                 }
 
-                $token = $user->createToken('patient_auth_token')->plainTextToken;
+                $tokenExpiresAt = SettingService::getApiTokenExpiresAt();
+                $token = $user->createToken('patient_auth_token', ['*'], $tokenExpiresAt)->plainTextToken;
                 $avatar = storage_url($patient?->avatar) ?? null;
 
                 $responseData = [
@@ -422,6 +423,7 @@ class ProfileController extends Controller
                     'avatar' => $avatar,
                     'status' => $user->status,
                     'patient_id' => $user->patient ? $user->patient->id : null,
+                    'token_expires_at' => $tokenExpiresAt?->toISOString(),
                 ];
 
                 if ($bookingPayload !== null && $appointment) {
@@ -439,6 +441,7 @@ class ProfileController extends Controller
                     'user' => $user,
                     'patient' => $patient,
                     'token' => $token,
+                    'tokenExpiresAt' => $tokenExpiresAt,
                     'responseData' => $responseData,
                     'appointment' => $appointment,
                     'bookingPayload' => $bookingPayload,
@@ -498,6 +501,7 @@ class ProfileController extends Controller
             [
                 'message' => 'Profile completed and account created successfully.',
                 'token' => $result['token'],
+                'token_expires_at' => $result['tokenExpiresAt']?->toISOString(),
             ],
             data: $result['responseData'],
             code: 'PROFILE_COMPLETED'

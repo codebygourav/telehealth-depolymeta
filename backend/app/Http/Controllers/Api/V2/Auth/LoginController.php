@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Registration;
 use App\Services\ApiResponseService;
+use App\Services\SettingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -160,9 +161,7 @@ class LoginController extends Controller
             $tokenName = 'user-app';
         }
 
-        $expirationMinutes = config('sanctum.expiration');
-        // Cast to int to handle string values from env, handle null case
-        $expiresAt = $expirationMinutes ? now()->addMinutes((int) $expirationMinutes) : null;
+        $expiresAt = SettingService::getApiTokenExpiresAt();
 
         $token = $user->createToken(
             $tokenName,
@@ -227,6 +226,7 @@ class LoginController extends Controller
             [
                 'message' => 'Login successful',
                 'token' => $token,
+                'token_expires_at' => $expiresAt?->toISOString(),
             ],
             [
                 'id' => $user->id,

@@ -50,6 +50,11 @@ class BookAppointmentController extends Controller
                 'appointment_time' => ['required', 'string'],
                 'consultation_type' => ['required', 'string', 'in:in-person,video'],
                 'admin_skip_payment' => ['nullable', 'boolean'],
+                'admin_payment_mode' => ['nullable', 'string', 'in:online,cash,no_payment'],
+                'admin_cash_receipt_number' => ['nullable', 'string', 'max:255', 'required_if:admin_payment_mode,cash'],
+                'admin_cash_collection_id' => ['nullable', 'string', 'max:255'],
+                'admin_cash_received_by' => ['nullable', 'string', 'max:255', 'required_if:admin_payment_mode,cash'],
+                'admin_cash_notes' => ['nullable', 'string', 'max:1000'],
                 // Only validate opd_type if consultation_type is in-person
             ];
 
@@ -62,8 +67,21 @@ class BookAppointmentController extends Controller
             $data = $request->validate($validationRules);
             $user = $request->user();
             $useMockPayment = SettingService::isAppointmentMockPaymentEnabled();
-            $isAdminBooking = $request->has('admin_skip_payment') && $this->canAdminBookWithoutPayment($user);
-            $adminSkipPayment = $request->boolean('admin_skip_payment') && $isAdminBooking;
+            $requestedAdminPaymentMode = $request->input(
+                'admin_payment_mode',
+                $request->boolean('admin_skip_payment') ? 'no_payment' : 'online'
+            ) ?: ($request->boolean('admin_skip_payment') ? 'no_payment' : 'online');
+            $isAdminBooking = ($request->has('admin_skip_payment') || $request->has('admin_payment_mode'))
+                && $this->canAdminBookWithoutPayment($user);
+            $adminPaymentMode = $isAdminBooking ? $requestedAdminPaymentMode : 'online';
+            $adminSkipPayment = in_array($adminPaymentMode, ['cash', 'no_payment'], true);
+            $adminCashPayment = $adminPaymentMode === 'cash';
+            $adminCashDetails = [
+                'receipt_number' => $request->input('admin_cash_receipt_number'),
+                'collection_id' => $request->input('admin_cash_collection_id'),
+                'received_by' => $request->input('admin_cash_received_by'),
+                'notes' => $request->input('admin_cash_notes'),
+            ];
 
 
             /*
@@ -220,7 +238,7 @@ class BookAppointmentController extends Controller
                 // Block for up to 10 seconds to allow other concurrent requests to finish
                 $lock->block(10);
 
-                return DB::transaction(function () use ($requestedDate, $startTime, $endTime, $availability, $data, $patient, $doctor, $useMockPayment, $isAdminBooking, $adminSkipPayment, $effectiveCapacity, $effectiveFee, $override) {
+                return DB::transaction(function () use ($requestedDate, $startTime, $endTime, $availability, $data, $patient, $doctor, $useMockPayment, $isAdminBooking, $adminSkipPayment, $adminPaymentMode, $adminCashPayment, $adminCashDetails, $effectiveCapacity, $effectiveFee, $override) {
 
                     // 1. Capacity check INSIDE the transaction to prevent overbooking
                     $existingCount = app(SlotCapacityService::class)->bookedCount(
@@ -267,8 +285,15 @@ class BookAppointmentController extends Controller
 
                         // Reset created_at to now so it looks like a fresh booking attempt (requested by user)
                         $appointment->created_at = now();
-                        $this->applyAdminPaymentMetadata($appointment, $isAdminBooking, $adminSkipPayment);
+                        $this->applyAdminPaymentMetadata($appointment, $isAdminBooking, $adminPaymentMode);
                         $appointment->save();
+
+                        if ($adminCashPayment) {
+                            $payment = $this->markAppointmentAsCashPaid($appointment, $adminCashDetails);
+                            $appointment->load(['doctor.user', 'patient.user', 'payment', 'availability', 'doctor.departments']);
+
+                            return $this->handleSuccess($appointment, $payment);
+                        }
 
                         if ($adminSkipPayment) {
                             $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
@@ -315,16 +340,18 @@ class BookAppointmentController extends Controller
                         'fee_amount' => $consultationFee,
                         'booking_source' => $isAdminBooking ? 'admin' : 'patient',
                         'admin_payment_type' => $isAdminBooking
-                            ? ($adminSkipPayment ? 'without_payment' : 'with_payment')
+                            ? $this->adminPaymentTypeForMode($adminPaymentMode)
                             : null,
-                        'payment_waived_by' => $adminSkipPayment ? optional(request()->user())->id : null,
-                        'payment_waived_at' => $adminSkipPayment ? now() : null,
+                        'payment_waived_by' => $adminPaymentMode === 'no_payment' ? optional(request()->user())->id : null,
+                        'payment_waived_at' => $adminPaymentMode === 'no_payment' ? now() : null,
                         'slug' => Str::slug($doctor->first_name . '-' . $patient->id . '-' . time()),
                     ]);
 
                     $payment = null;
 
-                    if ($consultationFee <= 0 || $adminSkipPayment) {
+                    if ($adminCashPayment) {
+                        $payment = $this->markAppointmentAsCashPaid($appointment, $adminCashDetails);
+                    } elseif ($consultationFee <= 0 || $adminSkipPayment) {
                         $appointment->update(['status' => AppointmentStatus::CONFIRMED->value]);
                         NotificationService::notifyAppointmentConfirmed($appointment);
 
@@ -665,11 +692,15 @@ class BookAppointmentController extends Controller
                 'status' => $payment->status instanceof PaymentStatus ? $payment->status->value : ($payment->status ?? PaymentStatus::PENDING->value),
                 'order_id' => $payment->razorpay_order_id ?? null,
                 'payment_id' => $payment->razorpay_payment_id ?? null,
+                'transaction_id' => $payment->transaction_id ?? null,
                 'amount' => $payment->amount ?? null,
                 'amount_paise' => (int) round(($payment->amount ?? 0) * 100),
                 'razorpay_key_id' => config('services.razorpay.key_id', env('RAZORPAY_KEY_ID')),
                 'payment_required' => false,
                 'mock_payment' => $payment->payment_method === 'mock',
+                'payment_method' => $payment->payment_method,
+                'admin_payment_type' => $appointment->admin_payment_type,
+                'notes' => $payment->notes ?? [],
             ];
         } elseif ($this->paymentOrderResult) {
             // Include payment order details for Razorpay popup
@@ -726,19 +757,28 @@ class BookAppointmentController extends Controller
             );
     }
 
-    protected function applyAdminPaymentMetadata(Appointment $appointment, bool $isAdminBooking, bool $adminSkipPayment): void
+    protected function applyAdminPaymentMetadata(Appointment $appointment, bool $isAdminBooking, string $adminPaymentMode): void
     {
         if (! $isAdminBooking) {
             return;
         }
 
         $appointment->booking_source = 'admin';
-        $appointment->admin_payment_type = $adminSkipPayment ? 'without_payment' : 'with_payment';
+        $appointment->admin_payment_type = $this->adminPaymentTypeForMode($adminPaymentMode);
 
-        if ($adminSkipPayment) {
+        if ($adminPaymentMode === 'no_payment') {
             $appointment->payment_waived_by = optional(request()->user())->id;
             $appointment->payment_waived_at = now();
         }
+    }
+
+    protected function adminPaymentTypeForMode(string $adminPaymentMode): string
+    {
+        return match ($adminPaymentMode) {
+            'cash' => 'cash_payment',
+            'no_payment' => 'without_payment',
+            default => 'with_payment',
+        };
     }
 
     protected function validateChildOnlySlot(DoctorAvailability $availability, ?Patient $patient)
@@ -963,6 +1003,48 @@ class BookAppointmentController extends Controller
         );
 
         $this->finalizeSuccessfulPayment($appointment, $payment);
+
+        return $payment->fresh();
+    }
+
+    protected function markAppointmentAsCashPaid(Appointment $appointment, array $cashDetails = []): Payment
+    {
+        $receiptNumber = trim((string) ($cashDetails['receipt_number'] ?? ''));
+        $collectionId = trim((string) ($cashDetails['collection_id'] ?? ''));
+        $receivedBy = trim((string) ($cashDetails['received_by'] ?? ''));
+        $cashNotes = trim((string) ($cashDetails['notes'] ?? ''));
+
+        $payment = Payment::updateOrCreate(
+            ['appointment_id' => $appointment->id],
+            [
+                'amount' => (float) ($appointment->fee_amount ?? 0),
+                'payment_method' => 'cash',
+                'status' => PaymentStatus::PAID->value,
+                'transaction_id' => $receiptNumber !== '' ? $receiptNumber : 'cash_' . $appointment->id,
+                'captured' => true,
+                'notes' => [
+                    'mode' => 'cash',
+                    'source' => 'admin_book_appointment',
+                    'collected_by' => optional(request()->user())->id,
+                    'receipt_number' => $receiptNumber ?: null,
+                    'collection_id' => $collectionId ?: null,
+                    'received_by' => $receivedBy ?: null,
+                    'cash_notes' => $cashNotes ?: null,
+                ],
+                'full_response' => json_encode([
+                    'mode' => 'cash',
+                    'status' => PaymentStatus::PAID->value,
+                    'appointment_id' => $appointment->id,
+                    'collected_by' => optional(request()->user())->id,
+                    'receipt_number' => $receiptNumber ?: null,
+                    'collection_id' => $collectionId ?: null,
+                    'received_by' => $receivedBy ?: null,
+                    'cash_notes' => $cashNotes ?: null,
+                ]),
+            ]
+        );
+
+        $this->finalizeSuccessfulPayment($appointment, $payment, true);
 
         return $payment->fresh();
     }

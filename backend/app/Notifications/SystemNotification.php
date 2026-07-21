@@ -6,6 +6,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
+use Deploymeta\WhatsAppNotifier\Channels\WhatsAppChannel;
+use Deploymeta\WhatsAppNotifier\Messages\WhatsAppMessage;
 use NotificationChannels\Expo\ExpoChannel;
 use NotificationChannels\Expo\ExpoMessage;
 use NotificationChannels\WebPush\WebPushChannel;
@@ -94,7 +96,23 @@ class SystemNotification extends Notification
 
     public function via($notifiable)
     {
-        return [\App\Channels\CustomDatabaseChannel::class, ExpoChannel::class, WebPushChannel::class];
+        return [
+            \App\Channels\CustomDatabaseChannel::class,
+            ExpoChannel::class,
+            WebPushChannel::class,
+            WhatsAppChannel::class,
+        ];
+    }
+
+    public function toWhatsApp($notifiable): WhatsAppMessage
+    {
+        return WhatsAppMessage::text($this->message, [
+            'title' => $this->title,
+            'type' => $this->type,
+            'category' => $this->category,
+            'entity_type' => $this->entityType,
+            'entity_id' => $this->entityId,
+        ]);
     }
 
     public function toExpo($notifiable)

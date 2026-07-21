@@ -86,12 +86,11 @@ class PatientHomeController extends Controller
                     $query->where('appointment_date', '>', $today)
                         ->orWhere(function ($q) use ($today, $currentTime) {
                             $q->where('appointment_date', $today)
-                                ->where('appointment_time', '>=', $currentTime);
+                                ->where('appointment_end_time', '>=', $currentTime);
                         });
                 })
                 ->orderBy('appointment_date', 'asc')
                 ->orderBy('appointment_time', 'asc')
-                ->limit(2)
                 ->get();
         }
 

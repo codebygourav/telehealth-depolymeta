@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\EmailLogs\Pages;
 
 use App\Filament\Resources\EmailLogs\EmailLogResource;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListRecords;
 use App\Filament\Resources\EmailLogs\Widgets\EmailLogStatsWidget;
 
 class ListEmailLogs extends ListRecords

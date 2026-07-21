@@ -8,6 +8,7 @@ use App\Models\DoctorAvailability;
 use App\Models\ExternalBooking;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class SlotCapacityService
 {
@@ -106,10 +107,10 @@ class SlotCapacityService
         return Appointment::query()
             ->where('doctor_id', $doctorId)
             ->whereDate('appointment_date', $this->formatDate($date))
-            ->when($availabilityId, fn (Builder $query) => $query->where('availability_id', $availabilityId))
-            ->when(! $availabilityId, fn (Builder $query) => $query->whereTime('appointment_time', $this->formatTime($startTime)))
-            ->when($consultationType, fn (Builder $query) => $query->where('consultation_type', $consultationType))
-            ->when($excludeAppointmentId, fn (Builder $query) => $query->where('id', '!=', $excludeAppointmentId))
+            ->when($availabilityId, fn(Builder $query) => $query->where('availability_id', $availabilityId))
+            ->when(! $availabilityId, fn(Builder $query) => $query->whereTime('appointment_time', $this->formatTime($startTime)))
+            ->when($consultationType, fn(Builder $query) => $query->where('consultation_type', $consultationType))
+            ->when($excludeAppointmentId, fn(Builder $query) => $query->where('id', '!=', $excludeAppointmentId))
             ->whereIn('status', [
                 AppointmentStatus::CONFIRMED->value,
                 AppointmentStatus::COMPLETED->value,
@@ -156,6 +157,101 @@ class SlotCapacityService
             ->where('consultation_type', 'in-person')
             ->where('opd_type', 'private')
             ->count();
+    }
+
+    /**
+     * Batch booking counts for availability rows keyed by availability ID and date.
+     *
+     * @param  iterable<int, array{availability_id?: string|null, date?: string|null, consultation_type?: string|null, opd_type?: string|null}>  $rows
+     * @return array<string, array{internal:int, external:int, total:int}>
+     */
+    public function bookedCountsForRows(iterable $rows): array
+    {
+        $rows = collect($rows)
+            ->filter(fn(array $row): bool => filled($row['availability_id'] ?? null) && filled($row['date'] ?? null))
+            ->values();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $availabilityDates = $rows
+            ->map(fn(array $row): string => $this->bookingKey($row['availability_id'], $row['date']))
+            ->unique()
+            ->values();
+
+        $availabilityIds = $rows->pluck('availability_id')->filter()->unique()->values();
+        $dates = $rows->pluck('date')->filter()->unique()->values();
+
+        $internalCounts = Appointment::query()
+            ->select('availability_id', 'appointment_date', DB::raw('count(*) as booked_count'))
+            ->whereIn('availability_id', $availabilityIds)
+            ->whereIn('appointment_date', $dates)
+            ->whereIn('status', [
+                AppointmentStatus::CONFIRMED->value,
+                AppointmentStatus::COMPLETED->value,
+                AppointmentStatus::RESCHEDULED->value,
+            ])
+            ->where(function (Builder $query): void {
+                $query->whereHas('payment', fn($paymentQuery) => $paymentQuery->where('status', \App\Enums\PaymentStatus::PAID->value))
+                    ->orWhere(function (Builder $adminQuery): void {
+                        $adminQuery
+                            ->where('booking_source', 'admin')
+                            ->where('admin_payment_type', 'without_payment');
+                    });
+            })
+            ->groupBy('availability_id', 'appointment_date')
+            ->get()
+            ->mapWithKeys(fn($row): array => [
+                $this->bookingKey($row->availability_id, $row->appointment_date) => (int) $row->booked_count,
+            ])
+            ->all();
+
+        $externalEligibility = $rows->filter(fn(array $row): bool => $this->supportsExternalBookings(
+            (string) ($row['consultation_type'] ?? 'in-person'),
+            (string) ($row['opd_type'] ?? 'general')
+        ));
+
+        $externalCounts = [];
+
+        if ($externalEligibility->isNotEmpty()) {
+            $eligibleAvailabilityIds = $externalEligibility->pluck('availability_id')->filter()->unique()->values();
+
+            $externalCounts = ExternalBooking::query()
+                ->select('availability_id', 'appointment_date', DB::raw('count(*) as booked_count'))
+                ->whereIn('availability_id', $eligibleAvailabilityIds)
+                ->whereIn('appointment_date', $dates)
+                ->where('consultation_type', 'in-person')
+                ->where('opd_type', 'private')
+                ->groupBy('availability_id', 'appointment_date')
+                ->get()
+                ->mapWithKeys(fn($row): array => [
+                    $this->bookingKey($row->availability_id, $row->appointment_date) => (int) $row->booked_count,
+                ])
+                ->all();
+        }
+
+        return $availabilityDates->mapWithKeys(function (string $key) use ($internalCounts, $externalCounts): array {
+            $internal = (int) ($internalCounts[$key] ?? 0);
+            $external = (int) ($externalCounts[$key] ?? 0);
+
+            return [$key => [
+                'internal' => $internal,
+                'external' => $external,
+                'total' => $internal + $external,
+            ]];
+        })->all();
+    }
+
+    private function bookingKey(string $availabilityId, string $date): string
+    {
+        return $availabilityId . '|' . Carbon::parse($date)->toDateString();
+    }
+
+    private function supportsExternalBookings(string $consultationType, string $opdType): bool
+    {
+        return strtolower(trim($consultationType)) === 'in-person'
+            && strtolower(trim($opdType)) === 'private';
     }
 
     private function formatDate(Carbon|string $date): string

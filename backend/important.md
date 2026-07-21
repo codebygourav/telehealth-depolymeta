@@ -4,7 +4,7 @@ docker exec -it tele-backend-app php artisan cache:clear
 docker exec -it tele-backend-app php artisan migrate
 
 ## Rebuild containers (after code push)
-
+cd /Users/apple/Downloads/Git-Repostries/repo2/backend && composer update deploymeta/laravel-whatsapp-notifier --no-interaction
 For Patient - docker compose -f docker-compose.prod.yml up -d --build patient
 For Doctor - docker compose -f docker-compose.prod.yml up -d --build doctor
 For Backend - docker compose -f docker-compose.prod.yml up -d --build db app web

@@ -62,11 +62,6 @@ class Doctor extends Model
         'hide_from_mobile_app',
         'hide_from_wordpress_api',
         'is_test_doctor',
-        'voice_name',
-        'speech_rate',
-        'speech_pitch',
-        'speech_locale',
-        'ai_training_profile',
         'slug',
         'email_sent',
         'created_by',
@@ -74,9 +69,6 @@ class Doctor extends Model
         'deleted_by',
         'avatar',
         'signature',
-        'is_checked_in',
-        'checked_in_at',
-        'is_on_break',
     ];
 
     protected $appends = ['avatar', 'signature'];
@@ -115,12 +107,6 @@ class Doctor extends Model
         'social_links' => 'array',
         'gender' => GenderOption::class,
         'status' => \App\Enums\DoctorStatus::class,
-        'is_checked_in' => 'boolean',
-        'is_on_break' => 'boolean',
-        'checked_in_at' => 'datetime',
-        'speech_rate' => 'double',
-        'speech_pitch' => 'double',
-        'ai_training_profile' => 'array',
     ];
 
     public function externalBookings()
@@ -453,11 +439,6 @@ class Doctor extends Model
                     ->from('appointments')
                     ->whereColumn('appointments.doctor_id', 'doctors.id')
                     ->where('appointments.patient_id', $patient->id)
-                    ->whereDate('appointments.appointment_date', '>=', now()->toDateString())
-                    ->whereIn('appointments.status', [
-                        \App\Enums\AppointmentStatus::CONFIRMED->value,
-                        \App\Enums\AppointmentStatus::RESCHEDULED->value,
-                    ])
                     ->whereNull('appointments.deleted_at');
             });
         });
