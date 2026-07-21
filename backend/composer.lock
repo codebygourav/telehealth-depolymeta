@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "80d505a29ba27e900eaca29e6764677c",
+    "content-hash": "64a493388f6a09f146ca22bcbb77fc30",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -957,6 +957,44 @@
                 }
             ],
             "time": "2026-03-16T11:29:23+00:00"
+        },
+        {
+            "name": "deploymeta/laravel-whatsapp-notifier",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "packages/deploymeta/laravel-whatsapp-notifier",
+                "reference": "cd4a33265acb764afd9a9f74a75a2c038a3f82a8"
+            },
+            "require": {
+                "illuminate/database": "^11.0|^12.0",
+                "illuminate/http": "^11.0|^12.0",
+                "illuminate/notifications": "^11.0|^12.0",
+                "illuminate/routing": "^11.0|^12.0",
+                "illuminate/support": "^11.0|^12.0",
+                "php": "^8.2"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Deploymeta\\WhatsAppNotifier\\WhatsAppNotifierServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Deploymeta\\WhatsAppNotifier\\": "src/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Reusable Laravel WhatsApp notification channel and Meta Cloud API webhook integration.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "dflydev/dot-access-data",
@@ -12799,7 +12837,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "deploymeta/laravel-whatsapp-notifier": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {

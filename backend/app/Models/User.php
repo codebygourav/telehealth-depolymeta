@@ -72,6 +72,12 @@ class User extends Authenticatable implements FilamentUser, HasName
         $tokens = $this->routeNotificationForExpo();
         return !empty($tokens);
     }
+
+    public function routeNotificationForWhatsApp($notification = null): ?string
+    {
+        return $this->phone ?: null;
+    }
+
     protected $casts = [
         'id' => 'string',
         'email_verified_at' => 'datetime',
