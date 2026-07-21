@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Users\Tables;
 
 use App\Filament\Resources\Users\UserResource;
-use App\Models\User;
+use App\Support\FilamentUiVisibility;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -23,17 +23,8 @@ class UsersTable
     public static function configure(Table $table): Table
     {
 
-        // If the user doesn't have access, show empty table with "Access Denied"
-        if (! User::canUserAccess()) {
-            return $table
-                ->columns([])
-                ->filters([])
-                ->recordActions([])
-                ->toolbarActions([])
-                ->query(fn($query) => $query->whereRaw('1 = 0'))
-                ->emptyStateHeading('Access Denied')
-                ->emptyStateDescription('You do not have permission to view users.')
-                ->emptyStateIcon('heroicon-o-lock-closed');
+        if (! FilamentUiVisibility::canViewResourceIndex(UserResource::class)) {
+            return FilamentUiVisibility::denyTableAccess($table, 'You do not have permission to view users.');
         }
 
         return $table

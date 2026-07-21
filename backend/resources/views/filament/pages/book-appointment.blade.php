@@ -1,19 +1,23 @@
 <x-filament-panels::page>
-    <div class="admin-booking-page w-full mx-auto space-y-6">
-        <div class="border border-gray-200 bg-white shadow-sm rounded-lg">
-            <div class="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-                <div class="min-w-0">
-                    <h2 class="text-xl font-semibold tracking-tight text-gray-950">Book Appointment</h2>
-                    <p class="mt-1 max-w-4xl text-sm leading-6 text-gray-600">
-                        Select the patient, doctor, appointment date, and available time slot from one admin screen.
-                    </p>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <span
-                        class="inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset {{ $this->paymentMode === 'Mock' ? 'bg-amber-50 text-amber-700 ring-amber-200' : 'bg-emerald-50 text-emerald-700 ring-emerald-200' }}">
-                        Payment Mode: {{ $this->paymentMode }}
-                    </span>
-                </div>
+    <div class="admin-booking-page w-full mx-auto space-y-5">
+        <div class="booking-status-strip">
+            <div>
+                <p class="text-sm font-semibold text-gray-950">Admin booking workflow</p>
+                <p class="mt-0.5 text-xs text-gray-600">
+                    Choose patient, slot, and payment handling. Cash mode requires receipt details before confirmation.
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span
+                    class="inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset {{ $this->paymentMode === 'Mock' ? 'bg-amber-50 text-amber-700 ring-amber-200' : 'bg-emerald-50 text-emerald-700 ring-emerald-200' }}">
+                    Razorpay: {{ $this->paymentMode }}
+                </span>
+                <?php if (!$this->isRescheduleMode()) { ?>
+                <span
+                    class="inline-flex w-fit items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-inset ring-sky-200">
+                    Collection: {{ $this->selectedAdminPaymentModeLabel() }}
+                </span>
+                <?php } ?>
             </div>
         </div>
 
@@ -176,6 +180,28 @@
                                 ₹{{ number_format($this->availabilityDetails['consultation_fee'], 2) }}
                             </dd>
                         </div>
+                        <?php if (!$this->isRescheduleMode()) { ?>
+                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:col-span-2">
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Payment Mode</dt>
+                            <dd class="mt-1 font-semibold text-gray-900">
+                                {{ $this->selectedAdminPaymentModeLabel() }}
+                            </dd>
+                        </div>
+                        <?php if (($this->data['admin_payment_mode'] ?? null) === 'cash') { ?>
+                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Cash Receipt</dt>
+                            <dd class="mt-1 font-semibold text-gray-900">
+                                {{ $this->data['admin_cash_receipt_number'] ?? 'Required' }}
+                            </dd>
+                        </div>
+                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Received By</dt>
+                            <dd class="mt-1 font-semibold text-gray-900">
+                                {{ $this->data['admin_cash_received_by'] ?? 'Required' }}
+                            </dd>
+                        </div>
+                        <?php } ?>
+                        <?php } ?>
                     </dl>
                     <?php } ?>
                 </div>
@@ -240,6 +266,11 @@
                 $paymentAmount = $resData['payment']['amount'] ?? $resData['payment']['amount_rupees'] ?? null;
                 $paymentOrderId = $resData['payment']['order_id'] ?? null;
                 $isMockPayment = (bool) ($resData['payment']['mock_payment'] ?? false);
+                $paymentMethod = strtolower((string) ($resData['payment']['payment_method'] ?? ''));
+                $paymentNotes = $resData['payment']['notes'] ?? [];
+                $cashReceiptNumber = $resData['payment']['transaction_id'] ?? $paymentNotes['receipt_number'] ?? null;
+                $cashCollectionId = $paymentNotes['collection_id'] ?? null;
+                $cashReceivedBy = $paymentNotes['received_by'] ?? null;
                 $razorpayKeyId = config('services.razorpay.key_id', env('RAZORPAY_KEY_ID'));
 
                 $canShowPayBtn = !$isMockPayment && $paymentOrderId && $paymentAmount && $razorpayKeyId && strtolower($paymentStatus) !== 'paid';
@@ -280,7 +311,7 @@
                 </div>
 
                 <div class="p-4 mt-4 border border-gray-200 rounded-lg bg-gray-50">
-                    <div class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-4">
                         <div>
                             <span class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Payment
                                 Status</span>
@@ -299,8 +330,26 @@
                         <div>
                             <span class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Mode</span>
                             <p class="mt-1 font-semibold text-gray-900">
-                                {{ $isAdminWithoutPayment ? 'Admin No Payment' : ($isMockPayment ? 'Mock Mode' : 'Online Payment') }}</p>
+                                {{ $isAdminWithoutPayment ? 'Admin No Payment' : ($paymentMethod === 'cash' ? 'Cash at Counter' : ($isMockPayment ? 'Mock Mode' : 'Online Payment')) }}</p>
                         </div>
+                        <?php if ($paymentMethod === 'cash') { ?>
+                        <div>
+                            <span class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Receipt</span>
+                            <p class="mt-1 font-semibold text-gray-900">{{ $cashReceiptNumber ?: 'N/A' }}</p>
+                        </div>
+                        <?php if ($cashCollectionId) { ?>
+                        <div>
+                            <span class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Collection ID</span>
+                            <p class="mt-1 font-semibold text-gray-900">{{ $cashCollectionId }}</p>
+                        </div>
+                        <?php } ?>
+                        <?php if ($cashReceivedBy) { ?>
+                        <div>
+                            <span class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Received By</span>
+                            <p class="mt-1 font-semibold text-gray-900">{{ $cashReceivedBy }}</p>
+                        </div>
+                        <?php } ?>
+                        <?php } ?>
                     </div>
 
                     <?php if ($canShowPayBtn) { ?>
@@ -356,21 +405,60 @@
         <?php } ?>
     </div>
     <style>
+        .admin-booking-page {
+            max-width: 1500px;
+        }
+
+        .payment-mode-radio{
+            margin-top: 0px !important;
+        }
+
+        .admin-booking-page .booking-status-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            border: 1px solid rgb(226 232 240);
+            border-radius: .75rem;
+            background: rgb(255 255 255);
+            padding: .875rem 1rem;
+            box-shadow: 0 1px 2px rgb(15 23 42 / .04);
+        }
+
+        .admin-booking-page .booking-form-shell {
+            border: 1px solid rgb(226 232 240);
+            border-radius: .75rem;
+            background: rgb(248 250 252);
+            padding: .875rem;
+            box-shadow: 0 1px 2px rgb(15 23 42 / .04);
+        }
+
         .admin-booking-page .booking-form-shell>form,
         .admin-booking-page .booking-form-shell>div {
             display: grid;
-            gap: 1.5rem;
+            gap: .875rem;
+        }
+
+        .admin-booking-page .patient-type-radio,
+        .admin-booking-page .payment-mode-radio {
+            display: grid !important;
+            gap: .75rem;
+            width: 100%;
         }
 
         .admin-booking-page .patient-type-radio {
-            display: grid !important;
             grid-template-columns: repeat(2, minmax(0, 180px));
             gap: .75rem;
             width: fit-content;
         }
 
-        .admin-booking-page .patient-type-radio .fi-fo-radio-label {
-            min-height: 42px;
+        .admin-booking-page .payment-mode-radio {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .admin-booking-page .patient-type-radio .fi-fo-radio-label,
+        .admin-booking-page .payment-mode-radio .fi-fo-radio-label {
+            min-height: 100%;
             border: 1px solid rgb(203 213 225);
             border-radius: .5rem;
             background: rgb(255 255 255);
@@ -380,25 +468,45 @@
             transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
         }
 
-        .admin-booking-page .patient-type-radio .fi-fo-radio-label:hover {
-            border-color: var(--app-primary-hex);
-            color: var(--app-primary-hex);
+        .admin-booking-page .payment-mode-radio .fi-fo-radio-label {
+            align-items: flex-start;
+            padding: .75rem .875rem;
         }
 
-        .admin-booking-page .patient-type-radio .fi-fo-radio-label:has(.fi-radio-input:checked) {
-            border-color: var(--app-primary-hex);
-            background: var(--app-primary-hex-12);
-            color: var(--app-primary-hex);
-            box-shadow: inset 0 0 0 1px var(--app-primary-hex);
+        .admin-booking-page .patient-type-radio .fi-fo-radio-label:hover,
+        .admin-booking-page .payment-mode-radio .fi-fo-radio-label:hover {
+            border-color: rgb(7 56 39);
+            color: rgb(7 56 39);
         }
 
-        .admin-booking-page .patient-type-radio .fi-radio-input {
-            accent-color: var(--app-primary-hex);
+        .admin-booking-page .patient-type-radio .fi-fo-radio-label:has(.fi-radio-input:checked),
+        .admin-booking-page .payment-mode-radio .fi-fo-radio-label:has(.fi-radio-input:checked) {
+            border-color: rgb(7 56 39);
+            background: rgb(236 253 245);
+            color: rgb(7 56 39);
+            box-shadow: inset 0 0 0 1px rgb(7 56 39);
         }
 
-        .admin-booking-page .patient-type-radio .fi-radio-input:checked {
-            border-color: var(--app-primary-hex);
-            background-color: var(--app-primary-hex);
+        .admin-booking-page .patient-type-radio .fi-radio-input,
+        .admin-booking-page .payment-mode-radio .fi-radio-input {
+            accent-color: rgb(7 56 39);
+        }
+
+        .admin-booking-page .patient-type-radio .fi-radio-input:checked,
+        .admin-booking-page .payment-mode-radio .fi-radio-input:checked {
+            border-color: rgb(7 56 39);
+            background-color: rgb(7 56 39);
+        }
+
+        @media (max-width: 1024px) {
+            .admin-booking-page .booking-status-strip {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .admin-booking-page .payment-mode-radio {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 640px) {

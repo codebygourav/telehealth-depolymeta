@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Doctors\Pages;
 
+use App\Enums\DoctorStatus;
 use App\Filament\Resources\Doctors\DoctorResource;
 use App\Filament\Imports\DoctorExcelImporter;
 use App\Models\Doctor;
@@ -10,13 +11,68 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Tabs\Tab;
 use App\Filament\Resources\Pages\ListRecords;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 
 class ListDoctors extends ListRecords
 {
     protected static string $resource = DoctorResource::class;
+
+    public function getDefaultActiveTab(): string | int | null
+    {
+        return 'active';
+    }
+
+    public function getTabs(): array
+    {
+        $resource = static::getResource();
+
+        return [
+            'active' => Tab::make('Active Doctors')
+                ->modifyQueryUsing(fn (Builder $query): Builder => $this->activeDoctorsQuery($query))
+                ->badge(fn (): int => $this->activeDoctorsQuery($resource::getEloquentQuery())->count())
+                ->badgeColor('success'),
+
+            'hidden_mobile' => Tab::make('Hidden from Mobile')
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('hide_from_mobile_app', true))
+                ->badge(fn (): int => $resource::getEloquentQuery()->where('hide_from_mobile_app', true)->count())
+                ->badgeColor('warning'),
+
+            'hidden_wordpress' => Tab::make('Hidden from WordPress')
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('hide_from_wordpress_api', true))
+                ->badge(fn (): int => $resource::getEloquentQuery()->where('hide_from_wordpress_api', true)->count())
+                ->badgeColor('warning'),
+
+            'test_doctors' => Tab::make('Test Doctors')
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('is_test_doctor', true))
+                ->badge(fn (): int => $resource::getEloquentQuery()->where('is_test_doctor', true)->count())
+                ->badgeColor('gray'),
+
+            'all' => Tab::make('All Doctors')
+                ->badge(fn (): int => $resource::getEloquentQuery()->count()),
+        ];
+    }
+
+    protected function activeDoctorsQuery(Builder $query): Builder
+    {
+        return $query
+            ->where('status', DoctorStatus::ACTIVE->value)
+            ->where(function (Builder $query): void {
+                $query->where('hide_from_mobile_app', false)
+                    ->orWhereNull('hide_from_mobile_app');
+            })
+            ->where(function (Builder $query): void {
+                $query->where('hide_from_wordpress_api', false)
+                    ->orWhereNull('hide_from_wordpress_api');
+            })
+            ->where(function (Builder $query): void {
+                $query->where('is_test_doctor', false)
+                    ->orWhereNull('is_test_doctor');
+            });
+    }
 
     protected function getHeaderActions(): array
     {

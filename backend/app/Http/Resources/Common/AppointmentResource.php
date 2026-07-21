@@ -138,12 +138,11 @@ class AppointmentResource extends JsonResource
         }
 
         // Doctor block
-        if (
-            ! $isDoctor &&
-            $this->relationLoaded('doctor') &&
+        $canShowDoctor = $this->relationLoaded('doctor') &&
             $this->doctor &&
-            (! $this->doctor->hide_from_mobile_app || $isPatientOwner || $isBookedTodayOrFutureAppointment)
-        ) {
+            (! $this->doctor->hide_from_mobile_app || $isPatientOwner || $isDoctor || $isBookedTodayOrFutureAppointment);
+
+        if ($canShowDoctor) {
             $result['doctor'] = [
                 'id' => $this->doctor->id,
                 'user_id' => $this->doctor->user_id,

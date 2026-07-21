@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\Pages;
 
+use App\Support\FilamentUiVisibility;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
 
 abstract class ListRecords extends \Filament\Resources\Pages\ListRecords
@@ -15,10 +17,10 @@ abstract class ListRecords extends \Filament\Resources\Pages\ListRecords
 
     public function cacheInteractsWithHeaderActions(): void
     {
-        $actions = [
+        $actions = FilamentUiVisibility::prepareActions([
             ...$this->getGlobalHeaderActions(),
             ...$this->getHeaderActions(),
-        ];
+        ], static::getResource());
 
         foreach ($actions as $action) {
             if ($action instanceof ActionGroup) {
@@ -52,5 +54,10 @@ abstract class ListRecords extends \Filament\Resources\Pages\ListRecords
     public function getTabs(): array
     {
         return [];
+    }
+
+    protected function makeTable(): Table
+    {
+        return FilamentUiVisibility::prepareTable(parent::makeTable(), static::getResource());
     }
 }

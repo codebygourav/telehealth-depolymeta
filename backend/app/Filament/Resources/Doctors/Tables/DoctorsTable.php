@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Doctors\Tables;
 
 use App\Enums\GenderOption;
 use App\Filament\Resources\Doctors\DoctorResource;
+use App\Support\FilamentUiVisibility;
 use App\Models\Department;
 use App\Models\DepartmentDoctor;
 use Filament\Actions\{Action, ActionGroup, BulkAction, BulkActionGroup, DeleteBulkAction, ForceDeleteBulkAction, RestoreBulkAction, ViewAction, DeleteAction, EditAction};
@@ -24,19 +25,8 @@ class DoctorsTable
 {
     public static function configure(Table $table): Table
     {
-        // Only deny access for unauthenticated users. Any logged-in user
-        // will be able to view the doctors table. Actions (edit/delete)
-        // are still gated by resource permission checks below.
-        if (! auth()->check()) {
-            return $table
-                ->columns([])
-                ->filters([])
-                ->recordActions([])
-                ->toolbarActions([])
-                ->query(fn($query) => $query->whereRaw('1 = 0'))
-                ->emptyStateHeading('Access Denied')
-                ->emptyStateDescription('You do not have permission to view doctors.')
-                ->emptyStateIcon('heroicon-o-lock-closed');
+        if (! FilamentUiVisibility::canViewResourceIndex(DoctorResource::class)) {
+            return FilamentUiVisibility::denyTableAccess($table, 'You do not have permission to view doctors.');
         }
 
         // Add a custom header view with the "note" above the table, under the header bar (where the search/filter is)
@@ -121,6 +111,7 @@ class DoctorsTable
                         Action::make('editStatus')
                             ->label('Update Status')
                             ->icon('heroicon-o-pencil')
+                            ->visible(fn ($record) => DoctorResource::canEdit($record))
                             ->modalHeading('Update Doctor Status')
                             ->form([
                                 \Filament\Forms\Components\Select::make('status')
@@ -164,6 +155,7 @@ class DoctorsTable
                         Action::make('editOrder')
                             ->label('Edit Order')
                             ->icon('heroicon-o-pencil')
+                            ->visible(fn ($record) => DoctorResource::canEdit($record))
                             ->modalHeading('Edit Doctor Order')
                             ->form([TextInput::make('order')->label('Order')->numeric()->required()])
                             ->mountUsing(function ($form, $record, $livewire) {
@@ -236,6 +228,7 @@ class DoctorsTable
                     BulkAction::make('editStatus')
                         ->label('Update Status')
                         ->icon('heroicon-o-pencil')
+                        ->visible(fn () => DoctorResource::canEdit(null))
                         ->form([
                             \Filament\Forms\Components\Select::make('status')
                                 ->label('Status')
@@ -267,15 +260,9 @@ class DoctorsTable
                 ActionGroup::make([
                     ViewAction::make()
                         ->icon('heroicon-o-eye')
-                        ->visible(fn($record) => DoctorResource::canViewAny()),
+                        ->visible(fn($record) => DoctorResource::canView($record)),
 
                     EditAction::make()
-                        ->visible(fn($record) => DoctorResource::canEdit($record)),
-
-                    Action::make('aiTraining')
-                        ->label('AI Training')
-                        ->icon('heroicon-o-cpu-chip')
-                        ->url(fn($record) => DoctorResource::getUrl('ai-training', ['record' => $record]))
                         ->visible(fn($record) => DoctorResource::canEdit($record)),
 
                     DeleteAction::make()

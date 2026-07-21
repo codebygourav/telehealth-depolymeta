@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Patients\Tables;
 
 use App\Filament\Resources\Patients\PatientResource;
+use App\Support\FilamentUiVisibility;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Actions\ActionGroup;
@@ -22,7 +23,6 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Auth;
 
 use function App\Helpers\getUserAuditColumn;
 
@@ -30,19 +30,8 @@ class PatientsTable
 {
     public static function configure(Table $table): Table
     {
-        // Only deny access for unauthenticated users. Any logged-in user
-        // will be able to view the patients table. Actions (edit/delete)
-        // are still gated by resource permission checks below.
-        if (! Auth::check()) {
-            return $table
-                ->columns([])
-                ->filters([])
-                ->recordActions([])
-                ->toolbarActions([])
-                ->query(fn ($query) => $query->whereRaw('1 = 0'))
-                ->emptyStateHeading('Access Denied')
-                ->emptyStateDescription('You do not have permission to view patients.')
-                ->emptyStateIcon('heroicon-o-lock-closed');
+        if (! FilamentUiVisibility::canViewResourceIndex(PatientResource::class)) {
+            return FilamentUiVisibility::denyTableAccess($table, 'You do not have permission to view patients.');
         }
 
         return $table

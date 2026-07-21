@@ -6,13 +6,13 @@ use App\Filament\Resources\Appointments\AppointmentResource;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Payment;
+use App\Support\FilamentUiVisibility;
 use App\Traits\HasCustomSidebar;
 use BackedEnum;
 use Carbon\Carbon;
 use Filament\Forms\Components\{DatePicker, Select};
 use Filament\Forms\Concerns\{InteractsWithForms, InteractsWithTables};
 use Filament\Forms\Contracts\HasForms;
-use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -175,7 +175,7 @@ $module = static::$slug ?? strtolower(class_basename(static::class));
         $date = $this->data['reportDate'] ?? now()->format('Y-m-d');
         $parsedDate = Carbon::parse($date);
 
-        return $table
+        return FilamentUiVisibility::prepareTable($table
             ->query(function () use ($doctorId, $period, $parsedDate) {
                 $query = Appointment::query()
                     ->with(['doctor.user', 'patient.user', 'payment']);
@@ -366,6 +366,6 @@ $module = static::$slug ?? strtolower(class_basename(static::class));
                 Group::make('doctor.user.name')
                     ->label('Doctor')
                     ->collapsible(),
-            ]);
+            ]));
     }
 }

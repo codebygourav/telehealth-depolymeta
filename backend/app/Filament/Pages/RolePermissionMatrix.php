@@ -2,14 +2,13 @@
 
 namespace App\Filament\Pages;
 
-use Filament\Pages\Page;
 use Spatie\Permission\Models\{Role, Permission};
 use Filament\Support\Icons\Heroicon;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Facades\Filament;
-use Illuminate\Support\Facades\Cache;
 use App\Traits\HasCustomSidebar;
+use Illuminate\Support\Facades\Cache;
 
 class RolePermissionMatrix extends Page
 {

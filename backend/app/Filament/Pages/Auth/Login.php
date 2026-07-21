@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Auth;
 
+use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\Patients\PatientResource;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Filament\Auth\Pages\Login as BaseLogin;
@@ -27,7 +28,12 @@ class Login extends BaseLogin
             $userName = $user?->name;
 
             if ($user?->hasRole('patient')) {
-                session()->put('url.intended', PatientResource::getUrl());
+                session()->put(
+                    'url.intended',
+                    check_permission(['dashboard.view', 'dashboard.view_any'])
+                        ? Dashboard::getUrl()
+                        : PatientResource::getUrl(),
+                );
             }
 
             Notification::make()

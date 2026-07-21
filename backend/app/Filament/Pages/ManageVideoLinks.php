@@ -8,11 +8,11 @@ use App\Models\Appointment;
 use App\Models\VideoConsultation;
 use App\Services\WherebyService;
 use App\Traits\HasCustomSidebar;
+use App\Support\FilamentUiVisibility;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Notifications\Notification;
-use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -88,7 +88,7 @@ class ManageVideoLinks extends Page implements HasTable
 
     public function table(Table $table): Table
     {
-        return $table
+        return FilamentUiVisibility::prepareTable($table
             ->query($this->getTableQuery())
             ->defaultSort('appointment_date')
             ->columns([
@@ -179,7 +179,7 @@ class ManageVideoLinks extends Page implements HasTable
                     ->requiresConfirmation()
                     ->modalHeading('Generate video link')
                     ->modalDescription('This will create a Whereby room and save host and participant URLs for this appointment.')
-                    ->visible(fn (Appointment $record): bool => ! $this->hasCompleteVideoLinks($record))
+                    ->visible(fn (Appointment $record): bool => AppointmentResource::canEdit($record) && ! $this->hasCompleteVideoLinks($record))
                     ->action(function (Appointment $record): void {
                         $this->generateVideoLink($record);
                     }),
@@ -188,7 +188,7 @@ class ManageVideoLinks extends Page implements HasTable
                     ->label('View Links')
                     ->icon('heroicon-o-eye')
                     ->color('success')
-                    ->visible(fn (Appointment $record): bool => $this->hasCompleteVideoLinks($record))
+                    ->visible(fn (Appointment $record): bool => AppointmentResource::canView($record) && $this->hasCompleteVideoLinks($record))
                     ->modalHeading('Video consultation links')
                     ->modalContent(fn (Appointment $record) => view('filament.pages.video-consultation-urls', [
                         'videoConsultation' => $record->videoConsultation,
@@ -200,6 +200,7 @@ class ManageVideoLinks extends Page implements HasTable
                     ->label('View Appointment')
                     ->icon('heroicon-o-arrow-top-right-on-square')
                     ->color('gray')
+                    ->visible(fn (Appointment $record): bool => AppointmentResource::canView($record))
                     ->url(fn (Appointment $record): string => AppointmentResource::getUrl('view', ['record' => $record])),
             ])
             ->toolbarActions([
@@ -241,10 +242,11 @@ class ManageVideoLinks extends Page implements HasTable
                                 ->send();
                         }
                     })
-                    ->deselectRecordsAfterCompletion(),
+                    ->deselectRecordsAfterCompletion()
+                    ->visible(fn (): bool => AppointmentResource::canEdit(null)),
             ])
             ->emptyStateHeading('No video appointments found')
-            ->emptyStateDescription('There are no video appointments for the selected scope.');
+            ->emptyStateDescription('There are no video appointments for the selected scope.'), AppointmentResource::class);
     }
 
     protected function getTableQuery(): Builder
@@ -314,7 +316,8 @@ class ManageVideoLinks extends Page implements HasTable
                             ->danger()
                             ->send();
                     }
-                }),
+                })
+                ->visible(fn (): bool => AppointmentResource::canEdit(null)),
         ];
     }
 

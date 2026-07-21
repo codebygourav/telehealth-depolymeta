@@ -14,7 +14,7 @@ class SettingsSeeder extends Seeder
             ['group' => 'app', 'key' => 'name', 'value' => 'CMC Telehealth', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'tagline', 'value' => 'Your Trusted Healthcare Partner', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'version', 'value' => '1.0.0', 'type' => 'string', 'is_public' => true],
-            ['group' => 'app', 'key' => 'primary_color', 'value' => '#055bd9', 'type' => 'string', 'is_public' => true],
+            ['group' => 'app', 'key' => 'primary_color', 'value' => '#073827', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'booking_cutoff_rules', 'value' => '[{"value":4,"unit":"hours"},{"value":1,"unit":"hours"}]', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'secondary_color', 'value' => '#22c55e', 'type' => 'string', 'is_public' => true],
             ['group' => 'app', 'key' => 'email', 'value' => 'info@cmctelehealth.com', 'type' => 'string', 'is_public' => true],
@@ -42,6 +42,7 @@ class SettingsSeeder extends Seeder
             // Security
             ['group' => 'security', 'key' => 'max_login_attempts', 'value' => '5', 'type' => 'integer', 'is_public' => false],
             ['group' => 'security', 'key' => 'lockout_duration', 'value' => '30', 'type' => 'integer', 'is_public' => false],
+            ['group' => 'security', 'key' => 'api_token_expiration_days', 'value' => '30', 'type' => 'integer', 'is_public' => false],
 
 
             // Mobile

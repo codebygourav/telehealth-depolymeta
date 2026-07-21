@@ -52,31 +52,29 @@ class AppointmentController extends Controller
         ]);
 
         $today = Carbon::today();
-        $dateTimeExpression = \Illuminate\Support\Facades\DB::getDriverName() === 'sqlite'
-            ? "datetime(appointments.appointment_date || ' ' || appointments.appointment_end_time)"
-            : "STR_TO_DATE(CONCAT(appointments.appointment_date,' ',appointments.appointment_end_time), '%Y-%m-%d %H:%i:%s')";
+        $now = Carbon::now();
+        $todayStr = $today->toDateString();
 
         switch ($filter) {
             case 'today':
-                $query->whereDate('appointments.appointment_date', Carbon::today())
+                $query->whereDate('appointments.appointment_date', $today)
                     ->whereIn('appointments.status', [
                         AppointmentStatus::CONFIRMED->value,
                         AppointmentStatus::RESCHEDULED->value,
                         AppointmentStatus::CANCELLED->value,
                         AppointmentStatus::COMPLETED->value,
                     ])
-                    ->whereRaw(
-                        "{$dateTimeExpression} >= ?",
-                        [Carbon::now()->format('Y-m-d H:i:s')]
-                    )
                     ->orderBy('appointments.appointment_time', 'asc');
                 break;
 
             case 'upcoming':
-                $query->whereRaw(
-                    "{$dateTimeExpression} > ?",
-                    [Carbon::now()->format('Y-m-d H:i:s')]
-                )
+                $query->where(function ($q) use ($todayStr, $now) {
+                    $q->where('appointments.appointment_date', '>', $todayStr)
+                        ->orWhere(function ($sub) use ($todayStr, $now) {
+                            $sub->where('appointments.appointment_date', $todayStr)
+                                ->whereTime('appointments.appointment_end_time', '>=', $now->toTimeString());
+                        });
+                })
                     ->whereIn('appointments.status', [
                         AppointmentStatus::CONFIRMED->value,
                         AppointmentStatus::RESCHEDULED->value,
@@ -88,10 +86,13 @@ class AppointmentController extends Controller
                 break;
 
             case 'past':
-                $query->whereRaw(
-                    "{$dateTimeExpression} < ?",
-                    [Carbon::now()->format('Y-m-d H:i:s')]
-                )
+                $query->where(function ($q) use ($todayStr, $now) {
+                    $q->where('appointments.appointment_date', '<', $todayStr)
+                        ->orWhere(function ($sub) use ($todayStr, $now) {
+                            $sub->where('appointments.appointment_date', $todayStr)
+                                ->whereTime('appointments.appointment_end_time', '<', $now->toTimeString());
+                        });
+                })
                     ->whereIn('appointments.status', [
                         AppointmentStatus::COMPLETED->value,
                         AppointmentStatus::CANCELLED->value,
