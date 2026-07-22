@@ -63,6 +63,17 @@ class Settings extends Page
         $this->form->fill($this->loadSettings());
     }
 
+    public function getHiddenSettingsGroups(): array
+    {
+        $hiddenGroups = config('settings.hidden_groups', []);
+
+        if (!is_array($hiddenGroups)) {
+            return [];
+        }
+
+        return array_values(array_filter($hiddenGroups, static fn($group): bool => is_string($group) && $group !== ''));
+    }
+
     protected function loadSettings(): array
     {
         $settings = Setting::all()->groupBy('group');
@@ -122,6 +133,10 @@ class Settings extends Page
         foreach ($config as $groupKey => $group) {
             // Skip if 'label' key does not exist (prevent undefined key error)
             if (!isset($group['label'])) {
+                continue;
+            }
+
+            if (in_array($groupKey, $this->getHiddenSettingsGroups(), true)) {
                 continue;
             }
 
